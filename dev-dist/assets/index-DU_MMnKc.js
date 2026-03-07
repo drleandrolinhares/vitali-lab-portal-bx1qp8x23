@@ -19327,6 +19327,10 @@ var PanelLeft = createLucideIcon("panel-left", [["rect", {
 	d: "M9 3v18",
 	key: "fh3hqa"
 }]]);
+var Pen = createLucideIcon("pen", [["path", {
+	d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+	key: "1a8usu"
+}]]);
 var Play = createLucideIcon("play", [["path", {
 	d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
 	key: "10ikf1"
@@ -31950,15 +31954,15 @@ function AppProvider({ children }) {
 	(0, import_react.useEffect)(() => {
 		fetchProfile();
 	}, [session?.user]);
-	const fetchStages = async () => {
+	const fetchStages = (0, import_react.useCallback)(async () => {
 		const { data } = await supabase.from("kanban_stages").select("*").order("order_index", { ascending: true });
 		if (data) setKanbanStages(data.map((s) => ({
 			id: s.id,
 			name: s.name,
 			orderIndex: s.order_index
 		})));
-	};
-	const fetchOrders = async () => {
+	}, []);
+	const fetchOrders = (0, import_react.useCallback)(async () => {
 		if (!session?.user || !currentUser) return;
 		setLoading(true);
 		const { data: dbOrders } = await supabase.from("orders").select(`*, profiles!orders_dentist_id_fkey(name), order_history(*)`).order("created_at", { ascending: false });
@@ -31988,13 +31992,29 @@ function AppProvider({ children }) {
 			}))
 		})));
 		setLoading(false);
-	};
+	}, [session?.user, currentUser]);
 	(0, import_react.useEffect)(() => {
 		if (currentUser) {
 			fetchOrders();
 			fetchStages();
+			const channel = supabase.channel("app-updates").on("postgres_changes", {
+				event: "*",
+				schema: "public",
+				table: "orders"
+			}, () => fetchOrders()).on("postgres_changes", {
+				event: "*",
+				schema: "public",
+				table: "kanban_stages"
+			}, () => fetchStages()).subscribe();
+			return () => {
+				supabase.removeChannel(channel);
+			};
 		}
-	}, [currentUser]);
+	}, [
+		currentUser,
+		fetchOrders,
+		fetchStages
+	]);
 	const switchRole = () => toast({
 		title: "Aviso",
 		description: "Modo demonstração desativado."
@@ -32022,18 +32042,14 @@ function AppProvider({ children }) {
 		});
 		if (error) return toast({
 			title: "Erro",
-			description: "Não foi possível salvar o pedido.",
+			description: "Não foi possível salvar.",
 			variant: "destructive"
 		});
-		toast({
-			title: "Pedido enviado!",
-			description: `O pedido foi registrado com sucesso.`
-		});
-		fetchOrders();
+		toast({ title: "Pedido enviado!" });
 	};
 	const updateOrderStatus = async (dbId, status, note) => {
-		const { error: err1 } = await supabase.from("orders").update({ status }).eq("id", dbId);
-		if (err1) return toast({
+		const { error } = await supabase.from("orders").update({ status }).eq("id", dbId);
+		if (error) return toast({
 			title: "Erro",
 			description: "Erro ao atualizar status",
 			variant: "destructive"
@@ -32043,11 +32059,7 @@ function AppProvider({ children }) {
 			status,
 			note
 		});
-		toast({
-			title: "Status atualizado",
-			description: `O pedido agora está: ${status}.`
-		});
-		fetchOrders();
+		toast({ title: "Status atualizado" });
 	};
 	const updateOrderKanbanStage = async (dbId, stage) => {
 		if (!currentUser) return;
@@ -32068,62 +32080,61 @@ function AppProvider({ children }) {
 			status: newStatus,
 			note: `${currentUser.name} moveu o cartão para ${stage}`
 		});
-		toast({
-			title: "Cartão Movido",
-			description: `Avançado para: ${stage}.`
-		});
-		fetchOrders();
+		toast({ title: "Cartão Movido" });
 	};
 	const updateOrderObservations = async (dbId, observations) => {
 		const { error } = await supabase.from("orders").update({ observations }).eq("id", dbId);
 		if (error) return toast({
 			title: "Erro",
-			description: "Erro ao atualizar observações",
+			description: "Erro ao atualizar",
 			variant: "destructive"
 		});
-		toast({
-			title: "Observações salvas",
-			description: `As observações foram atualizadas com sucesso.`
-		});
-		fetchOrders();
+		toast({ title: "Observações salvas" });
 	};
 	const addKanbanStage = async (name) => {
+		const upperName = name.trim().toUpperCase();
+		if (kanbanStages.some((s) => s.name === upperName)) return toast({
+			title: "Erro",
+			description: "Coluna já existe.",
+			variant: "destructive"
+		});
 		const nextIndex = kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1;
 		const { error } = await supabase.from("kanban_stages").insert({
-			name,
+			name: upperName,
 			order_index: nextIndex
 		});
 		if (error) return toast({
 			title: "Erro",
-			description: "Não foi possível adicionar a coluna.",
+			description: "Erro ao adicionar.",
 			variant: "destructive"
 		});
 		toast({ title: "Coluna adicionada" });
-		fetchStages();
 	};
 	const updateKanbanStage = async (id, oldName, newName) => {
-		const { error } = await supabase.from("kanban_stages").update({ name: newName }).eq("id", id);
-		if (error) return toast({
+		const upperNewName = newName.trim().toUpperCase();
+		if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id)) return toast({
 			title: "Erro",
-			description: "Não foi possível renomear. Já existe?",
+			description: "Coluna já existe.",
 			variant: "destructive"
 		});
-		await supabase.from("orders").update({ kanban_stage: newName }).eq("kanban_stage", oldName);
+		const { error } = await supabase.from("kanban_stages").update({ name: upperNewName }).eq("id", id);
+		if (error) return toast({
+			title: "Erro",
+			description: "Erro ao renomear.",
+			variant: "destructive"
+		});
+		await supabase.from("orders").update({ kanban_stage: upperNewName }).eq("kanban_stage", oldName);
 		toast({ title: "Coluna renomeada" });
-		fetchStages();
-		fetchOrders();
 	};
 	const deleteKanbanStage = async (id, oldName, fallbackName) => {
 		if (fallbackName) await supabase.from("orders").update({ kanban_stage: fallbackName }).eq("kanban_stage", oldName);
 		const { error } = await supabase.from("kanban_stages").delete().eq("id", id);
 		if (error) return toast({
 			title: "Erro",
-			description: "Não foi possível remover a coluna.",
+			description: "Erro ao remover.",
 			variant: "destructive"
 		});
 		toast({ title: "Coluna removida" });
-		fetchStages();
-		fetchOrders();
 	};
 	if (session && profileLoading) return import_react.createElement("div", { className: "min-h-screen flex items-center justify-center font-medium" }, "Carregando...");
 	return import_react.createElement(AppContext.Provider, { value: {
@@ -40812,6 +40823,11 @@ function KanbanPage() {
 		const o = orders.find((x$1) => x$1.id === id);
 		if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage);
 	};
+	const handleSaveStageName = (id, oldName) => {
+		const trimmed = editStageName.trim();
+		if (trimmed && trimmed.toUpperCase() !== oldName.toUpperCase()) updateKanbanStage(id, oldName, trimmed);
+		setEditingStageId(null);
+	};
 	const handleSaveObs = () => {
 		if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText);
 	};
@@ -40870,30 +40886,24 @@ function KanbanPage() {
 										autoFocus: true,
 										value: editStageName,
 										onChange: (e) => setEditStageName(e.target.value),
-										onBlur: () => {
-											if (editStageName.trim() && editStageName.trim() !== stage.name) updateKanbanStage(stage.id, stage.name, editStageName.trim());
-											setEditingStageId(null);
-										},
+										onBlur: () => handleSaveStageName(stage.id, stage.name),
 										onKeyDown: (e) => {
-											if (e.key === "Enter") {
-												if (editStageName.trim() && editStageName.trim() !== stage.name) updateKanbanStage(stage.id, stage.name, editStageName.trim());
-												setEditingStageId(null);
-											}
+											if (e.key === "Enter") handleSaveStageName(stage.id, stage.name);
 											if (e.key === "Escape") setEditingStageId(null);
 										},
-										className: "h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0"
+										className: "h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
 									}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										className: "flex items-center gap-1.5 flex-1 min-w-0 pr-2",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
 											onClick: () => {
 												if (isAdmin) {
 													setEditingStageId(stage.id);
 													setEditStageName(stage.name);
 												}
 											},
-											className: cn("font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate", isAdmin && "cursor-pointer hover:text-primary transition-colors"),
+											className: cn("font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5", isAdmin && "cursor-pointer hover:text-primary transition-colors"),
 											title: isAdmin ? "Clique para renomear" : "",
-											children: stage.name
+											children: [stage.name, isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, { className: "w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" })]
 										}), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 											variant: "ghost",
 											size: "icon",
@@ -41095,4 +41105,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-BJFDTtYz.js.map
+//# sourceMappingURL=index-DU_MMnKc.js.map

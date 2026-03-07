@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react'
 import { Order, OrderStatus, KanbanStage, User, UserRole, Stage } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
@@ -44,21 +51,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', session.user.id)
       .single()
-    if (data) {
+    if (data)
       setCurrentUser({
         id: data.id,
         name: data.name,
         role: data.role as UserRole,
         clinic: data.clinic,
       })
-    } else {
+    else
       setCurrentUser({
         id: session.user.id,
         name: session.user.user_metadata?.name || 'Usuário',
         role: session.user.user_metadata?.role || 'dentist',
         clinic: session.user.user_metadata?.clinic,
       })
-    }
     setProfileLoading(false)
   }
 
@@ -66,16 +72,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchProfile()
   }, [session?.user])
 
-  const fetchStages = async () => {
+  const fetchStages = useCallback(async () => {
     const { data } = await supabase
       .from('kanban_stages' as any)
       .select('*')
       .order('order_index', { ascending: true })
     if (data)
       setKanbanStages(data.map((s: any) => ({ id: s.id, name: s.name, orderIndex: s.order_index })))
-  }
+  }, [])
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!session?.user || !currentUser) return
     setLoading(true)
     const { data: dbOrders } = await supabase
@@ -117,14 +123,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
     }
     setLoading(false)
-  }
+  }, [session?.user, currentUser])
 
   useEffect(() => {
     if (currentUser) {
       fetchOrders()
       fetchStages()
+
+      const channel = supabase
+        .channel('app-updates')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
+          fetchOrders(),
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'kanban_stages' }, () =>
+          fetchStages(),
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
     }
-  }, [currentUser])
+  }, [currentUser, fetchOrders, fetchStages])
 
   const switchRole = () => toast({ title: 'Aviso', description: 'Modo demonstração desativado.' })
 
@@ -149,27 +169,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error)
       return toast({
         title: 'Erro',
-        description: 'Não foi possível salvar o pedido.',
+        description: 'Não foi possível salvar.',
         variant: 'destructive',
       })
-    toast({ title: 'Pedido enviado!', description: `O pedido foi registrado com sucesso.` })
-    fetchOrders()
+    toast({ title: 'Pedido enviado!' })
   }
 
   const updateOrderStatus = async (dbId: string, status: OrderStatus, note?: string) => {
-    const { error: err1 } = await supabase
+    const { error } = await supabase
       .from('orders' as any)
       .update({ status })
       .eq('id', dbId)
-    if (err1)
+    if (error)
       return toast({
         title: 'Erro',
         description: 'Erro ao atualizar status',
         variant: 'destructive',
       })
     await supabase.from('order_history' as any).insert({ order_id: dbId, status, note })
-    toast({ title: 'Status atualizado', description: `O pedido agora está: ${status}.` })
-    fetchOrders()
+    toast({ title: 'Status atualizado' })
   }
 
   const updateOrderKanbanStage = async (dbId: string, stage: KanbanStage) => {
@@ -184,15 +202,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', dbId)
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao mover cartão', variant: 'destructive' })
-
-    await supabase.from('order_history' as any).insert({
-      order_id: dbId,
-      status: newStatus,
-      note: `${currentUser.name} moveu o cartão para ${stage}`,
-    })
-
-    toast({ title: 'Cartão Movido', description: `Avançado para: ${stage}.` })
-    fetchOrders()
+    await supabase
+      .from('order_history' as any)
+      .insert({
+        order_id: dbId,
+        status: newStatus,
+        note: `${currentUser.name} moveu o cartão para ${stage}`,
+      })
+    toast({ title: 'Cartão Movido' })
   }
 
   const updateOrderObservations = async (dbId: string, observations: string) => {
@@ -201,52 +218,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .update({ observations })
       .eq('id', dbId)
     if (error)
-      return toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar observações',
-        variant: 'destructive',
-      })
-    toast({
-      title: 'Observações salvas',
-      description: `As observações foram atualizadas com sucesso.`,
-    })
-    fetchOrders()
+      return toast({ title: 'Erro', description: 'Erro ao atualizar', variant: 'destructive' })
+    toast({ title: 'Observações salvas' })
   }
 
   const addKanbanStage = async (name: string) => {
+    const upperName = name.trim().toUpperCase()
+    if (kanbanStages.some((s) => s.name === upperName))
+      return toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
     const nextIndex =
       kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1
     const { error } = await supabase
       .from('kanban_stages' as any)
-      .insert({ name, order_index: nextIndex })
+      .insert({ name: upperName, order_index: nextIndex })
     if (error)
-      return toast({
-        title: 'Erro',
-        description: 'Não foi possível adicionar a coluna.',
-        variant: 'destructive',
-      })
+      return toast({ title: 'Erro', description: 'Erro ao adicionar.', variant: 'destructive' })
     toast({ title: 'Coluna adicionada' })
-    fetchStages()
   }
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
+    const upperNewName = newName.trim().toUpperCase()
+    if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id))
+      return toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
     const { error } = await supabase
       .from('kanban_stages' as any)
-      .update({ name: newName })
+      .update({ name: upperNewName })
       .eq('id', id)
     if (error)
-      return toast({
-        title: 'Erro',
-        description: 'Não foi possível renomear. Já existe?',
-        variant: 'destructive',
-      })
+      return toast({ title: 'Erro', description: 'Erro ao renomear.', variant: 'destructive' })
     await supabase
       .from('orders' as any)
-      .update({ kanban_stage: newName })
+      .update({ kanban_stage: upperNewName })
       .eq('kanban_stage', oldName)
     toast({ title: 'Coluna renomeada' })
-    fetchStages()
-    fetchOrders()
   }
 
   const deleteKanbanStage = async (id: string, oldName: string, fallbackName?: string) => {
@@ -260,14 +264,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .delete()
       .eq('id', id)
     if (error)
-      return toast({
-        title: 'Erro',
-        description: 'Não foi possível remover a coluna.',
-        variant: 'destructive',
-      })
+      return toast({ title: 'Erro', description: 'Erro ao remover.', variant: 'destructive' })
     toast({ title: 'Coluna removida' })
-    fetchStages()
-    fetchOrders()
   }
 
   if (session && profileLoading)

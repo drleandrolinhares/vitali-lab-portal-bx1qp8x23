@@ -9,6 +9,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      kanban_stages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
       order_history: {
         Row: {
           created_at: string
@@ -277,6 +298,11 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: kanban_stages
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   order_index: integer (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: order_history
 //   id: uuid (not null, default: gen_random_uuid())
 //   order_id: uuid (not null)
@@ -308,6 +334,9 @@ export const Constants = {
 //   clinic: text (nullable)
 
 // --- CONSTRAINTS ---
+// Table: kanban_stages
+//   UNIQUE kanban_stages_name_key: UNIQUE (name)
+//   PRIMARY KEY kanban_stages_pkey: PRIMARY KEY (id)
 // Table: order_history
 //   FOREIGN KEY order_history_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 //   PRIMARY KEY order_history_pkey: PRIMARY KEY (id)
@@ -319,6 +348,11 @@ export const Constants = {
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: kanban_stages
+//   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Public kanban_stages view" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: order_history
 //   Policy "Dentists can view own order history, lab can view all" (SELECT, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
@@ -374,3 +408,7 @@ export const Constants = {
 // --- TRIGGERS ---
 // Table: orders
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
+
+// --- INDEXES ---
+// Table: kanban_stages
+//   CREATE UNIQUE INDEX kanban_stages_name_key ON public.kanban_stages USING btree (name)

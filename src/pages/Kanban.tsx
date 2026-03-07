@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2 } from 'lucide-react'
+import { Users, Plus, Trash2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,6 +75,14 @@ export default function KanbanPage() {
     if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage)
   }
 
+  const handleSaveStageName = (id: string, oldName: string) => {
+    const trimmed = editStageName.trim()
+    if (trimmed && trimmed.toUpperCase() !== oldName.toUpperCase()) {
+      updateKanbanStage(id, oldName, trimmed)
+    }
+    setEditingStageId(null)
+  }
+
   const handleSaveObs = () => {
     if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText)
   }
@@ -133,20 +141,12 @@ export default function KanbanPage() {
                           autoFocus
                           value={editStageName}
                           onChange={(e) => setEditStageName(e.target.value)}
-                          onBlur={() => {
-                            if (editStageName.trim() && editStageName.trim() !== stage.name)
-                              updateKanbanStage(stage.id, stage.name, editStageName.trim())
-                            setEditingStageId(null)
-                          }}
+                          onBlur={() => handleSaveStageName(stage.id, stage.name)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              if (editStageName.trim() && editStageName.trim() !== stage.name)
-                                updateKanbanStage(stage.id, stage.name, editStageName.trim())
-                              setEditingStageId(null)
-                            }
+                            if (e.key === 'Enter') handleSaveStageName(stage.id, stage.name)
                             if (e.key === 'Escape') setEditingStageId(null)
                           }}
-                          className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0"
+                          className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
                         />
                       ) : (
                         <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
@@ -158,12 +158,15 @@ export default function KanbanPage() {
                               }
                             }}
                             className={cn(
-                              'font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate',
+                              'font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5',
                               isAdmin && 'cursor-pointer hover:text-primary transition-colors',
                             )}
                             title={isAdmin ? 'Clique para renomear' : ''}
                           >
                             {stage.name}
+                            {isAdmin && (
+                              <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            )}
                           </h4>
                           {isAdmin && (
                             <Button
