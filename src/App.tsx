@@ -13,6 +13,7 @@ import HistoryPage from './pages/History'
 import DentistsPage from './pages/Dentists'
 import AuthPage from './pages/Auth'
 import AdminDashboard from './pages/AdminDashboard'
+import KanbanPage from './pages/Kanban'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/new-request" element={<NewRequest />} />
               <Route path="/order/:id" element={<OrderDetails />} />
               <Route path="/history" element={<HistoryPage />} />
+              <Route path="/kanban" element={<KanbanPage />} />
               <Route path="/dentists" element={<DentistsPage />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
             </Route>

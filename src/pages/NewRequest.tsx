@@ -30,6 +30,7 @@ export default function NewRequest() {
 
   const [formData, setFormData] = useState({
     patientName: '',
+    sector: '',
     workType: '',
     material: '',
     shade: '',
@@ -43,19 +44,13 @@ export default function NewRequest() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.patientName || !formData.workType) return
-
+    if (!formData.patientName || !formData.workType || !formData.sector) return
     setSubmitting(true)
     await addOrder({
-      patientName: formData.patientName,
-      workType: formData.workType,
+      ...formData,
       material: formData.material || 'Padrão',
-      shade: formData.shade,
-      shadeScale: formData.shadeScale,
-      shippingMethod: formData.shippingMethod,
       stlDeliveryMethod:
         formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
-      observations: formData.observations,
       teeth: selectedTeeth,
       arches: selectedArches,
     })
@@ -71,20 +66,16 @@ export default function NewRequest() {
             NOVO PEDIDO VITALI LAB
           </CardTitle>
           <CardDescription>
-            Preencha os detalhes clínicos do paciente e especificações do trabalho.
+            Preencha os detalhes clínicos do paciente e especificações.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
             <div className="space-y-2">
-              <Label
-                htmlFor="patientName"
-                className="uppercase font-semibold text-xs text-muted-foreground"
-              >
+              <Label className="uppercase font-semibold text-xs text-muted-foreground">
                 NOME COMPLETO DO PACIENTE *
               </Label>
               <Input
-                id="patientName"
                 required
                 placeholder="Ex: João da Silva"
                 value={formData.patientName}
@@ -93,19 +84,23 @@ export default function NewRequest() {
               />
             </div>
 
-            <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
-              <Label className="uppercase font-semibold text-xs text-muted-foreground">
-                Seleção de Elementos (Odontograma)
-              </Label>
-              <TeethSelector
-                value={selectedTeeth}
-                onChange={setSelectedTeeth}
-                arches={selectedArches}
-                onArchesChange={setSelectedArches}
-              />
-            </div>
-
             <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs">Setor do Laboratório *</Label>
+                <Select
+                  value={formData.sector}
+                  onValueChange={(v) => setFormData({ ...formData, sector: v })}
+                  required
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SOLUÇÕES CERÂMICAS">Soluções Cerâmicas</SelectItem>
+                    <SelectItem value="STÚDIO ACRÍLICO">Stúdio Acrílico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">Tipo de Trabalho *</Label>
                 <Select
@@ -125,28 +120,32 @@ export default function NewRequest() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Material Preferencial</Label>
-                <Select
-                  value={formData.material}
-                  onValueChange={(v) => setFormData({ ...formData, material: v })}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Zircônia">Zircônia</SelectItem>
-                    <SelectItem value="Porcelana">Porcelana E-max</SelectItem>
-                    <SelectItem value="Resina">Resina Acrílica</SelectItem>
-                    <SelectItem value="Metalocerâmica">Metalocerâmica</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
+              <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                Seleção de Elementos (Odontograma)
+              </Label>
+              <TeethSelector
+                value={selectedTeeth}
+                onChange={setSelectedTeeth}
+                arches={selectedArches}
+                onArchesChange={setSelectedArches}
+              />
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">COR E SUAS CONSIDERAÇÕES</Label>
+                <Label className="uppercase font-semibold text-xs">Material</Label>
+                <Input
+                  value={formData.material}
+                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  className="h-11"
+                  placeholder="Ex: Zircônia, Resina..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs">COR BASE</Label>
                 <Input
                   placeholder="Ex: A2, BL1..."
                   value={formData.shade}
@@ -157,7 +156,7 @@ export default function NewRequest() {
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
                 <Input
-                  placeholder="Ex: VITA Classical, 3D Master..."
+                  placeholder="Ex: VITA..."
                   value={formData.shadeScale}
                   onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
                   className="h-11"
@@ -174,48 +173,41 @@ export default function NewRequest() {
                 onValueChange={(v) => setFormData({ ...formData, shippingMethod: v })}
                 className="flex flex-col space-y-3 mt-2"
               >
-                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors">
+                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border">
                   <RadioGroupItem value="lab_pickup" id="r1" />
-                  <Label htmlFor="r1" className="font-medium cursor-pointer flex-1">
+                  <Label htmlFor="r1" className="cursor-pointer flex-1">
                     Solicitar motoboy do laboratório
                   </Label>
                 </div>
-                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors">
+                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border">
                   <RadioGroupItem value="dentist_send" id="r2" />
-                  <Label
-                    htmlFor="r2"
-                    className="font-bold cursor-pointer flex-1 uppercase tracking-tight"
-                  >
+                  <Label htmlFor="r2" className="font-bold cursor-pointer flex-1">
                     VOU ENVIAR ARQUIVO STL
                   </Label>
                 </div>
               </RadioGroup>
-
               {formData.shippingMethod === 'dentist_send' && (
                 <div className="mt-4 pt-4 border-t space-y-2 animate-fade-in-down">
                   <Label className="uppercase font-semibold text-xs text-primary">
                     FORMA DO ENVIO *
                   </Label>
                   <Input
-                    placeholder="Ex: Link do WeTransfer, Dropbox, Portal de Scanners..."
+                    placeholder="Link ou método..."
                     value={formData.stlDeliveryMethod}
                     onChange={(e) =>
                       setFormData({ ...formData, stlDeliveryMethod: e.target.value })
                     }
-                    className="h-11 border-primary/30 focus-visible:ring-primary"
-                    required={formData.shippingMethod === 'dentist_send'}
+                    className="h-11"
+                    required
                   />
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="obs" className="uppercase font-semibold text-xs">
-                Observações Adicionais
-              </Label>
+              <Label className="uppercase font-semibold text-xs">Observações Adicionais</Label>
               <Textarea
-                id="obs"
-                placeholder="Instruções sobre textura, formato, ponto de contato..."
+                placeholder="Instruções sobre textura, formato..."
                 className="min-h-[100px]"
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}

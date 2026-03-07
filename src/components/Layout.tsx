@@ -11,6 +11,7 @@ import {
   LogOut,
   FileText,
   BarChart3,
+  KanbanSquare,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -45,6 +46,7 @@ function AppSidebar() {
       ? [
           { title: 'Meu Painel', icon: LayoutDashboard, path: '/' },
           { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
+          { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
           { title: 'Histórico', icon: History, path: '/history' },
         ]
       : [
@@ -52,6 +54,7 @@ function AppSidebar() {
             ? [{ title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' }]
             : []),
           { title: 'Caixa de Entrada', icon: FileText, path: '/' },
+          { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
           { title: 'Histórico Global', icon: History, path: '/history' },
           { title: 'Dentistas', icon: Users, path: '/dentists' },
         ]
@@ -113,9 +116,7 @@ function AppSidebar() {
 
 function MainHeader() {
   const { currentUser } = useAppStore()
-
   if (!currentUser) return null
-
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
       <SidebarTrigger />

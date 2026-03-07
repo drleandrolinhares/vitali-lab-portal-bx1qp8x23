@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ShieldAlert } from 'lucide-react'
+import { ShieldAlert, Eye, EyeOff } from 'lucide-react'
 
 type AuthView = 'login' | 'register' | 'forgot_password'
 
@@ -15,7 +15,6 @@ export default function AuthPage() {
   const { signIn, signUp, resetPassword } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-
   const isAdminView = location.pathname === '/dashboard'
 
   const [view, setView] = useState<AuthView>('login')
@@ -27,48 +26,48 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    if (isAdminView && view === 'register') {
-      setView('login')
-    }
+    if (isAdminView && view === 'register') setView('login')
   }, [isAdminView, view])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAction = async (e: React.FormEvent, action: Function) => {
     e.preventDefault()
     setError('')
     setMessage('')
     setLoading(true)
-    const { error } = await signIn(email, password, rememberMe)
+    const { error } = await action()
     if (error) setError(error.message)
+    else setMessage('Ação concluída com sucesso.')
     setLoading(false)
   }
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setMessage('')
-    setLoading(true)
-    const { error } = await signUp(email, password, { name, clinic, role: 'dentist' })
-    if (error) setError(error.message)
-    else setMessage('Conta criada com sucesso! Você já pode fazer login.')
-    setLoading(false)
-  }
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setMessage('')
-    setLoading(true)
-    const { error } = await resetPassword(email)
-    if (error) setError(error.message)
-    else setMessage('Email de recuperação enviado! Verifique sua caixa de entrada.')
-    setLoading(false)
-  }
+  const PasswordInput = ({ id }: { id: string }) => (
+    <div className="relative">
+      <Input
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        minLength={6}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
+        onClick={() => setShowPassword(!showPassword)}
+      >
+        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </Button>
+    </div>
+  )
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-elevation overflow-hidden border-0">
+      <Card className="w-full max-w-md shadow-elevation border-0">
         <CardHeader className="space-y-4 items-center text-center pb-8 bg-white pt-10">
           {isAdminView ? (
             <div className="flex items-center justify-center mb-2 bg-slate-900 text-white p-4 rounded-full shadow-lg">
@@ -85,53 +84,40 @@ export default function AuthPage() {
               {isAdminView ? 'PAINEL ADMINISTRATIVO' : 'REQUISIÇÃO DIGITAL'}
             </CardTitle>
             <CardDescription className="text-base">
-              {isAdminView
-                ? 'Acesso restrito à gestão do laboratório'
-                : 'Acesse o portal do laboratório'}
+              {isAdminView ? 'Acesso restrito' : 'Acesse o portal do laboratório'}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pt-6 bg-card">
           {view === 'forgot_password' ? (
-            <div className="space-y-4 animate-fade-in">
-              <div className="text-center mb-4 space-y-2">
-                <h3 className="text-lg font-medium text-primary">Recuperar Senha</h3>
-                <p className="text-sm text-muted-foreground">
-                  Digite seu email para receber um link de recuperação.
-                </p>
+            <form
+              onSubmit={(e) => handleAction(e, () => resetPassword(email))}
+              className="space-y-4 animate-fade-in"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-                {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                <div className="flex flex-col gap-2 pt-2">
-                  <Button type="submit" disabled={loading}>
-                    Enviar Email
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="hover:text-primary"
-                    onClick={() => {
-                      setView('login')
-                      setError('')
-                      setMessage('')
-                    }}
-                  >
-                    Voltar para o Login
-                  </Button>
-                </div>
-              </form>
-            </div>
+              {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+              {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
+              <Button type="submit" disabled={loading} className="w-full">
+                Enviar Email
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setView('login')}
+              >
+                Voltar para Login
+              </Button>
+            </form>
           ) : (
             <Tabs
               value={view}
@@ -144,28 +130,18 @@ export default function AuthPage() {
             >
               {!isAdminView && (
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" className="data-[state=active]:text-primary">
-                    Entrar
-                  </TabsTrigger>
-                  <TabsTrigger value="register" className="data-[state=active]:text-primary">
-                    Cadastro
-                  </TabsTrigger>
+                  <TabsTrigger value="login">Entrar</TabsTrigger>
+                  <TabsTrigger value="register">Cadastro</TabsTrigger>
                 </TabsList>
               )}
-              {isAdminView && (
-                <div className="mb-6 flex justify-center">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest bg-muted px-4 py-1.5 rounded-full">
-                    Acesso Restrito
-                  </span>
-                </div>
-              )}
-
               <TabsContent value="login" className="animate-fade-in">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form
+                  onSubmit={(e) => handleAction(e, () => signIn(email, password, rememberMe))}
+                  className="space-y-4"
+                >
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label>Email</Label>
                     <Input
-                      id="email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -173,24 +149,18 @@ export default function AuthPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Senha</Label>
+                    <div className="flex justify-between">
+                      <Label>Senha</Label>
                       <Button
                         type="button"
                         variant="link"
-                        className="p-0 h-auto text-xs font-normal text-muted-foreground hover:text-primary"
+                        className="p-0 h-auto text-xs"
                         onClick={() => setView('forgot_password')}
                       >
                         Esqueci minha senha
                       </Button>
                     </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <PasswordInput id="login-password" />
                   </div>
                   <div className="flex items-center space-x-2 py-2">
                     <Checkbox
@@ -206,38 +176,32 @@ export default function AuthPage() {
                     </Label>
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-                  {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     Entrar
                   </Button>
                 </form>
               </TabsContent>
-
               {!isAdminView && (
                 <TabsContent value="register" className="animate-fade-in">
-                  <form onSubmit={handleSignup} className="space-y-4">
+                  <form
+                    onSubmit={(e) =>
+                      handleAction(e, () =>
+                        signUp(email, password, { name, clinic, role: 'dentist' }),
+                      )
+                    }
+                    className="space-y-4"
+                  >
                     <div className="space-y-2">
-                      <Label htmlFor="reg-name">Nome Completo</Label>
-                      <Input
-                        id="reg-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
+                      <Label>Nome Completo</Label>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="clinic">Nome da Clínica</Label>
-                      <Input
-                        id="clinic"
-                        value={clinic}
-                        onChange={(e) => setClinic(e.target.value)}
-                        required
-                      />
+                      <Label>Clínica</Label>
+                      <Input value={clinic} onChange={(e) => setClinic(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reg-email">Email</Label>
+                      <Label>Email</Label>
                       <Input
-                        id="reg-email"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -245,15 +209,8 @@ export default function AuthPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reg-password">Senha</Label>
-                      <Input
-                        id="reg-password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                      />
+                      <Label>Senha</Label>
+                      <PasswordInput id="reg-password" />
                     </div>
                     {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                     {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
@@ -265,29 +222,16 @@ export default function AuthPage() {
               )}
             </Tabs>
           )}
-
           <div className="mt-8 border-t pt-6 flex flex-col items-center">
-            {!isAdminView ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-primary"
-                onClick={() => navigate('/dashboard')}
-              >
-                Acesso Administrativo (Gestão)
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-primary"
-                onClick={() => navigate('/')}
-              >
-                Voltar para Portal de Dentistas
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground hover:text-primary"
+              onClick={() => navigate(isAdminView ? '/' : '/dashboard')}
+            >
+              {isAdminView ? 'Voltar para Portal' : 'Acesso Administrativo'}
+            </Button>
           </div>
         </CardContent>
       </Card>
