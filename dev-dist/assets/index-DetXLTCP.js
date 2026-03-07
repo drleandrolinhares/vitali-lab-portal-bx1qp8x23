@@ -19191,6 +19191,44 @@ var FileText = createLucideIcon("file-text", [
 		key: "z1uh3a"
 	}]
 ]);
+var GripHorizontal = createLucideIcon("grip-horizontal", [
+	["circle", {
+		cx: "12",
+		cy: "9",
+		r: "1",
+		key: "124mty"
+	}],
+	["circle", {
+		cx: "19",
+		cy: "9",
+		r: "1",
+		key: "1ruzo2"
+	}],
+	["circle", {
+		cx: "5",
+		cy: "9",
+		r: "1",
+		key: "1a8b28"
+	}],
+	["circle", {
+		cx: "12",
+		cy: "15",
+		r: "1",
+		key: "1e56xg"
+	}],
+	["circle", {
+		cx: "19",
+		cy: "15",
+		r: "1",
+		key: "1a92ep"
+	}],
+	["circle", {
+		cx: "5",
+		cy: "15",
+		r: "1",
+		key: "5r1jwy"
+	}]
+]);
 var History = createLucideIcon("history", [
 	["path", {
 		d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",
@@ -32143,6 +32181,21 @@ function AppProvider({ children }) {
 		});
 		toast({ title: "Coluna removida" });
 	};
+	const reorderKanbanStages = async (reorderedStages) => {
+		if (currentUser?.role !== "admin") return;
+		setKanbanStages(reorderedStages);
+		const updates = reorderedStages.map((stage, index$1) => supabase.from("kanban_stages").update({ order_index: index$1 + 1 }).eq("id", stage.id));
+		try {
+			await Promise.all(updates);
+		} catch (e) {
+			toast({
+				title: "Erro",
+				description: "Erro ao reordenar colunas.",
+				variant: "destructive"
+			});
+			fetchStages();
+		}
+	};
 	if (session && profileLoading) return import_react.createElement("div", { className: "min-h-screen flex items-center justify-center font-medium" }, "Carregando...");
 	return import_react.createElement(AppContext.Provider, { value: {
 		currentUser,
@@ -32157,6 +32210,7 @@ function AppProvider({ children }) {
 		addKanbanStage,
 		updateKanbanStage,
 		deleteKanbanStage,
+		reorderKanbanStages,
 		refreshOrders: fetchOrders
 	} }, children);
 }
@@ -40802,7 +40856,7 @@ function OrderDetailsSheet({ order, isOpen, onClose, obsText, setObsText, onSave
 }
 var SECTORS = ["SOLUÇÕES CERÂMICAS", "STÚDIO ACRÍLICO"];
 function KanbanPage() {
-	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations, kanbanStages, addKanbanStage, updateKanbanStage, deleteKanbanStage } = useAppStore();
+	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations, kanbanStages, addKanbanStage, updateKanbanStage, deleteKanbanStage, reorderKanbanStages } = useAppStore();
 	const isAdmin = currentUser?.role === "admin";
 	const [dentist, setDentist] = (0, import_react.useState)("all");
 	const [selectedOrderId, setSelectedOrderId] = (0, import_react.useState)(null);
@@ -40814,6 +40868,8 @@ function KanbanPage() {
 	const [newColumnName, setNewColumnName] = (0, import_react.useState)("");
 	const [deleteStageData, setDeleteStageData] = (0, import_react.useState)(null);
 	const [fallbackStageName, setFallbackStageName] = (0, import_react.useState)("");
+	const [draggedStageId, setDraggedStageId] = (0, import_react.useState)(null);
+	const [dragOverStageId, setDragOverStageId] = (0, import_react.useState)(null);
 	const savingRef = (0, import_react.useRef)(false);
 	(0, import_react.useEffect)(() => {
 		if (selectedOrder) setObsText(selectedOrder.observations || "");
@@ -40824,12 +40880,33 @@ function KanbanPage() {
 		dentist
 	]);
 	const hasOrders = (0, import_react.useMemo)(() => deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false, [deleteStageData, orders]);
+	const handleColumnDrop = (e, targetStageId) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (!isAdmin) return;
+		const dragId = e.dataTransfer.getData("column-id");
+		if (dragId && dragId !== targetStageId) {
+			const oldIndex = kanbanStages.findIndex((s) => s.id === dragId);
+			const newIndex = kanbanStages.findIndex((s) => s.id === targetStageId);
+			if (oldIndex !== -1 && newIndex !== -1) {
+				const newStages = [...kanbanStages];
+				const [moved] = newStages.splice(oldIndex, 1);
+				newStages.splice(newIndex, 0, moved);
+				reorderKanbanStages(newStages.map((s, idx) => ({
+					...s,
+					orderIndex: idx + 1
+				})));
+			}
+		}
+	};
 	const handleDrop = (e, stage, sector) => {
 		e.preventDefault();
 		if (!isAdmin) return;
-		const id = e.dataTransfer.getData("text/plain");
-		const o = orders.find((x$1) => x$1.id === id);
-		if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage);
+		const cardId = e.dataTransfer.getData("card-id") || e.dataTransfer.getData("text/plain");
+		if (cardId) {
+			const o = orders.find((x$1) => x$1.id === cardId);
+			if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(cardId, stage);
+		}
 	};
 	const handleSaveStageName = async (id, oldName) => {
 		if (savingRef.current) return;
@@ -40894,9 +40971,30 @@ function KanbanPage() {
 						children: [kanbanStages.map((stage) => {
 							const cols = visibleOrders.filter((o) => o.sector === sector && o.kanbanStage === stage.name);
 							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								onDragOver: (e) => e.preventDefault(),
-								onDrop: (e) => handleDrop(e, stage.name, sector),
-								className: "w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start",
+								draggable: isAdmin && !editingStageId,
+								onDragStart: (e) => {
+									if (!isAdmin) return;
+									e.dataTransfer.setData("column-id", stage.id);
+									setDraggedStageId(stage.id);
+								},
+								onDragEnd: () => {
+									setDraggedStageId(null);
+									setDragOverStageId(null);
+								},
+								onDragOver: (e) => {
+									e.preventDefault();
+									if (draggedStageId && draggedStageId !== stage.id) setDragOverStageId(stage.id);
+								},
+								onDragLeave: () => {
+									if (dragOverStageId === stage.id) setDragOverStageId(null);
+								},
+								onDrop: (e) => {
+									e.preventDefault();
+									setDragOverStageId(null);
+									if (e.dataTransfer.getData("column-id")) handleColumnDrop(e, stage.id);
+									else handleDrop(e, stage.name, sector);
+								},
+								className: cn("w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200", draggedStageId === stage.id && "opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none", dragOverStageId === stage.id && draggedStageId && "border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]"),
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 									className: "flex items-center justify-between px-1 mb-1 group",
 									children: [editingStageId === stage.id ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
@@ -40914,26 +41012,33 @@ function KanbanPage() {
 										className: "h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
 									}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										className: "flex items-center gap-1.5 flex-1 min-w-0 pr-2",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
-											onClick: () => {
-												if (isAdmin) {
-													setEditingStageId(stage.id);
-													setEditStageName(stage.name);
-												}
-											},
-											className: cn("font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5", isAdmin && "cursor-pointer hover:text-primary transition-colors"),
-											title: isAdmin ? "Clique para renomear" : "",
-											children: [stage.name, isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, { className: "w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" })]
-										}), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-											variant: "ghost",
-											size: "icon",
-											className: "h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0",
-											onClick: () => {
-												setDeleteStageData(stage);
-												setFallbackStageName(kanbanStages.find((s) => s.id !== stage.id)?.name || "");
-											},
-											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "w-3 h-3" })
-										})]
+										children: [
+											isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GripHorizontal, {
+												className: "w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0",
+												title: "Arraste para reordenar"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
+												onClick: () => {
+													if (isAdmin) {
+														setEditingStageId(stage.id);
+														setEditStageName(stage.name);
+													}
+												},
+												className: cn("font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5", isAdmin && "cursor-pointer hover:text-primary transition-colors"),
+												title: isAdmin ? "Clique para renomear" : "",
+												children: [stage.name, isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, { className: "w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" })]
+											}),
+											isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+												variant: "ghost",
+												size: "icon",
+												className: "h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0",
+												onClick: () => {
+													setDeleteStageData(stage);
+													setFallbackStageName(kanbanStages.find((s) => s.id !== stage.id)?.name || "");
+												},
+												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "w-3 h-3" })
+											})
+										]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary shrink-0",
 										children: cols.length
@@ -40942,7 +41047,11 @@ function KanbanPage() {
 									className: "flex-1 flex flex-col gap-2 min-h-[150px]",
 									children: cols.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										draggable: isAdmin,
-										onDragStart: (e) => e.dataTransfer.setData("text/plain", o.id),
+										onDragStart: (e) => {
+											e.stopPropagation();
+											e.dataTransfer.setData("card-id", o.id);
+											e.dataTransfer.setData("text/plain", o.id);
+										},
 										onClick: () => isAdmin && setSelectedOrderId(o.id),
 										className: cn("bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden", isAdmin && "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md"),
 										children: [
@@ -41125,4 +41234,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Drsdj0wS.js.map
+//# sourceMappingURL=index-DetXLTCP.js.map

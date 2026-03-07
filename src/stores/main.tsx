@@ -24,6 +24,7 @@ interface AppState {
   addKanbanStage: (name: string) => Promise<void>
   updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
+  reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
   refreshOrders: () => void
 }
 
@@ -273,6 +274,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Coluna removida' })
   }
 
+  const reorderKanbanStages = async (reorderedStages: Stage[]) => {
+    if (currentUser?.role !== 'admin') return
+    setKanbanStages(reorderedStages)
+    const updates = reorderedStages.map((stage, index) =>
+      supabase
+        .from('kanban_stages' as any)
+        .update({ order_index: index + 1 })
+        .eq('id', stage.id),
+    )
+    try {
+      await Promise.all(updates)
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Erro ao reordenar colunas.', variant: 'destructive' })
+      fetchStages()
+    }
+  }
+
   if (session && profileLoading)
     return React.createElement(
       'div',
@@ -296,6 +314,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addKanbanStage,
         updateKanbanStage,
         deleteKanbanStage,
+        reorderKanbanStages,
         refreshOrders: fetchOrders,
       },
     },

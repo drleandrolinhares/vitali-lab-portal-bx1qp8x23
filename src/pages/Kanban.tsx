@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2, Edit2 } from 'lucide-react'
+import { Users, Plus, Trash2, Edit2, GripHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +36,7 @@ export default function KanbanPage() {
     addKanbanStage,
     updateKanbanStage,
     deleteKanbanStage,
+    reorderKanbanStages,
   } = useAppStore()
   const isAdmin = currentUser?.role === 'admin'
   const [dentist, setDentist] = useState('all')
@@ -52,6 +53,10 @@ export default function KanbanPage() {
   const [newColumnName, setNewColumnName] = useState('')
   const [deleteStageData, setDeleteStageData] = useState<Stage | null>(null)
   const [fallbackStageName, setFallbackStageName] = useState<string>('')
+
+  const [draggedStageId, setDraggedStageId] = useState<string | null>(null)
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null)
+
   const savingRef = useRef(false)
 
   useEffect(() => {
@@ -68,12 +73,31 @@ export default function KanbanPage() {
     [deleteStageData, orders],
   )
 
+  const handleColumnDrop = (e: React.DragEvent, targetStageId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isAdmin) return
+    const dragId = e.dataTransfer.getData('column-id')
+    if (dragId && dragId !== targetStageId) {
+      const oldIndex = kanbanStages.findIndex((s) => s.id === dragId)
+      const newIndex = kanbanStages.findIndex((s) => s.id === targetStageId)
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newStages = [...kanbanStages]
+        const [moved] = newStages.splice(oldIndex, 1)
+        newStages.splice(newIndex, 0, moved)
+        reorderKanbanStages(newStages.map((s, idx) => ({ ...s, orderIndex: idx + 1 })))
+      }
+    }
+  }
+
   const handleDrop = (e: React.DragEvent, stage: string, sector: string) => {
     e.preventDefault()
     if (!isAdmin) return
-    const id = e.dataTransfer.getData('text/plain')
-    const o = orders.find((x) => x.id === id)
-    if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage)
+    const cardId = e.dataTransfer.getData('card-id') || e.dataTransfer.getData('text/plain')
+    if (cardId) {
+      const o = orders.find((x) => x.id === cardId)
+      if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(cardId, stage)
+    }
   }
 
   const handleSaveStageName = async (id: string, oldName: string) => {
@@ -140,9 +164,39 @@ export default function KanbanPage() {
                 return (
                   <div
                     key={stage.id}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleDrop(e, stage.name, sector)}
-                    className="w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start"
+                    draggable={isAdmin && !editingStageId}
+                    onDragStart={(e) => {
+                      if (!isAdmin) return
+                      e.dataTransfer.setData('column-id', stage.id)
+                      setDraggedStageId(stage.id)
+                    }}
+                    onDragEnd={() => {
+                      setDraggedStageId(null)
+                      setDragOverStageId(null)
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      if (draggedStageId && draggedStageId !== stage.id)
+                        setDragOverStageId(stage.id)
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverStageId === stage.id) setDragOverStageId(null)
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      setDragOverStageId(null)
+                      const columnId = e.dataTransfer.getData('column-id')
+                      if (columnId) handleColumnDrop(e, stage.id)
+                      else handleDrop(e, stage.name, sector)
+                    }}
+                    className={cn(
+                      'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
+                      draggedStageId === stage.id &&
+                        'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
+                      dragOverStageId === stage.id &&
+                        draggedStageId &&
+                        'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
+                    )}
                   >
                     <div className="flex items-center justify-between px-1 mb-1 group">
                       {editingStageId === stage.id ? (
@@ -162,6 +216,12 @@ export default function KanbanPage() {
                         />
                       ) : (
                         <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
+                          {isAdmin && (
+                            <GripHorizontal
+                              className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
+                              title="Arraste para reordenar"
+                            />
+                          )}
                           <h4
                             onClick={() => {
                               if (isAdmin) {
@@ -206,7 +266,11 @@ export default function KanbanPage() {
                         <div
                           key={o.id}
                           draggable={isAdmin}
-                          onDragStart={(e) => e.dataTransfer.setData('text/plain', o.id)}
+                          onDragStart={(e) => {
+                            e.stopPropagation()
+                            e.dataTransfer.setData('card-id', o.id)
+                            e.dataTransfer.setData('text/plain', o.id)
+                          }}
                           onClick={() => isAdmin && setSelectedOrderId(o.id)}
                           className={cn(
                             'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
