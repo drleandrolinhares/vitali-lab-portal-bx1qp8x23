@@ -40053,6 +40053,24 @@ var Checkbox = import_react.forwardRef(({ className, ...props }, ref) => /* @__P
 	})
 }));
 Checkbox.displayName = Checkbox$1.displayName;
+var PasswordInput = ({ id, value, onChange, showPassword, onToggle }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+	className: "relative",
+	children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+		id,
+		type: showPassword ? "text" : "password",
+		value,
+		onChange,
+		required: true,
+		minLength: 6
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+		type: "button",
+		variant: "ghost",
+		size: "icon",
+		className: "absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground",
+		onClick: onToggle,
+		children: showPassword ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EyeOff, { className: "h-4 w-4" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, { className: "h-4 w-4" })
+	})]
+});
 function AuthPage() {
 	const { signIn, signUp, resetPassword } = useAuth();
 	const location = useLocation();
@@ -40081,24 +40099,6 @@ function AuthPage() {
 		else setMessage("Ação concluída com sucesso.");
 		setLoading(false);
 	};
-	const PasswordInput = ({ id }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "relative",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-			id,
-			type: showPassword ? "text" : "password",
-			value: password,
-			onChange: (e) => setPassword(e.target.value),
-			required: true,
-			minLength: 6
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-			type: "button",
-			variant: "ghost",
-			size: "icon",
-			className: "absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground",
-			onClick: () => setShowPassword(!showPassword),
-			children: showPassword ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EyeOff, { className: "h-4 w-4" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, { className: "h-4 w-4" })
-		})]
-	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "min-h-screen flex items-center justify-center bg-muted/30 p-4",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
@@ -40214,7 +40214,13 @@ function AuthPage() {
 												onClick: () => setView("forgot_password"),
 												children: "Esqueci minha senha"
 											})]
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasswordInput, { id: "login-password" })]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasswordInput, {
+											id: "login-password",
+											value: password,
+											onChange: (e) => setPassword(e.target.value),
+											showPassword,
+											onToggle: () => setShowPassword(!showPassword)
+										})]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										className: "flex items-center space-x-2 py-2",
@@ -40279,7 +40285,13 @@ function AuthPage() {
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										className: "space-y-2",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Senha" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasswordInput, { id: "reg-password" })]
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Senha" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasswordInput, {
+											id: "reg-password",
+											value: password,
+											onChange: (e) => setPassword(e.target.value),
+											showPassword,
+											onToggle: () => setShowPassword(!showPassword)
+										})]
 									}),
 									error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 										className: "text-sm text-red-500 font-medium",
@@ -40730,4 +40742,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-VjXfn_qf.js.map
+//# sourceMappingURL=index-CZBAXr9k.js.map

@@ -11,6 +11,40 @@ import { ShieldAlert, Eye, EyeOff } from 'lucide-react'
 
 type AuthView = 'login' | 'register' | 'forgot_password'
 
+const PasswordInput = ({
+  id,
+  value,
+  onChange,
+  showPassword,
+  onToggle,
+}: {
+  id: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  showPassword: boolean
+  onToggle: () => void
+}) => (
+  <div className="relative">
+    <Input
+      id={id}
+      type={showPassword ? 'text' : 'password'}
+      value={value}
+      onChange={onChange}
+      required
+      minLength={6}
+    />
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
+      onClick={onToggle}
+    >
+      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </Button>
+  </div>
+)
+
 export default function AuthPage() {
   const { signIn, signUp, resetPassword } = useAuth()
   const location = useLocation()
@@ -42,28 +76,6 @@ export default function AuthPage() {
     else setMessage('Ação concluída com sucesso.')
     setLoading(false)
   }
-
-  const PasswordInput = ({ id }: { id: string }) => (
-    <div className="relative">
-      <Input
-        id={id}
-        type={showPassword ? 'text' : 'password'}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-        minLength={6}
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
-        onClick={() => setShowPassword(!showPassword)}
-      >
-        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </Button>
-    </div>
-  )
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
@@ -160,7 +172,13 @@ export default function AuthPage() {
                         Esqueci minha senha
                       </Button>
                     </div>
-                    <PasswordInput id="login-password" />
+                    <PasswordInput
+                      id="login-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      showPassword={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                    />
                   </div>
                   <div className="flex items-center space-x-2 py-2">
                     <Checkbox
@@ -210,7 +228,13 @@ export default function AuthPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Senha</Label>
-                      <PasswordInput id="reg-password" />
+                      <PasswordInput
+                        id="reg-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        showPassword={showPassword}
+                        onToggle={() => setShowPassword(!showPassword)}
+                      />
                     </div>
                     {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                     {message && <p className="text-sm text-green-600 font-medium">{message}</p>}

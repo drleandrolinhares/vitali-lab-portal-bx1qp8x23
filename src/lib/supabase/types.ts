@@ -48,10 +48,12 @@ export type Database = {
           dentist_id: string
           friendly_id: string
           id: string
+          kanban_stage: string
           material: string
           observations: string | null
           patient_name: string
           scale_used: string | null
+          sector: string
           shipping_details: string | null
           shipping_method: string
           status: string
@@ -64,10 +66,12 @@ export type Database = {
           dentist_id: string
           friendly_id?: string
           id?: string
+          kanban_stage?: string
           material: string
           observations?: string | null
           patient_name: string
           scale_used?: string | null
+          sector?: string
           shipping_details?: string | null
           shipping_method: string
           status?: string
@@ -80,10 +84,12 @@ export type Database = {
           dentist_id?: string
           friendly_id?: string
           id?: string
+          kanban_stage?: string
           material?: string
           observations?: string | null
           patient_name?: string
           scale_used?: string | null
+          sector?: string
           shipping_details?: string | null
           shipping_method?: string
           status?: string
@@ -292,6 +298,8 @@ export const Constants = {
 //   observations: text (nullable)
 //   status: text (not null, default: 'pending'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+//   sector: text (not null, default: 'SOLUÇÕES CERÂMICAS'::text)
+//   kanban_stage: text (not null, default: 'TRIAGEM'::text)
 // Table: profiles
 //   id: uuid (not null)
 //   email: text (not null)
