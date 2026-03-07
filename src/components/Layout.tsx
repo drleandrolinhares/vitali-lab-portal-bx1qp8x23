@@ -118,7 +118,7 @@ function MainHeader() {
   const { currentUser } = useAppStore()
   if (!currentUser) return null
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6">
       <SidebarTrigger />
       <div className="flex flex-1 items-center justify-between">
         <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
@@ -143,7 +143,7 @@ export default function Layout() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <div className="flex flex-1 flex-col min-w-0 bg-muted/30">
+      <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background">
         <MainHeader />
         <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in">
           <Outlet />

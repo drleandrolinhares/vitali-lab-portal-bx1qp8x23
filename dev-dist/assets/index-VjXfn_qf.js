@@ -37613,7 +37613,7 @@ function MainHeader() {
 	const { currentUser } = useAppStore();
 	if (!currentUser) return null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		className: "sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6",
+		className: "sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex flex-1 items-center justify-between",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
@@ -37641,7 +37641,7 @@ function MainHeader() {
 }
 function Layout() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarProvider, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppSidebar, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-1 flex-col min-w-0 bg-muted/30",
+		className: "flex flex-1 flex-col min-w-0 bg-white dark:bg-background",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MainHeader, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
 			className: "flex-1 p-4 sm:p-6 overflow-auto animate-fade-in",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {})
@@ -40577,22 +40577,22 @@ function KanbanPage() {
 		if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)]",
+		className: "space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 				className: "text-2xl font-bold tracking-tight text-primary",
 				children: "Evolução dos Trabalhos"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-muted-foreground",
+				className: "text-slate-500 dark:text-muted-foreground",
 				children: "Acompanhe o progresso do fluxo de produção."
 			})] }), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex items-center gap-2 w-full sm:w-auto",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-muted-foreground hidden sm:block" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 					value: dentist,
 					onValueChange: setDentist,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-						className: "w-full sm:w-64 bg-white border-primary/20",
+						className: "w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Filtrar por Dentista" })
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
 						value: "all",
@@ -40608,7 +40608,7 @@ function KanbanPage() {
 			children: SECTORS.map((sector) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "space-y-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-					className: "text-lg font-bold text-foreground flex items-center gap-2",
+					className: "text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-2 h-6 bg-primary rounded-full" }),
 						" ",
@@ -40621,14 +40621,14 @@ function KanbanPage() {
 						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							onDragOver: (e) => e.preventDefault(),
 							onDrop: (e) => handleDrop(e, stage, sector),
-							className: "w-[300px] shrink-0 bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-border/50 snap-start",
+							className: "w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "flex items-center justify-between px-1",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
-									className: "font-semibold text-xs tracking-wide uppercase text-muted-foreground",
+									className: "font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground",
 									children: stage
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "bg-background px-2 py-0.5 rounded text-xs font-bold border text-primary",
+									className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary",
 									children: cols.length
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -40636,13 +40636,13 @@ function KanbanPage() {
 								children: cols.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 									draggable: isAdmin,
 									onDragStart: (e) => e.dataTransfer.setData("text/plain", o.id),
-									className: `bg-background p-3.5 rounded-lg border shadow-sm transition-all relative overflow-hidden ${isAdmin ? "cursor-grab active:cursor-grabbing hover:border-primary/50 hover:shadow-md" : ""}`,
+									className: `bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden ${isAdmin ? "cursor-grab active:cursor-grabbing hover:border-primary/50 hover:shadow-md" : ""}`,
 									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" }),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 											className: "flex justify-between items-start mb-2 pl-1",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "text-xs font-bold text-muted-foreground",
+												className: "text-xs font-bold text-slate-500 dark:text-muted-foreground",
 												children: o.friendlyId
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, {
 												status: o.status,
@@ -40650,16 +40650,16 @@ function KanbanPage() {
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "font-medium text-sm truncate pl-1",
+											className: "font-medium text-sm truncate pl-1 text-slate-900 dark:text-foreground",
 											title: o.patientName,
 											children: o.patientName
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-xs text-muted-foreground mt-1 truncate pl-1",
+											className: "text-xs text-slate-500 dark:text-muted-foreground mt-1 truncate pl-1",
 											children: o.workType
 										}),
 										isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-[10px] font-medium text-muted-foreground mt-3 pt-2 border-t truncate pl-1",
+											className: "text-[10px] font-medium text-slate-400 dark:text-muted-foreground mt-3 pt-2 border-t border-slate-100 dark:border-border truncate pl-1",
 											children: o.dentistName
 										})
 									]
@@ -40730,4 +40730,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-A-ulYJLK.js.map
+//# sourceMappingURL=index-VjXfn_qf.js.map

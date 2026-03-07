@@ -1829,6 +1829,16 @@ section[aria-label='Notifications alt+T'] {
   border-color: hsl(var(--sidebar-border));
 }
 
+.border-slate-100{
+  --tw-border-opacity: 1;
+  border-color: rgb(241 245 249 / var(--tw-border-opacity, 1));
+}
+
+.border-slate-200{
+  --tw-border-opacity: 1;
+  border-color: rgb(226 232 240 / var(--tw-border-opacity, 1));
+}
+
 .border-slate-500\/20{
   border-color: rgb(100 116 139 / 0.2);
 }
@@ -1878,10 +1888,6 @@ section[aria-label='Notifications alt+T'] {
 
 .bg-background{
   background-color: hsl(var(--background));
-}
-
-.bg-background\/95{
-  background-color: hsl(var(--background) / 0.95);
 }
 
 .bg-black\/80{
@@ -1948,10 +1954,6 @@ section[aria-label='Notifications alt+T'] {
   background-color: hsl(var(--muted) / 0.3);
 }
 
-.bg-muted\/40{
-  background-color: hsl(var(--muted) / 0.4);
-}
-
 .bg-muted\/50{
   background-color: hsl(var(--muted) / 0.5);
 }
@@ -1988,6 +1990,10 @@ section[aria-label='Notifications alt+T'] {
   background-color: hsl(var(--sidebar-border));
 }
 
+.bg-slate-50\/60{
+  background-color: rgb(248 250 252 / 0.6);
+}
+
 .bg-slate-500\/10{
   background-color: rgb(100 116 139 / 0.1);
 }
@@ -2004,6 +2010,10 @@ section[aria-label='Notifications alt+T'] {
 .bg-white{
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
+.bg-white\/95{
+  background-color: rgb(255 255 255 / 0.95);
 }
 
 .bg-gradient-to-r{
@@ -2528,9 +2538,29 @@ section[aria-label='Notifications alt+T'] {
   color: hsl(var(--sidebar-foreground) / 0.7);
 }
 
+.text-slate-400{
+  --tw-text-opacity: 1;
+  color: rgb(148 163 184 / var(--tw-text-opacity, 1));
+}
+
+.text-slate-500{
+  --tw-text-opacity: 1;
+  color: rgb(100 116 139 / var(--tw-text-opacity, 1));
+}
+
 .text-slate-600{
   --tw-text-opacity: 1;
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
+}
+
+.text-slate-800{
+  --tw-text-opacity: 1;
+  color: rgb(30 41 59 / var(--tw-text-opacity, 1));
+}
+
+.text-slate-900{
+  --tw-text-opacity: 1;
+  color: rgb(15 23 42 / var(--tw-text-opacity, 1));
 }
 
 .text-white{
@@ -3907,6 +3937,14 @@ section[aria-label='Notifications alt+T'] {
   color: hsl(var(--sidebar-accent-foreground));
 }
 
+.dark\:border-border:is(.dark *){
+  border-color: hsl(var(--border));
+}
+
+.dark\:border-border\/50:is(.dark *){
+  border-color: hsl(var(--border) / 0.5);
+}
+
 .dark\:border-destructive:is(.dark *){
   border-color: hsl(var(--destructive));
 }
@@ -3915,8 +3953,32 @@ section[aria-label='Notifications alt+T'] {
   border-color: rgb(16 185 129 / 0.2);
 }
 
+.dark\:bg-background:is(.dark *){
+  background-color: hsl(var(--background));
+}
+
+.dark\:bg-background\/95:is(.dark *){
+  background-color: hsl(var(--background) / 0.95);
+}
+
 .dark\:bg-emerald-500\/10:is(.dark *){
   background-color: rgb(16 185 129 / 0.1);
+}
+
+.dark\:bg-muted\/40:is(.dark *){
+  background-color: hsl(var(--muted) / 0.4);
+}
+
+.dark\:bg-primary\/40:is(.dark *){
+  background-color: hsl(var(--primary) / 0.4);
+}
+
+.dark\:text-foreground:is(.dark *){
+  color: hsl(var(--foreground));
+}
+
+.dark\:text-muted-foreground:is(.dark *){
+  color: hsl(var(--muted-foreground));
 }
 
 .dark\:text-white:is(.dark *){
