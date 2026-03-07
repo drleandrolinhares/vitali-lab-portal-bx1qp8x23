@@ -312,17 +312,17 @@ export const Constants = {
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: order_history
-//   Policy "Dentists can view own order history, lab can view all" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'receptionist'::text))))))))
-//   Policy "Lab can insert order history, dentists can insert for own" (INSERT, PERMISSIVE) roles={authenticated}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'receptionist'::text))))))))
+//   Policy "Dentists can view own order history, lab can view all" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
+//   Policy "Lab can insert order history, dentists can insert for own" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
 // Table: orders
 //   Policy "Dentists can insert own orders" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (dentist_id = auth.uid())
-//   Policy "Dentists can view own orders, lab can view all" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'receptionist'::text)))))
-//   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={authenticated}
-//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'receptionist'::text)))))
+//   Policy "Dentists can view own orders, lab can view all" (SELECT, PERMISSIVE) roles={public}
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
+//   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={public}
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
 // Table: profiles
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true

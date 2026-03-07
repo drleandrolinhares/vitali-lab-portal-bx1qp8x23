@@ -19322,6 +19322,20 @@ var Search = createLucideIcon("search", [["path", {
 	r: "8",
 	key: "4ej97u"
 }]]);
+var ShieldAlert = createLucideIcon("shield-alert", [
+	["path", {
+		d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+		key: "oel41y"
+	}],
+	["path", {
+		d: "M12 8v4",
+		key: "1got3b"
+	}],
+	["path", {
+		d: "M12 16h.01",
+		key: "1drbdi"
+	}]
+]);
 var TrendingUp = createLucideIcon("trending-up", [["path", {
 	d: "M16 7h6v6",
 	key: "box55l"
@@ -36538,7 +36552,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				value,
 				getSnapshot
 			]);
-			useEffect$4(function() {
+			useEffect$5(function() {
 				checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 				return subscribe$1(function() {
 					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
@@ -36561,7 +36575,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 			return getSnapshot();
 		}
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$8 = React$3.useState, useEffect$4 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$8 = React$3.useState, useEffect$5 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
 		exports.useSyncExternalStore = void 0 !== React$3.useSyncExternalStore ? React$3.useSyncExternalStore : shim;
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
 	})();
@@ -39983,6 +39997,9 @@ var Checkbox = import_react.forwardRef(({ className, ...props }, ref) => /* @__P
 Checkbox.displayName = Checkbox$1.displayName;
 function AuthPage() {
 	const { signIn, signUp, resetPassword } = useAuth();
+	const location = useLocation();
+	const navigate = useNavigate();
+	const isAdminView = location.pathname === "/dashboard";
 	const [view, setView] = (0, import_react.useState)("login");
 	const [email, setEmail] = (0, import_react.useState)("");
 	const [password, setPassword] = (0, import_react.useState)("");
@@ -39992,6 +40009,9 @@ function AuthPage() {
 	const [error, setError] = (0, import_react.useState)("");
 	const [message$1, setMessage] = (0, import_react.useState)("");
 	const [loading, setLoading] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		if (isAdminView && view === "register") setView("login");
+	}, [isAdminView, view]);
 	const handleLogin = async (e) => {
 		e.preventDefault();
 		setError("");
@@ -40031,7 +40051,10 @@ function AuthPage() {
 			className: "w-full max-w-md shadow-elevation overflow-hidden border-0",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 				className: "space-y-4 items-center text-center pb-8 bg-white pt-10",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				children: [isAdminView ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex items-center justify-center mb-2 bg-slate-900 text-white p-4 rounded-full shadow-lg",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, { className: "w-8 h-8" })
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex items-center justify-center gap-2 font-display tracking-tight text-4xl md:text-5xl mb-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 						className: "font-extrabold text-primary",
@@ -40044,15 +40067,15 @@ function AuthPage() {
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
 						className: "text-xl md:text-2xl font-bold tracking-tight text-primary",
-						children: "REQUISIÇÃO DIGITAL"
+						children: isAdminView ? "PAINEL ADMINISTRATIVO" : "REQUISIÇÃO DIGITAL"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
 						className: "text-base",
-						children: "Acesse o portal do laboratório"
+						children: isAdminView ? "Acesso restrito à gestão do laboratório" : "Acesse o portal do laboratório"
 					})]
 				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
 				className: "pt-6 bg-card",
-				children: view === "forgot_password" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				children: [view === "forgot_password" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "space-y-4 animate-fade-in",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "text-center mb-4 space-y-2",
@@ -40117,7 +40140,7 @@ function AuthPage() {
 					},
 					className: "w-full",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
+						!isAdminView && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
 							className: "grid w-full grid-cols-2 mb-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
 								value: "login",
@@ -40128,6 +40151,13 @@ function AuthPage() {
 								className: "data-[state=active]:text-primary",
 								children: "Cadastro"
 							})]
+						}),
+						isAdminView && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mb-6 flex justify-center",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-sm font-medium text-muted-foreground uppercase tracking-widest bg-muted px-4 py-1.5 rounded-full",
+								children: "Acesso Restrito"
+							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
 							value: "login",
@@ -40200,7 +40230,7 @@ function AuthPage() {
 								]
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+						!isAdminView && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
 							value: "register",
 							className: "animate-fade-in",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
@@ -40276,7 +40306,24 @@ function AuthPage() {
 							})
 						})
 					]
-				})
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-8 border-t pt-6 flex flex-col items-center",
+					children: !isAdminView ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						variant: "ghost",
+						size: "sm",
+						className: "text-xs text-muted-foreground hover:text-primary",
+						onClick: () => navigate("/dashboard"),
+						children: "Acesso Administrativo (Gestão)"
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						variant: "ghost",
+						size: "sm",
+						className: "text-xs text-muted-foreground hover:text-primary",
+						onClick: () => navigate("/"),
+						children: "Voltar para Portal de Dentistas"
+					})
+				})]
 			})]
 		})
 	});
@@ -40566,4 +40613,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Csgsp4cj.js.map
+//# sourceMappingURL=index-CZz05-y1.js.map

@@ -865,6 +865,10 @@ section[aria-label='Notifications alt+T'] {
   margin-top: 1rem;
 }
 
+.mt-8{
+  margin-top: 2rem;
+}
+
 .mt-auto{
   margin-top: auto;
 }
@@ -1928,6 +1932,11 @@ section[aria-label='Notifications alt+T'] {
   background-color: rgb(100 116 139 / 0.1);
 }
 
+.bg-slate-900{
+  --tw-bg-opacity: 1;
+  background-color: rgb(15 23 42 / var(--tw-bg-opacity, 1));
+}
+
 .bg-transparent{
   background-color: transparent;
 }
@@ -2450,6 +2459,11 @@ section[aria-label='Notifications alt+T'] {
 .text-slate-600{
   --tw-text-opacity: 1;
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
+}
+
+.text-white{
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
 .underline{
