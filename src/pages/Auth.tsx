@@ -32,7 +32,7 @@ export default function AuthPage() {
     if (isAdminView && view === 'register') setView('login')
   }, [isAdminView, view])
 
-  const handleAction = async (e: React.FormEvent, action: Function) => {
+  const handleAction = async (e: React.FormEvent, action: () => Promise<{ error: any }>) => {
     e.preventDefault()
     setError('')
     setMessage('')
