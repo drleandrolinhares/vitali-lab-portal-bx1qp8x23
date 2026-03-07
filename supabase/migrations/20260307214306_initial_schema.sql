@@ -76,7 +76,7 @@ CREATE POLICY "Lab can insert order history, dentists can insert for own" ON ord
 -- Triggers for User and Order History
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, name, role, clinic)
   VALUES (
@@ -88,27 +88,27 @@ BEGIN
   );
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 CREATE OR REPLACE FUNCTION public.handle_new_order()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.order_history (order_id, status)
   VALUES (NEW.id, NEW.status);
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE TRIGGER on_order_created
   AFTER INSERT ON orders
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_order();
 
 -- Insert Seed Data
-DO $
+DO $$
 DECLARE
   lab_id uuid := gen_random_uuid();
   dentist_id uuid := gen_random_uuid();
@@ -144,5 +144,4 @@ BEGIN
     false, 'authenticated', 'authenticated',
     '', '', '', '', '', NULL, '', '', ''
   );
-END $;
-
+END $$;
