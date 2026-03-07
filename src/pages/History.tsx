@@ -1,0 +1,97 @@
+import { useAppStore } from '@/stores/main'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { StatusBadge } from '@/components/StatusBadge'
+import { Input } from '@/components/ui/input'
+import { Search } from 'lucide-react'
+import { useState } from 'react'
+import { format } from 'date-fns'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+
+export default function HistoryPage() {
+  const { orders, currentUser } = useAppStore()
+  const [search, setSearch] = useState('')
+
+  let displayOrders = orders
+  if (currentUser.role === 'dentist') {
+    displayOrders = orders.filter((o) => o.dentistName === currentUser.name)
+  }
+
+  const filtered = displayOrders.filter(
+    (o) =>
+      o.patientName.toLowerCase().includes(search.toLowerCase()) ||
+      o.id.toLowerCase().includes(search.toLowerCase()),
+  )
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Histórico de Pedidos</h2>
+          <p className="text-muted-foreground">Consulte todos os casos registrados.</p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por paciente ou ID..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <Card className="shadow-subtle">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">ID</TableHead>
+                {currentUser.role === 'lab' && <TableHead>Clínica/Dentista</TableHead>}
+                <TableHead>Paciente</TableHead>
+                <TableHead>Trabalho</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right pr-6">Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="pl-6 font-medium">{order.id}</TableCell>
+                  {currentUser.role === 'lab' && <TableCell>{order.dentistName}</TableCell>}
+                  <TableCell>{order.patientName}</TableCell>
+                  <TableCell>{order.workType}</TableCell>
+                  <TableCell>{format(new Date(order.createdAt), 'dd/MM/yyyy')}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={order.status} />
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/order/${order.id}`}>Detalhes</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Nenhum pedido encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
