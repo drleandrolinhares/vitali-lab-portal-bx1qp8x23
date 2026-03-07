@@ -15,7 +15,7 @@ const config: Record<OrderStatus, { label: string; icon: React.ElementType; clas
     className: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20',
   },
   completed: {
-    label: 'Concluído',
+    label: 'Finalizado',
     icon: CheckCircle2,
     className: 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20',
   },

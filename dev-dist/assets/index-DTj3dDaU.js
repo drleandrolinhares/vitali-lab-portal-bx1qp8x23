@@ -32007,15 +32007,40 @@ function AppProvider({ children }) {
 		fetchOrders();
 	};
 	const updateOrderKanbanStage = async (dbId, stage) => {
-		const { error } = await supabase.from("orders").update({ kanban_stage: stage }).eq("id", dbId);
+		if (!currentUser) return;
+		let newStatus = "in_production";
+		if (stage === "TRIAGEM" || stage === "PENDÊNCIAS") newStatus = "pending";
+		else if (stage === "PRONTO PARA ENVIO") newStatus = "completed";
+		const { error } = await supabase.from("orders").update({
+			kanban_stage: stage,
+			status: newStatus
+		}).eq("id", dbId);
 		if (error) return toast({
 			title: "Erro",
 			description: "Erro ao mover cartão",
 			variant: "destructive"
 		});
+		await supabase.from("order_history").insert({
+			order_id: dbId,
+			status: newStatus,
+			note: `${currentUser.name} moveu o cartão para ${stage}`
+		});
 		toast({
 			title: "Cartão Movido",
 			description: `Avançado para: ${stage}.`
+		});
+		fetchOrders();
+	};
+	const updateOrderObservations = async (dbId, observations) => {
+		const { error } = await supabase.from("orders").update({ observations }).eq("id", dbId);
+		if (error) return toast({
+			title: "Erro",
+			description: "Erro ao atualizar observações",
+			variant: "destructive"
+		});
+		toast({
+			title: "Observações salvas",
+			description: `As observações foram atualizadas com sucesso.`
 		});
 		fetchOrders();
 	};
@@ -32028,6 +32053,7 @@ function AppProvider({ children }) {
 		addOrder,
 		updateOrderStatus,
 		updateOrderKanbanStage,
+		updateOrderObservations,
 		refreshOrders: fetchOrders
 	} }, children);
 }
@@ -32225,7 +32251,7 @@ var config = {
 		className: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20"
 	},
 	completed: {
-		label: "Concluído",
+		label: "Finalizado",
 		icon: CircleCheck,
 		className: "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20"
 	},
@@ -36600,7 +36626,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				value,
 				getSnapshot
 			]);
-			useEffect$5(function() {
+			useEffect$6(function() {
 				checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 				return subscribe$1(function() {
 					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
@@ -36623,7 +36649,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 			return getSnapshot();
 		}
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$9 = React$3.useState, useEffect$5 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$9 = React$3.useState, useEffect$6 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
 		exports.useSyncExternalStore = void 0 !== React$3.useSyncExternalStore ? React$3.useSyncExternalStore : shim;
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
 	})();
@@ -40569,9 +40595,15 @@ var STAGES = [
 ];
 var SECTORS = ["SOLUÇÕES CERÂMICAS", "STÚDIO ACRÍLICO"];
 function KanbanPage() {
-	const { orders, currentUser, updateOrderKanbanStage } = useAppStore();
+	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations } = useAppStore();
 	const isAdmin = currentUser?.role === "admin";
 	const [dentist, setDentist] = (0, import_react.useState)("all");
+	const [selectedOrderId, setSelectedOrderId] = (0, import_react.useState)(null);
+	const selectedOrder = (0, import_react.useMemo)(() => orders.find((o) => o.id === selectedOrderId), [orders, selectedOrderId]);
+	const [obsText, setObsText] = (0, import_react.useState)("");
+	(0, import_react.useEffect)(() => {
+		if (selectedOrder) setObsText(selectedOrder.observations || "");
+	}, [selectedOrder]);
 	const dentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort();
 	const visibleOrders = (0, import_react.useMemo)(() => {
 		if (!isAdmin || dentist === "all") return orders;
@@ -40588,100 +40620,175 @@ function KanbanPage() {
 		const o = orders.find((x$1) => x$1.id === id);
 		if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage);
 	};
+	const handleSaveObs = () => {
+		if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText);
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-				className: "text-2xl font-bold tracking-tight text-primary",
-				children: "Evolução dos Trabalhos"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-slate-500 dark:text-muted-foreground",
-				children: "Acompanhe o progresso do fluxo de produção."
-			})] }), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-center gap-2 w-full sm:w-auto",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-					value: dentist,
-					onValueChange: setDentist,
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-						className: "w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Filtrar por Dentista" })
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-						value: "all",
-						children: "Todos os Dentistas"
-					}), dentists.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-						value: d,
-						children: d
-					}, d))] })]
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-2xl font-bold tracking-tight text-primary",
+					children: "Evolução dos Trabalhos"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-slate-500 dark:text-muted-foreground",
+					children: "Acompanhe o progresso do fluxo de produção."
+				})] }), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-2 w-full sm:w-auto",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+						value: dentist,
+						onValueChange: setDentist,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+							className: "w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Filtrar por Dentista" })
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+							value: "all",
+							children: "Todos os Dentistas"
+						}), dentists.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+							value: d,
+							children: d
+						}, d))] })]
+					})]
 				})]
-			})]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "flex-1 overflow-y-auto space-y-10 pb-6 pr-2",
-			children: SECTORS.map((sector) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "space-y-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-					className: "text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-2 h-6 bg-primary rounded-full" }),
-						" ",
-						sector
-					]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex gap-4 overflow-x-auto pb-4 snap-x",
-					children: STAGES.map((stage) => {
-						const cols = visibleOrders.filter((o) => o.sector === sector && o.kanbanStage === stage);
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							onDragOver: (e) => e.preventDefault(),
-							onDrop: (e) => handleDrop(e, stage, sector),
-							className: "w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-center justify-between px-1",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
-									className: "font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground",
-									children: stage
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary",
-									children: cols.length
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex-1 overflow-y-auto space-y-10 pb-6 pr-2",
+				children: SECTORS.map((sector) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "space-y-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+						className: "text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-2 h-6 bg-primary rounded-full" }),
+							" ",
+							sector
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex gap-4 overflow-x-auto pb-4 snap-x",
+						children: STAGES.map((stage) => {
+							const cols = visibleOrders.filter((o) => o.sector === sector && o.kanbanStage === stage);
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								onDragOver: (e) => e.preventDefault(),
+								onDrop: (e) => handleDrop(e, stage, sector),
+								className: "w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center justify-between px-1",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+										className: "font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground",
+										children: stage
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary",
+										children: cols.length
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "flex-1 flex flex-col gap-2 min-h-[150px]",
+									children: cols.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										draggable: isAdmin,
+										onDragStart: (e) => e.dataTransfer.setData("text/plain", o.id),
+										onClick: () => isAdmin && setSelectedOrderId(o.id),
+										className: `bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden ${isAdmin ? "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md" : ""}`,
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" }),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "flex justify-between items-start mb-2 pl-1",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+													className: "text-xs font-bold text-slate-500 dark:text-muted-foreground",
+													children: o.friendlyId
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, {
+													status: o.status,
+													className: "scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
+												})]
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "font-medium text-sm truncate pl-1 text-slate-900 dark:text-foreground",
+												title: o.patientName,
+												children: o.patientName
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs text-slate-500 dark:text-muted-foreground mt-1 truncate pl-1",
+												children: o.workType
+											}),
+											isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-[10px] font-medium text-slate-400 dark:text-muted-foreground mt-3 pt-2 border-t border-slate-100 dark:border-border truncate pl-1",
+												children: o.dentistName
+											})
+										]
+									}, o.id))
 								})]
+							}, stage);
+						})
+					})]
+				}, sector))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sheet, {
+				open: !!selectedOrderId,
+				onOpenChange: (open) => !open && setSelectedOrderId(null),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetContent, {
+					className: "w-full sm:w-[540px] flex flex-col h-full bg-white dark:bg-background z-[100] border-l",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetTitle, {
+						className: "text-xl text-slate-900 dark:text-slate-100",
+						children: ["Pedido ", selectedOrder?.friendlyId]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetDescription, {
+						className: "text-sm text-slate-500",
+						children: [
+							selectedOrder?.patientName,
+							" - ",
+							selectedOrder?.dentistName
+						]
+					})] }), selectedOrder && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex-1 overflow-y-auto mt-6 space-y-8 pr-2 pb-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "space-y-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
+									className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "w-4 h-4 text-primary" }), " Observações Administrativas"]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+									value: obsText,
+									onChange: (e) => setObsText(e.target.value),
+									placeholder: "Adicione notas ou comentários...",
+									className: "min-h-[120px] resize-none"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									onClick: handleSaveObs,
+									size: "sm",
+									className: "w-full sm:w-auto",
+									children: "Salvar Observações"
+								})
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "space-y-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
+								className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-4 h-4 text-primary" }), " Histórico de Atividades"]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "flex-1 flex flex-col gap-2 min-h-[150px]",
-								children: cols.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									draggable: isAdmin,
-									onDragStart: (e) => e.dataTransfer.setData("text/plain", o.id),
-									className: `bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden ${isAdmin ? "cursor-grab active:cursor-grabbing hover:border-primary/50 hover:shadow-md" : ""}`,
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "flex justify-between items-start mb-2 pl-1",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "text-xs font-bold text-slate-500 dark:text-muted-foreground",
-												children: o.friendlyId
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, {
-												status: o.status,
-												className: "scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
+								className: "space-y-4 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800",
+								children: selectedOrder.history.map((ev) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "relative flex items-start gap-4",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 mt-1.5 w-2 h-2 ml-2 rounded-full bg-primary z-10" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "ml-8 space-y-1 w-full",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "flex items-center justify-between",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-sm font-medium text-slate-900 dark:text-slate-100",
+												children: getStatusLabel(ev.status)
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+												className: "text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-3 h-3" }), format(new Date(ev.date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })]
 											})]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "font-medium text-sm truncate pl-1 text-slate-900 dark:text-foreground",
-											title: o.patientName,
-											children: o.patientName
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-xs text-slate-500 dark:text-muted-foreground mt-1 truncate pl-1",
-											children: o.workType
-										}),
-										isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											className: "text-[10px] font-medium text-slate-400 dark:text-muted-foreground mt-3 pt-2 border-t border-slate-100 dark:border-border truncate pl-1",
-											children: o.dentistName
-										})
-									]
-								}, o.id))
+										}), ev.note && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "text-sm text-slate-700 dark:text-slate-300 mt-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800",
+											children: ev.note
+										})]
+									})]
+								}, ev.id))
 							})]
-						}, stage);
-					})
-				})]
-			}, sector))
-		})]
+						})]
+					})]
+				})
+			})
+		]
 	});
 }
 var PrivateRoute = ({ children }) => {
@@ -40742,4 +40849,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-CZBAXr9k.js.map
+//# sourceMappingURL=index-DTj3dDaU.js.map

@@ -12,6 +12,7 @@ interface AppState {
   addOrder: (order: any) => Promise<void>
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
+  updateOrderObservations: (dbId: string, observations: string) => Promise<void>
   refreshOrders: () => void
 }
 
@@ -153,13 +154,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateOrderKanbanStage = async (dbId: string, stage: KanbanStage) => {
+    if (!currentUser) return
+    let newStatus: OrderStatus = 'in_production'
+    if (stage === 'TRIAGEM' || stage === 'PENDÊNCIAS') newStatus = 'pending'
+    else if (stage === 'PRONTO PARA ENVIO') newStatus = 'completed'
+
     const { error } = await supabase
       .from('orders' as any)
-      .update({ kanban_stage: stage })
+      .update({ kanban_stage: stage, status: newStatus })
       .eq('id', dbId)
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao mover cartão', variant: 'destructive' })
+
+    await supabase.from('order_history' as any).insert({
+      order_id: dbId,
+      status: newStatus,
+      note: `${currentUser.name} moveu o cartão para ${stage}`,
+    })
+
     toast({ title: 'Cartão Movido', description: `Avançado para: ${stage}.` })
+    fetchOrders()
+  }
+
+  const updateOrderObservations = async (dbId: string, observations: string) => {
+    const { error } = await supabase
+      .from('orders' as any)
+      .update({ observations })
+      .eq('id', dbId)
+    if (error)
+      return toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar observações',
+        variant: 'destructive',
+      })
+    toast({
+      title: 'Observações salvas',
+      description: `As observações foram atualizadas com sucesso.`,
+    })
     fetchOrders()
   }
 
@@ -181,6 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addOrder,
         updateOrderStatus,
         updateOrderKanbanStage,
+        updateOrderObservations,
         refreshOrders: fetchOrders,
       },
     },
