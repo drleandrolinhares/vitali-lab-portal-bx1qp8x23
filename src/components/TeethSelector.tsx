@@ -1,10 +1,11 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface Props {
   value: number[]
   onChange: (teeth: number[]) => void
+  arches?: string[]
+  onArchesChange?: (arches: string[]) => void
 }
 
 const quadrants = [
@@ -14,7 +15,7 @@ const quadrants = [
   { id: 3, teeth: [31, 32, 33, 34, 35, 36, 37, 38] }, // Inferior Esquerdo
 ]
 
-export function TeethSelector({ value, onChange }: Props) {
+export function TeethSelector({ value, onChange, arches = [], onArchesChange }: Props) {
   const toggleTooth = (tooth: number) => {
     if (value.includes(tooth)) {
       onChange(value.filter((t) => t !== tooth))
@@ -23,9 +24,42 @@ export function TeethSelector({ value, onChange }: Props) {
     }
   }
 
+  const toggleArch = (arch: string) => {
+    if (!onArchesChange) return
+    if (arches.includes(arch)) {
+      onArchesChange(arches.filter((a) => a !== arch))
+    } else {
+      onArchesChange([...arches, arch])
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-4 items-center bg-muted/20 p-4 rounded-lg border">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4 items-center bg-background p-4 rounded-lg border w-full overflow-x-auto">
+      {onArchesChange && (
+        <div className="flex flex-col sm:flex-row gap-4 mb-2 w-full justify-center items-center pb-4 border-b border-primary/10">
+          <span className="text-sm font-medium text-muted-foreground mr-2">Arco Total:</span>
+          <Button
+            type="button"
+            variant={arches.includes('MAXILA') ? 'default' : 'outline'}
+            onClick={() => toggleArch('MAXILA')}
+            size="sm"
+            className="w-32"
+          >
+            MAXILA
+          </Button>
+          <Button
+            type="button"
+            variant={arches.includes('MANDIBULA') ? 'default' : 'outline'}
+            onClick={() => toggleArch('MANDIBULA')}
+            size="sm"
+            className="w-32"
+          >
+            MANDÍBULA
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 min-w-max">
         {/* Superior */}
         <div className="flex justify-center gap-6 border-b-2 border-primary/20 pb-2">
           <div className="flex gap-1 border-r-2 border-primary/20 pr-4">
@@ -69,7 +103,7 @@ function ToothBtn({ t, selected, onClick }: { t: number; selected: boolean; onCl
         'w-8 h-10 flex flex-col items-center justify-center rounded text-xs font-medium transition-all shadow-sm border',
         selected
           ? 'bg-primary text-primary-foreground border-primary scale-105 shadow-md'
-          : 'bg-background text-foreground hover:bg-muted',
+          : 'bg-muted/50 text-foreground hover:bg-muted',
       )}
     >
       <span className="opacity-50 text-[10px] mb-0.5">{Math.floor(t / 10)}</span>

@@ -32,14 +32,28 @@ export default function NewRequest() {
     workType: '',
     material: '',
     shade: '',
+    shadeScale: '',
     shippingMethod: 'lab_pickup',
+    stlDeliveryMethod: '',
     observations: '',
   })
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
+  const [selectedArches, setSelectedArches] = useState<string[]>([])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.patientName || !formData.workType) return
+
+    const finalObservations = [
+      formData.shadeScale ? `Escala Usada: ${formData.shadeScale}` : '',
+      selectedArches.length > 0 ? `Arco Total: ${selectedArches.join(', ')}` : '',
+      formData.shippingMethod === 'dentist_send' && formData.stlDeliveryMethod
+        ? `Forma do Envio STL: ${formData.stlDeliveryMethod}`
+        : '',
+      formData.observations,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
 
     addOrder({
       dentistName: currentUser.name,
@@ -48,53 +62,63 @@ export default function NewRequest() {
       material: formData.material || 'Padrão',
       shade: formData.shade,
       shippingMethod: formData.shippingMethod,
-      observations: formData.observations,
+      observations: finalObservations,
       teeth: selectedTeeth,
     })
     navigate('/')
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-6">
+    <div className="max-w-4xl mx-auto py-6">
       <Card className="shadow-elevation border-muted/60">
         <CardHeader className="bg-muted/30 border-b pb-6">
-          <CardTitle className="text-2xl">Novo Pedido de Laboratório</CardTitle>
+          <CardTitle className="text-2xl uppercase tracking-tight font-bold text-primary">
+            NOVO PEDIDO VITALI LAB
+          </CardTitle>
           <CardDescription>
             Preencha os detalhes clínicos do paciente e especificações do trabalho.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="patientName">Nome do Paciente *</Label>
-                <Input
-                  id="patientName"
-                  required
-                  placeholder="Ex: João da Silva"
-                  value={formData.patientName}
-                  onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cor/Escala</Label>
-                <Input
-                  placeholder="Ex: A2, BL1..."
-                  value={formData.shade}
-                  onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="patientName"
+                className="uppercase font-semibold text-xs text-muted-foreground"
+              >
+                NOME COMPLETO DO PACIENTE *
+              </Label>
+              <Input
+                id="patientName"
+                required
+                placeholder="Ex: João da Silva"
+                value={formData.patientName}
+                onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
+                className="h-12 text-lg font-medium"
+              />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
+              <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                Seleção de Elementos (Odontograma)
+              </Label>
+              <TeethSelector
+                value={selectedTeeth}
+                onChange={setSelectedTeeth}
+                arches={selectedArches}
+                onArchesChange={setSelectedArches}
+              />
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tipo de Trabalho *</Label>
+                <Label className="uppercase font-semibold text-xs">Tipo de Trabalho *</Label>
                 <Select
                   value={formData.workType}
                   onValueChange={(v) => setFormData({ ...formData, workType: v })}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -107,12 +131,12 @@ export default function NewRequest() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Material Preferencial</Label>
+                <Label className="uppercase font-semibold text-xs">Material Preferencial</Label>
                 <Select
                   value={formData.material}
                   onValueChange={(v) => setFormData({ ...formData, material: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -125,35 +149,75 @@ export default function NewRequest() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label>Seleção de Elementos (Odontograma)</Label>
-              <TeethSelector value={selectedTeeth} onChange={setSelectedTeeth} />
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs">COR E SUAS CONSIDERAÇÕES</Label>
+                <Input
+                  placeholder="Ex: A2, BL1..."
+                  value={formData.shade}
+                  onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
+                <Input
+                  placeholder="Ex: VITA Classical, 3D Master..."
+                  value={formData.shadeScale}
+                  onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
+                  className="h-11"
+                />
+              </div>
             </div>
 
-            <div className="space-y-3 bg-muted/20 p-4 rounded-lg border">
-              <Label className="text-base">Método de Envio do Molde/Escaneamento</Label>
+            <div className="space-y-4 bg-muted/20 p-5 rounded-xl border">
+              <Label className="text-base font-semibold">
+                Método de Envio do Molde/Escaneamento
+              </Label>
               <RadioGroup
                 value={formData.shippingMethod}
                 onValueChange={(v) => setFormData({ ...formData, shippingMethod: v })}
-                className="flex flex-col space-y-2 mt-2"
+                className="flex flex-col space-y-3 mt-2"
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors">
                   <RadioGroupItem value="lab_pickup" id="r1" />
-                  <Label htmlFor="r1" className="font-normal cursor-pointer">
+                  <Label htmlFor="r1" className="font-medium cursor-pointer flex-1">
                     Solicitar motoboy do laboratório
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors">
                   <RadioGroupItem value="dentist_send" id="r2" />
-                  <Label htmlFor="r2" className="font-normal cursor-pointer">
-                    Vou enviar / Arquivo STL via portal
+                  <Label
+                    htmlFor="r2"
+                    className="font-bold cursor-pointer flex-1 uppercase tracking-tight"
+                  >
+                    VOU ENVIAR ARQUIVO STL
                   </Label>
                 </div>
               </RadioGroup>
+
+              {formData.shippingMethod === 'dentist_send' && (
+                <div className="mt-4 pt-4 border-t space-y-2 animate-fade-in-down">
+                  <Label className="uppercase font-semibold text-xs text-primary">
+                    FORMA DO ENVIO *
+                  </Label>
+                  <Input
+                    placeholder="Ex: Link do WeTransfer, Dropbox, Portal de Scanners..."
+                    value={formData.stlDeliveryMethod}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stlDeliveryMethod: e.target.value })
+                    }
+                    className="h-11 border-primary/30 focus-visible:ring-primary"
+                    required={formData.shippingMethod === 'dentist_send'}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="obs">Observações Adicionais</Label>
+              <Label htmlFor="obs" className="uppercase font-semibold text-xs">
+                Observações Adicionais
+              </Label>
               <Textarea
                 id="obs"
                 placeholder="Instruções sobre textura, formato, ponto de contato..."
@@ -163,11 +227,16 @@ export default function NewRequest() {
               />
             </div>
           </CardContent>
-          <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+          <CardFooter className="bg-muted/20 border-t px-6 py-5 flex justify-end gap-3 rounded-b-lg">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="h-11 px-6"
+            >
               Cancelar
             </Button>
-            <Button type="submit" className="min-w-[150px]">
+            <Button type="submit" className="h-11 px-8 text-base">
               Enviar Pedido
             </Button>
           </CardFooter>

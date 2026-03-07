@@ -24339,6 +24339,18 @@ function StatusBadge({ status, className }) {
 function getStatusLabel(status) {
 	return config[status].label;
 }
+function Logo({ className }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-extrabold text-foreground dark:text-white uppercase",
+			children: "Vitali"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-light text-foreground/80 dark:text-white/80 lowercase",
+			children: "lab."
+		})]
+	});
+}
 const daysInYear = 365.2425;
 Math.pow(10, 8) * 24 * 60 * 60 * 1e3;
 const millisecondsInWeek = 6048e5;
@@ -26070,105 +26082,132 @@ function DentistDashboard() {
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "space-y-6 max-w-5xl mx-auto",
+		className: "space-y-8 max-w-5xl mx-auto py-2",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-					className: "text-2xl font-bold tracking-tight",
-					children: ["Olá, ", currentUser.name]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-muted-foreground",
-					children: "Aqui está o resumo dos seus casos protéticos."
-				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-6",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "hidden sm:flex bg-primary/5 p-4 rounded-2xl border border-primary/10 shadow-sm",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, { className: "text-4xl" })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "sm:hidden mb-4 bg-primary/5 p-3 rounded-xl border border-primary/10 inline-block shadow-sm",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, { className: "text-2xl" })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+							className: "text-3xl font-bold tracking-tight",
+							children: ["Olá, ", currentUser.name]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-muted-foreground mt-1 text-lg",
+							children: "Aqui está o resumo dos seus casos protéticos."
+						})
+					] })]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 					asChild: true,
-					className: "gap-2 shadow-sm",
+					size: "lg",
+					className: "gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
 						to: "/new-request",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CirclePlus, { className: "w-4 h-4" }), " Novo Pedido"]
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CirclePlus, { className: "w-5 h-5" }), " Novo Pedido"]
 					})
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "grid gap-4 md:grid-cols-3",
+				className: "grid gap-5 md:grid-cols-3",
 				children: stats.map((s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 					className: "shadow-subtle hover:shadow-md transition-shadow",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 						className: "flex flex-row items-center justify-between pb-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-							className: "text-sm font-medium text-muted-foreground",
+							className: "text-sm font-medium text-muted-foreground uppercase tracking-wider",
 							children: s.label
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(s.icon, { className: `h-4 w-4 ${s.color}` })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(s.icon, { className: `h-5 w-5 ${s.color}` })]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "text-3xl font-bold",
+						className: "text-4xl font-bold",
 						children: s.value
 					}) })]
 				}, i))
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-				className: "shadow-subtle",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, { children: "Casos Ativos" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, { children: "Acompanhe o status dos trabalhos em andamento no laboratório." })] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, { children: activeOrders.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "text-center py-12 text-muted-foreground flex flex-col items-center",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-6 h-6 opacity-50" })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Nenhum caso ativo no momento." }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							variant: "link",
-							asChild: true,
-							className: "mt-2",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-								to: "/new-request",
-								children: "Iniciar um novo pedido"
+				className: "shadow-subtle border-muted/60",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+					className: "bg-muted/10",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, { children: "Casos Ativos" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, { children: "Acompanhe o status dos trabalhos em andamento no laboratório." })]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+					className: "p-0",
+					children: activeOrders.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-center py-16 text-muted-foreground flex flex-col items-center",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-8 h-8 opacity-50" })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-lg font-medium",
+								children: "Nenhum caso ativo no momento."
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								variant: "link",
+								asChild: true,
+								className: "mt-2",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+									to: "/new-request",
+									children: "Iniciar um novo pedido"
+								})
 							})
-						})
-					]
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "space-y-4",
-					children: activeOrders.map((order) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors gap-4",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "grid gap-1",
+						]
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "divide-y",
+						children: activeOrders.map((order) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-center gap-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "font-semibold",
-									children: order.patientName
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "text-xs text-muted-foreground",
+								className: "grid gap-1.5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "font-semibold text-lg",
+										children: order.patientName
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground",
+										children: order.id
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "text-sm text-muted-foreground flex items-center gap-2",
 									children: [
-										"(",
-										order.id,
-										")"
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "font-medium text-foreground/80",
+											children: order.workType
+										}),
+										" •",
+										" ",
+										order.material,
+										" • Criado em",
+										" ",
+										format(new Date(order.createdAt), "dd MMM, HH:mm", { locale: ptBR })
 									]
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "text-sm text-muted-foreground flex items-center gap-2",
-								children: [
-									order.workType,
-									" • ",
-									order.material,
-									" • Criado em",
-									" ",
-									format(new Date(order.createdAt), "dd MMM, HH:mm", { locale: ptBR })
-								]
+								className: "flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, {
+									status: order.status,
+									className: "px-3 py-1"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									variant: "ghost",
+									size: "icon",
+									asChild: true,
+									className: "rounded-full",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+										to: `/order/${order.id}`,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "w-5 h-5" })
+									})
+								})]
 							})]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, { status: order.status }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-								variant: "ghost",
-								size: "icon",
-								asChild: true,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-									to: `/order/${order.id}`,
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "w-4 h-4" })
-								})
-							})]
-						})]
-					}, order.id))
-				}) })]
+						}, order.id))
+					})
+				})]
 			})
 		]
 	});
@@ -28520,18 +28559,6 @@ var NotFound = () => {
 	});
 };
 var NotFound_default = NotFound;
-function Logo({ className }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-extrabold text-foreground dark:text-white uppercase",
-			children: "Vitali"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-light text-foreground/80 dark:text-white/80 lowercase",
-			children: "lab."
-		})]
-	});
-}
 function createContextScope$1(scopeName, createContextScopeDeps = []) {
 	let defaultContexts = [];
 	function createContext3(rootComponentName, defaultContext) {
@@ -31044,61 +31071,94 @@ var quadrants = [
 		]
 	}
 ];
-function TeethSelector({ value, onChange }) {
+function TeethSelector({ value, onChange, arches = [], onArchesChange }) {
 	const toggleTooth = (tooth) => {
 		if (value.includes(tooth)) onChange(value.filter((t) => t !== tooth));
 		else onChange([...value, tooth].sort());
 	};
+	const toggleArch = (arch) => {
+		if (!onArchesChange) return;
+		if (arches.includes(arch)) onArchesChange(arches.filter((a) => a !== arch));
+		else onArchesChange([...arches, arch]);
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-col gap-4 items-center bg-muted/20 p-4 rounded-lg border",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex flex-col gap-2",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex justify-center gap-6 border-b-2 border-primary/20 pb-2",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex gap-1 border-r-2 border-primary/20 pr-4",
-					children: quadrants[0].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
-						t,
-						selected: value.includes(t),
-						onClick: () => toggleTooth(t)
-					}, t))
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex gap-1 pl-2",
-					children: quadrants[1].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
-						t,
-						selected: value.includes(t),
-						onClick: () => toggleTooth(t)
-					}, t))
+		className: "flex flex-col gap-4 items-center bg-background p-4 rounded-lg border w-full overflow-x-auto",
+		children: [
+			onArchesChange && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-col sm:flex-row gap-4 mb-2 w-full justify-center items-center pb-4 border-b border-primary/10",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-sm font-medium text-muted-foreground mr-2",
+						children: "Arco Total:"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						variant: arches.includes("MAXILA") ? "default" : "outline",
+						onClick: () => toggleArch("MAXILA"),
+						size: "sm",
+						className: "w-32",
+						children: "MAXILA"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						variant: arches.includes("MANDIBULA") ? "default" : "outline",
+						onClick: () => toggleArch("MANDIBULA"),
+						size: "sm",
+						className: "w-32",
+						children: "MANDÍBULA"
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-col gap-2 min-w-max",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex justify-center gap-6 border-b-2 border-primary/20 pb-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex gap-1 border-r-2 border-primary/20 pr-4",
+						children: quadrants[0].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
+							t,
+							selected: value.includes(t),
+							onClick: () => toggleTooth(t)
+						}, t))
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex gap-1 pl-2",
+						children: quadrants[1].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
+							t,
+							selected: value.includes(t),
+							onClick: () => toggleTooth(t)
+						}, t))
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex justify-center gap-6 pt-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex gap-1 border-r-2 border-primary/20 pr-4",
+						children: quadrants[2].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
+							t,
+							selected: value.includes(t),
+							onClick: () => toggleTooth(t)
+						}, t))
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex gap-1 pl-2",
+						children: quadrants[3].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
+							t,
+							selected: value.includes(t),
+							onClick: () => toggleTooth(t)
+						}, t))
+					})]
 				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex justify-center gap-6 pt-2",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex gap-1 border-r-2 border-primary/20 pr-4",
-					children: quadrants[2].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
-						t,
-						selected: value.includes(t),
-						onClick: () => toggleTooth(t)
-					}, t))
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex gap-1 pl-2",
-					children: quadrants[3].teeth.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToothBtn, {
-						t,
-						selected: value.includes(t),
-						onClick: () => toggleTooth(t)
-					}, t))
-				})]
-			})]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "text-xs text-muted-foreground mt-2",
-			children: "Clique nos elementos para selecionar (Odontograma FDI)"
-		})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs text-muted-foreground mt-2",
+				children: "Clique nos elementos para selecionar (Odontograma FDI)"
+			})
+		]
 	});
 }
 function ToothBtn({ t, selected, onClick }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 		type: "button",
 		onClick,
-		className: cn("w-8 h-10 flex flex-col items-center justify-center rounded text-xs font-medium transition-all shadow-sm border", selected ? "bg-primary text-primary-foreground border-primary scale-105 shadow-md" : "bg-background text-foreground hover:bg-muted"),
+		className: cn("w-8 h-10 flex flex-col items-center justify-center rounded text-xs font-medium transition-all shadow-sm border", selected ? "bg-primary text-primary-foreground border-primary scale-105 shadow-md" : "bg-muted/50 text-foreground hover:bg-muted"),
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 			className: "opacity-50 text-[10px] mb-0.5",
 			children: Math.floor(t / 10)
@@ -31113,13 +31173,22 @@ function NewRequest() {
 		workType: "",
 		material: "",
 		shade: "",
+		shadeScale: "",
 		shippingMethod: "lab_pickup",
+		stlDeliveryMethod: "",
 		observations: ""
 	});
 	const [selectedTeeth, setSelectedTeeth] = (0, import_react.useState)([]);
+	const [selectedArches, setSelectedArches] = (0, import_react.useState)([]);
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		if (!formData.patientName || !formData.workType) return;
+		const finalObservations = [
+			formData.shadeScale ? `Escala Usada: ${formData.shadeScale}` : "",
+			selectedArches.length > 0 ? `Arco Total: ${selectedArches.join(", ")}` : "",
+			formData.shippingMethod === "dentist_send" && formData.stlDeliveryMethod ? `Forma do Envio STL: ${formData.stlDeliveryMethod}` : "",
+			formData.observations
+		].filter(Boolean).join("\n\n");
 		addOrder({
 			dentistName: currentUser.name,
 			patientName: formData.patientName,
@@ -31127,20 +31196,20 @@ function NewRequest() {
 			material: formData.material || "Padrão",
 			shade: formData.shade,
 			shippingMethod: formData.shippingMethod,
-			observations: formData.observations,
+			observations: finalObservations,
 			teeth: selectedTeeth
 		});
 		navigate("/");
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "max-w-3xl mx-auto py-6",
+		className: "max-w-4xl mx-auto py-6",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 			className: "shadow-elevation border-muted/60",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 				className: "bg-muted/30 border-b pb-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-					className: "text-2xl",
-					children: "Novo Pedido de Laboratório"
+					className: "text-2xl uppercase tracking-tight font-bold text-primary",
+					children: "NOVO PEDIDO VITALI LAB"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, { children: "Preencha os detalhes clínicos do paciente e especificações do trabalho." })]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 				onSubmit: handleSubmit,
@@ -31148,46 +31217,53 @@ function NewRequest() {
 					className: "space-y-8 pt-8",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "grid gap-4 sm:grid-cols-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "space-y-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-									htmlFor: "patientName",
-									children: "Nome do Paciente *"
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-									id: "patientName",
-									required: true,
-									placeholder: "Ex: João da Silva",
-									value: formData.patientName,
-									onChange: (e) => setFormData({
-										...formData,
-										patientName: e.target.value
-									})
-								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "space-y-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Cor/Escala" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-									placeholder: "Ex: A2, BL1...",
-									value: formData.shade,
-									onChange: (e) => setFormData({
-										...formData,
-										shade: e.target.value
-									})
-								})]
+							className: "space-y-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+								htmlFor: "patientName",
+								className: "uppercase font-semibold text-xs text-muted-foreground",
+								children: "NOME COMPLETO DO PACIENTE *"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								id: "patientName",
+								required: true,
+								placeholder: "Ex: João da Silva",
+								value: formData.patientName,
+								onChange: (e) => setFormData({
+									...formData,
+									patientName: e.target.value
+								}),
+								className: "h-12 text-lg font-medium"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "grid gap-4 sm:grid-cols-2",
+							className: "space-y-3 bg-muted/10 p-5 rounded-xl border",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+								className: "uppercase font-semibold text-xs text-muted-foreground",
+								children: "Seleção de Elementos (Odontograma)"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TeethSelector, {
+								value: selectedTeeth,
+								onChange: setSelectedTeeth,
+								arches: selectedArches,
+								onArchesChange: setSelectedArches
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "grid gap-6 sm:grid-cols-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "space-y-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Tipo de Trabalho *" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									className: "uppercase font-semibold text-xs",
+									children: "Tipo de Trabalho *"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 									value: formData.workType,
 									onValueChange: (v) => setFormData({
 										...formData,
 										workType: v
 									}),
 									required: true,
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." }) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+										className: "h-11",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." })
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
 											value: "Coroa",
 											children: "Coroa Total"
@@ -31212,13 +31288,19 @@ function NewRequest() {
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "space-y-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Material Preferencial" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									className: "uppercase font-semibold text-xs",
+									children: "Material Preferencial"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 									value: formData.material,
 									onValueChange: (v) => setFormData({
 										...formData,
 										material: v
 									}),
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." }) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+										className: "h-11",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." })
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
 											value: "Zircônia",
 											children: "Zircônia"
@@ -31240,51 +31322,96 @@ function NewRequest() {
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-3",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Seleção de Elementos (Odontograma)" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TeethSelector, {
-								value: selectedTeeth,
-								onChange: setSelectedTeeth
+							className: "grid gap-6 sm:grid-cols-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									className: "uppercase font-semibold text-xs",
+									children: "COR E SUAS CONSIDERAÇÕES"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+									placeholder: "Ex: A2, BL1...",
+									value: formData.shade,
+									onChange: (e) => setFormData({
+										...formData,
+										shade: e.target.value
+									}),
+									className: "h-11"
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									className: "uppercase font-semibold text-xs",
+									children: "Escala Usada"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+									placeholder: "Ex: VITA Classical, 3D Master...",
+									value: formData.shadeScale,
+									onChange: (e) => setFormData({
+										...formData,
+										shadeScale: e.target.value
+									}),
+									className: "h-11"
+								})]
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-3 bg-muted/20 p-4 rounded-lg border",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-								className: "text-base",
-								children: "Método de Envio do Molde/Escaneamento"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(RadioGroup, {
-								value: formData.shippingMethod,
-								onValueChange: (v) => setFormData({
-									...formData,
-									shippingMethod: v
+							className: "space-y-4 bg-muted/20 p-5 rounded-xl border",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									className: "text-base font-semibold",
+									children: "Método de Envio do Molde/Escaneamento"
 								}),
-								className: "flex flex-col space-y-2 mt-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center space-x-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadioGroupItem, {
-										value: "lab_pickup",
-										id: "r1"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "r1",
-										className: "font-normal cursor-pointer",
-										children: "Solicitar motoboy do laboratório"
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(RadioGroup, {
+									value: formData.shippingMethod,
+									onValueChange: (v) => setFormData({
+										...formData,
+										shippingMethod: v
+									}),
+									className: "flex flex-col space-y-3 mt-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadioGroupItem, {
+											value: "lab_pickup",
+											id: "r1"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "r1",
+											className: "font-medium cursor-pointer flex-1",
+											children: "Solicitar motoboy do laboratório"
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-center space-x-3 bg-background p-3 rounded-lg border hover:border-primary/50 transition-colors",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadioGroupItem, {
+											value: "dentist_send",
+											id: "r2"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "r2",
+											className: "font-bold cursor-pointer flex-1 uppercase tracking-tight",
+											children: "VOU ENVIAR ARQUIVO STL"
+										})]
 									})]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center space-x-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadioGroupItem, {
-										value: "dentist_send",
-										id: "r2"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "r2",
-										className: "font-normal cursor-pointer",
-										children: "Vou enviar / Arquivo STL via portal"
+								}),
+								formData.shippingMethod === "dentist_send" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "mt-4 pt-4 border-t space-y-2 animate-fade-in-down",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+										className: "uppercase font-semibold text-xs text-primary",
+										children: "FORMA DO ENVIO *"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+										placeholder: "Ex: Link do WeTransfer, Dropbox, Portal de Scanners...",
+										value: formData.stlDeliveryMethod,
+										onChange: (e) => setFormData({
+											...formData,
+											stlDeliveryMethod: e.target.value
+										}),
+										className: "h-11 border-primary/30 focus-visible:ring-primary",
+										required: formData.shippingMethod === "dentist_send"
 									})]
-								})]
-							})]
+								})
+							]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "space-y-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
 								htmlFor: "obs",
+								className: "uppercase font-semibold text-xs",
 								children: "Observações Adicionais"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
 								id: "obs",
@@ -31299,15 +31426,16 @@ function NewRequest() {
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardFooter, {
-					className: "bg-muted/20 border-t px-6 py-4 flex justify-end gap-3",
+					className: "bg-muted/20 border-t px-6 py-5 flex justify-end gap-3 rounded-b-lg",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 						type: "button",
 						variant: "outline",
 						onClick: () => navigate(-1),
+						className: "h-11 px-6",
 						children: "Cancelar"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 						type: "submit",
-						className: "min-w-[150px]",
+						className: "h-11 px-8 text-base",
 						children: "Enviar Pedido"
 					})]
 				})]
@@ -31683,4 +31811,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppProvider, { child
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-XsIsBMTI.js.map
+//# sourceMappingURL=index-D7jS-qye.js.map
