@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   signUp: (email: string, password: string, metadata: any) => Promise<{ error: any }>
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
   resetPassword: (email: string) => Promise<{ error: any }>
   loading: boolean
@@ -26,6 +26,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Session persistence logic based on remember me preference
+    const rememberMeFalse = localStorage.getItem('vitali_remember_me') === 'false'
+    const isNewTab = !sessionStorage.getItem('vitali_session')
+
+    if (rememberMeFalse && isNewTab) {
+      supabase.auth.signOut().then(() => {
+        localStorage.removeItem('vitali_remember_me')
+      })
+    }
+
+    sessionStorage.setItem('vitali_session', 'true')
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -33,11 +45,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -53,13 +67,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe: boolean = true) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) {
+      if (!rememberMe) {
+        localStorage.setItem('vitali_remember_me', 'false')
+      } else {
+        localStorage.removeItem('vitali_remember_me')
+      }
+      sessionStorage.setItem('vitali_session', 'true')
+    }
     return { error }
   }
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
+    if (!error) {
+      localStorage.removeItem('vitali_remember_me')
+    }
     return { error }
   }
 

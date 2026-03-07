@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import logoImg from '@/assets/vitalli-09-74b6e.png'
+import logoImg from '@/assets/vitalli-03-2b72d.png'
 
 type AuthView = 'login' | 'register' | 'forgot_password'
 
@@ -27,7 +27,7 @@ export default function AuthPage() {
     setError('')
     setMessage('')
     setLoading(true)
-    const { error } = await signIn(email, password)
+    const { error } = await signIn(email, password, rememberMe)
     if (error) setError(error.message)
     setLoading(false)
   }
@@ -56,19 +56,25 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-elevation">
-        <CardHeader className="space-y-4 items-center text-center pb-8">
-          <img src={logoImg} alt="Vitali Lab" className="h-16 object-contain" />
-          <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">REQUISIÇÃO DIGITAL</CardTitle>
-            <CardDescription>Acesse o portal do laboratório</CardDescription>
+      <Card className="w-full max-w-md shadow-elevation border-t-4 border-t-[#E6007E]">
+        <CardHeader className="space-y-6 items-center text-center pb-8">
+          <img
+            src={logoImg}
+            alt="Vitali Lab"
+            className="h-24 md:h-32 object-contain drop-shadow-sm"
+          />
+          <div className="space-y-2">
+            <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-[#E6007E]">
+              REQUISIÇÃO DIGITAL
+            </CardTitle>
+            <CardDescription className="text-base">Acesse o portal do laboratório</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           {view === 'forgot_password' ? (
             <div className="space-y-4 animate-fade-in">
               <div className="text-center mb-4 space-y-2">
-                <h3 className="text-lg font-medium">Recuperar Senha</h3>
+                <h3 className="text-lg font-medium text-[#E6007E]">Recuperar Senha</h3>
                 <p className="text-sm text-muted-foreground">
                   Digite seu email para receber um link de recuperação.
                 </p>
@@ -87,12 +93,17 @@ export default function AuthPage() {
                 {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                 {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
                 <div className="flex flex-col gap-2 pt-2">
-                  <Button type="submit" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="bg-[#E6007E] hover:bg-[#C5006C] text-white"
+                    disabled={loading}
+                  >
                     Enviar Email
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
+                    className="hover:text-[#E6007E]"
                     onClick={() => {
                       setView('login')
                       setError('')
@@ -115,8 +126,12 @@ export default function AuthPage() {
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="register">Cadastro</TabsTrigger>
+                <TabsTrigger value="login" className="data-[state=active]:text-[#E6007E]">
+                  Entrar
+                </TabsTrigger>
+                <TabsTrigger value="register" className="data-[state=active]:text-[#E6007E]">
+                  Cadastro
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="login" className="animate-fade-in">
@@ -137,10 +152,10 @@ export default function AuthPage() {
                       <Button
                         type="button"
                         variant="link"
-                        className="p-0 h-auto text-xs font-normal text-muted-foreground hover:text-primary"
+                        className="p-0 h-auto text-xs font-normal text-muted-foreground hover:text-[#E6007E]"
                         onClick={() => setView('forgot_password')}
                       >
-                        Esqueceu a senha?
+                        Esqueci minha senha
                       </Button>
                     </div>
                     <Input
@@ -156,6 +171,7 @@ export default function AuthPage() {
                       id="remember"
                       checked={rememberMe}
                       onCheckedChange={(c) => setRememberMe(c as boolean)}
+                      className="data-[state=checked]:bg-[#E6007E] data-[state=checked]:border-[#E6007E]"
                     />
                     <Label
                       htmlFor="remember"
@@ -166,7 +182,11 @@ export default function AuthPage() {
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                   {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#E6007E] hover:bg-[#C5006C] text-white"
+                    disabled={loading}
+                  >
                     Entrar
                   </Button>
                 </form>
@@ -215,7 +235,11 @@ export default function AuthPage() {
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                   {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#E6007E] hover:bg-[#C5006C] text-white"
+                    disabled={loading}
+                  >
                     Criar Conta
                   </Button>
                 </form>

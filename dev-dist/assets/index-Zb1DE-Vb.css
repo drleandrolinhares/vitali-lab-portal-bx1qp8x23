@@ -1704,6 +1704,10 @@ section[aria-label='Notifications alt+T'] {
   border-top-width: 1px;
 }
 
+.border-t-4{
+  border-top-width: 4px;
+}
+
 .border-dashed{
   border-style: dashed;
 }
@@ -1785,8 +1789,18 @@ section[aria-label='Notifications alt+T'] {
   border-left-color: transparent;
 }
 
+.border-t-\[\#E6007E\]{
+  --tw-border-opacity: 1;
+  border-top-color: rgb(230 0 126 / var(--tw-border-opacity, 1));
+}
+
 .border-t-transparent{
   border-top-color: transparent;
+}
+
+.bg-\[\#E6007E\]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(230 0 126 / var(--tw-bg-opacity, 1));
 }
 
 .bg-\[--color-bg\]{
@@ -2273,6 +2287,11 @@ section[aria-label='Notifications alt+T'] {
   letter-spacing: 0.1em;
 }
 
+.text-\[\#E6007E\]{
+  --tw-text-opacity: 1;
+  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
+}
+
 .text-accent-foreground{
   color: hsl(var(--accent-foreground));
 }
@@ -2386,6 +2405,11 @@ section[aria-label='Notifications alt+T'] {
 .text-slate-600{
   --tw-text-opacity: 1;
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
+}
+
+.text-white{
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
 .underline{
@@ -2509,6 +2533,11 @@ section[aria-label='Notifications alt+T'] {
 
 .ring-offset-background{
   --tw-ring-offset-color: hsl(var(--background));
+}
+
+.drop-shadow-sm{
+  --tw-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
 .filter{
@@ -2807,6 +2836,11 @@ section[aria-label='Notifications alt+T'] {
   border-color: hsl(var(--primary) / 0.5);
 }
 
+.hover\:bg-\[\#C5006C\]:hover{
+  --tw-bg-opacity: 1;
+  background-color: rgb(197 0 108 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-accent:hover{
   background-color: hsl(var(--accent));
 }
@@ -2867,6 +2901,11 @@ section[aria-label='Notifications alt+T'] {
   background-color: rgb(100 116 139 / 0.2);
 }
 
+.hover\:text-\[\#E6007E\]:hover{
+  --tw-text-opacity: 1;
+  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
+}
+
 .hover\:text-accent-foreground:hover{
   color: hsl(var(--accent-foreground));
 }
@@ -2882,10 +2921,6 @@ section[aria-label='Notifications alt+T'] {
 
 .hover\:text-muted-foreground:hover{
   color: hsl(var(--muted-foreground));
-}
-
-.hover\:text-primary:hover{
-  color: hsl(var(--primary));
 }
 
 .hover\:text-sidebar-accent-foreground:hover{
@@ -3211,6 +3246,11 @@ section[aria-label='Notifications alt+T'] {
   border-radius: 0px;
 }
 
+.data-\[state\=checked\]\:border-\[\#E6007E\][data-state="checked"]{
+  --tw-border-opacity: 1;
+  border-color: rgb(230 0 126 / var(--tw-border-opacity, 1));
+}
+
 .data-\[active\=true\]\:bg-sidebar-accent[data-active="true"]{
   background-color: hsl(var(--sidebar-accent));
 }
@@ -3237,6 +3277,11 @@ section[aria-label='Notifications alt+T'] {
 
 .data-\[state\=active\]\:bg-background[data-state="active"]{
   background-color: hsl(var(--background));
+}
+
+.data-\[state\=checked\]\:bg-\[\#E6007E\][data-state="checked"]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(230 0 126 / var(--tw-bg-opacity, 1));
 }
 
 .data-\[state\=checked\]\:bg-primary[data-state="checked"]{
@@ -3297,6 +3342,11 @@ section[aria-label='Notifications alt+T'] {
 
 .data-\[selected\=true\]\:text-accent-foreground[data-selected="true"]{
   color: hsl(var(--accent-foreground));
+}
+
+.data-\[state\=active\]\:text-\[\#E6007E\][data-state="active"]{
+  --tw-text-opacity: 1;
+  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
 }
 
 .data-\[state\=active\]\:text-foreground[data-state="active"]{
@@ -3880,6 +3930,10 @@ section[aria-label='Notifications alt+T'] {
     display: flex;
   }
 
+  .md\:h-32{
+    height: 8rem;
+  }
+
   .md\:w-\[var\(--radix-navigation-menu-viewport-width\)\]{
     width: var(--radix-navigation-menu-viewport-width);
   }
@@ -3902,6 +3956,11 @@ section[aria-label='Notifications alt+T'] {
 
   .md\:flex-row{
     flex-direction: row;
+  }
+
+  .md\:text-2xl{
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 
   .md\:text-sm{
