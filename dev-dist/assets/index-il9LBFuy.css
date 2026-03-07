@@ -1007,6 +1007,10 @@ section[aria-label='Notifications alt+T'] {
   height: var(--cell-size);
 }
 
+.h-\[100px\]{
+  height: 100px;
+}
+
 .h-\[1px\]{
   height: 1px;
 }
@@ -2009,6 +2013,10 @@ section[aria-label='Notifications alt+T'] {
 .bg-slate-50{
   --tw-bg-opacity: 1;
   background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1));
+}
+
+.bg-slate-50\/30{
+  background-color: rgb(248 250 252 / 0.3);
 }
 
 .bg-slate-50\/60{
@@ -3022,6 +3030,10 @@ section[aria-label='Notifications alt+T'] {
 .last\:rounded-r-md:last-child{
   border-top-right-radius: calc(var(--radius) - 2px);
   border-bottom-right-radius: calc(var(--radius) - 2px);
+}
+
+.hover\:border-primary:hover{
+  border-color: hsl(var(--primary));
 }
 
 .hover\:border-primary\/30:hover{

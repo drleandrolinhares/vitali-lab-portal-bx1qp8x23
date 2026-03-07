@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Order, OrderStatus, KanbanStage, User, UserRole } from '@/lib/types'
+import { Order, OrderStatus, KanbanStage, User, UserRole, Stage } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -7,12 +7,16 @@ import { useAuth } from '@/hooks/use-auth'
 interface AppState {
   currentUser: User
   orders: Order[]
+  kanbanStages: Stage[]
   loading: boolean
   switchRole: (role: UserRole) => void
   addOrder: (order: any) => Promise<void>
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
+  addKanbanStage: (name: string) => Promise<void>
+  updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
+  deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   refreshOrders: () => void
 }
 
@@ -22,6 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
+  const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
@@ -29,6 +34,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!session?.user) {
       setCurrentUser(null)
       setOrders([])
+      setKanbanStages([])
       setProfileLoading(false)
       return
     }
@@ -59,6 +65,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchProfile()
   }, [session?.user])
+
+  const fetchStages = async () => {
+    const { data } = await supabase
+      .from('kanban_stages' as any)
+      .select('*')
+      .order('order_index', { ascending: true })
+    if (data)
+      setKanbanStages(data.map((s: any) => ({ id: s.id, name: s.name, orderIndex: s.order_index })))
+  }
 
   const fetchOrders = async () => {
     if (!session?.user || !currentUser) return
@@ -105,18 +120,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (currentUser) fetchOrders()
+    if (currentUser) {
+      fetchOrders()
+      fetchStages()
+    }
   }, [currentUser])
 
   const switchRole = () => toast({ title: 'Aviso', description: 'Modo demonstração desativado.' })
 
   const addOrder = async (orderData: any) => {
     if (!currentUser) return
+    const defaultStage = kanbanStages.length > 0 ? kanbanStages[0].name : 'TRIAGEM'
     const { error } = await supabase.from('orders' as any).insert({
       patient_name: orderData.patientName,
       dentist_id: currentUser.id,
       sector: orderData.sector,
-      kanban_stage: 'TRIAGEM',
+      kanban_stage: defaultStage,
       work_type: orderData.workType,
       material: orderData.material,
       tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },
@@ -194,6 +213,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchOrders()
   }
 
+  const addKanbanStage = async (name: string) => {
+    const nextIndex =
+      kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1
+    const { error } = await supabase
+      .from('kanban_stages' as any)
+      .insert({ name, order_index: nextIndex })
+    if (error)
+      return toast({
+        title: 'Erro',
+        description: 'Não foi possível adicionar a coluna.',
+        variant: 'destructive',
+      })
+    toast({ title: 'Coluna adicionada' })
+    fetchStages()
+  }
+
+  const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
+    const { error } = await supabase
+      .from('kanban_stages' as any)
+      .update({ name: newName })
+      .eq('id', id)
+    if (error)
+      return toast({
+        title: 'Erro',
+        description: 'Não foi possível renomear. Já existe?',
+        variant: 'destructive',
+      })
+    await supabase
+      .from('orders' as any)
+      .update({ kanban_stage: newName })
+      .eq('kanban_stage', oldName)
+    toast({ title: 'Coluna renomeada' })
+    fetchStages()
+    fetchOrders()
+  }
+
+  const deleteKanbanStage = async (id: string, oldName: string, fallbackName?: string) => {
+    if (fallbackName)
+      await supabase
+        .from('orders' as any)
+        .update({ kanban_stage: fallbackName })
+        .eq('kanban_stage', oldName)
+    const { error } = await supabase
+      .from('kanban_stages' as any)
+      .delete()
+      .eq('id', id)
+    if (error)
+      return toast({
+        title: 'Erro',
+        description: 'Não foi possível remover a coluna.',
+        variant: 'destructive',
+      })
+    toast({ title: 'Coluna removida' })
+    fetchStages()
+    fetchOrders()
+  }
+
   if (session && profileLoading)
     return React.createElement(
       'div',
@@ -207,12 +283,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value: {
         currentUser: currentUser as User,
         orders,
+        kanbanStages,
         loading,
         switchRole,
         addOrder,
         updateOrderStatus,
         updateOrderKanbanStage,
         updateOrderObservations,
+        addKanbanStage,
+        updateKanbanStage,
+        deleteKanbanStage,
         refreshOrders: fetchOrders,
       },
     },

@@ -1,14 +1,12 @@
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
 export type UserRole = 'dentist' | 'receptionist' | 'admin'
-export type KanbanStage =
-  | 'TRIAGEM'
-  | 'PENDÊNCIAS'
-  | 'CAD DESIGN'
-  | 'VALIDAÇÃO DENTISTA CAD'
-  | 'CAD FRESAGEM'
-  | 'SINTERIZAÇÃO ZIRCÔNIA'
-  | 'ACABAMENTO MAQUIAGEM'
-  | 'PRONTO PARA ENVIO'
+export type KanbanStage = string
+
+export interface Stage {
+  id: string
+  name: string
+  orderIndex: number
+}
 
 export interface OrderHistoryEvent {
   id: string

@@ -19331,6 +19331,13 @@ var Play = createLucideIcon("play", [["path", {
 	d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
 	key: "10ikf1"
 }]]);
+var Plus = createLucideIcon("plus", [["path", {
+	d: "M5 12h14",
+	key: "1ays0h"
+}], ["path", {
+	d: "M12 5v14",
+	key: "s699le"
+}]]);
 var Search = createLucideIcon("search", [["path", {
 	d: "m21 21-4.34-4.34",
 	key: "14j7rj"
@@ -19374,6 +19381,28 @@ var SquareKanban = createLucideIcon("square-kanban", [
 	["path", {
 		d: "M16 7v9",
 		key: "1hp2iy"
+	}]
+]);
+var Trash2 = createLucideIcon("trash-2", [
+	["path", {
+		d: "M10 11v6",
+		key: "nco0om"
+	}],
+	["path", {
+		d: "M14 11v6",
+		key: "outv1u"
+	}],
+	["path", {
+		d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",
+		key: "miytrc"
+	}],
+	["path", {
+		d: "M3 6h18",
+		key: "d0wm0j"
+	}],
+	["path", {
+		d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
+		key: "e791ji"
 	}]
 ]);
 var TrendingUp = createLucideIcon("trending-up", [["path", {
@@ -31891,12 +31920,14 @@ function AppProvider({ children }) {
 	const { session } = useAuth();
 	const [currentUser, setCurrentUser] = (0, import_react.useState)(null);
 	const [orders, setOrders] = (0, import_react.useState)([]);
+	const [kanbanStages, setKanbanStages] = (0, import_react.useState)([]);
 	const [loading, setLoading] = (0, import_react.useState)(false);
 	const [profileLoading, setProfileLoading] = (0, import_react.useState)(true);
 	const fetchProfile = async () => {
 		if (!session?.user) {
 			setCurrentUser(null);
 			setOrders([]);
+			setKanbanStages([]);
 			setProfileLoading(false);
 			return;
 		}
@@ -31919,6 +31950,14 @@ function AppProvider({ children }) {
 	(0, import_react.useEffect)(() => {
 		fetchProfile();
 	}, [session?.user]);
+	const fetchStages = async () => {
+		const { data } = await supabase.from("kanban_stages").select("*").order("order_index", { ascending: true });
+		if (data) setKanbanStages(data.map((s) => ({
+			id: s.id,
+			name: s.name,
+			orderIndex: s.order_index
+		})));
+	};
 	const fetchOrders = async () => {
 		if (!session?.user || !currentUser) return;
 		setLoading(true);
@@ -31951,7 +31990,10 @@ function AppProvider({ children }) {
 		setLoading(false);
 	};
 	(0, import_react.useEffect)(() => {
-		if (currentUser) fetchOrders();
+		if (currentUser) {
+			fetchOrders();
+			fetchStages();
+		}
 	}, [currentUser]);
 	const switchRole = () => toast({
 		title: "Aviso",
@@ -31959,11 +32001,12 @@ function AppProvider({ children }) {
 	});
 	const addOrder = async (orderData) => {
 		if (!currentUser) return;
+		const defaultStage = kanbanStages.length > 0 ? kanbanStages[0].name : "TRIAGEM";
 		const { error } = await supabase.from("orders").insert({
 			patient_name: orderData.patientName,
 			dentist_id: currentUser.id,
 			sector: orderData.sector,
-			kanban_stage: "TRIAGEM",
+			kanban_stage: defaultStage,
 			work_type: orderData.workType,
 			material: orderData.material,
 			tooth_or_arch: {
@@ -32044,16 +32087,58 @@ function AppProvider({ children }) {
 		});
 		fetchOrders();
 	};
+	const addKanbanStage = async (name) => {
+		const nextIndex = kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1;
+		const { error } = await supabase.from("kanban_stages").insert({
+			name,
+			order_index: nextIndex
+		});
+		if (error) return toast({
+			title: "Erro",
+			description: "Não foi possível adicionar a coluna.",
+			variant: "destructive"
+		});
+		toast({ title: "Coluna adicionada" });
+		fetchStages();
+	};
+	const updateKanbanStage = async (id, oldName, newName) => {
+		const { error } = await supabase.from("kanban_stages").update({ name: newName }).eq("id", id);
+		if (error) return toast({
+			title: "Erro",
+			description: "Não foi possível renomear. Já existe?",
+			variant: "destructive"
+		});
+		await supabase.from("orders").update({ kanban_stage: newName }).eq("kanban_stage", oldName);
+		toast({ title: "Coluna renomeada" });
+		fetchStages();
+		fetchOrders();
+	};
+	const deleteKanbanStage = async (id, oldName, fallbackName) => {
+		if (fallbackName) await supabase.from("orders").update({ kanban_stage: fallbackName }).eq("kanban_stage", oldName);
+		const { error } = await supabase.from("kanban_stages").delete().eq("id", id);
+		if (error) return toast({
+			title: "Erro",
+			description: "Não foi possível remover a coluna.",
+			variant: "destructive"
+		});
+		toast({ title: "Coluna removida" });
+		fetchStages();
+		fetchOrders();
+	};
 	if (session && profileLoading) return import_react.createElement("div", { className: "min-h-screen flex items-center justify-center font-medium" }, "Carregando...");
 	return import_react.createElement(AppContext.Provider, { value: {
 		currentUser,
 		orders,
+		kanbanStages,
 		loading,
 		switchRole,
 		addOrder,
 		updateOrderStatus,
 		updateOrderKanbanStage,
 		updateOrderObservations,
+		addKanbanStage,
+		updateKanbanStage,
+		deleteKanbanStage,
 		refreshOrders: fetchOrders
 	} }, children);
 }
@@ -36834,7 +36919,7 @@ Separator$1.displayName = Root$2.displayName;
 var DIALOG_NAME = "Dialog";
 var [createDialogContext, createDialogScope] = createContextScope(DIALOG_NAME);
 var [DialogProvider, useDialogContext] = createDialogContext(DIALOG_NAME);
-var Dialog = (props) => {
+var Dialog$1 = (props) => {
 	const { __scopeDialog, children, open: openProp, defaultOpen, onOpenChange, modal = true } = props;
 	const triggerRef = import_react.useRef(null);
 	const contentRef = import_react.useRef(null);
@@ -36858,9 +36943,9 @@ var Dialog = (props) => {
 		children
 	});
 };
-Dialog.displayName = DIALOG_NAME;
+Dialog$1.displayName = DIALOG_NAME;
 var TRIGGER_NAME$3 = "DialogTrigger";
-var DialogTrigger = import_react.forwardRef((props, forwardedRef) => {
+var DialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...triggerProps } = props;
 	const context = useDialogContext(TRIGGER_NAME$3, __scopeDialog);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
@@ -36875,10 +36960,10 @@ var DialogTrigger = import_react.forwardRef((props, forwardedRef) => {
 		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
 	});
 });
-DialogTrigger.displayName = TRIGGER_NAME$3;
+DialogTrigger$1.displayName = TRIGGER_NAME$3;
 var PORTAL_NAME$1 = "DialogPortal";
 var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME$1, { forceMount: void 0 });
-var DialogPortal = (props) => {
+var DialogPortal$1 = (props) => {
 	const { __scopeDialog, forceMount, children, container } = props;
 	const context = useDialogContext(PORTAL_NAME$1, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider, {
@@ -36894,9 +36979,9 @@ var DialogPortal = (props) => {
 		}))
 	});
 };
-DialogPortal.displayName = PORTAL_NAME$1;
+DialogPortal$1.displayName = PORTAL_NAME$1;
 var OVERLAY_NAME = "DialogOverlay";
-var DialogOverlay = import_react.forwardRef((props, forwardedRef) => {
+var DialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
 	const portalContext = usePortalContext(OVERLAY_NAME, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...overlayProps } = props;
 	const context = useDialogContext(OVERLAY_NAME, props.__scopeDialog);
@@ -36908,7 +36993,7 @@ var DialogOverlay = import_react.forwardRef((props, forwardedRef) => {
 		})
 	}) : null;
 });
-DialogOverlay.displayName = OVERLAY_NAME;
+DialogOverlay$1.displayName = OVERLAY_NAME;
 var Slot$2 = /* @__PURE__ */ createSlot("DialogOverlay.RemoveScroll");
 var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...overlayProps } = props;
@@ -36929,7 +37014,7 @@ var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var CONTENT_NAME$2 = "DialogContent";
-var DialogContent = import_react.forwardRef((props, forwardedRef) => {
+var DialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
 	const portalContext = usePortalContext(CONTENT_NAME$2, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...contentProps } = props;
 	const context = useDialogContext(CONTENT_NAME$2, props.__scopeDialog);
@@ -36944,7 +37029,7 @@ var DialogContent = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-DialogContent.displayName = CONTENT_NAME$2;
+DialogContent$1.displayName = CONTENT_NAME$2;
 var DialogContentModal = import_react.forwardRef((props, forwardedRef) => {
 	const context = useDialogContext(CONTENT_NAME$2, props.__scopeDialog);
 	const contentRef = import_react.useRef(null);
@@ -37028,7 +37113,7 @@ var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	})] })] });
 });
 var TITLE_NAME = "DialogTitle";
-var DialogTitle = import_react.forwardRef((props, forwardedRef) => {
+var DialogTitle$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...titleProps } = props;
 	const context = useDialogContext(TITLE_NAME, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.h2, {
@@ -37037,9 +37122,9 @@ var DialogTitle = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-DialogTitle.displayName = TITLE_NAME;
+DialogTitle$1.displayName = TITLE_NAME;
 var DESCRIPTION_NAME = "DialogDescription";
-var DialogDescription = import_react.forwardRef((props, forwardedRef) => {
+var DialogDescription$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...descriptionProps } = props;
 	const context = useDialogContext(DESCRIPTION_NAME, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.p, {
@@ -37048,9 +37133,9 @@ var DialogDescription = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-DialogDescription.displayName = DESCRIPTION_NAME;
+DialogDescription$1.displayName = DESCRIPTION_NAME;
 var CLOSE_NAME = "DialogClose";
-var DialogClose = import_react.forwardRef((props, forwardedRef) => {
+var DialogClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...closeProps } = props;
 	const context = useDialogContext(CLOSE_NAME, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.button, {
@@ -37060,7 +37145,7 @@ var DialogClose = import_react.forwardRef((props, forwardedRef) => {
 		onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
 	});
 });
-DialogClose.displayName = CLOSE_NAME;
+DialogClose$1.displayName = CLOSE_NAME;
 function getState$2(open) {
 	return open ? "open" : "closed";
 }
@@ -37099,13 +37184,13 @@ var DescriptionWarning = ({ contentRef, descriptionId }) => {
 	]);
 	return null;
 };
-var Root$1 = Dialog;
-var Portal$2 = DialogPortal;
-var Overlay = DialogOverlay;
-var Content$1 = DialogContent;
-var Title = DialogTitle;
-var Description = DialogDescription;
-var Close = DialogClose;
+var Root$1 = Dialog$1;
+var Portal$2 = DialogPortal$1;
+var Overlay = DialogOverlay$1;
+var Content$1 = DialogContent$1;
+var Title = DialogTitle$1;
+var Description = DialogDescription$1;
+var Close = DialogClose$1;
 var Sheet = Root$1;
 var SheetPortal = Portal$2;
 var SheetOverlay = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay, {
@@ -40583,36 +40668,143 @@ function AdminDashboard() {
 		]
 	});
 }
-var STAGES = [
-	"TRIAGEM",
-	"PENDÊNCIAS",
-	"CAD DESIGN",
-	"VALIDAÇÃO DENTISTA CAD",
-	"CAD FRESAGEM",
-	"SINTERIZAÇÃO ZIRCÔNIA",
-	"ACABAMENTO MAQUIAGEM",
-	"PRONTO PARA ENVIO"
-];
+var Dialog = Root$1;
+var DialogPortal = Portal$2;
+var DialogOverlay = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay, {
+	ref,
+	className: cn("fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className),
+	...props
+}));
+DialogOverlay.displayName = Overlay.displayName;
+var DialogContent = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogPortal, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogOverlay, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$1, {
+	ref,
+	className: cn("fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg overflow-y-auto max-h-screen", className),
+	...props,
+	children: [children, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Close, {
+		className: "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "h-4 w-4" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "sr-only",
+			children: "Close"
+		})]
+	})]
+})] }));
+DialogContent.displayName = Content$1.displayName;
+var DialogHeader = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	className: cn("flex flex-col space-y-1.5 text-center sm:text-left", className),
+	...props
+});
+DialogHeader.displayName = "DialogHeader";
+var DialogFooter = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	className: cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className),
+	...props
+});
+DialogFooter.displayName = "DialogFooter";
+var DialogTitle = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Title, {
+	ref,
+	className: cn("text-lg font-semibold leading-none tracking-tight", className),
+	...props
+}));
+DialogTitle.displayName = Title.displayName;
+var DialogDescription = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Description, {
+	ref,
+	className: cn("text-sm text-muted-foreground", className),
+	...props
+}));
+DialogDescription.displayName = Description.displayName;
+function OrderDetailsSheet({ order, isOpen, onClose, obsText, setObsText, onSaveObs }) {
+	if (!order) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sheet, {
+		open: isOpen,
+		onOpenChange: (open) => !open && onClose(),
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetContent, {
+			className: "w-full sm:w-[540px] flex flex-col h-full bg-white dark:bg-background z-[100] border-l",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetTitle, {
+				className: "text-xl text-slate-900 dark:text-slate-100",
+				children: ["Pedido ", order.friendlyId]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetDescription, {
+				className: "text-sm text-slate-500",
+				children: [
+					order.patientName,
+					" - ",
+					order.dentistName
+				]
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex-1 overflow-y-auto mt-6 space-y-8 pr-2 pb-6",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "space-y-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
+							className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "w-4 h-4 text-primary" }), " Observações Administrativas"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+							value: obsText,
+							onChange: (e) => setObsText(e.target.value),
+							placeholder: "Adicione notas ou comentários...",
+							className: "min-h-[120px] resize-none"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							onClick: onSaveObs,
+							size: "sm",
+							className: "w-full sm:w-auto",
+							children: "Salvar Observações"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "space-y-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
+						className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-4 h-4 text-primary" }), " Histórico de Atividades"]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "space-y-4 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800",
+						children: order.history.map((ev) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "relative flex items-start gap-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 mt-1.5 w-2 h-2 ml-2 rounded-full bg-primary z-10" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "ml-8 space-y-1 w-full",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center justify-between",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm font-medium text-slate-900 dark:text-slate-100",
+										children: getStatusLabel(ev.status)
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-3 h-3" }), format(new Date(ev.date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })]
+									})]
+								}), ev.note && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-sm text-slate-700 dark:text-slate-300 mt-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800",
+									children: ev.note
+								})]
+							})]
+						}, ev.id))
+					})]
+				})]
+			})]
+		})
+	});
+}
 var SECTORS = ["SOLUÇÕES CERÂMICAS", "STÚDIO ACRÍLICO"];
 function KanbanPage() {
-	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations } = useAppStore();
+	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations, kanbanStages, addKanbanStage, updateKanbanStage, deleteKanbanStage } = useAppStore();
 	const isAdmin = currentUser?.role === "admin";
 	const [dentist, setDentist] = (0, import_react.useState)("all");
 	const [selectedOrderId, setSelectedOrderId] = (0, import_react.useState)(null);
-	const selectedOrder = (0, import_react.useMemo)(() => orders.find((o) => o.id === selectedOrderId), [orders, selectedOrderId]);
+	const selectedOrder = (0, import_react.useMemo)(() => orders.find((o) => o.id === selectedOrderId) || null, [orders, selectedOrderId]);
 	const [obsText, setObsText] = (0, import_react.useState)("");
+	const [editingStageId, setEditingStageId] = (0, import_react.useState)(null);
+	const [editStageName, setEditStageName] = (0, import_react.useState)("");
+	const [isAddColumnOpen, setIsAddColumnOpen] = (0, import_react.useState)(false);
+	const [newColumnName, setNewColumnName] = (0, import_react.useState)("");
+	const [deleteStageData, setDeleteStageData] = (0, import_react.useState)(null);
+	const [fallbackStageName, setFallbackStageName] = (0, import_react.useState)("");
 	(0, import_react.useEffect)(() => {
 		if (selectedOrder) setObsText(selectedOrder.observations || "");
 	}, [selectedOrder]);
-	const dentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort();
-	const visibleOrders = (0, import_react.useMemo)(() => {
-		if (!isAdmin || dentist === "all") return orders;
-		return orders.filter((o) => o.dentistName === dentist);
-	}, [
+	const visibleOrders = (0, import_react.useMemo)(() => !isAdmin || dentist === "all" ? orders : orders.filter((o) => o.dentistName === dentist), [
 		orders,
 		isAdmin,
 		dentist
 	]);
+	const hasOrders = (0, import_react.useMemo)(() => deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false, [deleteStageData, orders]);
 	const handleDrop = (e, stage, sector) => {
 		e.preventDefault();
 		if (!isAdmin) return;
@@ -40623,6 +40815,7 @@ function KanbanPage() {
 	const handleSaveObs = () => {
 		if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText);
 	};
+	const dentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background",
 		children: [
@@ -40663,21 +40856,56 @@ function KanbanPage() {
 							" ",
 							sector
 						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "flex gap-4 overflow-x-auto pb-4 snap-x",
-						children: STAGES.map((stage) => {
-							const cols = visibleOrders.filter((o) => o.sector === sector && o.kanbanStage === stage);
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex gap-4 overflow-x-auto pb-4 snap-x items-start",
+						children: [kanbanStages.map((stage) => {
+							const cols = visibleOrders.filter((o) => o.sector === sector && o.kanbanStage === stage.name);
 							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								onDragOver: (e) => e.preventDefault(),
-								onDrop: (e) => handleDrop(e, stage, sector),
+								onDrop: (e) => handleDrop(e, stage.name, sector),
 								className: "w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center justify-between px-1",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
-										className: "font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground",
-										children: stage
+									className: "flex items-center justify-between px-1 mb-1 group",
+									children: [editingStageId === stage.id ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+										autoFocus: true,
+										value: editStageName,
+										onChange: (e) => setEditStageName(e.target.value),
+										onBlur: () => {
+											if (editStageName.trim() && editStageName.trim() !== stage.name) updateKanbanStage(stage.id, stage.name, editStageName.trim());
+											setEditingStageId(null);
+										},
+										onKeyDown: (e) => {
+											if (e.key === "Enter") {
+												if (editStageName.trim() && editStageName.trim() !== stage.name) updateKanbanStage(stage.id, stage.name, editStageName.trim());
+												setEditingStageId(null);
+											}
+											if (e.key === "Escape") setEditingStageId(null);
+										},
+										className: "h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0"
+									}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-center gap-1.5 flex-1 min-w-0 pr-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+											onClick: () => {
+												if (isAdmin) {
+													setEditingStageId(stage.id);
+													setEditStageName(stage.name);
+												}
+											},
+											className: cn("font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate", isAdmin && "cursor-pointer hover:text-primary transition-colors"),
+											title: isAdmin ? "Clique para renomear" : "",
+											children: stage.name
+										}), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											variant: "ghost",
+											size: "icon",
+											className: "h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0",
+											onClick: () => {
+												setDeleteStageData(stage);
+												setFallbackStageName(kanbanStages.find((s) => s.id !== stage.id)?.name || "");
+											},
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "w-3 h-3" })
+										})]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary",
+										className: "bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary shrink-0",
 										children: cols.length
 									})]
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -40686,13 +40914,13 @@ function KanbanPage() {
 										draggable: isAdmin,
 										onDragStart: (e) => e.dataTransfer.setData("text/plain", o.id),
 										onClick: () => isAdmin && setSelectedOrderId(o.id),
-										className: `bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden ${isAdmin ? "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md" : ""}`,
+										className: cn("bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden", isAdmin && "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md"),
 										children: [
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" }),
 											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 												className: "flex justify-between items-start mb-2 pl-1",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-													className: "text-xs font-bold text-slate-500 dark:text-muted-foreground",
+													className: "text-xs font-bold text-slate-500",
 													children: o.friendlyId
 												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, {
 													status: o.status,
@@ -40700,93 +40928,111 @@ function KanbanPage() {
 												})]
 											}),
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-												className: "font-medium text-sm truncate pl-1 text-slate-900 dark:text-foreground",
+												className: "font-medium text-sm truncate pl-1",
 												title: o.patientName,
 												children: o.patientName
 											}),
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-												className: "text-xs text-slate-500 dark:text-muted-foreground mt-1 truncate pl-1",
+												className: "text-xs text-slate-500 mt-1 truncate pl-1",
 												children: o.workType
 											}),
 											isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-												className: "text-[10px] font-medium text-slate-400 dark:text-muted-foreground mt-3 pt-2 border-t border-slate-100 dark:border-border truncate pl-1",
+												className: "text-[10px] font-medium text-slate-400 mt-3 pt-2 border-t truncate pl-1",
 												children: o.dentistName
 											})
 										]
 									}, o.id))
 								})]
-							}, stage);
-						})
-					})]
-				}, sector))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sheet, {
-				open: !!selectedOrderId,
-				onOpenChange: (open) => !open && setSelectedOrderId(null),
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetContent, {
-					className: "w-full sm:w-[540px] flex flex-col h-full bg-white dark:bg-background z-[100] border-l",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetTitle, {
-						className: "text-xl text-slate-900 dark:text-slate-100",
-						children: ["Pedido ", selectedOrder?.friendlyId]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SheetDescription, {
-						className: "text-sm text-slate-500",
-						children: [
-							selectedOrder?.patientName,
-							" - ",
-							selectedOrder?.dentistName
-						]
-					})] }), selectedOrder && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex-1 overflow-y-auto mt-6 space-y-8 pr-2 pb-6",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-3",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
-									className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "w-4 h-4 text-primary" }), " Observações Administrativas"]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
-									value: obsText,
-									onChange: (e) => setObsText(e.target.value),
-									placeholder: "Adicione notas ou comentários...",
-									className: "min-h-[120px] resize-none"
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-									onClick: handleSaveObs,
-									size: "sm",
-									className: "w-full sm:w-auto",
-									children: "Salvar Observações"
-								})
-							]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-4",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h4", {
-								className: "text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-4 h-4 text-primary" }), " Histórico de Atividades"]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "space-y-4 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800",
-								children: selectedOrder.history.map((ev) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "relative flex items-start gap-4",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 mt-1.5 w-2 h-2 ml-2 rounded-full bg-primary z-10" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "ml-8 space-y-1 w-full",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "flex items-center justify-between",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-												className: "text-sm font-medium text-slate-900 dark:text-slate-100",
-												children: getStatusLabel(ev.status)
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-												className: "text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1",
-												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-3 h-3" }), format(new Date(ev.date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })]
-											})]
-										}), ev.note && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											className: "text-sm text-slate-700 dark:text-slate-300 mt-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800",
-											children: ev.note
-										})]
-									})]
-								}, ev.id))
+							}, stage.id);
+						}), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+							variant: "outline",
+							className: "w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30",
+							onClick: () => setIsAddColumnOpen(true),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "w-6 h-6 mb-2" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "font-medium text-sm",
+								children: "Adicionar Coluna"
 							})]
 						})]
 					})]
-				})
+				}, sector))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrderDetailsSheet, {
+				order: selectedOrder,
+				isOpen: !!selectedOrderId,
+				onClose: () => setSelectedOrderId(null),
+				obsText,
+				setObsText,
+				onSaveObs: handleSaveObs
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
+				open: isAddColumnOpen,
+				onOpenChange: setIsAddColumnOpen,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, { children: "Nova Coluna" }) }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						value: newColumnName,
+						onChange: (e) => setNewColumnName(e.target.value),
+						onKeyDown: (e) => {
+							if (e.key === "Enter" && newColumnName.trim()) {
+								addKanbanStage(newColumnName.trim());
+								setNewColumnName("");
+								setIsAddColumnOpen(false);
+							}
+						},
+						placeholder: "Ex: CONTROLE DE QUALIDADE",
+						autoFocus: true
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogFooter, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						variant: "ghost",
+						onClick: () => setIsAddColumnOpen(false),
+						children: "Cancelar"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						onClick: () => {
+							if (newColumnName.trim()) {
+								addKanbanStage(newColumnName.trim());
+								setNewColumnName("");
+								setIsAddColumnOpen(false);
+							}
+						},
+						children: "Adicionar"
+					})] })
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
+				open: !!deleteStageData,
+				onOpenChange: (o) => !o && setDeleteStageData(null),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogTitle, { children: ["Excluir ", deleteStageData?.name] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogDescription, { children: ["Confirma a exclusão desta coluna?", hasOrders && " Selecione para qual coluna deseja mover os pedidos."] })] }),
+					hasOrders && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "py-4",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+							className: "mb-2 block text-sm",
+							children: "Mover pedidos para:"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+							value: fallbackStageName,
+							onValueChange: setFallbackStageName,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: kanbanStages.filter((s) => s.id !== deleteStageData?.id).map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								value: s.name,
+								children: s.name
+							}, s.id)) })]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogFooter, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						variant: "ghost",
+						onClick: () => setDeleteStageData(null),
+						children: "Cancelar"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						variant: "destructive",
+						disabled: hasOrders && !fallbackStageName,
+						onClick: () => {
+							if (deleteStageData) {
+								deleteKanbanStage(deleteStageData.id, deleteStageData.name, hasOrders ? fallbackStageName : void 0);
+								setDeleteStageData(null);
+							}
+						},
+						children: "Excluir"
+					})] })
+				] })
 			})
 		]
 	});
@@ -40849,4 +41095,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DTj3dDaU.js.map
+//# sourceMappingURL=index-BJFDTtYz.js.map
