@@ -37343,6 +37343,7 @@ function AppSidebar() {
 	const { currentUser } = useAppStore();
 	const { signOut } = useAuth();
 	const location = useLocation();
+	if (!currentUser) return null;
 	const navItems = currentUser.role === "dentist" ? [
 		{
 			title: "Meu Painel",
@@ -37404,7 +37405,7 @@ function AppSidebar() {
 						className: "w-full justify-start gap-3 px-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Avatar, {
 							className: "w-6 h-6",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvatarFallback, { children: currentUser.name.charAt(0) })
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvatarFallback, { children: currentUser.name?.charAt(0) || "U" })
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "flex flex-col items-start text-xs truncate flex-1",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -37435,6 +37436,7 @@ function AppSidebar() {
 }
 function MainHeader() {
 	const { currentUser } = useAppStore();
+	if (!currentUser) return null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
 		className: "sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -40226,4 +40228,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DhShDLLE.js.map
+//# sourceMappingURL=index-Dmyt6ujh.js.map

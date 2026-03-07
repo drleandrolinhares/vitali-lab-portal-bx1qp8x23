@@ -30,6 +30,8 @@ function AppSidebar() {
   const { signOut } = useAuth()
   const location = useLocation()
 
+  if (!currentUser) return null
+
   const navItems =
     currentUser.role === 'dentist'
       ? [
@@ -71,7 +73,7 @@ function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start gap-3 px-2">
               <Avatar className="w-6 h-6">
-                <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{currentUser.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start text-xs truncate flex-1">
                 <span className="font-medium truncate">{currentUser.name}</span>
@@ -96,6 +98,9 @@ function AppSidebar() {
 
 function MainHeader() {
   const { currentUser } = useAppStore()
+
+  if (!currentUser) return null
+
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
       <SidebarTrigger />
