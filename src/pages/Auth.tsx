@@ -58,11 +58,11 @@ export default function AuthPage() {
       <Card className="w-full max-w-md shadow-elevation overflow-hidden border-0">
         <CardHeader className="space-y-4 items-center text-center pb-8 bg-white pt-10">
           <div className="flex items-center justify-center gap-2 font-display tracking-tight text-4xl md:text-5xl mb-2">
-            <span className="font-extrabold text-[#E6007E]">VITALI</span>
-            <span className="font-light text-[#E6007E]">LAB</span>
+            <span className="font-extrabold text-primary">VITALI</span>
+            <span className="font-light text-primary">LAB</span>
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-[#E6007E]">
+            <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-primary">
               REQUISIÇÃO DIGITAL
             </CardTitle>
             <CardDescription className="text-base">Acesse o portal do laboratório</CardDescription>
@@ -72,7 +72,7 @@ export default function AuthPage() {
           {view === 'forgot_password' ? (
             <div className="space-y-4 animate-fade-in">
               <div className="text-center mb-4 space-y-2">
-                <h3 className="text-lg font-medium text-[#E6007E]">Recuperar Senha</h3>
+                <h3 className="text-lg font-medium text-primary">Recuperar Senha</h3>
                 <p className="text-sm text-muted-foreground">
                   Digite seu email para receber um link de recuperação.
                 </p>
@@ -91,17 +91,13 @@ export default function AuthPage() {
                 {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                 {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
                 <div className="flex flex-col gap-2 pt-2">
-                  <Button
-                    type="submit"
-                    className="bg-[#E6007E] hover:bg-[#C5006C] text-white"
-                    disabled={loading}
-                  >
+                  <Button type="submit" disabled={loading}>
                     Enviar Email
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    className="hover:text-[#E6007E]"
+                    className="hover:text-primary"
                     onClick={() => {
                       setView('login')
                       setError('')
@@ -124,10 +120,10 @@ export default function AuthPage() {
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login" className="data-[state=active]:text-[#E6007E]">
+                <TabsTrigger value="login" className="data-[state=active]:text-primary">
                   Entrar
                 </TabsTrigger>
-                <TabsTrigger value="register" className="data-[state=active]:text-[#E6007E]">
+                <TabsTrigger value="register" className="data-[state=active]:text-primary">
                   Cadastro
                 </TabsTrigger>
               </TabsList>
@@ -150,7 +146,7 @@ export default function AuthPage() {
                       <Button
                         type="button"
                         variant="link"
-                        className="p-0 h-auto text-xs font-normal text-muted-foreground hover:text-[#E6007E]"
+                        className="p-0 h-auto text-xs font-normal text-muted-foreground hover:text-primary"
                         onClick={() => setView('forgot_password')}
                       >
                         Esqueci minha senha
@@ -169,7 +165,6 @@ export default function AuthPage() {
                       id="remember"
                       checked={rememberMe}
                       onCheckedChange={(c) => setRememberMe(c as boolean)}
-                      className="data-[state=checked]:bg-[#E6007E] data-[state=checked]:border-[#E6007E]"
                     />
                     <Label
                       htmlFor="remember"
@@ -180,11 +175,7 @@ export default function AuthPage() {
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                   {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                  <Button
-                    type="submit"
-                    className="w-full bg-[#E6007E] hover:bg-[#C5006C] text-white"
-                    disabled={loading}
-                  >
+                  <Button type="submit" className="w-full" disabled={loading}>
                     Entrar
                   </Button>
                 </form>
@@ -233,11 +224,7 @@ export default function AuthPage() {
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                   {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                  <Button
-                    type="submit"
-                    className="w-full bg-[#E6007E] hover:bg-[#C5006C] text-white"
-                    disabled={loading}
-                  >
+                  <Button type="submit" className="w-full" disabled={loading}>
                     Criar Conta
                   </Button>
                 </form>

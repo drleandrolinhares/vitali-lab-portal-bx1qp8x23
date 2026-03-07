@@ -39929,16 +39929,16 @@ function AuthPage() {
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex items-center justify-center gap-2 font-display tracking-tight text-4xl md:text-5xl mb-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "font-extrabold text-[#E6007E]",
+						className: "font-extrabold text-primary",
 						children: "VITALI"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "font-light text-[#E6007E]",
+						className: "font-light text-primary",
 						children: "LAB"
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-						className: "text-xl md:text-2xl font-bold tracking-tight text-[#E6007E]",
+						className: "text-xl md:text-2xl font-bold tracking-tight text-primary",
 						children: "REQUISIÇÃO DIGITAL"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
 						className: "text-base",
@@ -39952,7 +39952,7 @@ function AuthPage() {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "text-center mb-4 space-y-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "text-lg font-medium text-[#E6007E]",
+							className: "text-lg font-medium text-primary",
 							children: "Recuperar Senha"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "text-sm text-muted-foreground",
@@ -39987,13 +39987,12 @@ function AuthPage() {
 								className: "flex flex-col gap-2 pt-2",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 									type: "submit",
-									className: "bg-[#E6007E] hover:bg-[#C5006C] text-white",
 									disabled: loading,
 									children: "Enviar Email"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 									type: "button",
 									variant: "ghost",
-									className: "hover:text-[#E6007E]",
+									className: "hover:text-primary",
 									onClick: () => {
 										setView("login");
 										setError("");
@@ -40017,11 +40016,11 @@ function AuthPage() {
 							className: "grid w-full grid-cols-2 mb-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
 								value: "login",
-								className: "data-[state=active]:text-[#E6007E]",
+								className: "data-[state=active]:text-primary",
 								children: "Entrar"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
 								value: "register",
-								className: "data-[state=active]:text-[#E6007E]",
+								className: "data-[state=active]:text-primary",
 								children: "Cadastro"
 							})]
 						}),
@@ -40055,7 +40054,7 @@ function AuthPage() {
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 												type: "button",
 												variant: "link",
-												className: "p-0 h-auto text-xs font-normal text-muted-foreground hover:text-[#E6007E]",
+												className: "p-0 h-auto text-xs font-normal text-muted-foreground hover:text-primary",
 												onClick: () => setView("forgot_password"),
 												children: "Esqueci minha senha"
 											})]
@@ -40072,8 +40071,7 @@ function AuthPage() {
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox, {
 											id: "remember",
 											checked: rememberMe,
-											onCheckedChange: (c) => setRememberMe(c),
-											className: "data-[state=checked]:bg-[#E6007E] data-[state=checked]:border-[#E6007E]"
+											onCheckedChange: (c) => setRememberMe(c)
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
 											htmlFor: "remember",
 											className: "text-sm font-normal cursor-pointer text-muted-foreground",
@@ -40090,7 +40088,7 @@ function AuthPage() {
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 										type: "submit",
-										className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
+										className: "w-full",
 										disabled: loading,
 										children: "Entrar"
 									})
@@ -40165,7 +40163,7 @@ function AuthPage() {
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 										type: "submit",
-										className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
+										className: "w-full",
 										disabled: loading,
 										children: "Criar Conta"
 									})
@@ -40228,4 +40226,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Dmyt6ujh.js.map
+//# sourceMappingURL=index-Cm3ryj0l.js.map

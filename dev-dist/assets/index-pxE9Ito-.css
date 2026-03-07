@@ -521,32 +521,32 @@ video {
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* Dental Blue Accent */
-    --primary: 210 100% 45%;
+    /* Brand Pink Accent (#E6007E) */
+    --primary: 327.1 100% 45.1%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 210 100% 95%;
-    --accent-foreground: 210 100% 45%;
+    --accent: 327.1 100% 95%;
+    --accent-foreground: 327.1 100% 45.1%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 210 100% 45%;
+    --ring: 327.1 100% 45.1%;
     --radius: 0.75rem;
 
     /* Dark gray sidebar to match logo */
     --sidebar-background: 0 0% 12%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 210 100% 50%;
+    --sidebar-primary: 327.1 100% 45.1%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 20%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 210 100% 50%;
+    --sidebar-ring: 327.1 100% 45.1%;
   }
 
 .dark {
@@ -556,7 +556,7 @@ video {
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 210 100% 60%;
+    --primary: 327.1 100% 60%;
     --primary-foreground: 0 0% 9%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -568,16 +568,16 @@ video {
     --destructive-foreground: 0 0% 98%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --ring: 327.1 100% 60%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 210 100% 60%;
+    --sidebar-primary: 327.1 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    --sidebar-ring: 327.1 100% 60%;
   }
 
 section[aria-label='Notifications alt+T'] {
@@ -1793,11 +1793,6 @@ section[aria-label='Notifications alt+T'] {
   border-top-color: transparent;
 }
 
-.bg-\[\#E6007E\]{
-  --tw-bg-opacity: 1;
-  background-color: rgb(230 0 126 / var(--tw-bg-opacity, 1));
-}
-
 .bg-\[--color-bg\]{
   background-color: var(--color-bg);
 }
@@ -2290,11 +2285,6 @@ section[aria-label='Notifications alt+T'] {
   letter-spacing: 0.1em;
 }
 
-.text-\[\#E6007E\]{
-  --tw-text-opacity: 1;
-  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
-}
-
 .text-accent-foreground{
   color: hsl(var(--accent-foreground));
 }
@@ -2408,11 +2398,6 @@ section[aria-label='Notifications alt+T'] {
 .text-slate-600{
   --tw-text-opacity: 1;
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
-}
-
-.text-white{
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
 .underline{
@@ -2834,11 +2819,6 @@ section[aria-label='Notifications alt+T'] {
   border-color: hsl(var(--primary) / 0.5);
 }
 
-.hover\:bg-\[\#C5006C\]:hover{
-  --tw-bg-opacity: 1;
-  background-color: rgb(197 0 108 / var(--tw-bg-opacity, 1));
-}
-
 .hover\:bg-accent:hover{
   background-color: hsl(var(--accent));
 }
@@ -2899,11 +2879,6 @@ section[aria-label='Notifications alt+T'] {
   background-color: rgb(100 116 139 / 0.2);
 }
 
-.hover\:text-\[\#E6007E\]:hover{
-  --tw-text-opacity: 1;
-  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
-}
-
 .hover\:text-accent-foreground:hover{
   color: hsl(var(--accent-foreground));
 }
@@ -2919,6 +2894,10 @@ section[aria-label='Notifications alt+T'] {
 
 .hover\:text-muted-foreground:hover{
   color: hsl(var(--muted-foreground));
+}
+
+.hover\:text-primary:hover{
+  color: hsl(var(--primary));
 }
 
 .hover\:text-sidebar-accent-foreground:hover{
@@ -3244,11 +3223,6 @@ section[aria-label='Notifications alt+T'] {
   border-radius: 0px;
 }
 
-.data-\[state\=checked\]\:border-\[\#E6007E\][data-state="checked"]{
-  --tw-border-opacity: 1;
-  border-color: rgb(230 0 126 / var(--tw-border-opacity, 1));
-}
-
 .data-\[active\=true\]\:bg-sidebar-accent[data-active="true"]{
   background-color: hsl(var(--sidebar-accent));
 }
@@ -3275,11 +3249,6 @@ section[aria-label='Notifications alt+T'] {
 
 .data-\[state\=active\]\:bg-background[data-state="active"]{
   background-color: hsl(var(--background));
-}
-
-.data-\[state\=checked\]\:bg-\[\#E6007E\][data-state="checked"]{
-  --tw-bg-opacity: 1;
-  background-color: rgb(230 0 126 / var(--tw-bg-opacity, 1));
 }
 
 .data-\[state\=checked\]\:bg-primary[data-state="checked"]{
@@ -3342,13 +3311,12 @@ section[aria-label='Notifications alt+T'] {
   color: hsl(var(--accent-foreground));
 }
 
-.data-\[state\=active\]\:text-\[\#E6007E\][data-state="active"]{
-  --tw-text-opacity: 1;
-  color: rgb(230 0 126 / var(--tw-text-opacity, 1));
-}
-
 .data-\[state\=active\]\:text-foreground[data-state="active"]{
   color: hsl(var(--foreground));
+}
+
+.data-\[state\=active\]\:text-primary[data-state="active"]{
+  color: hsl(var(--primary));
 }
 
 .data-\[state\=checked\]\:text-primary-foreground[data-state="checked"]{
