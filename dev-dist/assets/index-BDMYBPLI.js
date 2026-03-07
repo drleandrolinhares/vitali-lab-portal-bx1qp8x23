@@ -16333,6 +16333,30 @@ function DataRoutes({ routes, future, state, isStatic, onError }) {
 		future
 	});
 }
+function Navigate({ to, replace: replace2, state, relative }) {
+	invariant(useInRouterContext(), `<Navigate> may be used only in the context of a <Router> component.`);
+	let { static: isStatic } = import_react.useContext(NavigationContext);
+	warning(!isStatic, `<Navigate> must not be used on the initial render in a <StaticRouter>. This is a no-op, but you should modify your code so the <Navigate> is only ever rendered in response to some user interaction or state change.`);
+	let { matches } = import_react.useContext(RouteContext);
+	let { pathname: locationPathname } = useLocation();
+	let navigate = useNavigate();
+	let path = resolveTo(to, getResolveToMatches(matches), locationPathname, relative === "path");
+	let jsonPath = JSON.stringify(path);
+	import_react.useEffect(() => {
+		navigate(JSON.parse(jsonPath), {
+			replace: replace2,
+			state,
+			relative
+		});
+	}, [
+		navigate,
+		jsonPath,
+		relative,
+		replace2,
+		state
+	]);
+	return null;
+}
 function Outlet(props) {
 	return useOutlet(props.context);
 }
@@ -18988,6 +19012,24 @@ var Calendar = createLucideIcon("calendar", [
 		key: "8toen8"
 	}]
 ]);
+var ChartColumn = createLucideIcon("chart-column", [
+	["path", {
+		d: "M3 3v16a2 2 0 0 0 2 2h16",
+		key: "c24i48"
+	}],
+	["path", {
+		d: "M18 17V9",
+		key: "2bz60n"
+	}],
+	["path", {
+		d: "M13 17V5",
+		key: "1frdt8"
+	}],
+	["path", {
+		d: "M8 17v-3",
+		key: "17ska0"
+	}]
+]);
 var Check = createLucideIcon("check", [["path", {
 	d: "M20 6 9 17l-5-5",
 	key: "1gmf2c"
@@ -19004,6 +19046,28 @@ var ChevronUp = createLucideIcon("chevron-up", [["path", {
 	d: "m18 15-6-6-6 6",
 	key: "153udz"
 }]]);
+var CircleAlert = createLucideIcon("circle-alert", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12",
+		y1: "8",
+		y2: "12",
+		key: "1pkeuh"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12.01",
+		y1: "16",
+		y2: "16",
+		key: "4dfq90"
+	}]
+]);
 var CircleCheck = createLucideIcon("circle-check", [["circle", {
 	cx: "12",
 	cy: "12",
@@ -19257,6 +19321,13 @@ var Search = createLucideIcon("search", [["path", {
 	cy: "11",
 	r: "8",
 	key: "4ej97u"
+}]]);
+var TrendingUp = createLucideIcon("trending-up", [["path", {
+	d: "M16 7h6v6",
+	key: "box55l"
+}], ["path", {
+	d: "m22 7-8.5 8.5-5-5L2 17",
+	key: "1t1m79"
 }]]);
 var Users = createLucideIcon("users", [
 	["path", {
@@ -32142,6 +32213,13 @@ function constructFrom(date, value) {
 function toDate(argument, context) {
 	return constructFrom(context || argument, argument);
 }
+function addDays(date, amount, options$1) {
+	const _date = toDate(date, options$1?.in);
+	if (isNaN(amount)) return constructFrom(options$1?.in || date, NaN);
+	if (!amount) return _date;
+	_date.setDate(_date.getDate() + amount);
+	return _date;
+}
 var defaultOptions = {};
 function getDefaultOptions() {
 	return defaultOptions;
@@ -32212,6 +32290,20 @@ function isDate(value) {
 }
 function isValid(date) {
 	return !(!isDate(date) && typeof date !== "number" || isNaN(+toDate(date)));
+}
+function differenceInDays(laterDate, earlierDate, options$1) {
+	const [laterDate_, earlierDate_] = normalizeDates(options$1?.in, laterDate, earlierDate);
+	const sign = compareLocalAsc(laterDate_, earlierDate_);
+	const difference = Math.abs(differenceInCalendarDays(laterDate_, earlierDate_));
+	laterDate_.setDate(laterDate_.getDate() - sign * difference);
+	const result = sign * (difference - Number(compareLocalAsc(laterDate_, earlierDate_) === -sign));
+	return result === 0 ? 0 : result;
+}
+function compareLocalAsc(laterDate, earlierDate) {
+	const diff = laterDate.getFullYear() - earlierDate.getFullYear() || laterDate.getMonth() - earlierDate.getMonth() || laterDate.getDate() - earlierDate.getDate() || laterDate.getHours() - earlierDate.getHours() || laterDate.getMinutes() - earlierDate.getMinutes() || laterDate.getSeconds() - earlierDate.getSeconds() || laterDate.getMilliseconds() - earlierDate.getMilliseconds();
+	if (diff < 0) return -1;
+	if (diff > 0) return 1;
+	return diff;
 }
 function startOfYear(date, options$1) {
 	const date_ = toDate(date, options$1?.in);
@@ -33368,6 +33460,12 @@ function cleanEscapedString(input) {
 	const matched = input.match(escapedStringRegExp);
 	if (!matched) return input;
 	return matched[1].replace(doubleQuoteRegExp, "'");
+}
+function isAfter(date, dateToCompare) {
+	return +toDate(date) > +toDate(dateToCompare);
+}
+function subDays(date, amount, options$1) {
+	return addDays(date, -amount, options$1);
 }
 var formatDistanceLocale = {
 	lessThanXSeconds: {
@@ -36426,7 +36524,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				var cachedValue = getSnapshot();
 				objectIs(value, cachedValue) || (console.error("The result of getSnapshot should be cached to avoid an infinite loop"), didWarnUncachedGetSnapshot = !0);
 			}
-			cachedValue = useState$7({ inst: {
+			cachedValue = useState$8({ inst: {
 				value,
 				getSnapshot
 			} });
@@ -36463,7 +36561,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 			return getSnapshot();
 		}
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$7 = React$3.useState, useEffect$4 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$8 = React$3.useState, useEffect$4 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
 		exports.useSyncExternalStore = void 0 !== React$3.useSyncExternalStore ? React$3.useSyncExternalStore : shim;
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
 	})();
@@ -37361,6 +37459,11 @@ function AppSidebar() {
 			path: "/history"
 		}
 	] : [
+		...currentUser.role === "admin" ? [{
+			title: "DASHBOARD",
+			icon: ChartColumn,
+			path: "/dashboard"
+		}] : [],
 		{
 			title: "Caixa de Entrada",
 			icon: FileText,
@@ -37412,8 +37515,8 @@ function AppSidebar() {
 								className: "font-medium truncate",
 								children: currentUser.name
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "text-muted-foreground truncate",
-								children: currentUser.role === "dentist" ? "Dentista" : "Recepção / Lab"
+								className: "text-muted-foreground truncate text-[10px] uppercase tracking-wider",
+								children: currentUser.role === "dentist" ? "Dentista" : currentUser.role === "admin" ? "Administrador" : "Recepção / Lab"
 							})]
 						})]
 					})
@@ -39359,6 +39462,7 @@ function HistoryPage() {
 	const { orders, currentUser } = useAppStore();
 	const [search, setSearch] = (0, import_react.useState)("");
 	const filtered = orders.filter((o) => o.patientName.toLowerCase().includes(search.toLowerCase()) || o.friendlyId.toLowerCase().includes(search.toLowerCase()));
+	const showDentistCol = currentUser.role !== "dentist";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6 max-w-6xl mx-auto",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -39387,7 +39491,7 @@ function HistoryPage() {
 						className: "pl-6",
 						children: "ID"
 					}),
-					currentUser.role === "receptionist" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Clínica/Dentista" }),
+					showDentistCol && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Clínica/Dentista" }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Paciente" }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Trabalho" }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Data" }),
@@ -39401,7 +39505,7 @@ function HistoryPage() {
 						className: "pl-6 font-medium",
 						children: order.friendlyId
 					}),
-					currentUser.role === "receptionist" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, { children: order.dentistName }),
+					showDentistCol && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, { children: order.dentistName }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, { children: order.patientName }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, { children: order.workType }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, { children: format(new Date(order.createdAt), "dd/MM/yyyy") }),
@@ -39419,7 +39523,7 @@ function HistoryPage() {
 						})
 					})
 				] }, order.id)), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-					colSpan: 7,
+					colSpan: showDentistCol ? 7 : 6,
 					className: "h-24 text-center text-muted-foreground",
 					children: "Nenhum pedido encontrado."
 				}) })] })] })
@@ -39431,8 +39535,9 @@ function DentistsPage() {
 	const { currentUser } = useAppStore();
 	const [dentists, setDentists] = (0, import_react.useState)([]);
 	const [loading, setLoading] = (0, import_react.useState)(true);
+	const hasAccess = currentUser?.role === "receptionist" || currentUser?.role === "admin";
 	(0, import_react.useEffect)(() => {
-		if (currentUser?.role !== "receptionist") {
+		if (!hasAccess) {
 			setLoading(false);
 			return;
 		}
@@ -39450,10 +39555,10 @@ function DentistsPage() {
 			setLoading(false);
 		};
 		fetchDentists();
-	}, [currentUser]);
-	if (currentUser?.role !== "receptionist") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	}, [hasAccess]);
+	if (!hasAccess) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "p-8 text-center text-red-500 font-medium",
-		children: "Acesso negado. Apenas recepção e laboratório."
+		children: "Acesso negado. Apenas recepção e administração."
 	});
 	if (loading) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "p-8 text-center text-muted-foreground",
@@ -40176,6 +40281,237 @@ function AuthPage() {
 		})
 	});
 }
+function AdminDashboard() {
+	const { currentUser, orders } = useAppStore();
+	const [dateRange, setDateRange] = (0, import_react.useState)("30");
+	const [dentistFilter, setDentistFilter] = (0, import_react.useState)("all");
+	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
+		to: "/",
+		replace: true
+	});
+	const filteredOrders = (0, import_react.useMemo)(() => {
+		let filtered = orders;
+		if (dateRange !== "all") {
+			const days = parseInt(dateRange, 10);
+			const cutoff = subDays(/* @__PURE__ */ new Date(), days);
+			filtered = filtered.filter((o) => isAfter(new Date(o.createdAt), cutoff));
+		}
+		if (dentistFilter !== "all") filtered = filtered.filter((o) => o.dentistName === dentistFilter);
+		return filtered;
+	}, [
+		orders,
+		dateRange,
+		dentistFilter
+	]);
+	const pending = filteredOrders.filter((o) => o.status === "pending").length;
+	const inProgress = filteredOrders.filter((o) => o.status === "in_production").length;
+	const completed = filteredOrders.filter((o) => o.status === "completed" || o.status === "delivered").length;
+	const turnaroundTimes = filteredOrders.map((o) => {
+		const endEvent = o.history.find((h) => h.status === "delivered") || o.history.find((h) => h.status === "completed");
+		if (!endEvent) return null;
+		return Math.max(0, differenceInDays(new Date(endEvent.date), new Date(o.createdAt)));
+	}).filter((t) => t !== null);
+	const avgTurnaround = turnaroundTimes.length ? (turnaroundTimes.reduce((a, b$1) => a + b$1, 0) / turnaroundTimes.length).toFixed(1) : "-";
+	const dentistCounts = filteredOrders.reduce((acc, o) => {
+		acc[o.dentistName] = (acc[o.dentistName] || 0) + 1;
+		return acc;
+	}, {});
+	const topDentists = Object.entries(dentistCounts).sort((a, b$1) => b$1[1] - a[1]).slice(0, 5);
+	const allDentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort();
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6 max-w-6xl mx-auto animate-fade-in",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-2xl font-bold tracking-tight text-primary",
+					children: "Painel Gerencial"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-muted-foreground",
+					children: "Visão geral do desempenho e métricas do laboratório."
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-col sm:flex-row gap-3 w-full sm:w-auto",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-1",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+							className: "text-xs text-muted-foreground",
+							children: "Período"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+							value: dateRange,
+							onValueChange: setDateRange,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+								className: "w-full sm:w-40 bg-white border-primary/20 hover:border-primary/50 transition-colors",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									value: "7",
+									children: "Últimos 7 dias"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									value: "30",
+									children: "Últimos 30 dias"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									value: "90",
+									children: "Últimos 90 dias"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									value: "all",
+									children: "Todo o período"
+								})
+							] })]
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-1",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+							className: "text-xs text-muted-foreground",
+							children: "Dentista"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+							value: dentistFilter,
+							onValueChange: setDentistFilter,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+								className: "w-full sm:w-56 bg-white border-primary/20 hover:border-primary/50 transition-colors",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Todos os Dentistas" })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								value: "all",
+								children: "Todos os Dentistas"
+							}), allDentists.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								value: d,
+								children: d
+							}, d))] })]
+						})]
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-6 md:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						className: "shadow-subtle border-l-4 border-l-amber-500 overflow-hidden relative group hover:shadow-md transition-shadow",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+							className: "flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-amber-500/5 to-transparent",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+								className: "text-sm font-medium",
+								children: "Novos Casos (Pendentes)"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, { className: "h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
+							className: "pt-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "text-3xl font-bold",
+								children: pending
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground mt-1",
+								children: "Aguardando produção"
+							})]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						className: "shadow-subtle border-l-4 border-l-blue-500 overflow-hidden relative group hover:shadow-md transition-shadow",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+							className: "flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-blue-500/5 to-transparent",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+								className: "text-sm font-medium",
+								children: "Em Produção"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Wrench, { className: "h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
+							className: "pt-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "text-3xl font-bold",
+								children: inProgress
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground mt-1",
+								children: "Sendo trabalhados"
+							})]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						className: "shadow-subtle border-l-4 border-l-emerald-500 overflow-hidden relative group hover:shadow-md transition-shadow",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+							className: "flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-emerald-500/5 to-transparent",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+								className: "text-sm font-medium",
+								children: "Casos Finalizados"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
+							className: "pt-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "text-3xl font-bold",
+								children: completed
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground mt-1",
+								children: "Concluídos ou Entregues"
+							})]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						className: "shadow-subtle border-l-4 border-l-primary overflow-hidden relative group hover:shadow-md transition-shadow",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+							className: "flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-primary/5 to-transparent",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+								className: "text-sm font-medium",
+								children: "Tempo Médio"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TrendingUp, { className: "h-4 w-4 text-primary group-hover:scale-110 transition-transform" })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
+							className: "pt-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "text-3xl font-bold text-primary",
+								children: [
+									avgTurnaround,
+									" ",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-lg text-muted-foreground font-normal",
+										children: "dias"
+									})
+								]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground mt-1",
+								children: "Para conclusão de casos"
+							})]
+						})]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "grid gap-6 md:grid-cols-2",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+					className: "shadow-subtle",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardTitle, {
+						className: "flex items-center gap-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "h-5 w-5 text-primary" }), " Top Dentistas"]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, { children: "Dentistas com maior volume de casos no período selecionado." })] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "space-y-4",
+						children: topDentists.length > 0 ? topDentists.map(([name, count$3], index$1) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center justify-between p-3 bg-muted/20 rounded-lg border hover:border-primary/30 transition-colors",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-center gap-3",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary font-bold text-xs border border-primary/20",
+									children: index$1 + 1
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "font-medium text-sm",
+									children: name
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "font-bold text-lg",
+								children: [
+									count$3,
+									" ",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-xs font-normal text-muted-foreground",
+										children: "casos"
+									})
+								]
+							})]
+						}, name)) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-center py-8 text-muted-foreground bg-muted/10 rounded-lg border border-dashed",
+							children: "Nenhum dado para o período selecionado."
+						})
+					}) })]
+				})
+			})
+		]
+	});
+}
 var PrivateRoute = ({ children }) => {
 	const { session, loading } = useAuth();
 	if (loading) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -40215,6 +40551,10 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
 					path: "/dentists",
 					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DentistsPage, {})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+					path: "/dashboard",
+					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminDashboard, {})
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
@@ -40226,4 +40566,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Cm3ryj0l.js.map
+//# sourceMappingURL=index-BDMYBPLI.js.map

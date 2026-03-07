@@ -3,7 +3,15 @@ import { useAppStore } from '@/stores/main'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LayoutDashboard, PlusCircle, History, Users, LogOut, FileText } from 'lucide-react'
+import {
+  LayoutDashboard,
+  PlusCircle,
+  History,
+  Users,
+  LogOut,
+  FileText,
+  BarChart3,
+} from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +48,9 @@ function AppSidebar() {
           { title: 'Histórico', icon: History, path: '/history' },
         ]
       : [
+          ...(currentUser.role === 'admin'
+            ? [{ title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' }]
+            : []),
           { title: 'Caixa de Entrada', icon: FileText, path: '/' },
           { title: 'Histórico Global', icon: History, path: '/history' },
           { title: 'Dentistas', icon: Users, path: '/dentists' },
@@ -77,8 +88,12 @@ function AppSidebar() {
               </Avatar>
               <div className="flex flex-col items-start text-xs truncate flex-1">
                 <span className="font-medium truncate">{currentUser.name}</span>
-                <span className="text-muted-foreground truncate">
-                  {currentUser.role === 'dentist' ? 'Dentista' : 'Recepção / Lab'}
+                <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
+                  {currentUser.role === 'dentist'
+                    ? 'Dentista'
+                    : currentUser.role === 'admin'
+                      ? 'Administrador'
+                      : 'Recepção / Lab'}
                 </span>
               </div>
             </Button>

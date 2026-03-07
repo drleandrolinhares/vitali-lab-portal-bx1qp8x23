@@ -26,6 +26,8 @@ export default function HistoryPage() {
       o.friendlyId.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const showDentistCol = currentUser.role !== 'dentist'
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -50,7 +52,7 @@ export default function HistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="pl-6">ID</TableHead>
-                {currentUser.role === 'receptionist' && <TableHead>Clínica/Dentista</TableHead>}
+                {showDentistCol && <TableHead>Clínica/Dentista</TableHead>}
                 <TableHead>Paciente</TableHead>
                 <TableHead>Trabalho</TableHead>
                 <TableHead>Data</TableHead>
@@ -62,9 +64,7 @@ export default function HistoryPage() {
               {filtered.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="pl-6 font-medium">{order.friendlyId}</TableCell>
-                  {currentUser.role === 'receptionist' && (
-                    <TableCell>{order.dentistName}</TableCell>
-                  )}
+                  {showDentistCol && <TableCell>{order.dentistName}</TableCell>}
                   <TableCell>{order.patientName}</TableCell>
                   <TableCell>{order.workType}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'dd/MM/yyyy')}</TableCell>
@@ -80,7 +80,10 @@ export default function HistoryPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={showDentistCol ? 7 : 6}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     Nenhum pedido encontrado.
                   </TableCell>
                 </TableRow>

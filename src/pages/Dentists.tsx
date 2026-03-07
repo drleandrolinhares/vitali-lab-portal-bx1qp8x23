@@ -11,8 +11,10 @@ export default function DentistsPage() {
   const [dentists, setDentists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const hasAccess = currentUser?.role === 'receptionist' || currentUser?.role === 'admin'
+
   useEffect(() => {
-    if (currentUser?.role !== 'receptionist') {
+    if (!hasAccess) {
       setLoading(false)
       return
     }
@@ -42,12 +44,12 @@ export default function DentistsPage() {
     }
 
     fetchDentists()
-  }, [currentUser])
+  }, [hasAccess])
 
-  if (currentUser?.role !== 'receptionist') {
+  if (!hasAccess) {
     return (
       <div className="p-8 text-center text-red-500 font-medium">
-        Acesso negado. Apenas recepção e laboratório.
+        Acesso negado. Apenas recepção e administração.
       </div>
     )
   }

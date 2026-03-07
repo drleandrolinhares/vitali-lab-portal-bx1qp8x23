@@ -12,6 +12,7 @@ import OrderDetails from './pages/OrderDetails'
 import HistoryPage from './pages/History'
 import DentistsPage from './pages/Dentists'
 import AuthPage from './pages/Auth'
+import AdminDashboard from './pages/AdminDashboard'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/order/:id" element={<OrderDetails />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/dentists" element={<DentistsPage />} />
+              <Route path="/dashboard" element={<AdminDashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

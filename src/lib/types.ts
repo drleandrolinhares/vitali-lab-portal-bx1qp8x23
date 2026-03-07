@@ -1,6 +1,6 @@
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
 
-export type UserRole = 'dentist' | 'receptionist'
+export type UserRole = 'dentist' | 'receptionist' | 'admin'
 
 export interface OrderHistoryEvent {
   id: string
