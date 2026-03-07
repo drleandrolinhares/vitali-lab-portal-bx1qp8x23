@@ -20,15 +20,10 @@ export default function HistoryPage() {
   const { orders, currentUser } = useAppStore()
   const [search, setSearch] = useState('')
 
-  let displayOrders = orders
-  if (currentUser.role === 'dentist') {
-    displayOrders = orders.filter((o) => o.dentistName === currentUser.name)
-  }
-
-  const filtered = displayOrders.filter(
+  const filtered = orders.filter(
     (o) =>
       o.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.toLowerCase().includes(search.toLowerCase()),
+      o.friendlyId.toLowerCase().includes(search.toLowerCase()),
   )
 
   return (
@@ -55,7 +50,7 @@ export default function HistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="pl-6">ID</TableHead>
-                {currentUser.role === 'lab' && <TableHead>Clínica/Dentista</TableHead>}
+                {currentUser.role === 'receptionist' && <TableHead>Clínica/Dentista</TableHead>}
                 <TableHead>Paciente</TableHead>
                 <TableHead>Trabalho</TableHead>
                 <TableHead>Data</TableHead>
@@ -66,8 +61,10 @@ export default function HistoryPage() {
             <TableBody>
               {filtered.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="pl-6 font-medium">{order.id}</TableCell>
-                  {currentUser.role === 'lab' && <TableCell>{order.dentistName}</TableCell>}
+                  <TableCell className="pl-6 font-medium">{order.friendlyId}</TableCell>
+                  {currentUser.role === 'receptionist' && (
+                    <TableCell>{order.dentistName}</TableCell>
+                  )}
                   <TableCell>{order.patientName}</TableCell>
                   <TableCell>{order.workType}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'dd/MM/yyyy')}</TableCell>

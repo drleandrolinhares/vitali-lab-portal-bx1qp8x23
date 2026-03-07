@@ -4,6 +4,7 @@ import { LabDashboard } from './dashboard/LabDashboard'
 
 const Index = () => {
   const { currentUser } = useAppStore()
+  if (!currentUser) return null
   return currentUser.role === 'dentist' ? <DentistDashboard /> : <LabDashboard />
 }
 

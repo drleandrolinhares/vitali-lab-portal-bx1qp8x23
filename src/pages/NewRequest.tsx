@@ -24,8 +24,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TeethSelector } from '@/components/TeethSelector'
 
 export default function NewRequest() {
-  const { addOrder, currentUser } = useAppStore()
+  const { addOrder } = useAppStore()
   const navigate = useNavigate()
+  const [submitting, setSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
     patientName: '',
@@ -40,31 +41,25 @@ export default function NewRequest() {
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.patientName || !formData.workType) return
 
-    const finalObservations = [
-      formData.shadeScale ? `Escala Usada: ${formData.shadeScale}` : '',
-      selectedArches.length > 0 ? `Arco Total: ${selectedArches.join(', ')}` : '',
-      formData.shippingMethod === 'dentist_send' && formData.stlDeliveryMethod
-        ? `Forma do Envio STL: ${formData.stlDeliveryMethod}`
-        : '',
-      formData.observations,
-    ]
-      .filter(Boolean)
-      .join('\n\n')
-
-    addOrder({
-      dentistName: currentUser.name,
+    setSubmitting(true)
+    await addOrder({
       patientName: formData.patientName,
       workType: formData.workType,
       material: formData.material || 'Padrão',
       shade: formData.shade,
+      shadeScale: formData.shadeScale,
       shippingMethod: formData.shippingMethod,
-      observations: finalObservations,
+      stlDeliveryMethod:
+        formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
+      observations: formData.observations,
       teeth: selectedTeeth,
+      arches: selectedArches,
     })
+    setSubmitting(false)
     navigate('/')
   }
 
@@ -236,8 +231,8 @@ export default function NewRequest() {
             >
               Cancelar
             </Button>
-            <Button type="submit" className="h-11 px-8 text-base">
-              Enviar Pedido
+            <Button type="submit" className="h-11 px-8 text-base" disabled={submitting}>
+              {submitting ? 'Enviando...' : 'Enviar Pedido'}
             </Button>
           </CardFooter>
         </form>

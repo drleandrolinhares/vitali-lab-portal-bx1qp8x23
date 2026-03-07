@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Eye, Play, Check, Package } from 'lucide-react'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
 import { OrderStatus } from '@/lib/types'
 
@@ -27,7 +26,7 @@ export function LabDashboard() {
   const activeOrders = orders.filter((o) => o.status !== 'delivered')
 
   const changeStatus = (id: string, status: OrderStatus) => {
-    updateOrderStatus(id, status, `Status atualizado para ${status} pelo laboratório.`)
+    updateOrderStatus(id, status, `Status atualizado para ${status} pela recepção.`)
   }
 
   return (
@@ -59,7 +58,7 @@ export function LabDashboard() {
             <TableBody>
               {activeOrders.map((order) => (
                 <TableRow key={order.id} className="group cursor-default">
-                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell className="font-medium">{order.friendlyId}</TableCell>
                   <TableCell>{order.dentistName}</TableCell>
                   <TableCell>{order.patientName}</TableCell>
                   <TableCell>

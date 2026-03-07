@@ -1,124 +1,198 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Order, OrderStatus, User, UserRole } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 interface AppState {
   currentUser: User
   orders: Order[]
+  loading: boolean
   switchRole: (role: UserRole) => void
-  addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status' | 'history'>) => void
-  updateOrderStatus: (orderId: string, status: OrderStatus, note?: string) => void
+  addOrder: (order: any) => Promise<void>
+  updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
+  refreshOrders: () => void
 }
-
-const mockOrders: Order[] = [
-  {
-    id: 'ORD-001',
-    patientName: 'Carlos Silva',
-    dentistName: 'Dra. Ana Souza',
-    workType: 'Coroa',
-    material: 'Zircônia',
-    teeth: [11, 21],
-    shade: 'A2',
-    shippingMethod: 'lab_pickup',
-    observations: 'Atenção ao ponto de contato.',
-    status: 'in_production',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    history: [
-      { id: 'h1', status: 'pending', date: new Date(Date.now() - 86400000 * 2).toISOString() },
-    ],
-  },
-  {
-    id: 'ORD-002',
-    patientName: 'Maria Oliveira',
-    dentistName: 'Dr. João Pedro',
-    workType: 'Faceta',
-    material: 'Porcelana',
-    teeth: [13, 12, 11, 21, 22, 23],
-    shade: 'BL2',
-    shippingMethod: 'dentist_send',
-    observations: 'Textura de superfície leve.',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    history: [{ id: 'h2', status: 'pending', date: new Date(Date.now() - 3600000).toISOString() }],
-  },
-  {
-    id: 'ORD-003',
-    patientName: 'José Santos',
-    dentistName: 'Dra. Ana Souza',
-    workType: 'Protocolo',
-    material: 'Resina/Acrílico',
-    teeth: [],
-    shade: 'A3',
-    shippingMethod: 'lab_pickup',
-    observations: 'Barra metálica reforçada.',
-    status: 'completed',
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    history: [
-      { id: 'h3', status: 'pending', date: new Date(Date.now() - 86400000 * 5).toISOString() },
-    ],
-  },
-]
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 'u1',
-    name: 'Dra. Ana Souza',
-    role: 'dentist',
-    clinic: 'Sorriso Clínica',
-  })
-  const [orders, setOrders] = useState<Order[]>(mockOrders)
+  const { session } = useAuth()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(true)
 
-  const switchRole = (role: UserRole) => {
-    setCurrentUser((prev) => ({
-      ...prev,
-      role,
-      name: role === 'dentist' ? 'Dra. Ana Souza' : 'Vitali Administrativo',
-    }))
-    toast({
-      title: 'Perfil alterado',
-      description: `Visualizando como ${role === 'dentist' ? 'Dentista' : 'Laboratório'}.`,
-    })
-  }
-
-  const addOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'status' | 'history'>) => {
-    const newOrder: Order = {
-      ...orderData,
-      id: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      history: [{ id: Date.now().toString(), status: 'pending', date: new Date().toISOString() }],
+  const fetchProfile = async () => {
+    if (!session?.user) {
+      setCurrentUser(null)
+      setOrders([])
+      setProfileLoading(false)
+      return
     }
-    setOrders([newOrder, ...orders])
+
+    setProfileLoading(true)
+    const { data } = await supabase
+      .from('profiles' as any)
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+    if (data) {
+      setCurrentUser({
+        id: data.id,
+        name: data.name,
+        role: data.role as UserRole,
+        clinic: data.clinic,
+      })
+    } else {
+      setCurrentUser({
+        id: session.user.id,
+        name: session.user.user_metadata?.name || 'Usuário',
+        role: session.user.user_metadata?.role || 'dentist',
+        clinic: session.user.user_metadata?.clinic,
+      })
+    }
+    setProfileLoading(false)
+  }
+
+  useEffect(() => {
+    fetchProfile()
+  }, [session?.user])
+
+  const fetchOrders = async () => {
+    if (!session?.user || !currentUser) return
+    setLoading(true)
+    const { data: dbOrders } = await supabase
+      .from('orders' as any)
+      .select(`
+        *,
+        profiles!orders_dentist_id_fkey(name),
+        order_history(*)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (dbOrders) {
+      const mapped: Order[] = dbOrders.map((o: any) => ({
+        id: o.id,
+        friendlyId: o.friendly_id,
+        patientName: o.patient_name,
+        dentistName: o.profiles?.name || 'Desconhecido',
+        workType: o.work_type,
+        material: o.material,
+        teeth: o.tooth_or_arch?.teeth || [],
+        arches: o.tooth_or_arch?.arches || [],
+        shade: o.color_and_considerations,
+        shadeScale: o.scale_used,
+        shippingMethod: o.shipping_method,
+        stlDeliveryMethod: o.shipping_details,
+        observations: o.observations,
+        status: o.status,
+        createdAt: o.created_at,
+        history: (o.order_history || [])
+          .sort(
+            (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          )
+          .map((h: any) => ({
+            id: h.id,
+            status: h.status,
+            date: h.created_at,
+            note: h.note,
+          })),
+      }))
+      setOrders(mapped)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchOrders()
+    }
+  }, [currentUser])
+
+  const switchRole = () => {
     toast({
-      title: 'Pedido enviado!',
-      description: `O pedido ${newOrder.id} foi registrado com sucesso.`,
+      title: 'Aviso',
+      description: 'O modo demonstração está desativado. Você está logado no banco de dados real.',
     })
   }
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus, note?: string) => {
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === orderId) {
-          return {
-            ...o,
-            status,
-            history: [
-              { id: Date.now().toString(), status, date: new Date().toISOString(), note },
-              ...o.history,
-            ],
-          }
-        }
-        return o
-      }),
+  const addOrder = async (orderData: any) => {
+    if (!currentUser) return
+    const { error } = await supabase.from('orders' as any).insert({
+      patient_name: orderData.patientName,
+      dentist_id: currentUser.id,
+      work_type: orderData.workType,
+      material: orderData.material,
+      tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },
+      color_and_considerations: orderData.shade,
+      scale_used: orderData.shadeScale,
+      shipping_method: orderData.shippingMethod,
+      shipping_details: orderData.stlDeliveryMethod,
+      observations: orderData.observations,
+      status: 'pending',
+    })
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar o pedido.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    toast({ title: 'Pedido enviado!', description: `O pedido foi registrado com sucesso.` })
+    fetchOrders()
+  }
+
+  const updateOrderStatus = async (dbId: string, status: OrderStatus, note?: string) => {
+    const { error: err1 } = await supabase
+      .from('orders' as any)
+      .update({ status })
+      .eq('id', dbId)
+    if (err1)
+      return toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar status',
+        variant: 'destructive',
+      })
+
+    const { error: err2 } = await supabase.from('order_history' as any).insert({
+      order_id: dbId,
+      status,
+      note,
+    })
+    if (err2) console.error('Erro ao adicionar histórico', err2)
+
+    toast({ title: 'Status atualizado', description: `O pedido agora está: ${status}.` })
+    fetchOrders()
+  }
+
+  if (session && profileLoading) {
+    return React.createElement(
+      'div',
+      {
+        className:
+          'min-h-screen flex items-center justify-center font-medium text-muted-foreground',
+      },
+      'Carregando perfil do usuário...',
     )
-    toast({ title: 'Status atualizado', description: `O pedido ${orderId} agora está: ${status}.` })
   }
 
   return React.createElement(
     AppContext.Provider,
-    { value: { currentUser, orders, switchRole, addOrder, updateOrderStatus } },
+    {
+      value: {
+        currentUser: currentUser as User,
+        orders,
+        loading,
+        switchRole,
+        addOrder,
+        updateOrderStatus,
+        refreshOrders: fetchOrders,
+      },
+    },
     children,
   )
 }

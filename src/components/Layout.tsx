@@ -2,17 +2,8 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  LayoutDashboard,
-  PlusCircle,
-  History,
-  Users,
-  LogOut,
-  FileText,
-  Menu,
-  RefreshCcw,
-} from 'lucide-react'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { LayoutDashboard, PlusCircle, History, Users, LogOut, FileText } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +14,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -33,9 +23,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useAuth } from '@/hooks/use-auth'
 
 function AppSidebar() {
-  const { currentUser, switchRole } = useAppStore()
+  const { currentUser } = useAppStore()
+  const { signOut } = useAuth()
   const location = useLocation()
 
   const navItems =
@@ -84,22 +76,15 @@ function AppSidebar() {
               <div className="flex flex-col items-start text-xs truncate flex-1">
                 <span className="font-medium truncate">{currentUser.name}</span>
                 <span className="text-muted-foreground truncate">
-                  {currentUser.role === 'dentist' ? 'Dentista' : 'Laboratório'}
+                  {currentUser.role === 'dentist' ? 'Dentista' : 'Recepção / Lab'}
                 </span>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Modo de Demonstração</DropdownMenuLabel>
+            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => switchRole('dentist')}>
-              <RefreshCcw className="mr-2 h-4 w-4" /> Alternar para Dentista
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => switchRole('lab')}>
-              <RefreshCcw className="mr-2 h-4 w-4" /> Alternar para Laboratório
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" /> Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

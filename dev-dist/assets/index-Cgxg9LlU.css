@@ -767,6 +767,10 @@ section[aria-label='Notifications alt+T'] {
   z-index: 1;
 }
 
+.col-span-2{
+  grid-column: span 2 / span 2;
+}
+
 .-mx-1{
   margin-left: -0.25rem;
   margin-right: -0.25rem;
@@ -819,6 +823,10 @@ section[aria-label='Notifications alt+T'] {
 
 .mb-4{
   margin-bottom: 1rem;
+}
+
+.mb-6{
+  margin-bottom: 1.5rem;
 }
 
 .ml-1{
@@ -1232,8 +1240,16 @@ section[aria-label='Notifications alt+T'] {
   max-width: max-content;
 }
 
+.max-w-md{
+  max-width: 28rem;
+}
+
 .flex-1{
   flex: 1 1 0%;
+}
+
+.flex-shrink-0{
+  flex-shrink: 0;
 }
 
 .shrink-0{
@@ -1563,6 +1579,10 @@ section[aria-label='Notifications alt+T'] {
 
 .whitespace-nowrap{
   white-space: nowrap;
+}
+
+.whitespace-pre-wrap{
+  white-space: pre-wrap;
 }
 
 .break-words{
@@ -1901,6 +1921,10 @@ section[aria-label='Notifications alt+T'] {
 
 .p-1\.5{
   padding: 0.375rem;
+}
+
+.p-12{
+  padding: 3rem;
 }
 
 .p-2{

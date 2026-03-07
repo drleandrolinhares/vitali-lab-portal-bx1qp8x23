@@ -1,6 +1,6 @@
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
 
-export type UserRole = 'dentist' | 'lab'
+export type UserRole = 'dentist' | 'receptionist'
 
 export interface OrderHistoryEvent {
   id: string
@@ -11,13 +11,17 @@ export interface OrderHistoryEvent {
 
 export interface Order {
   id: string
+  friendlyId: string
   patientName: string
   dentistName: string
   workType: string
   material: string
   teeth: number[]
+  arches?: string[]
   shade: string
+  shadeScale?: string
   shippingMethod: string
+  stlDeliveryMethod?: string
   observations: string
   status: OrderStatus
   createdAt: string

@@ -10,25 +10,24 @@ import { ptBR } from 'date-fns/locale'
 
 export function DentistDashboard() {
   const { orders, currentUser } = useAppStore()
-  const myOrders = orders.filter((o) => o.dentistName === currentUser.name)
-  const activeOrders = myOrders.filter((o) => o.status !== 'delivered' && o.status !== 'completed')
+  const activeOrders = orders.filter((o) => o.status !== 'delivered' && o.status !== 'completed')
 
   const stats = [
     {
       label: 'Pendentes',
-      value: myOrders.filter((o) => o.status === 'pending').length,
+      value: orders.filter((o) => o.status === 'pending').length,
       icon: Clock,
       color: 'text-amber-500',
     },
     {
       label: 'Em Produção',
-      value: myOrders.filter((o) => o.status === 'in_production').length,
+      value: orders.filter((o) => o.status === 'in_production').length,
       icon: Activity,
       color: 'text-blue-500',
     },
     {
       label: 'Concluídos',
-      value: myOrders.filter((o) => o.status === 'completed').length,
+      value: orders.filter((o) => o.status === 'completed').length,
       icon: CheckCircle2,
       color: 'text-emerald-500',
     },
@@ -103,7 +102,7 @@ export function DentistDashboard() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-lg">{order.patientName}</span>
                       <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                        {order.id}
+                        {order.friendlyId}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground flex items-center gap-2">

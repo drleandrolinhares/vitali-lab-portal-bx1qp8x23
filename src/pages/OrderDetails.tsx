@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge, getStatusLabel } from '@/components/StatusBadge'
-import { ArrowLeft, Calendar, User, FileText, Activity } from 'lucide-react'
+import { ArrowLeft, Calendar, FileText, Activity } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -23,7 +23,7 @@ export default function OrderDetails() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Pedido {order.id}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Pedido {order.friendlyId}</h2>
           <p className="text-muted-foreground flex items-center gap-2">
             Criado em {format(new Date(order.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
           </p>
@@ -59,9 +59,15 @@ export default function OrderDetails() {
                 <p className="font-medium">{order.material}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Cor/Escala</p>
+                <p className="text-sm text-muted-foreground">Cor</p>
                 <p className="font-medium">{order.shade || 'Não especificada'}</p>
               </div>
+              {order.shadeScale && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Escala</p>
+                  <p className="font-medium">{order.shadeScale}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Envio</p>
                 <p className="font-medium">
@@ -70,11 +76,25 @@ export default function OrderDetails() {
                     : 'Enviado pelo Dentista'}
                 </p>
               </div>
+              {order.stlDeliveryMethod && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Detalhes do Envio</p>
+                  <p className="font-medium">{order.stlDeliveryMethod}</p>
+                </div>
+              )}
             </div>
-            {order.teeth.length > 0 && (
+            {(order.teeth.length > 0 || (order.arches && order.arches.length > 0)) && (
               <div className="bg-muted/30 p-4 rounded-md border">
                 <p className="text-sm text-muted-foreground mb-2">Elementos Envolvidos</p>
                 <div className="flex flex-wrap gap-2">
+                  {order.arches?.map((a) => (
+                    <span
+                      key={a}
+                      className="bg-primary/10 text-primary px-2 py-1 rounded font-semibold text-sm border border-primary/20"
+                    >
+                      {a}
+                    </span>
+                  ))}
                   {order.teeth.map((t) => (
                     <span
                       key={t}
@@ -89,7 +109,7 @@ export default function OrderDetails() {
             {order.observations && (
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm bg-muted/50 p-3 rounded-md italic border-l-4 border-l-primary">
+                <p className="text-sm bg-muted/50 p-3 rounded-md italic border-l-4 border-l-primary whitespace-pre-wrap">
                   {order.observations}
                 </p>
               </div>
@@ -105,7 +125,7 @@ export default function OrderDetails() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted before:to-transparent">
-              {order.history.map((event, i) => (
+              {order.history.map((event) => (
                 <div key={event.id} className="relative flex items-start gap-4">
                   <div className="absolute left-0 mt-1.5 w-2 h-2 rounded-full ring-4 ring-background bg-primary z-10" />
                   <div className="ml-6 space-y-1">
