@@ -32111,18 +32111,25 @@ function AppProvider({ children }) {
 		toast({ title: "Coluna adicionada" });
 	};
 	const updateKanbanStage = async (id, oldName, newName) => {
+		if (currentUser?.role !== "admin") throw new Error("Unauthorized");
 		const upperNewName = newName.trim().toUpperCase();
-		if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id)) return toast({
-			title: "Erro",
-			description: "Coluna já existe.",
-			variant: "destructive"
-		});
+		if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id)) {
+			toast({
+				title: "Erro",
+				description: "Coluna já existe.",
+				variant: "destructive"
+			});
+			throw new Error("Duplicate column");
+		}
 		const { error } = await supabase.from("kanban_stages").update({ name: upperNewName }).eq("id", id);
-		if (error) return toast({
-			title: "Erro",
-			description: "Erro ao renomear.",
-			variant: "destructive"
-		});
+		if (error) {
+			toast({
+				title: "Erro",
+				description: "Erro ao renomear.",
+				variant: "destructive"
+			});
+			throw error;
+		}
 		await supabase.from("orders").update({ kanban_stage: upperNewName }).eq("kanban_stage", oldName);
 		toast({ title: "Coluna renomeada" });
 	};
@@ -40807,6 +40814,7 @@ function KanbanPage() {
 	const [newColumnName, setNewColumnName] = (0, import_react.useState)("");
 	const [deleteStageData, setDeleteStageData] = (0, import_react.useState)(null);
 	const [fallbackStageName, setFallbackStageName] = (0, import_react.useState)("");
+	const savingRef = (0, import_react.useRef)(false);
 	(0, import_react.useEffect)(() => {
 		if (selectedOrder) setObsText(selectedOrder.observations || "");
 	}, [selectedOrder]);
@@ -40823,10 +40831,19 @@ function KanbanPage() {
 		const o = orders.find((x$1) => x$1.id === id);
 		if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage);
 	};
-	const handleSaveStageName = (id, oldName) => {
+	const handleSaveStageName = async (id, oldName) => {
+		if (savingRef.current) return;
 		const trimmed = editStageName.trim();
-		if (trimmed && trimmed.toUpperCase() !== oldName.toUpperCase()) updateKanbanStage(id, oldName, trimmed);
-		setEditingStageId(null);
+		if (!trimmed || trimmed.toUpperCase() === oldName.toUpperCase()) return setEditingStageId(null);
+		savingRef.current = true;
+		try {
+			await updateKanbanStage(id, oldName, trimmed);
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setEditingStageId(null);
+			savingRef.current = false;
+		}
 	};
 	const handleSaveObs = () => {
 		if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText);
@@ -40888,7 +40905,10 @@ function KanbanPage() {
 										onChange: (e) => setEditStageName(e.target.value),
 										onBlur: () => handleSaveStageName(stage.id, stage.name),
 										onKeyDown: (e) => {
-											if (e.key === "Enter") handleSaveStageName(stage.id, stage.name);
+											if (e.key === "Enter") {
+												e.preventDefault();
+												handleSaveStageName(stage.id, stage.name);
+											}
 											if (e.key === "Escape") setEditingStageId(null);
 										},
 										className: "h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
@@ -41105,4 +41125,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DU_MMnKc.js.map
+//# sourceMappingURL=index-Drsdj0wS.js.map

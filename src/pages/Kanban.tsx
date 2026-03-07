@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useAppStore } from '@/stores/main'
 import { Stage } from '@/lib/types'
 import {
@@ -52,6 +52,7 @@ export default function KanbanPage() {
   const [newColumnName, setNewColumnName] = useState('')
   const [deleteStageData, setDeleteStageData] = useState<Stage | null>(null)
   const [fallbackStageName, setFallbackStageName] = useState<string>('')
+  const savingRef = useRef(false)
 
   useEffect(() => {
     if (selectedOrder) setObsText(selectedOrder.observations || '')
@@ -75,12 +76,20 @@ export default function KanbanPage() {
     if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(id, stage)
   }
 
-  const handleSaveStageName = (id: string, oldName: string) => {
+  const handleSaveStageName = async (id: string, oldName: string) => {
+    if (savingRef.current) return
     const trimmed = editStageName.trim()
-    if (trimmed && trimmed.toUpperCase() !== oldName.toUpperCase()) {
-      updateKanbanStage(id, oldName, trimmed)
+    if (!trimmed || trimmed.toUpperCase() === oldName.toUpperCase()) return setEditingStageId(null)
+
+    savingRef.current = true
+    try {
+      await updateKanbanStage(id, oldName, trimmed)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setEditingStageId(null)
+      savingRef.current = false
     }
-    setEditingStageId(null)
   }
 
   const handleSaveObs = () => {
@@ -143,7 +152,10 @@ export default function KanbanPage() {
                           onChange={(e) => setEditStageName(e.target.value)}
                           onBlur={() => handleSaveStageName(stage.id, stage.name)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveStageName(stage.id, stage.name)
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleSaveStageName(stage.id, stage.name)
+                            }
                             if (e.key === 'Escape') setEditingStageId(null)
                           }}
                           className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"

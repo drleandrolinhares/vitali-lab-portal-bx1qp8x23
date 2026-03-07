@@ -237,15 +237,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
+    if (currentUser?.role !== 'admin') throw new Error('Unauthorized')
     const upperNewName = newName.trim().toUpperCase()
-    if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id))
-      return toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
+    if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id)) {
+      toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
+      throw new Error('Duplicate column')
+    }
     const { error } = await supabase
       .from('kanban_stages' as any)
       .update({ name: upperNewName })
       .eq('id', id)
-    if (error)
-      return toast({ title: 'Erro', description: 'Erro ao renomear.', variant: 'destructive' })
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao renomear.', variant: 'destructive' })
+      throw error
+    }
     await supabase
       .from('orders' as any)
       .update({ kanban_stage: upperNewName })
