@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import logoImg from '@/assets/vitalli-03-2b72d.png'
 
 type AuthView = 'login' | 'register' | 'forgot_password'
 
@@ -56,13 +55,12 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-elevation border-t-4 border-t-[#E6007E]">
-        <CardHeader className="space-y-6 items-center text-center pb-8">
-          <img
-            src={logoImg}
-            alt="Vitali Lab"
-            className="h-24 md:h-32 object-contain drop-shadow-sm"
-          />
+      <Card className="w-full max-w-md shadow-elevation overflow-hidden border-0">
+        <CardHeader className="space-y-4 items-center text-center pb-8 bg-white pt-10">
+          <div className="flex items-center justify-center gap-2 font-display tracking-tight text-4xl md:text-5xl mb-2">
+            <span className="font-extrabold text-[#E6007E]">VITALI</span>
+            <span className="font-light text-[#E6007E]">LAB</span>
+          </div>
           <div className="space-y-2">
             <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-[#E6007E]">
               REQUISIÇÃO DIGITAL
@@ -70,7 +68,7 @@ export default function AuthPage() {
             <CardDescription className="text-base">Acesse o portal do laboratório</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6 bg-card">
           {view === 'forgot_password' ? (
             <div className="space-y-4 animate-fade-in">
               <div className="text-center mb-4 space-y-2">

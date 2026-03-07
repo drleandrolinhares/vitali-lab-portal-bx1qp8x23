@@ -39874,7 +39874,6 @@ var Checkbox = import_react.forwardRef(({ className, ...props }, ref) => /* @__P
 	})
 }));
 Checkbox.displayName = Checkbox$1.displayName;
-var vitalli_03_2b72d_default = "/assets/vitalli-03-2b72d-DxldsgJG.png";
 function AuthPage() {
 	const { signIn, signUp, resetPassword } = useAuth();
 	const [view, setView] = (0, import_react.useState)("login");
@@ -39922,13 +39921,18 @@ function AuthPage() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "min-h-screen flex items-center justify-center bg-muted/30 p-4",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-			className: "w-full max-w-md shadow-elevation border-t-4 border-t-[#E6007E]",
+			className: "w-full max-w-md shadow-elevation overflow-hidden border-0",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
-				className: "space-y-6 items-center text-center pb-8",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-					src: vitalli_03_2b72d_default,
-					alt: "Vitali Lab",
-					className: "h-24 md:h-32 object-contain drop-shadow-sm"
+				className: "space-y-4 items-center text-center pb-8 bg-white pt-10",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center justify-center gap-2 font-display tracking-tight text-4xl md:text-5xl mb-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "font-extrabold text-[#E6007E]",
+						children: "VITALI"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "font-light text-[#E6007E]",
+						children: "LAB"
+					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
@@ -39939,233 +39943,236 @@ function AuthPage() {
 						children: "Acesse o portal do laboratório"
 					})]
 				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, { children: view === "forgot_password" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "space-y-4 animate-fade-in",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "text-center mb-4 space-y-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						className: "text-lg font-medium text-[#E6007E]",
-						children: "Recuperar Senha"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-sm text-muted-foreground",
-						children: "Digite seu email para receber um link de recuperação."
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+				className: "pt-6 bg-card",
+				children: view === "forgot_password" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "space-y-4 animate-fade-in",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-center mb-4 space-y-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "text-lg font-medium text-[#E6007E]",
+							children: "Recuperar Senha"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm text-muted-foreground",
+							children: "Digite seu email para receber um link de recuperação."
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+						onSubmit: handleResetPassword,
+						className: "space-y-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+									htmlFor: "reset-email",
+									children: "Email"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+									id: "reset-email",
+									type: "email",
+									value: email,
+									onChange: (e) => setEmail(e.target.value),
+									required: true
+								})]
+							}),
+							error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm text-red-500 font-medium",
+								children: error
+							}),
+							message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm text-green-600 font-medium",
+								children: message$1
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex flex-col gap-2 pt-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									type: "submit",
+									className: "bg-[#E6007E] hover:bg-[#C5006C] text-white",
+									disabled: loading,
+									children: "Enviar Email"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									type: "button",
+									variant: "ghost",
+									className: "hover:text-[#E6007E]",
+									onClick: () => {
+										setView("login");
+										setError("");
+										setMessage("");
+									},
+									children: "Voltar para o Login"
+								})]
+							})
+						]
 					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-					onSubmit: handleResetPassword,
-					className: "space-y-4",
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
+					value: view,
+					onValueChange: (v) => {
+						setView(v);
+						setError("");
+						setMessage("");
+					},
+					className: "w-full",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-								htmlFor: "reset-email",
-								children: "Email"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-								id: "reset-email",
-								type: "email",
-								value: email,
-								onChange: (e) => setEmail(e.target.value),
-								required: true
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
+							className: "grid w-full grid-cols-2 mb-6",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+								value: "login",
+								className: "data-[state=active]:text-[#E6007E]",
+								children: "Entrar"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+								value: "register",
+								className: "data-[state=active]:text-[#E6007E]",
+								children: "Cadastro"
 							})]
 						}),
-						error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-sm text-red-500 font-medium",
-							children: error
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+							value: "login",
+							className: "animate-fade-in",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+								onSubmit: handleLogin,
+								className: "space-y-4",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "email",
+											children: "Email"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "email",
+											type: "email",
+											value: email,
+											onChange: (e) => setEmail(e.target.value),
+											required: true
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "flex items-center justify-between",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+												htmlFor: "password",
+												children: "Senha"
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+												type: "button",
+												variant: "link",
+												className: "p-0 h-auto text-xs font-normal text-muted-foreground hover:text-[#E6007E]",
+												onClick: () => setView("forgot_password"),
+												children: "Esqueci minha senha"
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "password",
+											type: "password",
+											value: password,
+											onChange: (e) => setPassword(e.target.value),
+											required: true
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-center space-x-2 py-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox, {
+											id: "remember",
+											checked: rememberMe,
+											onCheckedChange: (c) => setRememberMe(c),
+											className: "data-[state=checked]:bg-[#E6007E] data-[state=checked]:border-[#E6007E]"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "remember",
+											className: "text-sm font-normal cursor-pointer text-muted-foreground",
+											children: "Permanecer conectado"
+										})]
+									}),
+									error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm text-red-500 font-medium",
+										children: error
+									}),
+									message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm text-green-600 font-medium",
+										children: message$1
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+										type: "submit",
+										className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
+										disabled: loading,
+										children: "Entrar"
+									})
+								]
+							})
 						}),
-						message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-sm text-green-600 font-medium",
-							children: message$1
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex flex-col gap-2 pt-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-								type: "submit",
-								className: "bg-[#E6007E] hover:bg-[#C5006C] text-white",
-								disabled: loading,
-								children: "Enviar Email"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-								type: "button",
-								variant: "ghost",
-								className: "hover:text-[#E6007E]",
-								onClick: () => {
-									setView("login");
-									setError("");
-									setMessage("");
-								},
-								children: "Voltar para o Login"
-							})]
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+							value: "register",
+							className: "animate-fade-in",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+								onSubmit: handleSignup,
+								className: "space-y-4",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "reg-name",
+											children: "Nome Completo"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "reg-name",
+											value: name,
+											onChange: (e) => setName(e.target.value),
+											required: true
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "clinic",
+											children: "Nome da Clínica"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "clinic",
+											value: clinic,
+											onChange: (e) => setClinic(e.target.value),
+											required: true
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "reg-email",
+											children: "Email"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "reg-email",
+											type: "email",
+											value: email,
+											onChange: (e) => setEmail(e.target.value),
+											required: true
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+											htmlFor: "reg-password",
+											children: "Senha"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											id: "reg-password",
+											type: "password",
+											value: password,
+											onChange: (e) => setPassword(e.target.value),
+											required: true,
+											minLength: 6
+										})]
+									}),
+									error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm text-red-500 font-medium",
+										children: error
+									}),
+									message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm text-green-600 font-medium",
+										children: message$1
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+										type: "submit",
+										className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
+										disabled: loading,
+										children: "Criar Conta"
+									})
+								]
+							})
 						})
 					]
-				})]
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
-				value: view,
-				onValueChange: (v) => {
-					setView(v);
-					setError("");
-					setMessage("");
-				},
-				className: "w-full",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
-						className: "grid w-full grid-cols-2 mb-6",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-							value: "login",
-							className: "data-[state=active]:text-[#E6007E]",
-							children: "Entrar"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-							value: "register",
-							className: "data-[state=active]:text-[#E6007E]",
-							children: "Cadastro"
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-						value: "login",
-						className: "animate-fade-in",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-							onSubmit: handleLogin,
-							className: "space-y-4",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "email",
-										children: "Email"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "email",
-										type: "email",
-										value: email,
-										onChange: (e) => setEmail(e.target.value),
-										required: true
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "flex items-center justify-between",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-											htmlFor: "password",
-											children: "Senha"
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-											type: "button",
-											variant: "link",
-											className: "p-0 h-auto text-xs font-normal text-muted-foreground hover:text-[#E6007E]",
-											onClick: () => setView("forgot_password"),
-											children: "Esqueci minha senha"
-										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "password",
-										type: "password",
-										value: password,
-										onChange: (e) => setPassword(e.target.value),
-										required: true
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center space-x-2 py-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox, {
-										id: "remember",
-										checked: rememberMe,
-										onCheckedChange: (c) => setRememberMe(c),
-										className: "data-[state=checked]:bg-[#E6007E] data-[state=checked]:border-[#E6007E]"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "remember",
-										className: "text-sm font-normal cursor-pointer text-muted-foreground",
-										children: "Permanecer conectado"
-									})]
-								}),
-								error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-sm text-red-500 font-medium",
-									children: error
-								}),
-								message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-sm text-green-600 font-medium",
-									children: message$1
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-									type: "submit",
-									className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
-									disabled: loading,
-									children: "Entrar"
-								})
-							]
-						})
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-						value: "register",
-						className: "animate-fade-in",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-							onSubmit: handleSignup,
-							className: "space-y-4",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "reg-name",
-										children: "Nome Completo"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "reg-name",
-										value: name,
-										onChange: (e) => setName(e.target.value),
-										required: true
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "clinic",
-										children: "Nome da Clínica"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "clinic",
-										value: clinic,
-										onChange: (e) => setClinic(e.target.value),
-										required: true
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "reg-email",
-										children: "Email"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "reg-email",
-										type: "email",
-										value: email,
-										onChange: (e) => setEmail(e.target.value),
-										required: true
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "space-y-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-										htmlFor: "reg-password",
-										children: "Senha"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										id: "reg-password",
-										type: "password",
-										value: password,
-										onChange: (e) => setPassword(e.target.value),
-										required: true,
-										minLength: 6
-									})]
-								}),
-								error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-sm text-red-500 font-medium",
-									children: error
-								}),
-								message$1 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-sm text-green-600 font-medium",
-									children: message$1
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-									type: "submit",
-									className: "w-full bg-[#E6007E] hover:bg-[#C5006C] text-white",
-									disabled: loading,
-									children: "Criar Conta"
-								})
-							]
-						})
-					})
-				]
-			}) })]
+				})
+			})]
 		})
 	});
 }
@@ -40219,4 +40226,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Cd8yfqHM.js.map
+//# sourceMappingURL=index-DhShDLLE.js.map

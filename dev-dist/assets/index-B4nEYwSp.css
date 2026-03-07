@@ -1663,6 +1663,10 @@ section[aria-label='Notifications alt+T'] {
   border-width: 1px;
 }
 
+.border-0{
+  border-width: 0px;
+}
+
 .border-2{
   border-width: 2px;
 }
@@ -1702,10 +1706,6 @@ section[aria-label='Notifications alt+T'] {
 
 .border-t{
   border-top-width: 1px;
-}
-
-.border-t-4{
-  border-top-width: 4px;
 }
 
 .border-dashed{
@@ -1787,11 +1787,6 @@ section[aria-label='Notifications alt+T'] {
 
 .border-l-transparent{
   border-left-color: transparent;
-}
-
-.border-t-\[\#E6007E\]{
-  --tw-border-opacity: 1;
-  border-top-color: rgb(230 0 126 / var(--tw-border-opacity, 1));
 }
 
 .border-t-transparent{
@@ -1927,13 +1922,13 @@ section[aria-label='Notifications alt+T'] {
   background-color: transparent;
 }
 
-.fill-current{
-  fill: currentColor;
+.bg-white{
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
-.object-contain{
-  -o-object-fit: contain;
-     object-fit: contain;
+.fill-current{
+  fill: currentColor;
 }
 
 .p-0{
@@ -2142,6 +2137,10 @@ section[aria-label='Notifications alt+T'] {
   padding-top: 0px;
 }
 
+.pt-10{
+  padding-top: 2.5rem;
+}
+
 .pt-2{
   padding-top: 0.5rem;
 }
@@ -2152,6 +2151,10 @@ section[aria-label='Notifications alt+T'] {
 
 .pt-4{
   padding-top: 1rem;
+}
+
+.pt-6{
+  padding-top: 1.5rem;
 }
 
 .pt-8{
@@ -2533,11 +2536,6 @@ section[aria-label='Notifications alt+T'] {
 
 .ring-offset-background{
   --tw-ring-offset-color: hsl(var(--background));
-}
-
-.drop-shadow-sm{
-  --tw-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
 .filter{
@@ -3930,10 +3928,6 @@ section[aria-label='Notifications alt+T'] {
     display: flex;
   }
 
-  .md\:h-32{
-    height: 8rem;
-  }
-
   .md\:w-\[var\(--radix-navigation-menu-viewport-width\)\]{
     width: var(--radix-navigation-menu-viewport-width);
   }
@@ -3961,6 +3955,11 @@ section[aria-label='Notifications alt+T'] {
   .md\:text-2xl{
     font-size: 1.5rem;
     line-height: 2rem;
+  }
+
+  .md\:text-5xl{
+    font-size: 3rem;
+    line-height: 1;
   }
 
   .md\:text-sm{
