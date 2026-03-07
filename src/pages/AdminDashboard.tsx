@@ -18,10 +18,6 @@ export default function AdminDashboard() {
   const [dateRange, setDateRange] = useState('30')
   const [dentistFilter, setDentistFilter] = useState('all')
 
-  if (currentUser?.role !== 'admin') {
-    return <Navigate to="/" replace />
-  }
-
   const filteredOrders = useMemo(() => {
     let filtered = orders
 
@@ -37,6 +33,10 @@ export default function AdminDashboard() {
 
     return filtered
   }, [orders, dateRange, dentistFilter])
+
+  if (currentUser?.role !== 'admin') {
+    return <Navigate to="/" replace />
+  }
 
   const pending = filteredOrders.filter((o) => o.status === 'pending').length
   const inProgress = filteredOrders.filter((o) => o.status === 'in_production').length

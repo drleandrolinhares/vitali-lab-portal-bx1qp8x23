@@ -40285,10 +40285,6 @@ function AdminDashboard() {
 	const { currentUser, orders } = useAppStore();
 	const [dateRange, setDateRange] = (0, import_react.useState)("30");
 	const [dentistFilter, setDentistFilter] = (0, import_react.useState)("all");
-	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
-		to: "/",
-		replace: true
-	});
 	const filteredOrders = (0, import_react.useMemo)(() => {
 		let filtered = orders;
 		if (dateRange !== "all") {
@@ -40303,6 +40299,10 @@ function AdminDashboard() {
 		dateRange,
 		dentistFilter
 	]);
+	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
+		to: "/",
+		replace: true
+	});
 	const pending = filteredOrders.filter((o) => o.status === "pending").length;
 	const inProgress = filteredOrders.filter((o) => o.status === "in_production").length;
 	const completed = filteredOrders.filter((o) => o.status === "completed" || o.status === "delivered").length;
@@ -40566,4 +40566,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-BDMYBPLI.js.map
+//# sourceMappingURL=index-Csgsp4cj.js.map
