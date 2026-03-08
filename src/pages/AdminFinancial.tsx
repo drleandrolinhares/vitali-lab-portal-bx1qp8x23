@@ -56,9 +56,6 @@ export default function AdminFinancial() {
     return orders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
   }, [orders, priceList, kanbanStages])
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
-    return <Navigate to="/" replace />
-
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
 
@@ -77,7 +74,7 @@ export default function AdminFinancial() {
         }
         return acc
       }, 0),
-    [orders, priceList, kanbanStages],
+    [orders, priceList, kanbanStages, currentMonth, currentYear],
   )
 
   const monthlyExpenses = useMemo(
@@ -89,7 +86,7 @@ export default function AdminFinancial() {
             new Date(e.due_date + 'T00:00:00').getFullYear() === currentYear,
         )
         .reduce((acc, e) => acc + Number(e.amount), 0),
-    [expenses],
+    [expenses, currentMonth, currentYear],
   )
 
   const monthlyProfit = monthlyRevenue - monthlyExpenses
@@ -102,6 +99,9 @@ export default function AdminFinancial() {
       return { ...d, outstandingBalance, dentistOrders }
     })
     .filter((d) => d.outstandingBalance > 0 || d.dentistOrders.length > 0)
+
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
+    return <Navigate to="/" replace />
 
   const handleSettle = async () => {
     if (!settleDialog) return
