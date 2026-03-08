@@ -9,10 +9,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2, Edit2, GripHorizontal, X } from 'lucide-react'
+import { Users, Plus, Trash2, Edit2, GripHorizontal, X, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
@@ -36,6 +38,7 @@ export default function KanbanPage() {
     kanbanStages,
     addKanbanStage,
     updateKanbanStage,
+    updateKanbanStageDescription,
     deleteKanbanStage,
     reorderKanbanStages,
   } = useAppStore()
@@ -52,6 +55,10 @@ export default function KanbanPage() {
 
   const [editingStageId, setEditingStageId] = useState<string | null>(null)
   const [editStageName, setEditStageName] = useState('')
+
+  const [editingDescStage, setEditingDescStage] = useState<Stage | null>(null)
+  const [editDescText, setEditDescText] = useState('')
+
   const [isAddColumnOpen, setIsAddColumnOpen] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
   const [deleteStageData, setDeleteStageData] = useState<Stage | null>(null)
@@ -137,6 +144,13 @@ export default function KanbanPage() {
     } finally {
       setEditingStageId(null)
       savingRef.current = false
+    }
+  }
+
+  const handleSaveDesc = async () => {
+    if (editingDescStage) {
+      await updateKanbanStageDescription(editingDescStage.id, editDescText.trim())
+      setEditingDescStage(null)
     }
   }
 
@@ -286,11 +300,45 @@ export default function KanbanPage() {
                                 <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                               )}
                             </h4>
+                            {(stage.description || isAdmin) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn(
+                                      'h-5 w-5 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-800',
+                                      !stage.description && 'opacity-30 hover:opacity-100',
+                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (isAdmin) {
+                                        setEditingDescStage(stage)
+                                        setEditDescText(stage.description || '')
+                                      }
+                                    }}
+                                  >
+                                    <Info className="w-3.5 h-3.5 text-slate-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs text-center z-50">
+                                  {stage.description ? (
+                                    <p className="text-sm font-medium leading-relaxed">
+                                      {stage.description}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm italic text-muted-foreground">
+                                      Sem descrição. Clique para adicionar.
+                                    </p>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                             {isAdmin && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0 ml-auto"
                                 onClick={() => {
                                   setDeleteStageData(stage)
                                   setFallbackStageName(
@@ -387,6 +435,30 @@ export default function KanbanPage() {
         setObsText={setObsText}
         onSaveObs={handleSaveObs}
       />
+
+      <Dialog open={!!editingDescStage} onOpenChange={(open) => !open && setEditingDescStage(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Descrição da Coluna</DialogTitle>
+            <DialogDescription>
+              Explique o propósito ou requisitos para a etapa{' '}
+              <strong className="text-foreground">{editingDescStage?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={editDescText}
+            onChange={(e) => setEditDescText(e.target.value)}
+            placeholder="Ex: Todos os pedidos nesta coluna devem ter modelos validados."
+            className="min-h-[120px]"
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingDescStage(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveDesc}>Salvar Descrição</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isAddColumnOpen}

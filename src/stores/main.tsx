@@ -27,6 +27,7 @@ interface AppState {
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
   addKanbanStage: (name: string) => Promise<boolean>
   updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
+  updateKanbanStageDescription: (id: string, description: string) => Promise<void>
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
   updateSetting: (key: string, value: string) => Promise<void>
@@ -101,7 +102,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .select('*')
       .order('order_index', { ascending: true })
     if (data)
-      setKanbanStages(data.map((s: any) => ({ id: s.id, name: s.name, orderIndex: s.order_index })))
+      setKanbanStages(
+        data.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          orderIndex: s.order_index,
+          description: s.description,
+        })),
+      )
   }, [])
 
   const fetchSettings = useCallback(async () => {
@@ -474,6 +482,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Coluna renomeada' })
   }
 
+  const updateKanbanStageDescription = async (id: string, description: string) => {
+    if (currentUser?.role !== 'admin') throw new Error('Unauthorized')
+    const { error } = await supabase
+      .from('kanban_stages' as any)
+      .update({ description })
+      .eq('id', id)
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao atualizar descrição.', variant: 'destructive' })
+      throw error
+    }
+    setKanbanStages((prev) => prev.map((s) => (s.id === id ? { ...s, description } : s)))
+    await logAudit('UPDATE_STAGE_DESC', 'kanban_stage', id, { description })
+    toast({ title: 'Descrição atualizada' })
+  }
+
   const deleteKanbanStage = async (id: string, oldName: string, fallbackName?: string) => {
     if (fallbackName)
       await supabase
@@ -566,6 +589,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateOrderObservations,
         addKanbanStage,
         updateKanbanStage,
+        updateKanbanStageDescription,
         deleteKanbanStage,
         reorderKanbanStages,
         updateSetting,

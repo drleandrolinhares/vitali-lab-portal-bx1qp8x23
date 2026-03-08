@@ -18,6 +18,7 @@ export interface Stage {
   id: string
   name: string
   orderIndex: number
+  description?: string | null
 }
 
 export interface OrderHistory {
