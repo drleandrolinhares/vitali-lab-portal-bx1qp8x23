@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Mail, Briefcase, Settings, Phone, UserCircle } from 'lucide-react'
+import { Mail, Briefcase, Settings, Phone, UserCircle, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,6 +28,7 @@ export default function DentistsPage() {
     clinic_contact_name: '',
     clinic_contact_role: '',
     clinic_contact_phone: '',
+    whatsapp_group_link: '',
   })
 
   const hasAccess = currentUser?.role === 'receptionist' || currentUser?.role === 'admin'
@@ -56,6 +57,7 @@ export default function DentistsPage() {
         clinic_contact_name: p.clinic_contact_name,
         clinic_contact_role: p.clinic_contact_role,
         clinic_contact_phone: p.clinic_contact_phone,
+        whatsapp_group_link: p.whatsapp_group_link,
         activeCases: orders ? orders.filter((o: any) => o.dentist_id === p.id).length : 0,
       }))
       setDentists(mapped)
@@ -76,6 +78,7 @@ export default function DentistsPage() {
       clinic_contact_name: dentist.clinic_contact_name || '',
       clinic_contact_role: dentist.clinic_contact_role || '',
       clinic_contact_phone: dentist.clinic_contact_phone || '',
+      whatsapp_group_link: dentist.whatsapp_group_link || '',
     })
   }
 
@@ -93,6 +96,7 @@ export default function DentistsPage() {
         clinic_contact_name: formData.clinic_contact_name,
         clinic_contact_role: formData.clinic_contact_role,
         clinic_contact_phone: formData.clinic_contact_phone,
+        whatsapp_group_link: formData.whatsapp_group_link,
       })
       .eq('id', editingDentist.id)
       .select()
@@ -192,6 +196,21 @@ export default function DentistsPage() {
                   </div>
                 )}
 
+                {currentUser?.role === 'admin' && dentist.whatsapp_group_link && (
+                  <div className="flex items-center gap-2 text-muted-foreground truncate">
+                    <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                    <a
+                      href={dentist.whatsapp_group_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium truncate"
+                      title={dentist.whatsapp_group_link}
+                    >
+                      Acessar Grupo WhatsApp
+                    </a>
+                  </div>
+                )}
+
                 <div className="bg-muted/40 rounded-md p-2 mt-2 border border-border/50 grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-muted-foreground block mb-0.5">Fechamento</span>
@@ -249,6 +268,19 @@ export default function DentistsPage() {
                   onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
                 />
               </div>
+
+              {currentUser?.role === 'admin' && (
+                <div className="space-y-2">
+                  <Label>Grupo WhatsApp (Link)</Label>
+                  <Input
+                    placeholder="Ex: https://chat.whatsapp.com/..."
+                    value={formData.whatsapp_group_link}
+                    onChange={(e) =>
+                      setFormData({ ...formData, whatsapp_group_link: e.target.value })
+                    }
+                  />
+                </div>
+              )}
 
               <div className="pt-4 pb-2 border-b">
                 <h4 className="text-sm font-semibold text-foreground">Faturamento</h4>
