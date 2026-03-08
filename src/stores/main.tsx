@@ -134,7 +134,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     const { data: dbOrders } = await supabase
       .from('orders' as any)
-      .select(`*, profiles!orders_dentist_id_fkey(name, whatsapp_group_link), order_history(*)`)
+      .select(
+        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link), order_history(*)`,
+      )
       .order('created_at', { ascending: false })
     if (dbOrders) {
       setOrders(
@@ -146,6 +148,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           patientBirthDate: o.patient_birth_date,
           dentistId: o.dentist_id,
           dentistName: o.profiles?.name || 'Desconhecido',
+          dentistClinic: o.profiles?.clinic || '',
           dentistGroupLink: o.profiles?.whatsapp_group_link || '',
           sector: o.sector,
           kanbanStage: o.kanban_stage,
