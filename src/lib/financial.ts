@@ -1,10 +1,18 @@
 import { Stage } from '@/lib/types'
 
 export type PriceStage = { id: string; name: string; price: number; kanban_stage: string }
-export type PriceItem = { id: string; work_type: string; price_stages?: PriceStage[] }
+export type PriceItem = {
+  id: string
+  work_type: string
+  sector?: string
+  price_stages?: PriceStage[]
+}
 
 export function getOrderFinancials(order: any, priceList: PriceItem[], kanbanStages: Stage[]) {
-  const priceItem = priceList.find((p) => p.work_type === order.workType)
+  const priceItem =
+    priceList.find(
+      (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
+    ) || priceList.find((p) => p.work_type === order.workType)
   const stages = priceItem?.price_stages || []
 
   const kanbanIndexMap: Record<string, number> = {}

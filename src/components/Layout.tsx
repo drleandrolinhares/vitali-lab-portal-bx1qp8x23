@@ -4,6 +4,13 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   LayoutDashboard,
   PlusCircle,
   History,
@@ -62,7 +69,14 @@ const ADMIN_MENUS = [
     ],
   },
   {
-    group: 'ADMINISTRATIVO E FINANCEIRO',
+    group: 'ADMINISTRATIVO',
+    items: [
+      { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
+      { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
+    ],
+  },
+  {
+    group: 'FINANCEIRO',
     items: [
       { id: 'dashboard', title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' },
       { id: 'finances', title: 'Finanças', icon: TrendingUp, path: '/admin-financial' },
@@ -73,8 +87,6 @@ const ADMIN_MENUS = [
         path: '/accounts-payable',
       },
       { id: 'inventory', title: 'Estoque', icon: Package, path: '/inventory' },
-      { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
-      { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
       { id: 'prices', title: 'Tabela de Preços', icon: DollarSign, path: '/prices' },
     ],
   },
@@ -266,8 +278,21 @@ function AppSidebar() {
 }
 
 function MainHeader() {
-  const { currentUser } = useAppStore()
+  const { currentUser, selectedLab, setSelectedLab } = useAppStore()
+  const location = useLocation()
+
   if (!currentUser) return null
+
+  const isFinancialRoute = [
+    '/dashboard',
+    '/admin-financial',
+    '/accounts-payable',
+    '/inventory',
+    '/prices',
+  ].includes(location.pathname)
+  const showLabSelector =
+    (currentUser.role === 'admin' || currentUser.role === 'receptionist') && isFinancialRoute
+
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
       <SidebarTrigger />
@@ -276,7 +301,19 @@ function MainHeader() {
           Portal Digital •{' '}
           <span className="text-foreground">{currentUser.clinic || 'Gestão Lab'}</span>
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {showLabSelector && (
+            <Select value={selectedLab} onValueChange={setSelectedLab}>
+              <SelectTrigger className="w-[190px] h-8 text-xs font-medium bg-muted/50 border-dashed focus:ring-0">
+                <SelectValue placeholder="Selecione o Laboratório" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todos">Visão Consolidada</SelectItem>
+                <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
+                <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

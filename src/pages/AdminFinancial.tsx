@@ -24,7 +24,7 @@ import { TrendingUp, Wallet, CheckCircle, TrendingDown, DollarSign } from 'lucid
 import { Navigate } from 'react-router-dom'
 
 export default function AdminFinancial() {
-  const { currentUser, orders, kanbanStages, refreshOrders } = useAppStore()
+  const { currentUser, orders, kanbanStages, refreshOrders, selectedLab } = useAppStore()
   const [priceList, setPriceList] = useState<PriceItem[]>([])
   const [dentists, setDentists] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -33,7 +33,7 @@ export default function AdminFinancial() {
   useEffect(() => {
     supabase
       .from('price_list')
-      .select('id, work_type, price_stages(*)')
+      .select('id, work_type, sector, price_stages(*)')
       .then(({ data }) => {
         if (data) setPriceList(data as PriceItem[])
       })
@@ -52,16 +52,20 @@ export default function AdminFinancial() {
       })
   }, [])
 
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => selectedLab === 'Todos' || o.sector === selectedLab)
+  }, [orders, selectedLab])
+
   const financials = useMemo(() => {
-    return orders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
-  }, [orders, priceList, kanbanStages])
+    return filteredOrders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
+  }, [filteredOrders, priceList, kanbanStages])
 
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
 
   const monthlyRevenue = useMemo(
     () =>
-      orders.reduce((acc, o) => {
+      filteredOrders.reduce((acc, o) => {
         const isCompletedThisMonth = o.history.some(
           (h: any) =>
             (h.status === 'completed' || h.status === 'delivered') &&
@@ -74,19 +78,23 @@ export default function AdminFinancial() {
         }
         return acc
       }, 0),
-    [orders, priceList, kanbanStages, currentMonth, currentYear],
+    [filteredOrders, priceList, kanbanStages, currentMonth, currentYear],
   )
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter((e) => selectedLab === 'Todos' || e.sector === selectedLab)
+  }, [expenses, selectedLab])
 
   const monthlyExpenses = useMemo(
     () =>
-      expenses
+      filteredExpenses
         .filter(
           (e) =>
             new Date(e.due_date + 'T00:00:00').getMonth() === currentMonth &&
             new Date(e.due_date + 'T00:00:00').getFullYear() === currentYear,
         )
         .reduce((acc, e) => acc + Number(e.amount), 0),
-    [expenses, currentMonth, currentYear],
+    [filteredExpenses, currentMonth, currentYear],
   )
 
   const monthlyProfit = monthlyRevenue - monthlyExpenses

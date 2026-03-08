@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,9 +31,18 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { formatBRL } from '@/lib/financial'
 import { format } from 'date-fns'
-import { Plus, DollarSign, Calendar, TrendingDown, CheckCircle, Trash2 } from 'lucide-react'
+import {
+  Plus,
+  DollarSign,
+  Calendar,
+  TrendingDown,
+  CheckCircle,
+  Trash2,
+  XCircle,
+} from 'lucide-react'
 
 export default function AccountsPayable() {
+  const { selectedLab, logAudit } = useAppStore()
   const [expenses, setExpenses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -57,6 +67,10 @@ export default function AccountsPayable() {
     fetchExpenses()
   }, [])
 
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter((e) => selectedLab === 'Todos' || e.sector === selectedLab)
+  }, [expenses, selectedLab])
+
   const handleSave = async () => {
     if (!formData.description || !formData.amount || !formData.due_date) {
       return toast({ title: 'Preencha todos os campos.', variant: 'destructive' })
@@ -67,6 +81,7 @@ export default function AccountsPayable() {
       cost_center: formData.cost_center,
       due_date: formData.due_date,
       amount: Number(formData.amount.replace(/[^0-9,-]+/g, '').replace(',', '.')),
+      sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
       status: 'pending',
     })
 
@@ -88,6 +103,24 @@ export default function AccountsPayable() {
     }
   }
 
+  const cancelPayment = async (expense: any) => {
+    if (!confirm('Deseja cancelar o pagamento desta despesa?')) return
+    const { error } = await supabase
+      .from('expenses')
+      .update({ status: 'pending' })
+      .eq('id', expense.id)
+    if (!error) {
+      toast({ title: 'Pagamento cancelado' })
+      logAudit('CANCEL_PAYMENT', 'expense', expense.id, {
+        description: expense.description,
+        amount: expense.amount,
+      })
+      fetchExpenses()
+    } else {
+      toast({ title: 'Erro ao cancelar', description: error.message, variant: 'destructive' })
+    }
+  }
+
   const deleteExpense = async (id: string) => {
     if (!confirm('Deseja excluir esta despesa?')) return
     const { error } = await supabase.from('expenses').delete().eq('id', id)
@@ -99,18 +132,18 @@ export default function AccountsPayable() {
 
   const projectedFixed = useMemo(
     () =>
-      expenses
+      filteredExpenses
         .filter((e) => e.cost_center === 'Fixo' && e.status === 'pending')
         .reduce((a, b) => a + Number(b.amount), 0),
-    [expenses],
+    [filteredExpenses],
   )
 
   const projectedVariable = useMemo(
     () =>
-      expenses
+      filteredExpenses
         .filter((e) => e.cost_center === 'Variável' && e.status === 'pending')
         .reduce((a, b) => a + Number(b.amount), 0),
-    [expenses],
+    [filteredExpenses],
   )
 
   return (
@@ -179,14 +212,14 @@ export default function AccountsPayable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses.length === 0 ? (
+              {filteredExpenses.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                     Nenhuma despesa encontrada.
                   </TableCell>
                 </TableRow>
               ) : (
-                expenses.map((expense) => (
+                filteredExpenses.map((expense) => (
                   <TableRow
                     key={expense.id}
                     className={expense.status === 'paid' ? 'opacity-60 bg-muted/30' : ''}
@@ -228,8 +261,20 @@ export default function AccountsPayable() {
                             size="icon"
                             onClick={() => markAsPaid(expense.id)}
                             className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            title="Marcar como Pago"
                           >
                             <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {expense.status === 'paid' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => cancelPayment(expense)}
+                            className="text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                            title="Cancelar Pagamento"
+                          >
+                            <XCircle className="w-4 h-4" />
                           </Button>
                         )}
                         <Button
@@ -237,6 +282,7 @@ export default function AccountsPayable() {
                           size="icon"
                           onClick={() => deleteExpense(expense.id)}
                           className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          title="Excluir"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

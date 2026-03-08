@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Badge } from '@/components/ui/badge'
 import { MoreHorizontal, Eye, Play, Check, Package, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -59,7 +60,7 @@ export function LabDashboard() {
           <Logo variant="square" size="sm" className="sm:hidden mb-4" />
           <h2 className="text-3xl font-bold tracking-tight">Caixa de Entrada</h2>
           <p className="text-muted-foreground mt-1 text-lg">
-            Gerenciamento central de pedidos recebidos das clínicas.
+            Gerenciamento central de pedidos recebidos das clínicas (Visão Consolidada).
           </p>
         </div>
       </div>
@@ -84,7 +85,17 @@ export function LabDashboard() {
             <TableBody>
               {activeOrders.map((order) => (
                 <TableRow key={order.id} className="group cursor-default">
-                  <TableCell className="font-medium">{order.friendlyId}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col gap-1">
+                      <span>{order.friendlyId}</span>
+                      <Badge
+                        variant="outline"
+                        className={`w-fit text-[9px] uppercase leading-none tracking-wider px-1.5 py-0.5 ${order.sector === 'Studio Acrílico' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}
+                      >
+                        {order.sector}
+                      </Badge>
+                    </div>
+                  </TableCell>
                   <TableCell>{order.dentistName}</TableCell>
                   <TableCell>{order.patientName}</TableCell>
                   <TableCell>

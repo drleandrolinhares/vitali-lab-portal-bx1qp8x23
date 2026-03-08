@@ -17,6 +17,8 @@ interface AppState {
   kanbanStages: Stage[]
   appSettings: Record<string, string>
   loading: boolean
+  selectedLab: string
+  setSelectedLab: (lab: string) => void
   switchRole: (role: UserRole) => void
   addOrder: (order: any) => Promise<void>
   deleteOrder: (dbId: string, reason: string) => Promise<void>
@@ -30,6 +32,7 @@ interface AppState {
   updateSetting: (key: string, value: string) => Promise<void>
   updateProfile: (updates: Partial<User>) => Promise<void>
   refreshOrders: () => void
+  logAudit: (action: string, entityType: string, entityId: string, details?: any) => Promise<void>
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
@@ -42,6 +45,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [appSettings, setAppSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
+
+  const [selectedLab, setSelectedLab] = useState<string>(
+    () => localStorage.getItem('vitali_selected_lab') || 'Soluções Cerâmicas',
+  )
+
+  useEffect(() => {
+    localStorage.setItem('vitali_selected_lab', selectedLab)
+  }, [selectedLab])
 
   const fetchProfile = async () => {
     if (!session?.user) {
@@ -476,6 +487,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         kanbanStages,
         appSettings,
         loading,
+        selectedLab,
+        setSelectedLab,
         switchRole,
         addOrder,
         deleteOrder,
@@ -489,6 +502,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateSetting,
         updateProfile,
         refreshOrders: fetchOrders,
+        logAudit,
       },
     },
     children,
