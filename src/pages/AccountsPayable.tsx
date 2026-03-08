@@ -8,7 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DatePickerWithRange } from '@/components/ui/date-range-picker'
 import { toast } from '@/hooks/use-toast'
 import { formatBRL } from '@/lib/financial'
-import { format, parseISO, isBefore, isAfter, startOfDay, endOfDay, startOfMonth } from 'date-fns'
+import {
+  format,
+  parseISO,
+  isBefore,
+  isAfter,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Plus, CheckCircle, Trash2, XCircle } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
