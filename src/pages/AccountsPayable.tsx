@@ -205,7 +205,7 @@ export default function AccountsPayable() {
             <div className="col-span-2">Status</div>
             <div className="col-span-1">Ações</div>
             <div className="col-span-2">Classificação</div>
-            <div className="col-span-2">Categoria</div>
+            <div className="col-span-2">Categoria DRE</div>
             <div className="col-span-3">Descrição</div>
             <div className="col-span-1 text-right">Valor</div>
           </div>
@@ -274,10 +274,10 @@ export default function AccountsPayable() {
                           {item.classification}
                         </div>
                         <div
-                          className="col-span-1 md:col-span-2 text-sm truncate"
-                          title={item.category}
+                          className="col-span-1 md:col-span-2 text-sm truncate font-medium"
+                          title={item.dre_category || item.category}
                         >
-                          {item.category}
+                          {item.dre_category || item.category}
                         </div>
                         <div className="col-span-1 md:col-span-3 text-sm truncate font-medium">
                           {item.description}

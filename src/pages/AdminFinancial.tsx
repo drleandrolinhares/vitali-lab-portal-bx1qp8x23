@@ -20,8 +20,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { TrendingUp, Wallet, CheckCircle, TrendingDown, DollarSign } from 'lucide-react'
-import { Navigate } from 'react-router-dom'
+import { TrendingUp, Wallet, CheckCircle, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
+import { Navigate, Link } from 'react-router-dom'
 
 export default function AdminFinancial() {
   const { currentUser, orders, kanbanStages, refreshOrders, selectedLab } = useAppStore()
@@ -151,16 +151,23 @@ export default function AdminFinancial() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2.5 bg-primary/10 rounded-xl">
-          <TrendingUp className="w-6 h-6 text-primary" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <TrendingUp className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Painel Financeiro</h2>
+            <p className="text-muted-foreground text-sm">
+              Resultados operacionais, lucros e contas a receber.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Painel Financeiro</h2>
-          <p className="text-muted-foreground text-sm">
-            Resultados operacionais, lucros e contas a receber.
-          </p>
-        </div>
+        <Button asChild>
+          <Link to="/dre">
+            <BarChart3 className="w-4 h-4 mr-2" /> Acessar Relatório DRE
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 mb-8">

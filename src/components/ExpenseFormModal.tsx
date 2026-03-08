@@ -31,6 +31,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave }: Props) {
     description: '',
     classification: 'Custo Fixo',
     category: '',
+    dre_category: 'Despesa Administrativa',
     purchase_date: format(new Date(), 'yyyy-MM-dd'),
     due_date: '',
     payment_method: 'Boleto',
@@ -69,6 +70,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave }: Props) {
       description: formData.description,
       classification: formData.classification,
       category: formData.category || 'Geral',
+      dre_category: formData.dre_category,
       purchase_date: formData.purchase_date || null,
       payment_method: formData.payment_method,
       cost_center: formData.classification,
@@ -159,7 +161,34 @@ export function ExpenseFormModal({ open, onOpenChange, onSave }: Props) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Categoria</Label>
+            <Label>
+              Categoria DRE <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.dre_category}
+              onValueChange={(v) => setFormData({ ...formData, dre_category: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Material de Laboratório">
+                  Material de Lab. (Custo Variável)
+                </SelectItem>
+                <SelectItem value="Pessoal">Pessoal / Folha (Despesa Operacional)</SelectItem>
+                <SelectItem value="Despesa Administrativa">
+                  Despesa Administrativa (Fixo)
+                </SelectItem>
+                <SelectItem value="Impostos">Impostos</SelectItem>
+                <SelectItem value="Outros">Outros</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Define a linha correspondente no relatório DRE.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Categoria Interna (Opcional)</Label>
             <Input
               placeholder="Ex: Laboratório Externo, Materiais..."
               value={formData.category}

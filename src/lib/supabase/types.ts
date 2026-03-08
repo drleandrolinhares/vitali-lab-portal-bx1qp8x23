@@ -68,31 +68,55 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          category: string | null
+          classification: string | null
           cost_center: string
           created_at: string
           description: string
           due_date: string
           id: string
+          installment_current: number | null
+          installment_total: number | null
+          is_recurring: boolean | null
+          payment_method: string | null
+          purchase_date: string | null
+          recurring_day: number | null
           sector: string
           status: string
         }
         Insert: {
           amount: number
+          category?: string | null
+          classification?: string | null
           cost_center: string
           created_at?: string
           description: string
           due_date: string
           id?: string
+          installment_current?: number | null
+          installment_total?: number | null
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          purchase_date?: string | null
+          recurring_day?: number | null
           sector?: string
           status?: string
         }
         Update: {
           amount?: number
+          category?: string | null
+          classification?: string | null
           cost_center?: string
           created_at?: string
           description?: string
           due_date?: string
           id?: string
+          installment_current?: number | null
+          installment_total?: number | null
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          purchase_date?: string | null
+          recurring_day?: number | null
           sector?: string
           status?: string
         }
@@ -476,7 +500,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_user: { Args: { target_user_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
@@ -639,6 +663,14 @@ export const Constants = {
 //   status: text (not null, default: 'pending'::text)
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'Soluções Cerâmicas'::text)
+//   category: text (nullable, default: 'Geral'::text)
+//   classification: text (nullable)
+//   purchase_date: date (nullable)
+//   payment_method: text (nullable)
+//   is_recurring: boolean (nullable, default: false)
+//   recurring_day: integer (nullable)
+//   installment_current: integer (nullable)
+//   installment_total: integer (nullable)
 // Table: inventory_items
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -753,7 +785,7 @@ export const Constants = {
 //   FOREIGN KEY order_history_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 //   PRIMARY KEY order_history_pkey: PRIMARY KEY (id)
 // Table: orders
-//   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id)
+//   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
 // Table: price_list
 //   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
@@ -854,6 +886,24 @@ export const Constants = {
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text]))))))
 
 // --- DATABASE FUNCTIONS ---
+// FUNCTION delete_user(uuid)
+//   CREATE OR REPLACE FUNCTION public.delete_user(target_user_id uuid)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     IF EXISTS (
+//       SELECT 1 FROM public.profiles
+//       WHERE id = auth.uid() AND role = 'admin'
+//     ) THEN
+//       DELETE FROM auth.users WHERE id = target_user_id;
+//     ELSE
+//       RAISE EXCEPTION 'Unauthorized';
+//     END IF;
+//   END;
+//   $function$
+//
 // FUNCTION handle_new_order()
 //   CREATE OR REPLACE FUNCTION public.handle_new_order()
 //    RETURNS trigger
