@@ -388,7 +388,13 @@ export default function KanbanPage() {
         onSaveObs={handleSaveObs}
       />
 
-      <Dialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen}>
+      <Dialog
+        open={isAddColumnOpen}
+        onOpenChange={(open) => {
+          setIsAddColumnOpen(open)
+          if (!open) setNewColumnName('')
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova Coluna</DialogTitle>
@@ -396,26 +402,37 @@ export default function KanbanPage() {
           <Input
             value={newColumnName}
             onChange={(e) => setNewColumnName(e.target.value)}
-            onKeyDown={(e) => {
+            onKeyDown={async (e) => {
               if (e.key === 'Enter' && newColumnName.trim()) {
-                addKanbanStage(newColumnName.trim())
-                setNewColumnName('')
-                setIsAddColumnOpen(false)
+                e.preventDefault()
+                const success = await addKanbanStage(newColumnName.trim())
+                if (success) {
+                  setNewColumnName('')
+                  setIsAddColumnOpen(false)
+                }
               }
             }}
             placeholder="Ex: CONTROLE DE QUALIDADE"
             autoFocus
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsAddColumnOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setNewColumnName('')
+                setIsAddColumnOpen(false)
+              }}
+            >
               Cancelar
             </Button>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 if (newColumnName.trim()) {
-                  addKanbanStage(newColumnName.trim())
-                  setNewColumnName('')
-                  setIsAddColumnOpen(false)
+                  const success = await addKanbanStage(newColumnName.trim())
+                  if (success) {
+                    setNewColumnName('')
+                    setIsAddColumnOpen(false)
+                  }
                 }
               }}
             >

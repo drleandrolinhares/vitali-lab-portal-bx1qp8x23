@@ -25,7 +25,7 @@ interface AppState {
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
-  addKanbanStage: (name: string) => Promise<void>
+  addKanbanStage: (name: string) => Promise<boolean>
   updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
@@ -370,37 +370,106 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Observações salvas' })
   }
 
-  const addKanbanStage = async (name: string) => {
+  const addKanbanStage = async (name: string): Promise<boolean> => {
     const upperName = name.trim().toUpperCase()
-    if (kanbanStages.some((s) => s.name === upperName))
-      return toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
+
+    const { data: existing } = await supabase
+      .from('kanban_stages' as any)
+      .select('id')
+      .eq('name', upperName)
+
+    if (existing && existing.length > 0) {
+      toast({
+        title: 'Erro',
+        description: `A coluna "${upperName}" já existe.`,
+        variant: 'destructive',
+      })
+      return false
+    }
+
+    if (kanbanStages.some((s) => s.name.toUpperCase() === upperName)) {
+      toast({
+        title: 'Erro',
+        description: `A coluna "${upperName}" já existe.`,
+        variant: 'destructive',
+      })
+      return false
+    }
+
     const nextIndex =
       kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1
     const { error } = await supabase
       .from('kanban_stages' as any)
       .insert({ name: upperName, order_index: nextIndex })
-    if (error)
-      return toast({ title: 'Erro', description: 'Erro ao adicionar.', variant: 'destructive' })
+
+    if (error) {
+      if (error.code === '23505') {
+        toast({
+          title: 'Erro',
+          description: `A coluna "${upperName}" já existe.`,
+          variant: 'destructive',
+        })
+        return false
+      }
+      toast({ title: 'Erro', description: 'Erro ao adicionar.', variant: 'destructive' })
+      return false
+    }
+
     await logAudit('CREATE_STAGE', 'kanban_stage', upperName, { name: upperName })
     toast({ title: 'Coluna adicionada' })
+    return true
   }
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
     if (currentUser?.role !== 'admin') throw new Error('Unauthorized')
     const upperNewName = newName.trim().toUpperCase()
-    if (kanbanStages.some((s) => s.name === upperNewName && s.id !== id)) {
-      toast({ title: 'Erro', description: 'Coluna já existe.', variant: 'destructive' })
+
+    const { data: existing } = await supabase
+      .from('kanban_stages' as any)
+      .select('id')
+      .eq('name', upperNewName)
+      .neq('id', id)
+
+    if (existing && existing.length > 0) {
+      toast({
+        title: 'Erro',
+        description: `A coluna "${upperNewName}" já existe.`,
+        variant: 'destructive',
+      })
       throw new Error('Duplicate column')
     }
+
+    if (kanbanStages.some((s) => s.name.toUpperCase() === upperNewName && s.id !== id)) {
+      toast({
+        title: 'Erro',
+        description: `A coluna "${upperNewName}" já existe.`,
+        variant: 'destructive',
+      })
+      throw new Error('Duplicate column')
+    }
+
     const { error } = await supabase
       .from('kanban_stages' as any)
       .update({ name: upperNewName })
       .eq('id', id)
-    if (error) throw error
+
+    if (error) {
+      if (error.code === '23505') {
+        toast({
+          title: 'Erro',
+          description: `A coluna "${upperNewName}" já existe.`,
+          variant: 'destructive',
+        })
+        throw new Error('Duplicate column')
+      }
+      throw error
+    }
+
     await supabase
       .from('orders' as any)
       .update({ kanban_stage: upperNewName })
       .eq('kanban_stage', oldName)
+
     await logAudit('RENAME_STAGE', 'kanban_stage', id, { oldName, newName: upperNewName })
     toast({ title: 'Coluna renomeada' })
   }
