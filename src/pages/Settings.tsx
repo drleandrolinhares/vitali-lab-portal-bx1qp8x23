@@ -13,14 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { MessageSquare, Phone, User, Building, Camera, Loader2 } from 'lucide-react'
+import { Phone, User, Building, Camera, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
 export default function SettingsPage() {
   const { currentUser, appSettings, updateSetting, updateProfile } = useAppStore()
 
   // System Settings State
-  const [groupLink, setGroupLink] = useState('')
   const [labLink, setLabLink] = useState('')
   const [savingSystem, setSavingSystem] = useState(false)
 
@@ -32,7 +31,6 @@ export default function SettingsPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   useEffect(() => {
-    setGroupLink(appSettings?.whatsapp_group_link || '')
     setLabLink(appSettings?.whatsapp_lab_link || '')
   }, [appSettings])
 
@@ -46,7 +44,6 @@ export default function SettingsPage() {
 
   const handleSaveSystem = async () => {
     setSavingSystem(true)
-    await updateSetting('whatsapp_group_link', groupLink)
     await updateSetting('whatsapp_lab_link', labLink)
     setSavingSystem(false)
   }
@@ -177,21 +174,6 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 font-semibold">
-                <MessageSquare className="w-4 h-4 text-emerald-500" />
-                Grupo de WhatsApp Clínica/Vitali Lab
-              </Label>
-              <Input
-                value={groupLink}
-                onChange={(e) => setGroupLink(e.target.value)}
-                placeholder="Ex: https://chat.whatsapp.com/..."
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Este link será exibido no menu lateral para todos os usuários.
-              </p>
-            </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-2 font-semibold">
                 <Phone className="w-4 h-4 text-emerald-500" />

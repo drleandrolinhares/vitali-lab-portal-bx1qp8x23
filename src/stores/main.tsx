@@ -322,13 +322,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .update({ kanban_stage: stage, status: newStatus })
         .eq('id', dbId)
       if (error) throw error
-      await supabase
-        .from('order_history' as any)
-        .insert({
-          order_id: dbId,
-          status: newStatus,
-          note: `${currentUser.name} moveu o cartão para ${stage}`,
-        })
+      await supabase.from('order_history' as any).insert({
+        order_id: dbId,
+        status: newStatus,
+        note: `${currentUser.name} moveu o cartão para ${stage}`,
+      })
       await logAudit('MOVE_STAGE', 'order', dbId, { from: originalStage, to: stage })
       toast({ title: 'Cartão Movido' })
     } catch (error) {

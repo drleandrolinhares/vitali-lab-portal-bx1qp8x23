@@ -129,6 +129,8 @@ export type Database = {
           kanban_stage: string
           material: string
           observations: string | null
+          patient_birth_date: string | null
+          patient_cpf: string | null
           patient_name: string
           scale_used: string | null
           sector: string
@@ -148,6 +150,8 @@ export type Database = {
           kanban_stage?: string
           material: string
           observations?: string | null
+          patient_birth_date?: string | null
+          patient_cpf?: string | null
           patient_name: string
           scale_used?: string | null
           sector?: string
@@ -167,6 +171,8 @@ export type Database = {
           kanban_stage?: string
           material?: string
           observations?: string | null
+          patient_birth_date?: string | null
+          patient_cpf?: string | null
           patient_name?: string
           scale_used?: string | null
           sector?: string
@@ -516,6 +522,8 @@ export const Constants = {
 //   sector: text (not null, default: 'SOLUÇÕES CERÂMICAS'::text)
 //   kanban_stage: text (not null, default: 'TRIAGEM'::text)
 //   cleared_balance: numeric (not null, default: 0)
+//   patient_cpf: text (nullable)
+//   patient_birth_date: date (nullable)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -600,6 +608,8 @@ export const Constants = {
 //   Policy "Lab can insert order history, dentists can insert for own" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
 // Table: orders
+//   Policy "Admin can delete orders" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Dentists can insert own orders" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (dentist_id = auth.uid())
 //   Policy "Dentists can view own orders, lab can view all" (SELECT, PERMISSIVE) roles={public}
