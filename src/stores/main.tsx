@@ -241,18 +241,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const order = orders.find((o) => o.id === dbId)
     if (!order) return
 
+    // Optimistic UI update to ensure immediate dashboard recalculation
+    setOrders((prev) => prev.filter((o) => o.id !== dbId))
+
     const { error } = await supabase
       .from('orders' as any)
       .delete()
       .eq('id', dbId)
-    if (error)
+
+    if (error) {
+      // Revert optimistic update on error
+      fetchOrders()
       return toast({
         title: 'Erro',
         description: 'Não foi possível excluir o pedido.',
         variant: 'destructive',
       })
+    }
 
-    await logAudit('DELETE', 'order', dbId, {
+    await logAudit('DELETE_ORDER', 'order', dbId, {
       friendlyId: order.friendlyId,
       reason,
       patientName: order.patientName,

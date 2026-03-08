@@ -27,6 +27,44 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       kanban_stages: {
         Row: {
           created_at: string
@@ -212,6 +250,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           clinic: string | null
           clinic_contact_name: string | null
           clinic_contact_phone: string | null
@@ -226,6 +265,7 @@ export type Database = {
           whatsapp_group_link: string | null
         }
         Insert: {
+          avatar_url?: string | null
           clinic?: string | null
           clinic_contact_name?: string | null
           clinic_contact_phone?: string | null
@@ -240,6 +280,7 @@ export type Database = {
           whatsapp_group_link?: string | null
         }
         Update: {
+          avatar_url?: string | null
           clinic?: string | null
           clinic_contact_name?: string | null
           clinic_contact_phone?: string | null
@@ -438,6 +479,14 @@ export const Constants = {
 //   key: text (not null)
 //   value: text (not null)
 //   updated_at: timestamp with time zone (not null, default: now())
+// Table: audit_logs
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (nullable)
+//   action: text (not null)
+//   entity_type: text (not null)
+//   entity_id: text (nullable)
+//   details: jsonb (nullable, default: '{}'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: kanban_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -494,6 +543,7 @@ export const Constants = {
 //   clinic_contact_role: text (nullable)
 //   clinic_contact_phone: text (nullable)
 //   whatsapp_group_link: text (nullable)
+//   avatar_url: text (nullable)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -504,6 +554,9 @@ export const Constants = {
 // --- CONSTRAINTS ---
 // Table: app_settings
 //   PRIMARY KEY app_settings_pkey: PRIMARY KEY (key)
+// Table: audit_logs
+//   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
 // Table: kanban_stages
 //   UNIQUE kanban_stages_name_key: UNIQUE (name)
 //   PRIMARY KEY kanban_stages_pkey: PRIMARY KEY (id)
@@ -531,6 +584,11 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Public app_settings view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: audit_logs
+//   Policy "Admin select audit logs" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Authenticated insert audit logs" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (auth.uid() = user_id)
 // Table: kanban_stages
 //   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
@@ -623,5 +681,8 @@ export const Constants = {
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
 
 // --- INDEXES ---
+// Table: audit_logs
+//   CREATE INDEX idx_audit_logs_created_at ON public.audit_logs USING btree (created_at DESC)
+//   CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id)
 // Table: kanban_stages
 //   CREATE UNIQUE INDEX kanban_stages_name_key ON public.kanban_stages USING btree (name)
