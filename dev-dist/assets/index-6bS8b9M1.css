@@ -1932,10 +1932,6 @@ section[aria-label='Notifications alt+T'] {
   border-color: rgb(59 130 246 / 0.2);
 }
 
-.border-border\/20{
-  border-color: hsl(var(--border) / 0.2);
-}
-
 .border-border\/50{
   border-color: hsl(var(--border) / 0.5);
 }
@@ -2268,6 +2264,11 @@ section[aria-label='Notifications alt+T'] {
   fill: currentColor;
 }
 
+.object-contain{
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
 .p-0{
   padding: 0px;
 }
@@ -2571,14 +2572,6 @@ section[aria-label='Notifications alt+T'] {
   font-size: 11px;
 }
 
-.text-\[22px\]{
-  font-size: 22px;
-}
-
-.text-\[32px\]{
-  font-size: 32px;
-}
-
 .text-base{
   font-size: 1rem;
   line-height: 1.5rem;
@@ -2655,10 +2648,6 @@ section[aria-label='Notifications alt+T'] {
 
 .tracking-tight{
   letter-spacing: -0.025em;
-}
-
-.tracking-tighter{
-  letter-spacing: -0.05em;
 }
 
 .tracking-wide{
@@ -2774,10 +2763,6 @@ section[aria-label='Notifications alt+T'] {
 
 .text-primary-foreground{
   color: hsl(var(--primary-foreground));
-}
-
-.text-primary\/80{
-  color: hsl(var(--primary) / 0.8);
 }
 
 .text-red-500{

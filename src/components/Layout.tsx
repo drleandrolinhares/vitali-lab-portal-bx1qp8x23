@@ -90,8 +90,8 @@ function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader className="p-4 flex flex-row items-center">
-        <Logo />
+      <SidebarHeader className="py-6 flex flex-col items-center justify-center">
+        <Logo variant="square" size="lg" className="mb-2" />
       </SidebarHeader>
       <SidebarContent className="px-2">
         <SidebarMenu>

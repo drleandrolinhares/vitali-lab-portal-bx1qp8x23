@@ -34299,25 +34299,34 @@ const ptBR = {
 		firstWeekContainsDate: 1
 	}
 };
+var vitalli_03_4bb8e_default = "/assets/vitalli-03-4bb8e-DxldsgJG.png";
 function Logo({ className, variant = "default", size: size$3 = "lg" }) {
-	if (variant === "square") return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: cn("flex flex-col items-center justify-center bg-background shrink-0 shadow-md overflow-hidden border border-border/20", size$3 === "sm" ? "w-20 h-20 rounded-xl" : "w-28 h-28 rounded-2xl", className),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: cn("font-extrabold text-primary uppercase leading-none tracking-tighter", size$3 === "sm" ? "text-[22px]" : "text-[32px]"),
-			children: "VITALI"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: cn("font-light text-primary uppercase leading-none tracking-widest mt-1", size$3 === "sm" ? "text-[22px]" : "text-[32px]"),
-			children: "LAB"
-		})]
+	if (variant === "square") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: cn("flex flex-col items-center justify-center bg-primary shrink-0 shadow-md overflow-hidden border border-primary/20", size$3 === "sm" ? "w-20 h-20 rounded-xl" : "w-28 h-28 rounded-2xl", className),
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+			src: vitalli_03_4bb8e_default,
+			alt: "Vitali Lab Logo",
+			className: "w-full h-full object-contain"
+		})
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-extrabold text-primary uppercase",
-			children: "Vitali"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-light text-primary/80 lowercase",
-			children: "lab."
+		className: cn("flex items-center gap-2 font-display tracking-tight text-xl", className),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex flex-col items-center justify-center bg-primary shrink-0 shadow-sm overflow-hidden rounded-md w-8 h-8 border border-primary/20",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src: vitalli_03_4bb8e_default,
+				alt: "Vitali Lab Logo",
+				className: "w-full h-full object-contain"
+			})
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center gap-1",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "font-extrabold text-foreground uppercase",
+				children: "Vitali"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "font-light text-foreground/80 lowercase",
+				children: "lab."
+			})]
 		})]
 	});
 }
@@ -38057,8 +38066,12 @@ function AppSidebar() {
 		variant: "inset",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarHeader, {
-				className: "p-4 flex flex-row items-center",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {})
+				className: "py-6 flex flex-col items-center justify-center",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {
+					variant: "square",
+					size: "lg",
+					className: "mb-2"
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
 				className: "px-2",
@@ -43123,4 +43136,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-B8a1Udkl.js.map
+//# sourceMappingURL=index-B4V2NJ9m.js.map
