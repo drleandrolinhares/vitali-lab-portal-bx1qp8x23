@@ -992,8 +992,16 @@ section[aria-label='Notifications alt+T'] {
   height: 0.625rem;
 }
 
+.h-20{
+  height: 5rem;
+}
+
 .h-24{
   height: 6rem;
+}
+
+.h-28{
+  height: 7rem;
 }
 
 .h-3{
@@ -2250,6 +2258,11 @@ section[aria-label='Notifications alt+T'] {
 
 .fill-current{
   fill: currentColor;
+}
+
+.object-cover{
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .p-0{

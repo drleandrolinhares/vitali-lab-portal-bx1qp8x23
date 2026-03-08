@@ -32566,18 +32566,6 @@ function StatusBadge({ status, className }) {
 function getStatusLabel(status) {
 	return config[status].label;
 }
-function Logo({ className }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-extrabold text-foreground dark:text-white uppercase",
-			children: "Vitali"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-light text-foreground/80 dark:text-white/80 lowercase",
-			children: "lab."
-		})]
-	});
-}
 const daysInYear = 365.2425;
 Math.pow(10, 8) * 24 * 60 * 60 * 1e3;
 const millisecondsInWeek = 6048e5;
@@ -34311,6 +34299,7 @@ const ptBR = {
 		firstWeekContainsDate: 1
 	}
 };
+var vitalli_03_3c8a5_default = "/assets/vitalli-03-3c8a5-DxldsgJG.png";
 function DentistDashboard() {
 	const { orders, currentUser } = useAppStore();
 	const activeOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "completed");
@@ -34340,14 +34329,22 @@ function DentistDashboard() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex items-center gap-6",
+					className: "flex flex-col sm:flex-row items-start sm:items-center gap-6",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "hidden sm:flex bg-primary/5 p-4 rounded-2xl border border-primary/10 shadow-sm",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, { className: "text-4xl" })
+						className: "hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+							src: vitalli_03_3c8a5_default,
+							alt: "Vitali Lab",
+							className: "h-28 w-auto object-cover"
+						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "sm:hidden mb-4 bg-primary/5 p-3 rounded-xl border border-primary/10 inline-block shadow-sm",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, { className: "text-2xl" })
+							className: "sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+								src: vitalli_03_3c8a5_default,
+								alt: "Vitali Lab",
+								className: "h-20 w-auto object-cover"
+							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
 							className: "text-3xl font-bold tracking-tight",
@@ -36667,14 +36664,35 @@ function LabDashboard() {
 		updateOrderStatus(id, status, `Status atualizado para ${status} pela recepção.`);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "space-y-6 max-w-6xl mx-auto",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-			className: "text-2xl font-bold tracking-tight",
-			children: "Caixa de Entrada"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "text-muted-foreground",
-			children: "Gerenciamento central de pedidos recebidos das clínicas."
-		})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+		className: "space-y-8 max-w-6xl mx-auto py-2",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border/50",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+					src: vitalli_03_3c8a5_default,
+					alt: "Vitali Lab",
+					className: "h-28 w-auto object-cover"
+				})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						src: vitalli_03_3c8a5_default,
+						alt: "Vitali Lab",
+						className: "h-20 w-auto object-cover"
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-3xl font-bold tracking-tight",
+					children: "Caixa de Entrada"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-muted-foreground mt-1 text-lg",
+					children: "Gerenciamento central de pedidos recebidos das clínicas."
+				})
+			] })]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 			className: "shadow-subtle",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
 				className: "pb-3",
@@ -36786,6 +36804,18 @@ var NotFound = () => {
 	});
 };
 var NotFound_default = NotFound;
+function Logo({ className }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-extrabold text-foreground dark:text-white uppercase",
+			children: "Vitali"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-light text-foreground/80 dark:text-white/80 lowercase",
+			children: "lab."
+		})]
+	});
+}
 function createContextScope$1(scopeName, createContextScopeDeps = []) {
 	let defaultContexts = [];
 	function createContext3(rootComponentName, defaultContext) {
@@ -43096,4 +43126,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Dhhq5BJG.js.map
+//# sourceMappingURL=index-CxQpdU7P.js.map

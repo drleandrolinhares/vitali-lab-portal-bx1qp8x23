@@ -20,6 +20,7 @@ import { MoreHorizontal, Eye, Play, Check, Package } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { OrderStatus } from '@/lib/types'
+import logoImg from '@/assets/vitalli-03-3c8a5.png'
 
 export function LabDashboard() {
   const { orders, updateOrderStatus } = useAppStore()
@@ -30,12 +31,20 @@ export function LabDashboard() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Caixa de Entrada</h2>
-        <p className="text-muted-foreground">
-          Gerenciamento central de pedidos recebidos das clínicas.
-        </p>
+    <div className="space-y-8 max-w-6xl mx-auto py-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border/50">
+        <div className="hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background">
+          <img src={logoImg} alt="Vitali Lab" className="h-28 w-auto object-cover" />
+        </div>
+        <div>
+          <div className="sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background">
+            <img src={logoImg} alt="Vitali Lab" className="h-20 w-auto object-cover" />
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight">Caixa de Entrada</h2>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Gerenciamento central de pedidos recebidos das clínicas.
+          </p>
+        </div>
       </div>
 
       <Card className="shadow-subtle">

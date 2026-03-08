@@ -3,10 +3,10 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Logo } from '@/components/Logo'
 import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import logoImg from '@/assets/vitalli-03-3c8a5.png'
 
 export function DentistDashboard() {
   const { orders, currentUser } = useAppStore()
@@ -36,13 +36,13 @@ export function DentistDashboard() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-2">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50">
-        <div className="flex items-center gap-6">
-          <div className="hidden sm:flex bg-primary/5 p-4 rounded-2xl border border-primary/10 shadow-sm">
-            <Logo className="text-4xl" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background">
+            <img src={logoImg} alt="Vitali Lab" className="h-28 w-auto object-cover" />
           </div>
           <div>
-            <div className="sm:hidden mb-4 bg-primary/5 p-3 rounded-xl border border-primary/10 inline-block shadow-sm">
-              <Logo className="text-2xl" />
+            <div className="sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background">
+              <img src={logoImg} alt="Vitali Lab" className="h-20 w-auto object-cover" />
             </div>
             <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
             <p className="text-muted-foreground mt-1 text-lg">
