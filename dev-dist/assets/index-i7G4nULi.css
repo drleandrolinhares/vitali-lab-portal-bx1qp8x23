@@ -1040,6 +1040,10 @@ section[aria-label='Notifications alt+T'] {
   height: 1px;
 }
 
+.h-\[50vh\]{
+  height: 50vh;
+}
+
 .h-\[calc\(100vh-6rem\)\]{
   height: calc(100vh - 6rem);
 }
@@ -1515,6 +1519,17 @@ section[aria-label='Notifications alt+T'] {
 
 .animate-pulse{
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin{
+
+  to{
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin{
+  animation: spin 1s linear infinite;
 }
 
 .cursor-default{

@@ -19316,6 +19316,10 @@ var LayoutDashboard = createLucideIcon("layout-dashboard", [
 		key: "ldoo1y"
 	}]
 ]);
+var LoaderCircle = createLucideIcon("loader-circle", [["path", {
+	d: "M21 12a9 9 0 1 1-6.219-8.56",
+	key: "13zald"
+}]]);
 var LogOut = createLucideIcon("log-out", [
 	["path", {
 		d: "m16 17 5-5-5-5",
@@ -40023,8 +40027,12 @@ function OrderDetails() {
 function HistoryPage() {
 	const { orders, currentUser } = useAppStore();
 	const [search, setSearch] = (0, import_react.useState)("");
+	if (!currentUser) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "flex h-[50vh] items-center justify-center",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, { className: "h-8 w-8 animate-spin text-muted-foreground" })
+	});
 	const filtered = orders.filter((o) => o.patientName.toLowerCase().includes(search.toLowerCase()) || o.friendlyId.toLowerCase().includes(search.toLowerCase()));
-	const showDentistCol = currentUser.role !== "dentist";
+	const showDentistCol = currentUser?.role !== "dentist";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6 max-w-6xl mx-auto",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -43067,4 +43075,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DKTviBUn.js.map
+//# sourceMappingURL=index-DcedXv09.js.map

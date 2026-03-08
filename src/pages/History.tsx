@@ -1,5 +1,5 @@
 import { useAppStore } from '@/stores/main'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -20,13 +20,21 @@ export default function HistoryPage() {
   const { orders, currentUser } = useAppStore()
   const [search, setSearch] = useState('')
 
+  if (!currentUser) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   const filtered = orders.filter(
     (o) =>
       o.patientName.toLowerCase().includes(search.toLowerCase()) ||
       o.friendlyId.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const showDentistCol = currentUser.role !== 'dentist'
+  const showDentistCol = currentUser?.role !== 'dentist'
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
