@@ -25,8 +25,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Soft reconciliation logic to prevent 406 errors on missing profiles
+  const reconcileProfile = async (currentUser: User) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+
+      if (!data && !error) {
+        await supabase.from('profiles').insert({
+          id: currentUser.id,
+          email: currentUser.email || '',
+          name: currentUser.user_metadata?.name || 'Usuário',
+          role: currentUser.user_metadata?.role || 'dentist',
+          clinic: currentUser.user_metadata?.clinic || null,
+        })
+      }
+    } catch (e) {
+      console.error('Failed to reconcile profile:', e)
+    }
+  }
+
   useEffect(() => {
-    // Session persistence logic based on remember me preference
     const rememberMeFalse = localStorage.getItem('vitali_remember_me') === 'false'
     const isNewTab = !sessionStorage.getItem('vitali_session')
 
@@ -44,19 +66,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+
+      if (session?.user) {
+        reconcileProfile(session.user).catch(console.error)
+      }
     })
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+
+      if (session?.user) {
+        reconcileProfile(session.user).catch(console.error)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
   const signUp = async (email: string, password: string, metadata: any) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -64,11 +94,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: `${window.location.origin}/`,
       },
     })
+
+    if (data?.user && !error) {
+      await reconcileProfile(data.user)
+    }
+
     return { error }
   }
 
   const signIn = async (email: string, password: string, rememberMe: boolean = true) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (!error) {
       if (!rememberMe) {
         localStorage.setItem('vitali_remember_me', 'false')
@@ -76,6 +111,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('vitali_remember_me')
       }
       sessionStorage.setItem('vitali_session', 'true')
+
+      if (data?.user) {
+        await reconcileProfile(data.user)
+      }
     }
     return { error }
   }
