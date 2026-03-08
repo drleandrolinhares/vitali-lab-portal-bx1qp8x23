@@ -5,6 +5,7 @@ import { ChevronRight, HeartHandshake, Diamond, ShieldCheck } from 'lucide-react
 import allanImg from '@/assets/allan-queiroz-25-13390.jpeg'
 import acrilicoImg from '@/assets/allan-queiroz-52-abae6.jpeg'
 import heroBgImg from '@/assets/allan-queiroz-64-c1e37.jpeg'
+import purposeImg from '@/assets/design-sem-nome-7bcf6.jpg'
 
 export default function LandingPage() {
   return (
@@ -194,7 +195,7 @@ export default function LandingPage() {
               <div className="relative order-1 lg:order-2">
                 <div className="relative z-10 rounded-3xl overflow-hidden border border-border aspect-square lg:aspect-auto bg-muted">
                   <img
-                    src="https://img.usecurling.com/p/800/800?q=dentist%20consultation&dpr=2"
+                    src={purposeImg}
                     alt="Atendimento Humanizado"
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   />
