@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Phone, User, Building, Camera, Loader2 } from 'lucide-react'
+import { Phone, User, Building, Camera, Loader2, Link as LinkIcon } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { UsersManagement } from '@/components/UsersManagement'
 
@@ -26,6 +26,7 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('')
   const [clinic, setClinic] = useState('')
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -38,6 +39,7 @@ export default function SettingsPage() {
     if (currentUser) {
       setName(currentUser.name || '')
       setClinic(currentUser.clinic || '')
+      setWhatsappGroupLink((currentUser as any).whatsapp_group_link || '')
       setAvatarUrl(currentUser.avatar_url || '')
     }
   }, [currentUser])
@@ -55,7 +57,23 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     setSavingProfile(true)
-    await updateProfile({ name, clinic, avatar_url: avatarUrl })
+    let finalGroupLink = whatsappGroupLink.trim()
+    if (
+      finalGroupLink &&
+      !finalGroupLink.startsWith('http://') &&
+      !finalGroupLink.startsWith('https://')
+    ) {
+      finalGroupLink = `https://${finalGroupLink}`
+    }
+
+    await updateProfile({
+      name,
+      clinic,
+      avatar_url: avatarUrl,
+      whatsapp_group_link: finalGroupLink,
+    } as any)
+
+    setWhatsappGroupLink(finalGroupLink)
     setSavingProfile(false)
   }
 
@@ -176,6 +194,17 @@ export default function SettingsPage() {
                         placeholder="Nome da sua clínica"
                       />
                     </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4 text-primary/70" />
+                        Link do Grupo da Clínica (WhatsApp)
+                      </Label>
+                      <Input
+                        value={whatsappGroupLink}
+                        onChange={(e) => setWhatsappGroupLink(e.target.value)}
+                        placeholder="Ex: https://chat.whatsapp.com/..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -206,7 +235,7 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-semibold">
                       <Phone className="w-4 h-4 text-emerald-500" />
-                      WhatsApp Vitali Lab
+                      WhatsApp Vitali Lab (Contato Laboratório)
                     </Label>
                     <Input
                       value={labLink}
@@ -215,7 +244,7 @@ export default function SettingsPage() {
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Link direto para o número do laboratório.
+                      Link global de contato direto para o número do laboratório.
                     </p>
                   </div>
                 </CardContent>

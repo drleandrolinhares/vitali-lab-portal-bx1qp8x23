@@ -125,7 +125,7 @@ function AppSidebar() {
     { title: 'Histórico', icon: History, path: '/history' },
   ]
 
-  let adminDynamicLink = appSettings?.whatsapp_group_link
+  let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
 
   if (
@@ -141,7 +141,7 @@ function AppSidebar() {
   }
 
   const clinicName = currentUser.clinic?.trim()
-  const groupTitle = clinicName ? `Grupo ${clinicName}/Vitali Lab` : 'Grupo Clínica/Vitali Lab'
+  const groupTitle = clinicName ? `Grupo ${clinicName}/Vitali Lab` : 'Grupo da Clínica'
 
   const commLinks =
     currentUser.role === 'dentist'
@@ -149,7 +149,7 @@ function AppSidebar() {
           {
             title: groupTitle,
             icon: WhatsAppIcon,
-            url: (currentUser as any).whatsapp_group_link || appSettings?.whatsapp_group_link,
+            url: (currentUser as any).whatsapp_group_link,
           },
           { title: 'Vitali Lab Recepção', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
         ]
@@ -285,7 +285,7 @@ function AppSidebar() {
 }
 
 function MainHeader() {
-  const { currentUser, selectedLab, setSelectedLab } = useAppStore()
+  const { currentUser, selectedLab, setSelectedLab, appSettings, orders } = useAppStore()
   const location = useLocation()
 
   if (!currentUser) return null
@@ -300,6 +300,33 @@ function MainHeader() {
   const showLabSelector =
     (currentUser.role === 'admin' || currentUser.role === 'receptionist') && isFinancialRoute
 
+  let adminDynamicLink = (currentUser as any).whatsapp_group_link
+  let viewingClient = false
+
+  if (
+    (currentUser.role === 'admin' || currentUser.role === 'receptionist') &&
+    location.pathname.startsWith('/order/')
+  ) {
+    const orderId = location.pathname.split('/').pop()
+    const order = orders.find((o: any) => o.id === orderId)
+    if (order && order.dentistGroupLink) {
+      adminDynamicLink = order.dentistGroupLink
+      viewingClient = true
+    }
+  }
+
+  const clinicLink =
+    currentUser.role === 'dentist'
+      ? (currentUser as any).whatsapp_group_link
+      : viewingClient
+        ? adminDynamicLink
+        : (currentUser as any).whatsapp_group_link
+
+  const labLink = appSettings?.whatsapp_lab_link
+
+  const hasClinicLink = Boolean(clinicLink && clinicLink.trim() !== '')
+  const hasLabLink = Boolean(labLink && labLink.trim() !== '')
+
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
       <SidebarTrigger />
@@ -308,7 +335,55 @@ function MainHeader() {
           Portal Digital •{' '}
           <span className="text-foreground">{currentUser.clinic || 'Gestão Lab'}</span>
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-2">
+            {hasClinicLink ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden lg:flex text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-900/50 dark:hover:bg-emerald-900/20"
+                asChild
+              >
+                <a href={clinicLink} target="_blank" rel="noopener noreferrer">
+                  <WhatsAppIcon className="w-4 h-4 mr-2" />
+                  {viewingClient ? 'Grupo do Cliente' : 'Grupo da Clínica'}
+                </a>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden lg:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
+              >
+                <WhatsAppIcon className="w-4 h-4 mr-2 opacity-50" />
+                {viewingClient ? 'Grupo do Cliente' : 'Grupo da Clínica'}
+              </Button>
+            )}
+
+            {hasLabLink ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden lg:flex text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-900/50 dark:hover:bg-emerald-900/20"
+                asChild
+              >
+                <a href={labLink} target="_blank" rel="noopener noreferrer">
+                  <WhatsAppIcon className="w-4 h-4 mr-2" />
+                  Contato do Laboratório
+                </a>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden lg:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
+              >
+                <WhatsAppIcon className="w-4 h-4 mr-2 opacity-50" />
+                Contato do Laboratório
+              </Button>
+            )}
+          </div>
+
           {showLabSelector && (
             <Select value={selectedLab} onValueChange={setSelectedLab}>
               <SelectTrigger className="w-[190px] h-8 text-xs font-medium bg-muted/50 border-dashed focus:ring-0">

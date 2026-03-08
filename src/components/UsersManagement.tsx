@@ -59,6 +59,7 @@ export function UsersManagement() {
     password: '',
     role: 'dentist',
     clinic: '',
+    whatsapp_group_link: '',
   })
   const [selectedPerms, setSelectedPerms] = useState<string[]>([])
 
@@ -82,11 +83,19 @@ export function UsersManagement() {
         password: '',
         role: user.role,
         clinic: user.clinic || '',
+        whatsapp_group_link: user.whatsapp_group_link || '',
       })
       setSelectedPerms(user.permissions || [])
     } else {
       setEditingUser(null)
-      setFormData({ name: '', email: '', password: '', role: 'dentist', clinic: '' })
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'dentist',
+        clinic: '',
+        whatsapp_group_link: '',
+      })
       setSelectedPerms([])
     }
     setModalOpen(true)
@@ -98,16 +107,32 @@ export function UsersManagement() {
     }
     setSaving(true)
 
+    let finalGroupLink = formData.whatsapp_group_link.trim()
+    if (
+      finalGroupLink &&
+      !finalGroupLink.startsWith('http://') &&
+      !finalGroupLink.startsWith('https://')
+    ) {
+      finalGroupLink = `https://${finalGroupLink}`
+    }
+
     if (editingUser) {
       const { error } = await supabase
         .from('profiles')
-        .update({ permissions: selectedPerms })
+        .update({
+          name: formData.name,
+          clinic: formData.clinic,
+          role: formData.role,
+          whatsapp_group_link: finalGroupLink,
+          permissions: selectedPerms,
+        })
         .eq('id', editingUser.id)
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-      else toast({ title: 'Permissões atualizadas' })
+      else toast({ title: 'Usuário atualizado com sucesso' })
     } else {
       const { error } = await createUser({
         ...formData,
+        whatsapp_group_link: finalGroupLink,
         permissions: selectedPerms,
       })
       if (error)
@@ -187,36 +212,40 @@ export function UsersManagement() {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingUser ? 'Editar Permissões' : 'Novo Usuário'}</DialogTitle>
+            <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {!editingUser && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome Completo</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Clínica (Opcional)</Label>
-                  <Input
-                    value={formData.clinic}
-                    onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email de Acesso</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Nome Completo</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Clínica (Opcional)</Label>
+                <Input
+                  value={formData.clinic}
+                  onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Email de Acesso</Label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  disabled={!!editingUser}
+                  className={editingUser ? 'bg-muted' : ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              {!editingUser && (
+                <div className="space-y-2 col-span-2 sm:col-span-1">
                   <Label>Senha Inicial</Label>
                   <Input
                     type="password"
@@ -224,24 +253,36 @@ export function UsersManagement() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Função do Usuário</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(v) => setFormData({ ...formData, role: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dentist">Dentista</SelectItem>
-                      <SelectItem value="receptionist">Recepção / Produção</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              )}
+
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Função do Usuário</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(v) => setFormData({ ...formData, role: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dentist">Dentista</SelectItem>
+                    <SelectItem value="receptionist">Recepção / Produção</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Link Grupo WhatsApp</Label>
+                <Input
+                  value={formData.whatsapp_group_link}
+                  onChange={(e) =>
+                    setFormData({ ...formData, whatsapp_group_link: e.target.value })
+                  }
+                  placeholder="Ex: https://chat.whatsapp.com/..."
+                />
+              </div>
+            </div>
 
             <div className="space-y-3 pt-4 border-t">
               <Label className="text-base">Permissões de Acesso (Menu Lateral)</Label>
@@ -249,7 +290,7 @@ export function UsersManagement() {
                 Selecione os módulos que este usuário poderá visualizar. Se nenhum for selecionado,
                 as permissões padrões da função serão aplicadas.
               </p>
-              <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 border rounded-md bg-muted/20">
+              <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto p-3 border rounded-md bg-muted/20">
                 {PERMISSION_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center space-x-2">
                     <Checkbox
