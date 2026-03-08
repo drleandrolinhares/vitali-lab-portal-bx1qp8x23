@@ -18,16 +18,16 @@ import {
 } from '@/components/ui/table'
 import { formatBRL, getOrderFinancials } from '@/lib/financial'
 import { useAppStore } from '@/stores/main'
-import { FileDown, BarChart3, Info } from 'lucide-react'
+import { FileDown, BarChart3, Info, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { parseISO, getMonth, getYear } from 'date-fns'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function DREPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [basis, setBasis] = useState<'cash' | 'accrual'>('accrual')
-  const { orders, kanbanStages, priceList, currentUser } = useAppStore()
+  const { orders, kanbanStages, priceList, currentUser, dreCategories } = useAppStore()
 
   const [settlements, setSettlements] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -70,23 +70,66 @@ export default function DREPage() {
     })
   }, [year])
 
-  const report = useMemo(() => {
-    const data = months.map(() => ({
-      revenue: 0,
-      labMaterial: 0,
-      personnel: 0,
-      administrative: 0,
-      taxes: 0,
-      other: 0,
+  const revenueCats = useMemo(
+    () => dreCategories.filter((c) => c.category_type === 'revenue'),
+    [dreCategories],
+  )
+  const variableCats = useMemo(
+    () => dreCategories.filter((c) => c.category_type === 'variable'),
+    [dreCategories],
+  )
+  const fixedCats = useMemo(
+    () => dreCategories.filter((c) => c.category_type === 'fixed'),
+    [dreCategories],
+  )
+  const defaultRevCat = revenueCats[0]?.name || 'Receita'
+
+  const { report, totals } = useMemo(() => {
+    const dreCatMap = new Map(dreCategories.map((c) => [c.name, c.category_type]))
+
+    const rep = months.map(() => {
+      const data = {
+        revenue: {} as Record<string, number>,
+        variable: {} as Record<string, number>,
+        fixed: {} as Record<string, number>,
+        totalRevenue: 0,
+        totalVariable: 0,
+        totalFixed: 0,
+        grossProfit: 0,
+        netResult: 0,
+      }
+      dreCategories.forEach((c) => {
+        if (c.category_type === 'revenue') data.revenue[c.name] = 0
+        if (c.category_type === 'variable') data.variable[c.name] = 0
+        if (c.category_type === 'fixed') data.fixed[c.name] = 0
+      })
+      return data
+    })
+
+    const tot = {
+      revenue: {} as Record<string, number>,
+      variable: {} as Record<string, number>,
+      fixed: {} as Record<string, number>,
+      totalRevenue: 0,
+      totalVariable: 0,
+      totalFixed: 0,
       grossProfit: 0,
-      operatingExpenses: 0,
       netResult: 0,
-    }))
+    }
+    dreCategories.forEach((c) => {
+      if (c.category_type === 'revenue') tot.revenue[c.name] = 0
+      if (c.category_type === 'variable') tot.variable[c.name] = 0
+      if (c.category_type === 'fixed') tot.fixed[c.name] = 0
+    })
 
     if (basis === 'cash') {
       settlements.forEach((s) => {
         const m = getMonth(parseISO(s.created_at))
-        data[m].revenue += Number(s.amount)
+        const val = Number(s.amount)
+        if (rep[m].revenue[defaultRevCat] !== undefined) {
+          rep[m].revenue[defaultRevCat] += val
+          rep[m].totalRevenue += val
+        }
       })
     } else {
       orders.forEach((o) => {
@@ -97,10 +140,13 @@ export default function DREPage() {
           )
           const dateStr = completionHist ? completionHist.date : o.createdAt
           const m = getMonth(parseISO(dateStr))
-          const y = getYear(parseISO(dateStr))
-          if (y.toString() === year) {
+          if (getYear(parseISO(dateStr)).toString() === year) {
             const fin = getOrderFinancials(o, priceList, kanbanStages)
-            data[m].revenue += fin.totalCost
+            const cat = o.dre_category || defaultRevCat
+            if (dreCatMap.get(cat) === 'revenue' && rep[m].revenue[cat] !== undefined) {
+              rep[m].revenue[cat] += fin.totalCost
+              rep[m].totalRevenue += fin.totalCost
+            }
           }
         }
       })
@@ -110,76 +156,101 @@ export default function DREPage() {
       if (basis === 'cash' && e.status !== 'paid') return
       const m = getMonth(parseISO(e.due_date))
       const val = Number(e.amount)
-      switch (e.dre_category) {
-        case 'Material de Laboratório':
-          data[m].labMaterial += val
-          break
-        case 'Pessoal':
-          data[m].personnel += val
-          break
-        case 'Despesa Administrativa':
-          data[m].administrative += val
-          break
-        case 'Impostos':
-          data[m].taxes += val
-          break
-        default:
-          data[m].other += val
-          break
+      const cat = e.dre_category || 'Outros'
+      const type = dreCatMap.get(cat)
+
+      if (type === 'variable' && rep[m].variable[cat] !== undefined) {
+        rep[m].variable[cat] += val
+        rep[m].totalVariable += val
+      } else if (type === 'fixed' && rep[m].fixed[cat] !== undefined) {
+        rep[m].fixed[cat] += val
+        rep[m].totalFixed += val
+      } else if (type === 'revenue' && rep[m].revenue[cat] !== undefined) {
+        rep[m].revenue[cat] += val
+        rep[m].totalRevenue += val
       }
     })
 
-    return data.map((d) => {
-      const grossProfit = d.revenue - d.labMaterial
-      const operatingExpenses = d.personnel + d.administrative + d.taxes + d.other
-      const netResult = grossProfit - operatingExpenses
-      return { ...d, grossProfit, operatingExpenses, netResult }
-    })
-  }, [basis, year, settlements, expenses, orders, priceList, kanbanStages])
+    rep.forEach((m) => {
+      m.grossProfit = m.totalRevenue - m.totalVariable
+      m.netResult = m.grossProfit - m.totalFixed
 
-  const totals = report.reduce(
-    (acc, curr) => ({
-      revenue: acc.revenue + curr.revenue,
-      labMaterial: acc.labMaterial + curr.labMaterial,
-      grossProfit: acc.grossProfit + curr.grossProfit,
-      personnel: acc.personnel + curr.personnel,
-      administrative: acc.administrative + curr.administrative,
-      taxes: acc.taxes + curr.taxes,
-      other: acc.other + curr.other,
-      operatingExpenses: acc.operatingExpenses + curr.operatingExpenses,
-      netResult: acc.netResult + curr.netResult,
-    }),
-    {
-      revenue: 0,
-      labMaterial: 0,
-      grossProfit: 0,
-      personnel: 0,
-      administrative: 0,
-      taxes: 0,
-      other: 0,
-      operatingExpenses: 0,
-      netResult: 0,
-    },
-  )
+      dreCategories.forEach((c) => {
+        if (c.category_type === 'revenue') tot.revenue[c.name] += m.revenue[c.name]
+        if (c.category_type === 'variable') tot.variable[c.name] += m.variable[c.name]
+        if (c.category_type === 'fixed') tot.fixed[c.name] += m.fixed[c.name]
+      })
+      tot.totalRevenue += m.totalRevenue
+      tot.totalVariable += m.totalVariable
+      tot.totalFixed += m.totalFixed
+      tot.grossProfit += m.grossProfit
+      tot.netResult += m.netResult
+    })
+
+    return { report: rep, totals: tot }
+  }, [
+    basis,
+    year,
+    settlements,
+    expenses,
+    orders,
+    priceList,
+    kanbanStages,
+    dreCategories,
+    defaultRevCat,
+  ])
 
   const handleExportCSV = () => {
     let csv = 'Demonstrativo,' + months.join(',') + ',Total\n'
-    const addRow = (label: string, key: keyof (typeof report)[0]) => {
-      csv += `"${label}",` + report.map((d) => d[key]).join(',') + ',' + totals[key] + '\n'
-    }
-    addRow('(=) Receita Bruta', 'revenue')
-    addRow('(-) Custo de Materiais (Variável)', 'labMaterial')
-    addRow('(=) Lucro Bruto', 'grossProfit')
-    addRow('(-) Pessoal / Folha', 'personnel')
-    addRow('(-) Despesas Administrativas', 'administrative')
-    addRow('(-) Impostos', 'taxes')
-    addRow('(-) Outras Despesas', 'other')
-    addRow('(=) Resultado Líquido', 'netResult')
+
+    revenueCats.forEach((cat) => {
+      csv +=
+        `"${cat.name}",` +
+        report.map((d) => d.revenue[cat.name]).join(',') +
+        ',' +
+        totals.revenue[cat.name] +
+        '\n'
+    })
+    csv +=
+      `"(=) Total Receita Bruta",` +
+      report.map((d) => d.totalRevenue).join(',') +
+      ',' +
+      totals.totalRevenue +
+      '\n'
+
+    variableCats.forEach((cat) => {
+      csv +=
+        `"(-) ${cat.name}",` +
+        report.map((d) => d.variable[cat.name]).join(',') +
+        ',' +
+        totals.variable[cat.name] +
+        '\n'
+    })
+    csv +=
+      `"(=) Lucro Bruto",` +
+      report.map((d) => d.grossProfit).join(',') +
+      ',' +
+      totals.grossProfit +
+      '\n'
+
+    fixedCats.forEach((cat) => {
+      csv +=
+        `"(-) ${cat.name}",` +
+        report.map((d) => d.fixed[cat.name]).join(',') +
+        ',' +
+        totals.fixed[cat.name] +
+        '\n'
+    })
+    csv +=
+      `"(=) Resultado Líquido",` +
+      report.map((d) => d.netResult).join(',') +
+      ',' +
+      totals.netResult +
+      '\n'
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
+    a.href = URL.createObjectURL(blob)
     a.download = `DRE_${year}_${basis}.csv`
     a.click()
   }
@@ -230,17 +301,22 @@ export default function DREPage() {
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p>
-                  <strong>Competência:</strong> Considera a data de finalização dos trabalhos
-                  (Receita) e a data de vencimento das contas (Despesa), independentemente do
-                  pagamento.
+                  <strong>Competência:</strong> Considera a data de finalização dos trabalhos e
+                  vencimento das contas.
                 </p>
                 <p className="mt-2">
-                  <strong>Caixa:</strong> Considera apenas o que foi efetivamente recebido
-                  (Liquidações) e o que foi efetivamente pago (Status: Paga).
+                  <strong>Caixa:</strong> Considera apenas valores efetivamente pagos e recebidos.
                 </p>
               </TooltipContent>
             </Tooltip>
           </div>
+          {currentUser?.role === 'admin' && (
+            <Button variant="outline" asChild className="hidden md:flex">
+              <Link to="/dre-categories">
+                <Settings className="w-4 h-4 mr-2" /> Categorias
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" onClick={handleExportCSV}>
             <FileDown className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
@@ -275,35 +351,52 @@ export default function DREPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Receita Bruta */}
+                {/* Receitas */}
+                {revenueCats.map((cat) => (
+                  <TableRow key={cat.name}>
+                    <TableCell className="pl-8 text-muted-foreground print:text-black">
+                      (+) {cat.name}
+                    </TableCell>
+                    {report.map((d, i) => (
+                      <TableCell key={i} className="text-right print:text-black">
+                        {formatBRL(d.revenue[cat.name])}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
+                      {formatBRL(totals.revenue[cat.name])}
+                    </TableCell>
+                  </TableRow>
+                ))}
                 <TableRow className="bg-emerald-50/30 print:bg-transparent">
                   <TableCell className="font-semibold text-emerald-700 print:text-black">
                     (=) Receita Bruta
                   </TableCell>
                   {report.map((d, i) => (
                     <TableCell key={i} className="text-right text-emerald-600 print:text-black">
-                      {formatBRL(d.revenue)}
+                      {formatBRL(d.totalRevenue)}
                     </TableCell>
                   ))}
                   <TableCell className="text-right font-bold text-emerald-700 bg-emerald-50/50 print:bg-transparent print:text-black">
-                    {formatBRL(totals.revenue)}
+                    {formatBRL(totals.totalRevenue)}
                   </TableCell>
                 </TableRow>
 
                 {/* Custos Variáveis */}
-                <TableRow>
-                  <TableCell className="pl-8 text-muted-foreground print:text-black">
-                    (-) Custo de Materiais (Variável)
-                  </TableCell>
-                  {report.map((d, i) => (
-                    <TableCell key={i} className="text-right text-red-500 print:text-black">
-                      {formatBRL(d.labMaterial)}
+                {variableCats.map((cat) => (
+                  <TableRow key={cat.name}>
+                    <TableCell className="pl-8 text-muted-foreground print:text-black">
+                      (-) {cat.name}
                     </TableCell>
-                  ))}
-                  <TableCell className="text-right font-bold text-red-600 bg-muted/30 print:bg-transparent print:text-black">
-                    {formatBRL(totals.labMaterial)}
-                  </TableCell>
-                </TableRow>
+                    {report.map((d, i) => (
+                      <TableCell key={i} className="text-right text-red-500 print:text-black">
+                        {formatBRL(d.variable[cat.name])}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-bold text-red-600 bg-muted/30 print:bg-transparent print:text-black">
+                      {formatBRL(totals.variable[cat.name])}
+                    </TableCell>
+                  </TableRow>
+                ))}
 
                 {/* Lucro Bruto */}
                 <TableRow className="border-t-2 border-t-muted bg-blue-50/20 print:bg-transparent print:border-black">
@@ -324,58 +417,21 @@ export default function DREPage() {
                 </TableRow>
 
                 {/* Despesas Operacionais */}
-                <TableRow>
-                  <TableCell className="pl-8 text-muted-foreground print:text-black">
-                    (-) Pessoal / Folha
-                  </TableCell>
-                  {report.map((d, i) => (
-                    <TableCell key={i} className="text-right print:text-black">
-                      {formatBRL(d.personnel)}
+                {fixedCats.map((cat) => (
+                  <TableRow key={cat.name}>
+                    <TableCell className="pl-8 text-muted-foreground print:text-black">
+                      (-) {cat.name}
                     </TableCell>
-                  ))}
-                  <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
-                    {formatBRL(totals.personnel)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-8 text-muted-foreground print:text-black">
-                    (-) Despesas Administrativas
-                  </TableCell>
-                  {report.map((d, i) => (
-                    <TableCell key={i} className="text-right print:text-black">
-                      {formatBRL(d.administrative)}
+                    {report.map((d, i) => (
+                      <TableCell key={i} className="text-right print:text-black">
+                        {formatBRL(d.fixed[cat.name])}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
+                      {formatBRL(totals.fixed[cat.name])}
                     </TableCell>
-                  ))}
-                  <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
-                    {formatBRL(totals.administrative)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-8 text-muted-foreground print:text-black">
-                    (-) Impostos
-                  </TableCell>
-                  {report.map((d, i) => (
-                    <TableCell key={i} className="text-right print:text-black">
-                      {formatBRL(d.taxes)}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
-                    {formatBRL(totals.taxes)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-8 text-muted-foreground print:text-black">
-                    (-) Outras Despesas
-                  </TableCell>
-                  {report.map((d, i) => (
-                    <TableCell key={i} className="text-right print:text-black">
-                      {formatBRL(d.other)}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-right font-medium bg-muted/30 print:bg-transparent print:text-black">
-                    {formatBRL(totals.other)}
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
+                ))}
 
                 {/* Resultado Líquido */}
                 <TableRow className="border-t-2 border-t-muted bg-slate-50 dark:bg-slate-900 print:bg-transparent print:border-black">

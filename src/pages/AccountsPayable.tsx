@@ -108,14 +108,12 @@ export default function AccountsPayable() {
         fetchExpenses()
       }
     } else {
-      const { error } = await supabase
-        .from('expenses')
-        .insert(
-          entries.map((e) => ({
-            ...e,
-            sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
-          })),
-        )
+      const { error } = await supabase.from('expenses').insert(
+        entries.map((e) => ({
+          ...e,
+          sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+        })),
+      )
       if (error)
         toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
       else {

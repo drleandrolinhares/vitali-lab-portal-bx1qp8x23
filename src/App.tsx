@@ -28,6 +28,7 @@ import ComparativeDashboard from './pages/ComparativeDashboard'
 import PendingApproval from './pages/PendingApproval'
 import PendingUsersPage from './pages/PendingUsers'
 import DREPage from './pages/DRE'
+import DRECategories from './pages/DRECategories'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/comparative-dashboard" element={<ComparativeDashboard />} />
               <Route path="/admin-financial" element={<AdminFinancial />} />
               <Route path="/dre" element={<DREPage />} />
+              <Route path="/dre-categories" element={<DRECategories />} />
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />
               <Route path="/settings" element={<SettingsPage />} />

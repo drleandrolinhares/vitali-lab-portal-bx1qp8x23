@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { format, addMonths, parseISO } from 'date-fns'
 import { supabase } from '@/lib/supabase/client'
+import { useAppStore } from '@/stores/main'
 
 interface Props {
   open: boolean
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: Props) {
+  const { dreCategories } = useAppStore()
   const [saving, setSaving] = useState(false)
   const [installments, setInstallments] = useState<any[]>([])
   const [showConflictDialog, setShowConflictDialog] = useState(false)
@@ -49,7 +51,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
     description: '',
     classification: 'Custo Fixo',
     category: '',
-    dre_category: 'Despesa Administrativa',
+    dre_category: '',
     purchase_date: format(new Date(), 'yyyy-MM-dd'),
     due_date: '',
     payment_method: 'Boleto',
@@ -65,7 +67,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
           description: expenseToEdit.description || '',
           classification: expenseToEdit.classification || 'Custo Fixo',
           category: expenseToEdit.category || '',
-          dre_category: expenseToEdit.dre_category || 'Despesa Administrativa',
+          dre_category: expenseToEdit.dre_category || '',
           purchase_date: expenseToEdit.purchase_date || '',
           due_date: expenseToEdit.due_date || '',
           payment_method: expenseToEdit.payment_method || '',
@@ -77,11 +79,15 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
         })
         setInstallments([])
       } else {
+        const defaultCategory =
+          dreCategories.find((c) => c.category_type === 'fixed')?.name ||
+          dreCategories[0]?.name ||
+          ''
         setFormData({
           description: '',
           classification: 'Custo Fixo',
           category: '',
-          dre_category: 'Despesa Administrativa',
+          dre_category: defaultCategory,
           purchase_date: format(new Date(), 'yyyy-MM-dd'),
           due_date: '',
           payment_method: 'Boleto',
@@ -92,7 +98,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
         setInstallments([])
       }
     }
-  }, [open, expenseToEdit])
+  }, [open, expenseToEdit, dreCategories])
 
   useEffect(() => {
     if (
@@ -177,17 +183,12 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
       }
     }
 
-    // Consistency Validation
     try {
       let query = supabase
         .from('expenses')
         .select('dre_category')
         .ilike('description', formData.description)
-
-      if (expenseToEdit) {
-        query = query.neq('id', expenseToEdit.id)
-      }
-
+      if (expenseToEdit) query = query.neq('id', expenseToEdit.id)
       const { data: existing } = await query.limit(1).maybeSingle()
 
       if (existing && existing.dre_category !== formData.dre_category) {
@@ -270,16 +271,17 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Material de Laboratório">
-                    Material de Lab. (Custo Variável)
-                  </SelectItem>
-                  <SelectItem value="Pessoal">Pessoal / Folha (Despesa Operacional)</SelectItem>
-                  <SelectItem value="Despesa Administrativa">
-                    Despesa Administrativa (Fixo)
-                  </SelectItem>
-                  <SelectItem value="Impostos">Impostos</SelectItem>
-                  <SelectItem value="Receita">Receita</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
+                  {dreCategories.map((cat) => (
+                    <SelectItem key={cat.name} value={cat.name}>
+                      {cat.name} (
+                      {cat.category_type === 'variable'
+                        ? 'Custo Variável'
+                        : cat.category_type === 'fixed'
+                          ? 'Despesa Operacional'
+                          : 'Receita'}
+                      )
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-muted-foreground mt-1">

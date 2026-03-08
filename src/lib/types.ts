@@ -66,3 +66,8 @@ export interface AuditLog {
     name: string
   }
 }
+
+export interface DRECategory {
+  name: string
+  category_type: 'revenue' | 'variable' | 'fixed'
+}
