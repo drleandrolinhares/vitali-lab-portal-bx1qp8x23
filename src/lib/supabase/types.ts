@@ -102,7 +102,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_purchase_brand: string | null
+          last_purchase_value: number | null
           name: string
+          observations: string | null
           packaging_type: string | null
           purchase_cost: number | null
           quantity: number
@@ -114,7 +117,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_purchase_brand?: string | null
+          last_purchase_value?: number | null
           name: string
+          observations?: string | null
           packaging_type?: string | null
           purchase_cost?: number | null
           quantity?: number
@@ -126,7 +132,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_purchase_brand?: string | null
+          last_purchase_value?: number | null
           name?: string
+          observations?: string | null
           packaging_type?: string | null
           purchase_cost?: number | null
           quantity?: number
@@ -626,6 +635,9 @@ export const Constants = {
 //   packaging_type: text (nullable, default: ''::text)
 //   usage_factor: numeric (nullable, default: 1)
 //   storage_location: text (nullable, default: ''::text)
+//   last_purchase_brand: text (nullable)
+//   last_purchase_value: numeric (nullable)
+//   observations: text (nullable)
 // Table: inventory_transactions
 //   id: uuid (not null, default: gen_random_uuid())
 //   item_id: uuid (not null)
@@ -756,8 +768,8 @@ export const Constants = {
 //   Policy "Admin/Reception view expenses" (SELECT, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
 // Table: inventory_items
-//   Policy "Admin/Reception delete inventory_items" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin delete inventory_items" (DELETE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Admin/Reception insert inventory_items" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception update inventory_items" (UPDATE, PERMISSIVE) roles={public}
