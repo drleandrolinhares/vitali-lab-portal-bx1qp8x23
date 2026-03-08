@@ -926,10 +926,6 @@ section[aria-label='Notifications alt+T'] {
   display: block;
 }
 
-.inline-block{
-  display: inline-block;
-}
-
 .flex{
   display: flex;
 }
@@ -1175,6 +1171,14 @@ section[aria-label='Notifications alt+T'] {
 
 .w-2\.5{
   width: 0.625rem;
+}
+
+.w-20{
+  width: 5rem;
+}
+
+.w-28{
+  width: 7rem;
 }
 
 .w-3{
@@ -1928,6 +1932,10 @@ section[aria-label='Notifications alt+T'] {
   border-color: rgb(59 130 246 / 0.2);
 }
 
+.border-border\/20{
+  border-color: hsl(var(--border) / 0.2);
+}
+
 .border-border\/50{
   border-color: hsl(var(--border) / 0.5);
 }
@@ -2260,11 +2268,6 @@ section[aria-label='Notifications alt+T'] {
   fill: currentColor;
 }
 
-.object-cover{
-  -o-object-fit: cover;
-     object-fit: cover;
-}
-
 .p-0{
   padding: 0px;
 }
@@ -2568,6 +2571,14 @@ section[aria-label='Notifications alt+T'] {
   font-size: 11px;
 }
 
+.text-\[22px\]{
+  font-size: 22px;
+}
+
+.text-\[32px\]{
+  font-size: 32px;
+}
+
 .text-base{
   font-size: 1rem;
   line-height: 1.5rem;
@@ -2644,6 +2655,10 @@ section[aria-label='Notifications alt+T'] {
 
 .tracking-tight{
   letter-spacing: -0.025em;
+}
+
+.tracking-tighter{
+  letter-spacing: -0.05em;
 }
 
 .tracking-wide{
@@ -2759,6 +2774,10 @@ section[aria-label='Notifications alt+T'] {
 
 .text-primary-foreground{
   color: hsl(var(--primary-foreground));
+}
+
+.text-primary\/80{
+  color: hsl(var(--primary) / 0.8);
 }
 
 .text-red-500{
@@ -4416,15 +4435,6 @@ section[aria-label='Notifications alt+T'] {
 .dark\:text-slate-500:is(.dark *){
   --tw-text-opacity: 1;
   color: rgb(100 116 139 / var(--tw-text-opacity, 1));
-}
-
-.dark\:text-white:is(.dark *){
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-
-.dark\:text-white\/80:is(.dark *){
-  color: rgb(255 255 255 / 0.8);
 }
 
 .dark\:before\:bg-slate-800:is(.dark *)::before{

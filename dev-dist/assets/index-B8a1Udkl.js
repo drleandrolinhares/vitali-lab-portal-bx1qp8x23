@@ -34299,7 +34299,28 @@ const ptBR = {
 		firstWeekContainsDate: 1
 	}
 };
-var vitalli_03_3c8a5_default = "/assets/vitalli-03-3c8a5-DxldsgJG.png";
+function Logo({ className, variant = "default", size: size$3 = "lg" }) {
+	if (variant === "square") return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: cn("flex flex-col items-center justify-center bg-background shrink-0 shadow-md overflow-hidden border border-border/20", size$3 === "sm" ? "w-20 h-20 rounded-xl" : "w-28 h-28 rounded-2xl", className),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: cn("font-extrabold text-primary uppercase leading-none tracking-tighter", size$3 === "sm" ? "text-[22px]" : "text-[32px]"),
+			children: "VITALI"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: cn("font-light text-primary uppercase leading-none tracking-widest mt-1", size$3 === "sm" ? "text-[22px]" : "text-[32px]"),
+			children: "LAB"
+		})]
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-extrabold text-primary uppercase",
+			children: "Vitali"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "font-light text-primary/80 lowercase",
+			children: "lab."
+		})]
+	});
+}
 function DentistDashboard() {
 	const { orders, currentUser } = useAppStore();
 	const activeOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "completed");
@@ -34330,21 +34351,15 @@ function DentistDashboard() {
 				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex flex-col sm:flex-row items-start sm:items-center gap-6",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							src: vitalli_03_3c8a5_default,
-							alt: "Vitali Lab",
-							className: "h-28 w-auto object-cover"
-						})
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {
+						variant: "square",
+						size: "lg",
+						className: "hidden sm:flex"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-								src: vitalli_03_3c8a5_default,
-								alt: "Vitali Lab",
-								className: "h-20 w-auto object-cover"
-							})
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {
+							variant: "square",
+							size: "sm",
+							className: "sm:hidden mb-4"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
 							className: "text-3xl font-bold tracking-tight",
@@ -36667,21 +36682,15 @@ function LabDashboard() {
 		className: "space-y-8 max-w-6xl mx-auto py-2",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border/50",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "hidden sm:flex rounded-2xl shadow-md overflow-hidden shrink-0 bg-background",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-					src: vitalli_03_3c8a5_default,
-					alt: "Vitali Lab",
-					className: "h-28 w-auto object-cover"
-				})
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {
+				variant: "square",
+				size: "lg",
+				className: "hidden sm:flex"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "sm:hidden mb-4 rounded-xl shadow-md overflow-hidden inline-block bg-background",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						src: vitalli_03_3c8a5_default,
-						alt: "Vitali Lab",
-						className: "h-20 w-auto object-cover"
-					})
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Logo, {
+					variant: "square",
+					size: "sm",
+					className: "sm:hidden mb-4"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "text-3xl font-bold tracking-tight",
@@ -36804,18 +36813,6 @@ var NotFound = () => {
 	});
 };
 var NotFound_default = NotFound;
-function Logo({ className }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: cn("flex items-center gap-1 font-display tracking-tight text-xl", className),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-extrabold text-foreground dark:text-white uppercase",
-			children: "Vitali"
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "font-light text-foreground/80 dark:text-white/80 lowercase",
-			children: "lab."
-		})]
-	});
-}
 function createContextScope$1(scopeName, createContextScopeDeps = []) {
 	let defaultContexts = [];
 	function createContext3(rootComponentName, defaultContext) {
@@ -43126,4 +43123,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-CxQpdU7P.js.map
+//# sourceMappingURL=index-B8a1Udkl.js.map
