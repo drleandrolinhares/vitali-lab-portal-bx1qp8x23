@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
+import { KanbanCardTimer } from '@/components/KanbanCardTimer'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 
@@ -414,11 +415,12 @@ export default function KanbanPage() {
                                 <p className="text-xs text-slate-500 mt-1 truncate pl-1">
                                   {o.workType}
                                 </p>
-                                {isAdmin && (
-                                  <p className="text-[10px] font-medium text-slate-400 mt-3 pt-2 border-t truncate pl-1">
-                                    {o.dentistName}
-                                  </p>
-                                )}
+                                <div className="flex justify-between items-center mt-3 pt-2 border-t pl-1 gap-2">
+                                  <div className="text-[10px] font-medium text-slate-400 truncate flex-1">
+                                    {isAdmin && o.dentistName}
+                                  </div>
+                                  <KanbanCardTimer order={o} currentStage={stage.name} />
+                                </div>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent
