@@ -44,7 +44,12 @@ export default function SettingsPage() {
 
   const handleSaveSystem = async () => {
     setSavingSystem(true)
-    await updateSetting('whatsapp_lab_link', labLink)
+    let finalLink = labLink.trim()
+    if (finalLink && !finalLink.startsWith('http://') && !finalLink.startsWith('https://')) {
+      finalLink = `https://${finalLink}`
+    }
+    await updateSetting('whatsapp_lab_link', finalLink)
+    setLabLink(finalLink)
     setSavingSystem(false)
   }
 

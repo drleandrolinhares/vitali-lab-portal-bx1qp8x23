@@ -87,7 +87,12 @@ export default function DentistsPage() {
     const closing_date = formData.closing_date ? parseInt(formData.closing_date) : null
     const payment_due_date = formData.payment_due_date ? parseInt(formData.payment_due_date) : null
 
-    const { error } = await supabase
+    let finalLink = formData.whatsapp_group_link?.trim() || ''
+    if (finalLink && !finalLink.startsWith('http://') && !finalLink.startsWith('https://')) {
+      finalLink = `https://${finalLink}`
+    }
+
+    const { data, error } = await supabase
       .from('profiles' as any)
       .update({
         closing_date,
@@ -96,14 +101,15 @@ export default function DentistsPage() {
         clinic_contact_name: formData.clinic_contact_name,
         clinic_contact_role: formData.clinic_contact_role,
         clinic_contact_phone: formData.clinic_contact_phone,
-        whatsapp_group_link: formData.whatsapp_group_link,
+        whatsapp_group_link: finalLink,
       })
       .eq('id', editingDentist.id)
+      .select()
 
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível salvar as configurações.',
+        description: 'Não foi possível salvar as configurações. Verifique suas permissões.',
         variant: 'destructive',
       })
     } else {
@@ -204,7 +210,11 @@ export default function DentistsPage() {
                       className="w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8"
                     >
                       <a
-                        href={dentist.whatsapp_group_link}
+                        href={
+                          dentist.whatsapp_group_link.startsWith('http')
+                            ? dentist.whatsapp_group_link
+                            : `https://${dentist.whatsapp_group_link}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -281,7 +291,7 @@ export default function DentistsPage() {
                   }
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Usado no atalho do sidebar para o cliente.
+                  Usado no atalho do sidebar e dashboard para o cliente.
                 </p>
               </div>
 

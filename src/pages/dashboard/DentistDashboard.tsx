@@ -18,11 +18,20 @@ export function DentistDashboard() {
   const { orders, currentUser, appSettings } = useAppStore()
   const activeOrders = orders.filter((o) => o.status !== 'delivered' && o.status !== 'completed')
 
-  const whatsappLink =
+  const rawWhatsappLink =
     (currentUser as any).whatsapp_group_link ||
     appSettings?.whatsapp_group_link ||
     appSettings?.whatsapp_lab_link
-  const isWhatsappConfigured = Boolean(whatsappLink && whatsappLink.trim() !== '')
+
+  let validWhatsappLink = ''
+  if (rawWhatsappLink && rawWhatsappLink.trim() !== '') {
+    validWhatsappLink = rawWhatsappLink.trim()
+    if (!validWhatsappLink.startsWith('http://') && !validWhatsappLink.startsWith('https://')) {
+      validWhatsappLink = `https://${validWhatsappLink}`
+    }
+  }
+
+  const isWhatsappConfigured = validWhatsappLink !== ''
 
   const stats = [
     {
@@ -66,7 +75,7 @@ export function DentistDashboard() {
               size="lg"
               className="gap-2 shadow-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 w-full sm:w-auto"
             >
-              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+              <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
                 <WhatsAppIcon className="w-5 h-5" />
                 Contato Laboratório
               </a>
