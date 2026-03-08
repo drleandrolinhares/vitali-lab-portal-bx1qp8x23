@@ -13,6 +13,7 @@ import HistoryPage from './pages/History'
 import DentistsPage from './pages/Dentists'
 import AuthPage from './pages/Auth'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminFinancial from './pages/AdminFinancial'
 import KanbanPage from './pages/Kanban'
 import PriceList from './pages/PriceList'
 import FinancialPage from './pages/Financial'
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/kanban" element={<KanbanPage />} />
               <Route path="/dentists" element={<DentistsPage />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin-financial" element={<AdminFinancial />} />
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />
             </Route>

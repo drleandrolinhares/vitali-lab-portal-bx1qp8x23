@@ -154,6 +154,41 @@ export type Database = {
         }
         Relationships: []
       }
+      price_stages: {
+        Row: {
+          created_at: string
+          id: string
+          kanban_stage: string
+          name: string
+          price: number
+          price_list_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kanban_stage: string
+          name: string
+          price?: number
+          price_list_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kanban_stage?: string
+          name?: string
+          price?: number
+          price_list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'price_stages_price_list_id_fkey'
+            columns: ['price_list_id']
+            isOneToOne: false
+            referencedRelation: 'price_list'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       profiles: {
         Row: {
           clinic: string | null
@@ -360,6 +395,13 @@ export const Constants = {
 //   price: text (not null)
 //   notes: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: price_stages
+//   id: uuid (not null, default: gen_random_uuid())
+//   price_list_id: uuid (not null)
+//   name: text (not null)
+//   price: numeric (not null, default: 0)
+//   kanban_stage: text (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null)
 //   email: text (not null)
@@ -379,6 +421,9 @@ export const Constants = {
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
 // Table: price_list
 //   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
+// Table: price_stages
+//   PRIMARY KEY price_stages_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY price_stages_price_list_id_fkey: FOREIGN KEY (price_list_id) REFERENCES price_list(id) ON DELETE CASCADE
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
@@ -409,6 +454,15 @@ export const Constants = {
 //   Policy "Admin price_list update" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Public price_list view" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+// Table: price_stages
+//   Policy "Admin price_stages delete" (DELETE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Admin price_stages insert" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Admin price_stages update" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Public price_stages view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: profiles
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}

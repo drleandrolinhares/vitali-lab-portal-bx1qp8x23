@@ -13,6 +13,7 @@ import {
   BarChart3,
   KanbanSquare,
   DollarSign,
+  TrendingUp,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -55,6 +56,9 @@ function AppSidebar() {
       : [
           ...(currentUser.role === 'admin'
             ? [{ title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' }]
+            : []),
+          ...(currentUser.role === 'admin'
+            ? [{ title: 'Painel Financeiro', icon: TrendingUp, path: '/admin-financial' }]
             : []),
           { title: 'Caixa de Entrada', icon: FileText, path: '/' },
           { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
@@ -124,7 +128,7 @@ function MainHeader() {
   const { currentUser } = useAppStore()
   if (!currentUser) return null
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
       <SidebarTrigger />
       <div className="flex flex-1 items-center justify-between">
         <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
@@ -148,10 +152,12 @@ function MainHeader() {
 export default function Layout() {
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background">
+      <div className="print:hidden h-full flex">
+        <AppSidebar />
+      </div>
+      <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen">
         <MainHeader />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible">
           <Outlet />
         </main>
       </div>

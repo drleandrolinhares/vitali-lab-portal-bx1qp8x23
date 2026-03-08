@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/use-auth'
 
 interface AppState {
   currentUser: User
-  orders: Order[]
+  orders: any[]
   kanbanStages: Stage[]
   loading: boolean
   switchRole: (role: UserRole) => void
@@ -33,7 +33,7 @@ const AppContext = createContext<AppState | undefined>(undefined)
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [orders, setOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
@@ -110,6 +110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           observations: o.observations,
           status: o.status,
           createdAt: o.created_at,
+          clearedBalance: o.cleared_balance || 0,
           history: (o.order_history || [])
             .sort(
               (a: any, b: any) =>
@@ -228,11 +229,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .update({ kanban_stage: stage, status: newStatus })
         .eq('id', dbId)
       if (error) throw error
-      await supabase.from('order_history' as any).insert({
-        order_id: dbId,
-        status: newStatus,
-        note: `${currentUser.name} moveu o cartão para ${stage}`,
-      })
+      await supabase
+        .from('order_history' as any)
+        .insert({
+          order_id: dbId,
+          status: newStatus,
+          note: `${currentUser.name} moveu o cartão para ${stage}`,
+        })
       toast({ title: 'Cartão Movido' })
     } catch (error) {
       console.error(error)
@@ -247,11 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         return revertedOrders
       })
-      toast({
-        title: 'Erro',
-        description: 'Erro ao mover cartão. As alterações foram desfeitas.',
-        variant: 'destructive',
-      })
+      toast({ title: 'Erro', description: 'Erro ao mover cartão.', variant: 'destructive' })
     }
   }
 
@@ -290,10 +289,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('kanban_stages' as any)
       .update({ name: upperNewName })
       .eq('id', id)
-    if (error) {
-      toast({ title: 'Erro', description: 'Erro ao renomear.', variant: 'destructive' })
-      throw error
-    }
+    if (error) throw error
     await supabase
       .from('orders' as any)
       .update({ kanban_stage: upperNewName })
