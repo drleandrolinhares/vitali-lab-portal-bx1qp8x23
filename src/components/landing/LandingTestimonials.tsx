@@ -6,27 +6,22 @@ const testimonials = [
     role: 'Especialista em Implantodontia',
     content:
       'O Vitali Lab transformou a previsibilidade dos meus casos. A qualidade das peças em zircônia e o atendimento próximo da equipe fazem toda a diferença na minha prática clínica diária.',
-    image: 'https://img.usecurling.com/ppl/thumbnail?gender=male&seed=1',
   },
   {
     name: 'Dra. Carolina Mendes',
     role: 'Odontologia Estética',
     content:
       'As lentes de contato dental produzidas por eles são verdadeiras obras de arte. A adaptação é sempre perfeita e a naturalidade impressiona meus pacientes.',
-    image: 'https://img.usecurling.com/ppl/thumbnail?gender=female&seed=2',
   },
   {
     name: 'Dr. Fernando Costa',
     role: 'Reabilitação Oral',
     content:
       'Ter um laboratório que entende não só da técnica, mas também da comunicação com o dentista é essencial. O portal digital facilitou muito a gestão dos meus pedidos.',
-    image: 'https://img.usecurling.com/ppl/thumbnail?gender=male&seed=3',
   },
 ]
 
 export function LandingTestimonials() {
-  const showIdentity = false // Toggle this to show names and roles again
-
   return (
     <section id="depoimentos" className="py-24 bg-muted/20 border-t border-border/50">
       <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
@@ -54,18 +49,11 @@ export function LandingTestimonials() {
               <p className="text-muted-foreground text-center leading-relaxed flex-1 mb-8 italic text-lg">
                 "{testimonial.content}"
               </p>
-              <div className="flex items-center justify-center gap-4 pt-6 border-t border-border/50 mt-auto">
-                <img
-                  src={testimonial.image}
-                  alt={showIdentity ? testimonial.name : 'Dentista parceiro'}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-primary/20"
-                />
-                {showIdentity && (
-                  <div className="text-left">
-                    <h4 className="font-bold text-foreground text-base">{testimonial.name}</h4>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                )}
+              <div className="flex flex-col items-center justify-center pt-6 border-t border-border/50 mt-auto">
+                <h4 className="font-bold text-foreground text-base text-center">
+                  {testimonial.name}
+                </h4>
+                <p className="text-sm text-muted-foreground text-center">{testimonial.role}</p>
               </div>
             </div>
           ))}
