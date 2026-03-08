@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -16,18 +17,38 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Eye, Play, Check, Package } from 'lucide-react'
+import { MoreHorizontal, Eye, Play, Check, Package, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { OrderStatus } from '@/lib/types'
 import { Logo } from '@/components/Logo'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 
 export function LabDashboard() {
-  const { orders, updateOrderStatus } = useAppStore()
+  const { orders, updateOrderStatus, deleteOrder, currentUser } = useAppStore()
   const activeOrders = orders.filter((o) => o.status !== 'delivered')
+
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
+  const [deleteReason, setDeleteReason] = useState('')
 
   const changeStatus = (id: string, status: OrderStatus) => {
     updateOrderStatus(id, status, `Status atualizado para ${status} pela recepção.`)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (deleteOrderId && deleteReason.trim()) {
+      await deleteOrder(deleteOrderId, deleteReason.trim())
+      setDeleteOrderId(null)
+      setDeleteReason('')
+    }
   }
 
   return (
@@ -107,6 +128,17 @@ export function LabDashboard() {
                             <Package className="mr-2 h-4 w-4" /> Registrar Entrega
                           </DropdownMenuItem>
                         )}
+                        {currentUser?.role === 'admin' && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setDeleteOrderId(order.id)
+                              setDeleteReason('')
+                            }}
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir Pedido
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -123,6 +155,42 @@ export function LabDashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!deleteOrderId} onOpenChange={(o) => !o && setDeleteOrderId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão de Pedido</DialogTitle>
+            <DialogDescription>
+              Esta ação removerá o pedido permanentemente e excluirá seus dados de todas as métricas
+              do sistema. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Motivo da Exclusão <span className="text-destructive">*</span>
+            </h4>
+            <Textarea
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="Ex: Lançamento duplicado, cancelado pelo dentista antes do envio..."
+              className="min-h-[100px] resize-none"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteOrderId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={!deleteReason.trim()}
+            >
+              Excluir Pedido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

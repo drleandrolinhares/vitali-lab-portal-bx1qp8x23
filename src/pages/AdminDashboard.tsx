@@ -2,6 +2,7 @@ import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns'
 import {
@@ -14,8 +15,9 @@ import {
   Clock,
   CalendarDays,
   DollarSign,
+  ShieldAlert,
 } from 'lucide-react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { Label } from '@/components/ui/label'
 import { DateRange } from 'react-day-picker'
 import { DatePickerWithRange } from '@/components/ui/date-range-picker'
@@ -101,7 +103,6 @@ export default function AdminDashboard() {
     (workType: string) => {
       const item = priceList.find((p) => p.work_type === workType)
       if (!item || !item.price) return 0
-      // Try to parse R$ 150,00 to 150.00
       const parsed = parseFloat(item.price.replace(/[R$\s.]/g, '').replace(',', '.'))
       return isNaN(parsed) ? 0 : parsed
     },
@@ -150,7 +151,6 @@ export default function AdminDashboard() {
   const rankings = useMemo(() => {
     const map: Record<string, any> = {}
 
-    // Init map with all dentists
     profiles.forEach((p) => {
       map[p.id] = {
         id: p.id,
@@ -165,7 +165,6 @@ export default function AdminDashboard() {
       }
     })
 
-    // Process Orders for Incoming, Completed, Generated Revenue
     filteredOrders.forEach((o) => {
       if (!map[o.dentistId]) return
       map[o.dentistId].incoming += 1
@@ -175,7 +174,6 @@ export default function AdminDashboard() {
       map[o.dentistId].generatedRev += getPriceForOrder(o.workType)
     })
 
-    // Process Settlements for Paid Revenue, On-Time, Late Payments
     filteredSettlements.forEach((s) => {
       if (!map[s.dentist_id]) return
       map[s.dentist_id].paidRev += Number(s.amount)
@@ -233,11 +231,18 @@ export default function AdminDashboard() {
             Métricas de produção e rankings de dentistas.
           </p>
         </div>
-        <div className="w-full md:w-auto">
-          <Label className="text-xs text-muted-foreground block mb-1.5 ml-1">
-            Filtro de Período
-          </Label>
-          <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <Button variant="outline" className="gap-2 h-9 bg-white" asChild>
+            <Link to="/audit-logs">
+              <ShieldAlert className="w-4 h-4 text-muted-foreground" /> Logs de Auditoria
+            </Link>
+          </Button>
+          <div className="w-full sm:w-auto">
+            <Label className="text-xs text-muted-foreground block mb-1.5 ml-1">
+              Filtro de Período
+            </Label>
+            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+          </div>
         </div>
       </div>
 

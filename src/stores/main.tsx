@@ -19,6 +19,7 @@ interface AppState {
   loading: boolean
   switchRole: (role: UserRole) => void
   addOrder: (order: any) => Promise<void>
+  deleteOrder: (dbId: string, reason: string) => Promise<void>
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
@@ -173,6 +174,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser, fetchOrders, fetchStages, fetchSettings])
 
+  const logAudit = async (
+    action: string,
+    entityType: string,
+    entityId: string,
+    details: any = {},
+  ) => {
+    if (!currentUser) return
+    await supabase.from('audit_logs' as any).insert({
+      user_id: currentUser.id,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details,
+    })
+  }
+
   const switchRole = () => toast({ title: 'Aviso', description: 'Modo demonstração desativado.' })
 
   const addOrder = async (orderData: any) => {
@@ -184,28 +201,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? orderData.dentistId
         : currentUser.id
 
-    const { error } = await supabase.from('orders' as any).insert({
-      patient_name: orderData.patientName,
-      dentist_id: targetDentistId,
-      sector: orderData.sector,
-      kanban_stage: defaultStage,
-      work_type: orderData.workType,
-      material: orderData.material,
-      tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },
-      color_and_considerations: orderData.shade,
-      scale_used: orderData.shadeScale,
-      shipping_method: orderData.shippingMethod,
-      shipping_details: orderData.stlDeliveryMethod,
-      observations: orderData.observations,
-      status: 'pending',
-    })
+    const { data, error } = await supabase
+      .from('orders' as any)
+      .insert({
+        patient_name: orderData.patientName,
+        dentist_id: targetDentistId,
+        sector: orderData.sector,
+        kanban_stage: defaultStage,
+        work_type: orderData.workType,
+        material: orderData.material,
+        tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },
+        color_and_considerations: orderData.shade,
+        scale_used: orderData.shadeScale,
+        shipping_method: orderData.shippingMethod,
+        shipping_details: orderData.stlDeliveryMethod,
+        observations: orderData.observations,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
     if (error)
       return toast({
         title: 'Erro',
         description: 'Não foi possível salvar.',
         variant: 'destructive',
       })
+    if (data)
+      await logAudit('CREATE', 'order', data.id, {
+        friendlyId: data.friendly_id,
+        patientName: orderData.patientName,
+      })
+
     toast({ title: 'Pedido enviado!' })
+  }
+
+  const deleteOrder = async (dbId: string, reason: string) => {
+    if (currentUser?.role !== 'admin') return
+    const order = orders.find((o) => o.id === dbId)
+    if (!order) return
+
+    const { error } = await supabase
+      .from('orders' as any)
+      .delete()
+      .eq('id', dbId)
+    if (error)
+      return toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o pedido.',
+        variant: 'destructive',
+      })
+
+    await logAudit('DELETE', 'order', dbId, {
+      friendlyId: order.friendlyId,
+      reason,
+      patientName: order.patientName,
+    })
+    toast({ title: 'Pedido Excluído', description: 'O caso foi removido com sucesso do sistema.' })
+    fetchOrders()
   }
 
   const updateOrderStatus = async (dbId: string, status: OrderStatus, note?: string) => {
@@ -220,6 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       })
     await supabase.from('order_history' as any).insert({ order_id: dbId, status, note })
+    await logAudit('UPDATE_STATUS', 'order', dbId, { status, note })
     toast({ title: 'Status atualizado' })
   }
 
@@ -259,11 +313,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .update({ kanban_stage: stage, status: newStatus })
         .eq('id', dbId)
       if (error) throw error
-      await supabase.from('order_history' as any).insert({
-        order_id: dbId,
-        status: newStatus,
-        note: `${currentUser.name} moveu o cartão para ${stage}`,
-      })
+      await supabase
+        .from('order_history' as any)
+        .insert({
+          order_id: dbId,
+          status: newStatus,
+          note: `${currentUser.name} moveu o cartão para ${stage}`,
+        })
+      await logAudit('MOVE_STAGE', 'order', dbId, { from: originalStage, to: stage })
       toast({ title: 'Cartão Movido' })
     } catch (error) {
       console.error(error)
@@ -289,6 +346,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', dbId)
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao atualizar', variant: 'destructive' })
+    await logAudit('UPDATE_OBSERVATIONS', 'order', dbId, {})
     toast({ title: 'Observações salvas' })
   }
 
@@ -303,6 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .insert({ name: upperName, order_index: nextIndex })
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao adicionar.', variant: 'destructive' })
+    await logAudit('CREATE_STAGE', 'kanban_stage', upperName, { name: upperName })
     toast({ title: 'Coluna adicionada' })
   }
 
@@ -322,6 +381,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('orders' as any)
       .update({ kanban_stage: upperNewName })
       .eq('kanban_stage', oldName)
+    await logAudit('RENAME_STAGE', 'kanban_stage', id, { oldName, newName: upperNewName })
     toast({ title: 'Coluna renomeada' })
   }
 
@@ -337,6 +397,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', id)
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao remover.', variant: 'destructive' })
+    await logAudit('DELETE_STAGE', 'kanban_stage', id, { oldName, fallbackName })
     toast({ title: 'Coluna removida' })
   }
 
@@ -351,6 +412,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
     try {
       await Promise.all(updates)
+      await logAudit('REORDER_STAGES', 'kanban_stage', 'all', {})
     } catch (e) {
       toast({ title: 'Erro', description: 'Erro ao reordenar colunas.', variant: 'destructive' })
       fetchStages()
@@ -365,6 +427,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toast({ title: 'Erro', description: 'Erro ao salvar configuração.', variant: 'destructive' })
       return
     }
+    await logAudit('UPDATE_SETTING', 'setting', key, { value })
     toast({ title: 'Configuração atualizada' })
     fetchSettings()
   }
@@ -383,6 +446,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       return
     }
+    await logAudit('UPDATE_PROFILE', 'profile', currentUser.id, { updates })
     setCurrentUser({ ...currentUser, ...updates } as User)
     toast({ title: 'Perfil atualizado com sucesso' })
   }
@@ -405,6 +469,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loading,
         switchRole,
         addOrder,
+        deleteOrder,
         updateOrderStatus,
         updateOrderKanbanStage,
         updateOrderObservations,
