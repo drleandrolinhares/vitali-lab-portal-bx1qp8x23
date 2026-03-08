@@ -32043,7 +32043,7 @@ function AppProvider({ children }) {
 			return;
 		}
 		setProfileLoading(true);
-		const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+		const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
 		if (data) setCurrentUser({
 			id: data.id,
 			name: data.name,
@@ -43136,4 +43136,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DOz_ftzh.js.map
+//# sourceMappingURL=index-B0HawQtZ.js.map
