@@ -9,6 +9,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       kanban_stages: {
         Row: {
           created_at: string
@@ -401,6 +419,10 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: app_settings
+//   key: text (not null)
+//   value: text (not null)
+//   updated_at: timestamp with time zone (not null, default: now())
 // Table: kanban_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -460,6 +482,8 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
+// Table: app_settings
+//   PRIMARY KEY app_settings_pkey: PRIMARY KEY (key)
 // Table: kanban_stages
 //   UNIQUE kanban_stages_name_key: UNIQUE (name)
 //   PRIMARY KEY kanban_stages_pkey: PRIMARY KEY (id)
@@ -482,6 +506,11 @@ export const Constants = {
 //   PRIMARY KEY settlements_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: app_settings
+//   Policy "Admin app_settings all" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Public app_settings view" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: kanban_stages
 //   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
