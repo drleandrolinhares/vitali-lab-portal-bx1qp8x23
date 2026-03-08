@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -65,7 +65,7 @@ export default function HistoryPage() {
                 <TableHead>Trabalho</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right pr-6">Ação</TableHead>
+                <TableHead className="text-right pr-6">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -80,9 +80,28 @@ export default function HistoryPage() {
                     <StatusBadge status={order.status} />
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/order/${order.id}`}>Detalhes</Link>
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {order.dentistGroupLink && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 hover:border-green-300"
+                          asChild
+                        >
+                          <a
+                            href={order.dentistGroupLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Contato via WhatsApp"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/order/${order.id}`}>Detalhes</Link>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
