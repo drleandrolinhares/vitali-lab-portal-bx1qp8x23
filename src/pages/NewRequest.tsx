@@ -30,7 +30,9 @@ export default function NewRequest() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
-  const [priceListItems, setPriceListItems] = useState<{ category: string; workType: string }[]>([])
+  const [priceListItems, setPriceListItems] = useState<
+    { category: string; sector: string; workType: string }[]
+  >([])
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
 
@@ -55,9 +57,15 @@ export default function NewRequest() {
 
   useEffect(() => {
     const fetchPrices = async () => {
-      const { data } = await supabase.from('price_list' as any).select('category, work_type')
+      const { data } = await supabase.from('price_list').select('category, sector, work_type')
       if (data) {
-        setPriceListItems(data.map((d: any) => ({ category: d.category, workType: d.workType })))
+        setPriceListItems(
+          data.map((d: any) => ({
+            category: d.category || '',
+            sector: d.sector || '',
+            workType: d.work_type,
+          })),
+        )
       }
     }
     fetchPrices()
@@ -65,7 +73,7 @@ export default function NewRequest() {
     if (isAdminOrReception) {
       const fetchDentists = async () => {
         const { data } = await supabase
-          .from('profiles' as any)
+          .from('profiles')
           .select('id, name, clinic')
           .eq('role', 'dentist')
         if (data) {
@@ -83,13 +91,26 @@ export default function NewRequest() {
 
   useEffect(() => {
     if (formData.sector) {
+      const normalize = (str: string) =>
+        str
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+      const normalizedFormSector = normalize(formData.sector)
+
       const filtered = Array.from(
         new Set(
           priceListItems
-            .filter((p) => p.category.toLowerCase() === formData.sector.toLowerCase())
-            .map((p) => p.workType),
+            .filter((p) => {
+              const catMatch = p.category && normalize(p.category) === normalizedFormSector
+              const secMatch = p.sector && normalize(p.sector) === normalizedFormSector
+              return catMatch || secMatch
+            })
+            .map((p) => p.workType)
+            .filter(Boolean),
         ),
       ).sort()
+
       setAvailableWorkTypes(filtered)
 
       if (formData.workType && !filtered.includes(formData.workType)) {
