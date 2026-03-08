@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Stage } from '@/lib/types'
 import {
@@ -43,7 +44,18 @@ export default function KanbanPage() {
     reorderKanbanStages,
   } = useAppStore()
   const isAdmin = currentUser?.role === 'admin'
-  const [selectedDentistId, setSelectedDentistId] = useState('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedDentistId = searchParams.get('dentist') || 'all'
+
+  const setSelectedDentistId = (val: string) => {
+    if (val === 'all') {
+      searchParams.delete('dentist')
+    } else {
+      searchParams.set('dentist', val)
+    }
+    setSearchParams(searchParams, { replace: true })
+  }
+
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)

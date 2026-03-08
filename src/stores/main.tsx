@@ -64,12 +64,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setProfileLoading(false)
       return
     }
-    setProfileLoading(true)
+
+    // Only show loading screen if we don't have the user yet
+    if (currentUser?.id !== session.user.id) {
+      setProfileLoading(true)
+    }
+
     const { data } = await supabase
       .from('profiles' as any)
       .select('*')
       .eq('id', session.user.id)
       .maybeSingle()
+
     if (data) {
       setCurrentUser({
         id: data.id,
@@ -94,7 +100,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchProfile()
-  }, [session?.user])
+  }, [session?.user?.id])
 
   const fetchStages = useCallback(async () => {
     const { data } = await supabase
