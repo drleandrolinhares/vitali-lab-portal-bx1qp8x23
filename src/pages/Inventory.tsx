@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { formatBRL } from '@/lib/financial'
 import { Package, Plus, ArrowUpRight, ArrowDownRight, Trash2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const formatQty = (q: any) => {
   const num = Number(q)
@@ -46,7 +47,7 @@ export default function Inventory() {
 
   const [productModal, setProductModal] = useState<{
     open: boolean
-    mode: 'create' | 'edit' | 'in'
+    mode: 'create' | 'view' | 'in'
     item: any | null
   }>({ open: false, mode: 'create', item: null })
 
@@ -100,13 +101,19 @@ export default function Inventory() {
     return items.filter((i) => selectedLab === 'Todos' || i.sector === selectedLab)
   }, [items, selectedLab])
 
-  const openModal = (mode: 'create' | 'edit' | 'in', item?: any) => {
+  const openModal = (mode: 'create' | 'view' | 'in', item?: any) => {
     if (item) {
-      let initialPackaging = ['']
+      let initialPackaging: string[] = []
       if (item.packaging_types && item.packaging_types.length > 0) {
-        initialPackaging = [...item.packaging_types, '']
+        initialPackaging = [...item.packaging_types]
       } else if (item.packaging_type) {
-        initialPackaging = [item.packaging_type, '']
+        initialPackaging = [item.packaging_type]
+      }
+
+      if (mode !== 'view') {
+        initialPackaging.push('')
+      } else if (initialPackaging.length === 0) {
+        initialPackaging = ['-']
       }
 
       setFormData({
@@ -139,6 +146,7 @@ export default function Inventory() {
   }
 
   const handlePackagingChange = (index: number, value: string) => {
+    if (productModal.mode === 'view') return
     const newTypes = [...formData.packagingTypes]
     newTypes[index] = value
     if (index === newTypes.length - 1 && value.trim() !== '') {
@@ -148,6 +156,7 @@ export default function Inventory() {
   }
 
   const removePackaging = (index: number) => {
+    if (productModal.mode === 'view') return
     const newTypes = formData.packagingTypes.filter((_, i) => i !== index)
     if (newTypes.length === 0) newTypes.push('')
     setFormData({ ...formData, packagingTypes: newTypes })
@@ -160,10 +169,20 @@ export default function Inventory() {
   const totalCost = costVal * qtyBought
 
   const handleSaveProduct = async () => {
+    if (productModal.mode === 'view') return
+
     if (!formData.name || !formData.purchase_cost || !formData.usage_factor)
       return toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' })
 
-    const packTypes = formData.packagingTypes.filter((t) => t.trim() !== '')
+    if (productModal.mode === 'in' && qtyBought <= 0) {
+      return toast({
+        title: 'Quantidade Inválida',
+        description: 'Informe a quantidade comprada para registrar a entrada.',
+        variant: 'destructive',
+      })
+    }
+
+    const packTypes = formData.packagingTypes.filter((t) => t.trim() !== '' && t !== '-')
 
     const payload = {
       name: formData.name,
@@ -198,7 +217,7 @@ export default function Inventory() {
         })
       }
       toast({ title: 'Produto cadastrado!' })
-    } else {
+    } else if (productModal.mode === 'in') {
       const { error } = await supabase
         .from('inventory_items' as any)
         .update(payload)
@@ -218,9 +237,7 @@ export default function Inventory() {
           quantity: qtyBought,
         })
       }
-      toast({
-        title: productModal.mode === 'in' ? 'Entrada registrada!' : 'Produto atualizado!',
-      })
+      toast({ title: 'Entrada registrada e produto atualizado!' })
     }
 
     setProductModal({ open: false, mode: 'create', item: null })
@@ -268,7 +285,7 @@ export default function Inventory() {
 
     if (error) toast({ title: 'Erro ao registrar', variant: 'destructive' })
     else {
-      toast({ title: 'Baixa registrada' })
+      toast({ title: 'Baixa registrada com sucesso' })
       setBaixaModal({ open: false, item: null })
       setBaixaData({ qty: '', type: 'box' })
       fetchItems()
@@ -350,7 +367,7 @@ export default function Inventory() {
                       className="cursor-pointer hover:bg-muted/50 transition-colors group"
                       onClick={(e) => {
                         if ((e.target as HTMLElement).closest('.actions-col')) return
-                        openModal('edit', item)
+                        openModal('view', item)
                       }}
                     >
                       <TableCell className="pl-6 font-medium">
@@ -407,7 +424,10 @@ export default function Inventory() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              onClick={() => handleDelete(item)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(item)
+                              }}
                               title="Excluir produto"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -417,7 +437,10 @@ export default function Inventory() {
                             variant="outline"
                             size="sm"
                             className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
-                            onClick={() => openModal('in', item)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openModal('in', item)
+                            }}
                           >
                             <ArrowUpRight className="w-3 h-3 mr-1" /> Entrada
                           </Button>
@@ -425,7 +448,10 @@ export default function Inventory() {
                             variant="outline"
                             size="sm"
                             className="h-8 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/30"
-                            onClick={() => setBaixaModal({ open: true, item })}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setBaixaModal({ open: true, item })
+                            }}
                           >
                             <ArrowDownRight className="w-3 h-3 mr-1" /> Baixa
                           </Button>
@@ -451,7 +477,7 @@ export default function Inventory() {
                 ? 'Novo Produto no Estoque'
                 : productModal.mode === 'in'
                   ? 'Registrar Nova Entrada'
-                  : 'Detalhes / Editar Produto'}
+                  : 'Detalhes do Produto'}
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4 max-h-[70vh] overflow-y-auto px-1">
@@ -461,7 +487,7 @@ export default function Inventory() {
                 placeholder="Ex: Resina A2"
                 value={formData.name}
                 readOnly={productModal.mode !== 'create'}
-                className={productModal.mode !== 'create' ? 'bg-muted opacity-80' : ''}
+                className={cn(productModal.mode !== 'create' && 'bg-muted opacity-80')}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
@@ -471,6 +497,8 @@ export default function Inventory() {
               <Input
                 placeholder="0,00"
                 value={formData.purchase_cost}
+                readOnly={productModal.mode === 'view'}
+                className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                 onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })}
               />
             </div>
@@ -480,6 +508,8 @@ export default function Inventory() {
               <Input
                 placeholder="Ex: Sala 1 - Armário A"
                 value={formData.storage_location}
+                readOnly={productModal.mode === 'view'}
+                className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                 onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
               />
             </div>
@@ -487,36 +517,44 @@ export default function Inventory() {
             <div className="col-span-2 mt-2 p-4 bg-muted/30 rounded-lg border border-border">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3 col-span-2">
-                  <Label>Tipos de Embalagem (Dinâmico)</Label>
+                  <Label>Tipos de Embalagem</Label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {formData.packagingTypes.map((type, idx) => (
                       <div key={idx} className="flex items-center gap-1">
                         <Input
-                          className="w-36"
+                          className={cn(
+                            'w-36',
+                            productModal.mode === 'view' && 'bg-muted opacity-80',
+                          )}
                           placeholder={
-                            idx === formData.packagingTypes.length - 1
+                            idx === formData.packagingTypes.length - 1 &&
+                            productModal.mode !== 'view'
                               ? 'Nova embalagem...'
                               : 'Ex: Frasco'
                           }
                           value={type}
+                          readOnly={productModal.mode === 'view'}
                           onChange={(e) => handlePackagingChange(idx, e.target.value)}
                         />
-                        {idx < formData.packagingTypes.length - 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100"
-                            onClick={() => removePackaging(idx)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {idx < formData.packagingTypes.length - 1 &&
+                          productModal.mode !== 'view' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => removePackaging(idx)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Preencha o último campo para adicionar um novo tipo automaticamente.
-                  </p>
+                  {productModal.mode !== 'view' && (
+                    <p className="text-xs text-muted-foreground">
+                      Preencha o último campo para adicionar um novo tipo automaticamente.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -527,6 +565,8 @@ export default function Inventory() {
                     step="0.01"
                     placeholder="Ex: 5"
                     value={formData.items_per_box}
+                    readOnly={productModal.mode === 'view'}
+                    className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                     onChange={(e) => setFormData({ ...formData, items_per_box: e.target.value })}
                   />
                 </div>
@@ -538,6 +578,8 @@ export default function Inventory() {
                     step="0.01"
                     placeholder="Ex: 50 coroas"
                     value={formData.usage_factor}
+                    readOnly={productModal.mode === 'view'}
+                    className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                     onChange={(e) => setFormData({ ...formData, usage_factor: e.target.value })}
                   />
                 </div>
@@ -552,30 +594,31 @@ export default function Inventory() {
               </div>
             </div>
 
-            <div className="col-span-2 mt-2 pt-2 border-t border-border" />
-
-            <div className="space-y-2">
-              <Label className="text-blue-600 dark:text-blue-400">
-                {productModal.mode === 'create'
-                  ? 'Qtd. Comprada (Inicial em Caixas)'
-                  : 'Qtd. Comprada (Nova Entrada)'}
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder={
-                  productModal.mode === 'edit' ? 'Deixe em branco para não alterar' : 'Ex: 10'
-                }
-                value={formData.initial_quantity}
-                onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value })}
-                className="border-blue-200 dark:border-blue-900/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Custo Total da Compra Atual</Label>
-              <Input readOnly className="bg-muted font-semibold" value={formatBRL(totalCost)} />
-            </div>
+            {productModal.mode !== 'view' && (
+              <>
+                <div className="col-span-2 mt-2 pt-2 border-t border-border" />
+                <div className="space-y-2">
+                  <Label className="text-blue-600 dark:text-blue-400">
+                    {productModal.mode === 'create'
+                      ? 'Qtd. Comprada (Inicial em Caixas)'
+                      : 'Qtd. Comprada (Nova Entrada)'}
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 10"
+                    value={formData.initial_quantity}
+                    onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value })}
+                    className="border-blue-200 dark:border-blue-900/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Custo Total da Compra Atual</Label>
+                  <Input readOnly className="bg-muted font-semibold" value={formatBRL(totalCost)} />
+                </div>
+              </>
+            )}
 
             <div className="col-span-2 mt-4 pt-4 border-t border-border">
               <Label className="text-sm font-semibold text-muted-foreground mb-3 block">
@@ -587,6 +630,8 @@ export default function Inventory() {
               <Input
                 placeholder="Ex: 3M, Ivoclar..."
                 value={formData.last_purchase_brand}
+                readOnly={productModal.mode === 'view'}
+                className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                 onChange={(e) => setFormData({ ...formData, last_purchase_brand: e.target.value })}
               />
             </div>
@@ -595,6 +640,8 @@ export default function Inventory() {
               <Input
                 placeholder="0,00"
                 value={formData.last_purchase_value}
+                readOnly={productModal.mode === 'view'}
+                className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                 onChange={(e) => setFormData({ ...formData, last_purchase_value: e.target.value })}
               />
             </div>
@@ -602,26 +649,37 @@ export default function Inventory() {
               <Label>Observações</Label>
               <Textarea
                 placeholder="Adicione notas, links de fornecedores ou detalhes..."
-                className="min-h-[80px]"
+                className={cn(
+                  'min-h-[80px]',
+                  productModal.mode === 'view' && 'bg-muted opacity-80',
+                )}
                 value={formData.observations}
+                readOnly={productModal.mode === 'view'}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setProductModal({ ...productModal, open: false })}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveProduct}>
-              {productModal.mode === 'create'
-                ? 'Cadastrar Produto'
-                : productModal.mode === 'in'
-                  ? 'Salvar Entrada'
-                  : 'Salvar Alterações'}
-            </Button>
+            {productModal.mode === 'view' ? (
+              <Button
+                variant="outline"
+                onClick={() => setProductModal({ ...productModal, open: false })}
+              >
+                Fechar Detalhes
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setProductModal({ ...productModal, open: false })}
+                >
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveProduct}>
+                  {productModal.mode === 'create' ? 'Cadastrar Produto' : 'Salvar Entrada'}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -681,7 +739,7 @@ export default function Inventory() {
             </div>
 
             {baixaData.type === 'item' && Number(baixaData.qty) > 0 && (
-              <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-900/50">
+              <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-900/50 mt-4">
                 Será deduzido{' '}
                 <strong className="font-bold">
                   {(Number(baixaData.qty) / (Number(baixaModal.item?.items_per_box) || 1)).toFixed(
