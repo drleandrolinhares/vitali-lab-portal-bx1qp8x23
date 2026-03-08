@@ -41129,10 +41129,6 @@ function AdminFinancial() {
 			if (data) setDentists(data);
 		});
 	}, []);
-	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
-		to: "/",
-		replace: true
-	});
 	const financials = (0, import_react.useMemo)(() => {
 		return orders.map((o) => getOrderFinancials(o, priceList, kanbanStages));
 	}, [
@@ -41140,6 +41136,10 @@ function AdminFinancial() {
 		priceList,
 		kanbanStages
 	]);
+	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
+		to: "/",
+		replace: true
+	});
 	const globalTotalReceivable = financials.reduce((acc, o) => acc + o.outstandingCost, 0);
 	const globalValueToProduce = financials.reduce((acc, o) => acc + o.pendingCost, 0);
 	const dentistStats = dentists.map((d) => {
@@ -42899,4 +42899,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-KizBtVP_.js.map
+//# sourceMappingURL=index-NWxdQ1Au.js.map

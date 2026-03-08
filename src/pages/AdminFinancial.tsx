@@ -45,11 +45,11 @@ export default function AdminFinancial() {
       })
   }, [])
 
-  if (currentUser?.role !== 'admin') return <Navigate to="/" replace />
-
   const financials = useMemo(() => {
     return orders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
   }, [orders, priceList, kanbanStages])
+
+  if (currentUser?.role !== 'admin') return <Navigate to="/" replace />
 
   const globalTotalReceivable = financials.reduce((acc, o) => acc + o.outstandingCost, 0)
   const globalValueToProduce = financials.reduce((acc, o) => acc + o.pendingCost, 0)
