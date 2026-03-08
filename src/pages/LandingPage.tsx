@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/Logo'
 import { ChevronRight, HeartHandshake, Diamond, ShieldCheck } from 'lucide-react'
 import allanImg from '@/assets/allan-queiroz-25-13390.jpeg'
+import acrilicoImg from '@/assets/allan-queiroz-52-abae6.jpeg'
 
 export default function LandingPage() {
   return (
@@ -106,11 +107,11 @@ export default function LandingPage() {
 
               {/* Acrílico */}
               <div className="group relative overflow-hidden rounded-3xl bg-card border border-border transition-all hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 flex flex-col">
-                <div className="aspect-[4/3] overflow-hidden bg-muted">
+                <div className="aspect-[4/3] overflow-hidden bg-black">
                   <img
-                    src="https://img.usecurling.com/p/800/600?q=acrylic%20dental%20protocol&color=black&dpr=2"
+                    src={acrilicoImg}
                     alt="Studio Acrílico Protocolo"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 mix-blend-luminosity group-hover:mix-blend-normal"
+                    className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
                 <div className="p-8 md:p-10 flex-1 flex flex-col">
