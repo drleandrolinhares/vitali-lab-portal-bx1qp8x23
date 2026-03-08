@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Mail, MapPin, Briefcase, Settings, Phone, UserCircle, MessageCircle } from 'lucide-react'
+import { Mail, Briefcase, Settings, Phone, UserCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,7 +28,6 @@ export default function DentistsPage() {
     clinic_contact_name: '',
     clinic_contact_role: '',
     clinic_contact_phone: '',
-    whatsapp_group_link: '',
   })
 
   const hasAccess = currentUser?.role === 'receptionist' || currentUser?.role === 'admin'
@@ -57,7 +56,6 @@ export default function DentistsPage() {
         clinic_contact_name: p.clinic_contact_name,
         clinic_contact_role: p.clinic_contact_role,
         clinic_contact_phone: p.clinic_contact_phone,
-        whatsapp_group_link: p.whatsapp_group_link,
         activeCases: orders ? orders.filter((o: any) => o.dentist_id === p.id).length : 0,
       }))
       setDentists(mapped)
@@ -78,7 +76,6 @@ export default function DentistsPage() {
       clinic_contact_name: dentist.clinic_contact_name || '',
       clinic_contact_role: dentist.clinic_contact_role || '',
       clinic_contact_phone: dentist.clinic_contact_phone || '',
-      whatsapp_group_link: dentist.whatsapp_group_link || '',
     })
   }
 
@@ -86,11 +83,6 @@ export default function DentistsPage() {
     if (!editingDentist) return
     const closing_date = formData.closing_date ? parseInt(formData.closing_date) : null
     const payment_due_date = formData.payment_due_date ? parseInt(formData.payment_due_date) : null
-
-    let finalLink = formData.whatsapp_group_link?.trim() || ''
-    if (finalLink && !finalLink.startsWith('http://') && !finalLink.startsWith('https://')) {
-      finalLink = `https://${finalLink}`
-    }
 
     const { data, error } = await supabase
       .from('profiles' as any)
@@ -101,7 +93,6 @@ export default function DentistsPage() {
         clinic_contact_name: formData.clinic_contact_name,
         clinic_contact_role: formData.clinic_contact_role,
         clinic_contact_phone: formData.clinic_contact_phone,
-        whatsapp_group_link: finalLink,
       })
       .eq('id', editingDentist.id)
       .select()
@@ -201,29 +192,6 @@ export default function DentistsPage() {
                   </div>
                 )}
 
-                {dentist.whatsapp_group_link && (
-                  <div className="mt-2">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8"
-                    >
-                      <a
-                        href={
-                          dentist.whatsapp_group_link.startsWith('http')
-                            ? dentist.whatsapp_group_link
-                            : `https://${dentist.whatsapp_group_link}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <MessageCircle className="w-3 h-3 mr-2" /> Grupo WhatsApp
-                      </a>
-                    </Button>
-                  </div>
-                )}
-
                 <div className="bg-muted/40 rounded-md p-2 mt-2 border border-border/50 grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-muted-foreground block mb-0.5">Fechamento</span>
@@ -280,19 +248,6 @@ export default function DentistsPage() {
                   value={formData.personal_phone}
                   onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Link Grupo WhatsApp (Clínica/Lab)</Label>
-                <Input
-                  placeholder="https://chat.whatsapp.com/..."
-                  value={formData.whatsapp_group_link}
-                  onChange={(e) =>
-                    setFormData({ ...formData, whatsapp_group_link: e.target.value })
-                  }
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Usado no atalho do sidebar e dashboard para o cliente.
-                </p>
               </div>
 
               <div className="pt-4 pb-2 border-b">

@@ -102,11 +102,13 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          items_per_box: number | null
           last_purchase_brand: string | null
           last_purchase_value: number | null
           name: string
           observations: string | null
           packaging_type: string | null
+          packaging_types: Json | null
           purchase_cost: number | null
           quantity: number
           sector: string
@@ -117,11 +119,13 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          items_per_box?: number | null
           last_purchase_brand?: string | null
           last_purchase_value?: number | null
           name: string
           observations?: string | null
           packaging_type?: string | null
+          packaging_types?: Json | null
           purchase_cost?: number | null
           quantity?: number
           sector?: string
@@ -132,11 +136,13 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          items_per_box?: number | null
           last_purchase_brand?: string | null
           last_purchase_value?: number | null
           name?: string
           observations?: string | null
           packaging_type?: string | null
+          packaging_types?: Json | null
           purchase_cost?: number | null
           quantity?: number
           sector?: string
@@ -628,7 +634,7 @@ export const Constants = {
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
 //   unit_price: numeric (not null, default: 0)
-//   quantity: integer (not null, default: 0)
+//   quantity: numeric (not null, default: 0)
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'Soluções Cerâmicas'::text)
 //   purchase_cost: numeric (nullable, default: 0)
@@ -638,11 +644,13 @@ export const Constants = {
 //   last_purchase_brand: text (nullable)
 //   last_purchase_value: numeric (nullable)
 //   observations: text (nullable)
+//   items_per_box: numeric (nullable, default: 1)
+//   packaging_types: jsonb (nullable, default: '[]'::jsonb)
 // Table: inventory_transactions
 //   id: uuid (not null, default: gen_random_uuid())
 //   item_id: uuid (not null)
 //   type: text (not null)
-//   quantity: integer (not null)
+//   quantity: numeric (not null)
 //   created_at: timestamp with time zone (not null, default: now())
 // Table: kanban_stages
 //   id: uuid (not null, default: gen_random_uuid())
