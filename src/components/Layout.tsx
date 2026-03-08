@@ -49,6 +49,7 @@ function AppSidebar() {
           { title: 'Meu Painel', icon: LayoutDashboard, path: '/' },
           { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
           { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
+          { title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
           { title: 'Histórico', icon: History, path: '/history' },
         ]
       : [

@@ -127,6 +127,33 @@ export type Database = {
           },
         ]
       }
+      price_list: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          price: string
+          work_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price: string
+          work_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price?: string
+          work_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           clinic: string | null
@@ -326,6 +353,13 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'SOLUÇÕES CERÂMICAS'::text)
 //   kanban_stage: text (not null, default: 'TRIAGEM'::text)
+// Table: price_list
+//   id: uuid (not null, default: gen_random_uuid())
+//   category: text (not null)
+//   work_type: text (not null)
+//   price: text (not null)
+//   notes: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null)
 //   email: text (not null)
@@ -343,6 +377,8 @@ export const Constants = {
 // Table: orders
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id)
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
+// Table: price_list
+//   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
@@ -365,6 +401,15 @@ export const Constants = {
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
 //   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={public}
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
+// Table: price_list
+//   Policy "Admin price_list delete" (DELETE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Admin price_list insert" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Admin price_list update" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Public price_list view" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: profiles
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
