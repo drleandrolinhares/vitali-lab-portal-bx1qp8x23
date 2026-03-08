@@ -4,6 +4,7 @@ import { Logo } from '@/components/Logo'
 import { ChevronRight, HeartHandshake, Diamond, ShieldCheck } from 'lucide-react'
 import allanImg from '@/assets/allan-queiroz-25-13390.jpeg'
 import acrilicoImg from '@/assets/allan-queiroz-52-abae6.jpeg'
+import heroBgImg from '@/assets/allan-queiroz-64-c1e37.jpeg'
 
 export default function LandingPage() {
   return (
@@ -32,7 +33,7 @@ export default function LandingPage() {
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden flex items-center justify-center">
           <div className="absolute inset-0 z-0 opacity-40">
             <img
-              src="https://img.usecurling.com/p/1920/1080?q=premium%20dental%20lab&color=black&dpr=2"
+              src={heroBgImg}
               alt="Premium dental laboratory"
               className="w-full h-full object-cover"
             />
