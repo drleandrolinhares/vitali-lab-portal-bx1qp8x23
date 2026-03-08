@@ -105,6 +105,7 @@ export type Database = {
           items_per_box: number | null
           last_purchase_brand: string | null
           last_purchase_value: number | null
+          minimum_stock_level: number
           name: string
           observations: string | null
           packaging_type: string | null
@@ -122,6 +123,7 @@ export type Database = {
           items_per_box?: number | null
           last_purchase_brand?: string | null
           last_purchase_value?: number | null
+          minimum_stock_level?: number
           name: string
           observations?: string | null
           packaging_type?: string | null
@@ -139,6 +141,7 @@ export type Database = {
           items_per_box?: number | null
           last_purchase_brand?: string | null
           last_purchase_value?: number | null
+          minimum_stock_level?: number
           name?: string
           observations?: string | null
           packaging_type?: string | null
@@ -652,6 +655,7 @@ export const Constants = {
 //   observations: text (nullable)
 //   items_per_box: numeric (nullable, default: 1)
 //   packaging_types: jsonb (nullable, default: '[]'::jsonb)
+//   minimum_stock_level: numeric (not null, default: 0)
 // Table: inventory_transactions
 //   id: uuid (not null, default: gen_random_uuid())
 //   item_id: uuid (not null)

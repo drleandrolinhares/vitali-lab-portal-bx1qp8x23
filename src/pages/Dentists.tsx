@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Mail, Briefcase, Settings, Phone, UserCircle, MessageCircle } from 'lucide-react'
+import { Mail, Briefcase, Settings, Phone, UserCircle, MessageCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -80,6 +80,23 @@ export default function DentistsPage() {
       clinic_contact_phone: dentist.clinic_contact_phone || '',
       whatsapp_group_link: dentist.whatsapp_group_link || '',
     })
+  }
+
+  const handleDeleteDentist = async (id: string) => {
+    if (
+      !confirm(
+        'Tem certeza que deseja excluir este dentista permanentemente? Todo o histórico de pedidos e faturamento dele também será excluído.',
+      )
+    )
+      return
+
+    const { error } = await supabase.rpc('delete_user', { target_user_id: id })
+    if (error) {
+      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' })
+    } else {
+      toast({ title: 'Dentista excluído com sucesso.' })
+      fetchDentists()
+    }
   }
 
   const handleSave = async () => {
@@ -228,16 +245,29 @@ export default function DentistsPage() {
 
                 <div className="pt-4 flex items-center justify-between border-t mt-4">
                   <span className="font-medium text-foreground">
-                    Casos Ativos: <span className="text-primary">{dentist.activeCases}</span>
+                    Casos: <span className="text-primary">{dentist.activeCases}</span>
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1 text-primary"
-                    onClick={() => handleEditClick(dentist)}
-                  >
-                    <Settings className="w-3 h-3" /> Configurar
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {currentUser?.role === 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDeleteDentist(dentist.id)}
+                        title="Excluir Dentista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1 text-primary hover:bg-primary/10"
+                      onClick={() => handleEditClick(dentist)}
+                    >
+                      <Settings className="w-3 h-3" /> Config
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

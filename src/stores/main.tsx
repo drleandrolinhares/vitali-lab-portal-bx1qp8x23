@@ -274,18 +274,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const rejectUser = async (userId: string) => {
-    const { error } = await supabase
-      .from('profiles' as any)
-      .delete()
-      .eq('id', userId)
+    const { error } = await supabase.rpc('delete_user', { target_user_id: userId })
     if (error) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível rejeitar o usuário.',
+        description: 'Não foi possível rejeitar o usuário. ' + error.message,
         variant: 'destructive',
       })
     } else {
-      toast({ title: 'Usuário rejeitado e removido do sistema.' })
+      toast({ title: 'Usuário rejeitado e removido permanentemente do sistema.' })
       setPendingUsers((prev) => prev.filter((u) => u.id !== userId))
     }
   }
