@@ -38017,7 +38017,7 @@ function AppSidebar() {
 		title: "WhatsApp Vitali Lab",
 		icon: Phone,
 		url: appSettings?.whatsapp_lab_link
-	}].filter((l) => Boolean(l.url));
+	}];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
 		variant: "inset",
 		children: [
@@ -38027,31 +38027,41 @@ function AppSidebar() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
 				className: "px-2",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarMenu, { children: [navItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
-					asChild: true,
-					isActive: location.pathname === item.path,
-					tooltip: item.title,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
-						to: item.path,
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarMenu, { children: [
+					navItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
+						asChild: true,
+						isActive: location.pathname === item.path,
+						tooltip: item.title,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
+							to: item.path,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
+						})
+					}) }, item.path)),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
+						className: "mt-4 mb-1 px-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "text-[10px] font-semibold text-muted-foreground uppercase tracking-wider",
+							children: "Comunicação"
+						})
+					}),
+					commLinks.map((item) => {
+						const isConfigured = Boolean(item.url && item.url.trim() !== "");
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
+							asChild: true,
+							tooltip: item.title,
+							className: cn("text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10", !isConfigured && "opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent"),
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+								href: isConfigured ? item.url : "#",
+								target: isConfigured ? "_blank" : void 0,
+								rel: isConfigured ? "noopener noreferrer" : void 0,
+								onClick: (e) => {
+									if (!isConfigured) e.preventDefault();
+								},
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
+							})
+						}) }, item.title);
 					})
-				}) }, item.path)), commLinks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
-					className: "mt-4 mb-1 px-2",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-[10px] font-semibold text-muted-foreground uppercase tracking-wider",
-						children: "Comunicação"
-					})
-				}), commLinks.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
-					asChild: true,
-					tooltip: item.title,
-					className: "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-						href: item.url,
-						target: "_blank",
-						rel: "noopener noreferrer",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
-					})
-				}) }, item.title))] })] })
+				] })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarFooter, {
 				className: "p-4",
@@ -42965,7 +42975,7 @@ function SettingsPage() {
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 								className: "text-xs text-muted-foreground",
-								children: "Este link será exibido para dentistas e administradores."
+								children: "Este link será exibido no menu lateral para todos os usuários."
 							})
 						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -43075,4 +43085,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DcedXv09.js.map
+//# sourceMappingURL=index-UakcfzvT.js.map

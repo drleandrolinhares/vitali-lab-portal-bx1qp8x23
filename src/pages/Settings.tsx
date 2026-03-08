@@ -63,7 +63,7 @@ export default function SettingsPage() {
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Este link será exibido para dentistas e administradores.
+              Este link será exibido no menu lateral para todos os usuários.
             </p>
           </div>
           <div className="space-y-2">

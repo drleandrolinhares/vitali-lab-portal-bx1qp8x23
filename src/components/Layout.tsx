@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/use-auth'
 import { NewOrderNotification } from '@/components/NewOrderNotification'
+import { cn } from '@/lib/utils'
 
 function AppSidebar() {
   const { currentUser, appSettings } = useAppStore()
@@ -82,7 +83,7 @@ function AppSidebar() {
       url: appSettings?.whatsapp_group_link,
     },
     { title: 'WhatsApp Vitali Lab', icon: Phone, url: appSettings?.whatsapp_lab_link },
-  ].filter((l) => Boolean(l.url))
+  ]
 
   return (
     <Sidebar variant="inset">
@@ -106,29 +107,39 @@ function AppSidebar() {
             </SidebarMenuItem>
           ))}
 
-          {commLinks.length > 0 && (
-            <>
-              <SidebarMenuItem className="mt-4 mb-1 px-2">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Comunicação
-                </span>
-              </SidebarMenuItem>
-              {commLinks.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={item.title}
-                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+          <SidebarMenuItem className="mt-4 mb-1 px-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Comunicação
+            </span>
+          </SidebarMenuItem>
+          {commLinks.map((item) => {
+            const isConfigured = Boolean(item.url && item.url.trim() !== '')
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.title}
+                  className={cn(
+                    'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
+                    !isConfigured &&
+                      'opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent',
+                  )}
+                >
+                  <a
+                    href={isConfigured ? item.url : '#'}
+                    target={isConfigured ? '_blank' : undefined}
+                    rel={isConfigured ? 'noopener noreferrer' : undefined}
+                    onClick={(e) => {
+                      if (!isConfigured) e.preventDefault()
+                    }}
                   >
-                    <a href={item.url} target="_blank" rel="noopener noreferrer">
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </>
-          )}
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-4">
