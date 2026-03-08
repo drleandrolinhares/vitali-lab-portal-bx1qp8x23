@@ -80,7 +80,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md shadow-elevation border-0">
-        <CardHeader className="space-y-4 items-center text-center pb-8 bg-white pt-10">
+        <CardHeader className="space-y-4 items-center text-center pb-8 bg-white pt-10 rounded-t-lg">
           {isAdminView ? (
             <div className="flex items-center justify-center mb-2 bg-slate-900 text-white p-4 rounded-full shadow-lg">
               <ShieldAlert className="w-8 h-8" />
@@ -100,7 +100,7 @@ export default function AuthPage() {
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="pt-6 bg-card">
+        <CardContent className="pt-6 bg-card rounded-b-lg border-t border-border">
           {view === 'forgot_password' ? (
             <form
               onSubmit={(e) => handleAction(e, () => resetPassword(email))}
@@ -246,15 +246,25 @@ export default function AuthPage() {
               )}
             </Tabs>
           )}
-          <div className="mt-8 border-t pt-6 flex flex-col items-center">
+          <div className="mt-8 border-t pt-6 flex flex-col items-center gap-3">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground hover:text-primary"
-              onClick={() => navigate(isAdminView ? '/' : '/dashboard')}
+              onClick={() => navigate(isAdminView ? '/app' : '/dashboard')}
             >
               {isAdminView ? 'Voltar para Portal' : 'Acesso Administrativo'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => navigate('/')}
+            >
+              &larr; Voltar para o Site Institucional
             </Button>
           </div>
         </CardContent>

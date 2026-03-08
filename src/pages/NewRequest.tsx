@@ -123,7 +123,7 @@ export default function NewRequest() {
       arches: selectedArches,
     })
     setSubmitting(false)
-    navigate('/')
+    navigate('/app')
   }
 
   return (

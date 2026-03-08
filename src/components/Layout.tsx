@@ -63,7 +63,7 @@ const ADMIN_MENUS = [
   {
     group: 'OPERACIONAL',
     items: [
-      { id: 'inbox', title: 'Caixa de Entrada', icon: FileText, path: '/' },
+      { id: 'inbox', title: 'Caixa de Entrada', icon: FileText, path: '/app' },
       { id: 'new-request', title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
       { id: 'kanban', title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
       { id: 'history', title: 'Histórico Global', icon: History, path: '/history' },
@@ -118,7 +118,7 @@ function AppSidebar() {
     currentUser.role === 'admin' && permissions.length === 0 ? true : permissions.includes(id)
 
   const dentistNavItems = [
-    { title: 'Meu Painel', icon: LayoutDashboard, path: '/' },
+    { title: 'Meu Painel', icon: LayoutDashboard, path: '/app' },
     { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
     { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
     { title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },

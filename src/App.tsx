@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppProvider } from '@/stores/main'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
+import LandingPage from './pages/LandingPage'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -42,6 +43,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route
               element={
                 <PrivateRoute>
@@ -49,7 +51,7 @@ const App = () => (
                 </PrivateRoute>
               }
             >
-              <Route path="/" element={<Index />} />
+              <Route path="/app" element={<Index />} />
               <Route path="/new-request" element={<NewRequest />} />
               <Route path="/order/:id" element={<OrderDetails />} />
               <Route path="/history" element={<HistoryPage />} />

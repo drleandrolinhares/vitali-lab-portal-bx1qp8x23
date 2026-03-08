@@ -187,18 +187,21 @@ export type Database = {
       kanban_stages: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           order_index: number
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           order_index: number
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           order_index?: number
@@ -657,6 +660,7 @@ export const Constants = {
 //   name: text (not null)
 //   order_index: integer (not null)
 //   created_at: timestamp with time zone (not null, default: now())
+//   description: text (nullable)
 // Table: order_history
 //   id: uuid (not null, default: gen_random_uuid())
 //   order_id: uuid (not null)
