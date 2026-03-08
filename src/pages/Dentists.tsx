@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Mail, MapPin, Briefcase, Settings, Phone, UserCircle, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -50,6 +50,7 @@ export default function DentistsPage() {
         name: p.name,
         clinic: p.clinic || 'Clínica não informada',
         email: p.email,
+        avatar_url: p.avatar_url,
         closing_date: p.closing_date,
         payment_due_date: p.payment_due_date,
         personal_phone: p.personal_phone,
@@ -147,6 +148,7 @@ export default function DentistsPage() {
             >
               <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
                 <Avatar className="w-12 h-12 border-2 border-primary/10">
+                  <AvatarImage src={dentist.avatar_url} className="object-cover" />
                   <AvatarFallback className="bg-primary/5 text-primary text-lg font-semibold">
                     {dentist.name.charAt(0)}
                   </AvatarFallback>

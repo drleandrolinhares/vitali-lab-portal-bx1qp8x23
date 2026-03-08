@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
+import { supabase } from '@/lib/supabase/client'
 import {
   Card,
   CardHeader,
@@ -11,27 +12,79 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Navigate } from 'react-router-dom'
-import { MessageSquare, Phone } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MessageSquare, Phone, User, Building, Camera, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 export default function SettingsPage() {
-  const { currentUser, appSettings, updateSetting } = useAppStore()
+  const { currentUser, appSettings, updateSetting, updateProfile } = useAppStore()
+
+  // System Settings State
   const [groupLink, setGroupLink] = useState('')
   const [labLink, setLabLink] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [savingSystem, setSavingSystem] = useState(false)
+
+  // Profile Settings State
+  const [name, setName] = useState('')
+  const [clinic, setClinic] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   useEffect(() => {
     setGroupLink(appSettings?.whatsapp_group_link || '')
     setLabLink(appSettings?.whatsapp_lab_link || '')
   }, [appSettings])
 
-  if (currentUser?.role !== 'admin') return <Navigate to="/" replace />
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name || '')
+      setClinic(currentUser.clinic || '')
+      setAvatarUrl(currentUser.avatar_url || '')
+    }
+  }, [currentUser])
 
-  const handleSave = async () => {
-    setLoading(true)
+  const handleSaveSystem = async () => {
+    setSavingSystem(true)
     await updateSetting('whatsapp_group_link', groupLink)
     await updateSetting('whatsapp_lab_link', labLink)
-    setLoading(false)
+    setSavingSystem(false)
+  }
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true)
+    await updateProfile({ name, clinic, avatar_url: avatarUrl })
+    setSavingProfile(false)
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingAvatar(true)
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      const fileExt = file.name.split('.').pop()
+      const filePath = `${currentUser.id}-${Math.random()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+
+      setAvatarUrl(data.publicUrl)
+      await updateProfile({ avatar_url: data.publicUrl })
+    } catch (error) {
+      toast({
+        title: 'Erro no upload',
+        description: 'Não foi possível fazer upload da imagem.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   return (
@@ -39,59 +92,133 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-1">
         <h2 className="text-2xl font-bold tracking-tight text-primary">Configurações</h2>
         <p className="text-muted-foreground">
-          Gerencie as configurações gerais e links de comunicação do sistema.
+          Gerencie seu perfil e as configurações gerais do sistema.
         </p>
       </div>
 
       <Card className="shadow-subtle">
         <CardHeader>
-          <CardTitle>Canais de Comunicação</CardTitle>
-          <CardDescription>
-            Defina os links do WhatsApp para acesso rápido pelo menu lateral.
-          </CardDescription>
+          <CardTitle>Meu Perfil</CardTitle>
+          <CardDescription>Atualize suas informações pessoais e foto de perfil.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-semibold">
-              <MessageSquare className="w-4 h-4 text-emerald-500" />
-              Grupo de WhatsApp Clínica/Vitali Lab
-            </Label>
-            <Input
-              value={groupLink}
-              onChange={(e) => setGroupLink(e.target.value)}
-              placeholder="Ex: https://chat.whatsapp.com/..."
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Este link será exibido no menu lateral para todos os usuários.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-semibold">
-              <Phone className="w-4 h-4 text-emerald-500" />
-              WhatsApp Vitali Lab
-            </Label>
-            <Input
-              value={labLink}
-              onChange={(e) => setLabLink(e.target.value)}
-              placeholder="Ex: https://wa.me/5511999999999"
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Link direto para o número do laboratório.
-            </p>
+          <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+            <div className="relative group">
+              <Avatar className="w-24 h-24 border-2 border-border/50">
+                <AvatarImage src={avatarUrl} className="object-cover" />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {name.charAt(0)?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <label
+                htmlFor="avatar-upload"
+                className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6" />
+                )}
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                disabled={uploadingAvatar}
+              />
+            </div>
+            <div className="flex-1 space-y-4 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary/70" />
+                    Nome Completo
+                  </Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-primary/70" />
+                    Clínica (Opcional)
+                  </Label>
+                  <Input
+                    value={clinic}
+                    onChange={(e) => setClinic(e.target.value)}
+                    placeholder="Nome da sua clínica"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg">
           <Button
-            onClick={handleSave}
-            disabled={loading}
+            onClick={handleSaveProfile}
+            disabled={savingProfile || uploadingAvatar}
             className="w-full sm:w-auto min-w-[150px]"
           >
-            {loading ? 'Salvando...' : 'Salvar Configurações'}
+            {savingProfile ? 'Salvando...' : 'Salvar Perfil'}
           </Button>
         </CardFooter>
       </Card>
+
+      {currentUser.role === 'admin' && (
+        <Card className="shadow-subtle">
+          <CardHeader>
+            <CardTitle>Canais de Comunicação</CardTitle>
+            <CardDescription>
+              Defina os links do WhatsApp para acesso rápido pelo menu lateral.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold">
+                <MessageSquare className="w-4 h-4 text-emerald-500" />
+                Grupo de WhatsApp Clínica/Vitali Lab
+              </Label>
+              <Input
+                value={groupLink}
+                onChange={(e) => setGroupLink(e.target.value)}
+                placeholder="Ex: https://chat.whatsapp.com/..."
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este link será exibido no menu lateral para todos os usuários.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold">
+                <Phone className="w-4 h-4 text-emerald-500" />
+                WhatsApp Vitali Lab
+              </Label>
+              <Input
+                value={labLink}
+                onChange={(e) => setLabLink(e.target.value)}
+                placeholder="Ex: https://wa.me/5511999999999"
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Link direto para o número do laboratório.
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg">
+            <Button
+              onClick={handleSaveSystem}
+              disabled={savingSystem}
+              className="w-full sm:w-auto min-w-[150px]"
+            >
+              {savingSystem ? 'Salvando...' : 'Salvar Configurações'}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   )
 }

@@ -213,30 +213,45 @@ export type Database = {
       profiles: {
         Row: {
           clinic: string | null
+          clinic_contact_name: string | null
+          clinic_contact_phone: string | null
+          clinic_contact_role: string | null
           closing_date: number | null
           email: string
           id: string
           name: string
           payment_due_date: number | null
+          personal_phone: string | null
           role: string
+          whatsapp_group_link: string | null
         }
         Insert: {
           clinic?: string | null
+          clinic_contact_name?: string | null
+          clinic_contact_phone?: string | null
+          clinic_contact_role?: string | null
           closing_date?: number | null
           email: string
           id: string
           name: string
           payment_due_date?: number | null
+          personal_phone?: string | null
           role?: string
+          whatsapp_group_link?: string | null
         }
         Update: {
           clinic?: string | null
+          clinic_contact_name?: string | null
+          clinic_contact_phone?: string | null
+          clinic_contact_role?: string | null
           closing_date?: number | null
           email?: string
           id?: string
           name?: string
           payment_due_date?: number | null
+          personal_phone?: string | null
           role?: string
+          whatsapp_group_link?: string | null
         }
         Relationships: []
       }
@@ -474,6 +489,11 @@ export const Constants = {
 //   clinic: text (nullable)
 //   closing_date: integer (nullable)
 //   payment_due_date: integer (nullable)
+//   personal_phone: text (nullable)
+//   clinic_contact_name: text (nullable)
+//   clinic_contact_role: text (nullable)
+//   clinic_contact_phone: text (nullable)
+//   whatsapp_group_link: text (nullable)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

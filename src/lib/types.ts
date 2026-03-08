@@ -1,5 +1,16 @@
-export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
-export type UserRole = 'dentist' | 'receptionist' | 'admin'
+export type UserRole = 'admin' | 'receptionist' | 'dentist'
+
+export interface User {
+  id: string
+  name: string
+  role: UserRole
+  clinic?: string | null
+  whatsapp_group_link?: string | null
+  avatar_url?: string | null
+}
+
+export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered' | 'cancelled'
+
 export type KanbanStage = string
 
 export interface Stage {
@@ -8,7 +19,7 @@ export interface Stage {
   orderIndex: number
 }
 
-export interface OrderHistoryEvent {
+export interface OrderHistory {
   id: string
   status: OrderStatus
   date: string
@@ -21,25 +32,20 @@ export interface Order {
   patientName: string
   dentistId: string
   dentistName: string
+  dentistGroupLink: string
   sector: string
   kanbanStage: KanbanStage
   workType: string
   material: string
-  teeth: number[]
-  arches?: string[]
-  shade: string
+  teeth: string[]
+  arches: string[]
+  shade?: string
   shadeScale?: string
   shippingMethod: string
   stlDeliveryMethod?: string
-  observations: string
+  observations?: string
   status: OrderStatus
   createdAt: string
-  history: OrderHistoryEvent[]
-}
-
-export interface User {
-  id: string
-  name: string
-  role: UserRole
-  clinic?: string
+  clearedBalance: number
+  history: OrderHistory[]
 }

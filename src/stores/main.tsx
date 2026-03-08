@@ -27,6 +27,7 @@ interface AppState {
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
   updateSetting: (key: string, value: string) => Promise<void>
+  updateProfile: (updates: Partial<User>) => Promise<void>
   refreshOrders: () => void
 }
 
@@ -63,6 +64,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         role: data.role as UserRole,
         clinic: data.clinic,
         whatsapp_group_link: data.whatsapp_group_link,
+        avatar_url: data.avatar_url,
       } as any)
     } else {
       setCurrentUser({
@@ -369,6 +371,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchSettings()
   }
 
+  const updateProfile = async (updates: Partial<User>) => {
+    if (!currentUser) return
+    const { error } = await supabase
+      .from('profiles' as any)
+      .update(updates)
+      .eq('id', currentUser.id)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o perfil.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setCurrentUser({ ...currentUser, ...updates } as User)
+    toast({ title: 'Perfil atualizado com sucesso' })
+  }
+
   if (session && profileLoading)
     return React.createElement(
       'div',
@@ -395,6 +415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteKanbanStage,
         reorderKanbanStages,
         updateSetting,
+        updateProfile,
         refreshOrders: fetchOrders,
       },
     },
