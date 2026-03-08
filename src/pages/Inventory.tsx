@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Table,
   TableBody,
@@ -29,10 +30,10 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/hooks/use-toast'
 import { formatBRL } from '@/lib/financial'
-import { Package, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Package, Plus, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react'
 
 export default function Inventory() {
-  const { selectedLab } = useAppStore()
+  const { selectedLab, currentUser, logAudit } = useAppStore()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,6 +45,9 @@ export default function Inventory() {
     usage_factor: '1',
     storage_location: '',
     initial_quantity: '',
+    last_purchase_brand: '',
+    last_purchase_value: '',
+    observations: '',
   })
 
   const [transactionModal, setTransactionModal] = useState<{
@@ -92,7 +96,7 @@ export default function Inventory() {
       return toast({ title: 'Preencha os campos obrigatórios' })
 
     const { data: insertedItem, error } = await supabase
-      .from('inventory_items')
+      .from('inventory_items' as any)
       .insert({
         name: newProduct.name,
         unit_price: unitPrice,
@@ -102,6 +106,11 @@ export default function Inventory() {
         packaging_type: newProduct.packaging_type,
         usage_factor: Number(newProduct.usage_factor),
         storage_location: newProduct.storage_location,
+        last_purchase_brand: newProduct.last_purchase_brand,
+        last_purchase_value:
+          Number(newProduct.last_purchase_value.replace(/[^0-9,-]+/g, '').replace(',', '.')) ||
+          null,
+        observations: newProduct.observations,
       })
       .select()
       .single()
@@ -128,8 +137,30 @@ export default function Inventory() {
       usage_factor: '1',
       storage_location: '',
       initial_quantity: '',
+      last_purchase_brand: '',
+      last_purchase_value: '',
+      observations: '',
     })
     fetchItems()
+  }
+
+  const handleDelete = async (item: any) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o produto "${item.name}" definitivamente?`))
+      return
+
+    const { error } = await supabase.from('inventory_items').delete().eq('id', item.id)
+    if (error) {
+      toast({
+        title: 'Erro ao excluir',
+        description:
+          'Não foi possível excluir o item. Verifique se ele possui transações vinculadas.',
+        variant: 'destructive',
+      })
+    } else {
+      await logAudit('DELETE_INVENTORY_ITEM', 'inventory_items', item.id, { name: item.name })
+      toast({ title: 'Produto excluído com sucesso' })
+      fetchItems()
+    }
   }
 
   const handleTransaction = async () => {
@@ -246,7 +277,18 @@ export default function Inventory() {
                       {formatBRL(Number(item.unit_price) * Number(item.quantity))}
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        {currentUser?.role === 'admin' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(item)}
+                            title="Excluir produto"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -274,11 +316,11 @@ export default function Inventory() {
       </Card>
 
       <Dialog open={productModal} onOpenChange={setProductModal}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Novo Produto no Estoque</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
             <div className="col-span-2 space-y-2">
               <Label>Nome do Material</Label>
               <Input
@@ -337,12 +379,48 @@ export default function Inventory() {
                 onChange={(e) => setNewProduct({ ...newProduct, initial_quantity: e.target.value })}
               />
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2">
               <Label>Local de Armazenamento</Label>
               <Input
                 placeholder="Ex: Sala 1 - Armário A"
                 value={newProduct.storage_location}
                 onChange={(e) => setNewProduct({ ...newProduct, storage_location: e.target.value })}
+              />
+            </div>
+
+            {/* Novas opções de registro */}
+            <div className="col-span-2 mt-2 pt-4 border-t border-border">
+              <Label className="text-sm font-semibold text-muted-foreground mb-3 block">
+                Detalhes da Compra & Histórico (Opcional)
+              </Label>
+            </div>
+            <div className="space-y-2">
+              <Label>Marca da última compra</Label>
+              <Input
+                placeholder="Ex: 3M, Ivoclar..."
+                value={newProduct.last_purchase_brand}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, last_purchase_brand: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor da última compra (R$)</Label>
+              <Input
+                placeholder="0,00"
+                value={newProduct.last_purchase_value}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, last_purchase_value: e.target.value })
+                }
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Adicione notas, links de fornecedores ou detalhes específicos sobre o produto..."
+                className="min-h-[80px]"
+                value={newProduct.observations}
+                onChange={(e) => setNewProduct({ ...newProduct, observations: e.target.value })}
               />
             </div>
           </div>
