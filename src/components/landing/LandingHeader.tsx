@@ -12,9 +12,6 @@ export function LandingHeader() {
           <a href="#solucoes" className="hover:text-foreground transition-colors">
             Especialidades
           </a>
-          <a href="#casos" className="hover:text-foreground transition-colors">
-            Casos
-          </a>
           <a href="#diferenciais" className="hover:text-foreground transition-colors">
             Propósito
           </a>

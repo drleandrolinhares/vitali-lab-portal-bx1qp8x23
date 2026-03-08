@@ -1,7 +1,6 @@
 import { LandingHeader } from '@/components/landing/LandingHeader'
 import { LandingHero } from '@/components/landing/LandingHero'
 import { LandingSpecialties } from '@/components/landing/LandingSpecialties'
-import { LandingCases } from '@/components/landing/LandingCases'
 import { LandingPurpose } from '@/components/landing/LandingPurpose'
 import { LandingTestimonials } from '@/components/landing/LandingTestimonials'
 import { LandingContact } from '@/components/landing/LandingContact'
@@ -15,7 +14,6 @@ export default function LandingPage() {
       <main>
         <LandingHero />
         <LandingSpecialties />
-        <LandingCases />
         <LandingPurpose />
         <LandingTestimonials />
         <LandingContact />
