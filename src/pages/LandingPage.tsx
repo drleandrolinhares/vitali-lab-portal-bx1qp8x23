@@ -31,14 +31,14 @@ export default function LandingPage() {
       <main>
         {/* Hero Section */}
         <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden flex items-center justify-center">
-          <div className="absolute inset-0 z-0 opacity-40">
+          <div className="absolute inset-0 z-0 opacity-[0.55]">
             <img
               src={heroBgImg}
               alt="Premium dental laboratory"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-right"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
           </div>
           <div className="container relative z-10 mx-auto px-4 sm:px-6 text-center lg:text-left max-w-7xl flex flex-col items-center lg:items-start">
             <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 text-foreground leading-tight max-w-4xl">
