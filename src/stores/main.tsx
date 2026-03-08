@@ -194,22 +194,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateOrderKanbanStage = async (dbId: string, stage: KanbanStage) => {
     if (!currentUser) return
+
+    if (!kanbanStages.some((s) => s.name === stage)) {
+      toast({ title: 'Erro', description: 'Fase do Kanban inválida.', variant: 'destructive' })
+      return
+    }
+
     let newStatus: OrderStatus = 'in_production'
     if (stage === 'TRIAGEM' || stage === 'PENDÊNCIAS') newStatus = 'pending'
     else if (stage === 'PRONTO PARA ENVIO') newStatus = 'completed'
 
-    const { error } = await supabase
-      .from('orders' as any)
-      .update({ kanban_stage: stage, status: newStatus })
-      .eq('id', dbId)
-    if (error)
-      return toast({ title: 'Erro', description: 'Erro ao mover cartão', variant: 'destructive' })
-    await supabase.from('order_history' as any).insert({
-      order_id: dbId,
-      status: newStatus,
-      note: `${currentUser.name} moveu o cartão para ${stage}`,
+    let originalStage: string | null = null
+    let originalStatus: OrderStatus | null = null
+
+    setOrders((prev) => {
+      const orderIndex = prev.findIndex((o) => o.id === dbId)
+      if (orderIndex === -1) return prev
+      const newOrders = [...prev]
+      originalStage = newOrders[orderIndex].kanbanStage
+      originalStatus = newOrders[orderIndex].status
+
+      if (originalStage === stage) return prev
+
+      newOrders[orderIndex] = { ...newOrders[orderIndex], kanbanStage: stage, status: newStatus }
+      return newOrders
     })
-    toast({ title: 'Cartão Movido' })
+
+    if (!originalStage || originalStage === stage) return
+
+    try {
+      const { error } = await supabase
+        .from('orders' as any)
+        .update({ kanban_stage: stage, status: newStatus })
+        .eq('id', dbId)
+      if (error) throw error
+      await supabase
+        .from('order_history' as any)
+        .insert({
+          order_id: dbId,
+          status: newStatus,
+          note: `${currentUser.name} moveu o cartão para ${stage}`,
+        })
+      toast({ title: 'Cartão Movido' })
+    } catch (error) {
+      console.error(error)
+      setOrders((prev) => {
+        const orderIndex = prev.findIndex((o) => o.id === dbId)
+        if (orderIndex === -1) return prev
+        const revertedOrders = [...prev]
+        revertedOrders[orderIndex] = {
+          ...revertedOrders[orderIndex],
+          kanbanStage: originalStage!,
+          status: originalStatus!,
+        }
+        return revertedOrders
+      })
+      toast({
+        title: 'Erro',
+        description: 'Erro ao mover cartão. As alterações foram desfeitas.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const updateOrderObservations = async (dbId: string, observations: string) => {

@@ -32127,24 +32127,65 @@ function AppProvider({ children }) {
 	};
 	const updateOrderKanbanStage = async (dbId, stage) => {
 		if (!currentUser) return;
+		if (!kanbanStages.some((s) => s.name === stage)) {
+			toast({
+				title: "Erro",
+				description: "Fase do Kanban inválida.",
+				variant: "destructive"
+			});
+			return;
+		}
 		let newStatus = "in_production";
 		if (stage === "TRIAGEM" || stage === "PENDÊNCIAS") newStatus = "pending";
 		else if (stage === "PRONTO PARA ENVIO") newStatus = "completed";
-		const { error } = await supabase.from("orders").update({
-			kanban_stage: stage,
-			status: newStatus
-		}).eq("id", dbId);
-		if (error) return toast({
-			title: "Erro",
-			description: "Erro ao mover cartão",
-			variant: "destructive"
+		let originalStage = null;
+		let originalStatus = null;
+		setOrders((prev) => {
+			const orderIndex = prev.findIndex((o) => o.id === dbId);
+			if (orderIndex === -1) return prev;
+			const newOrders = [...prev];
+			originalStage = newOrders[orderIndex].kanbanStage;
+			originalStatus = newOrders[orderIndex].status;
+			if (originalStage === stage) return prev;
+			newOrders[orderIndex] = {
+				...newOrders[orderIndex],
+				kanbanStage: stage,
+				status: newStatus
+			};
+			return newOrders;
 		});
-		await supabase.from("order_history").insert({
-			order_id: dbId,
-			status: newStatus,
-			note: `${currentUser.name} moveu o cartão para ${stage}`
-		});
-		toast({ title: "Cartão Movido" });
+		if (!originalStage || originalStage === stage) return;
+		try {
+			const { error } = await supabase.from("orders").update({
+				kanban_stage: stage,
+				status: newStatus
+			}).eq("id", dbId);
+			if (error) throw error;
+			await supabase.from("order_history").insert({
+				order_id: dbId,
+				status: newStatus,
+				note: `${currentUser.name} moveu o cartão para ${stage}`
+			});
+			toast({ title: "Cartão Movido" });
+		} catch (error) {
+			console.error(error);
+			setOrders((prev) => {
+				const orderIndex = prev.findIndex((o) => o.id === dbId);
+				if (orderIndex === -1) return prev;
+				const revertedOrders = [...prev];
+				revertedOrders[orderIndex] = {
+					...revertedOrders[orderIndex],
+					kanbanStage: originalStage,
+					status: originalStatus
+				};
+				return revertedOrders;
+			});
+			toast({
+				title: "Erro",
+				description: "Erro ao mover cartão. As alterações foram desfeitas.",
+				variant: "destructive"
+			});
+		}
 	};
 	const updateOrderObservations = async (dbId, observations) => {
 		const { error } = await supabase.from("orders").update({ observations }).eq("id", dbId);
@@ -40975,6 +41016,8 @@ function KanbanPage() {
 	const [fallbackStageName, setFallbackStageName] = (0, import_react.useState)("");
 	const [draggedStageId, setDraggedStageId] = (0, import_react.useState)(null);
 	const [dragOverStageId, setDragOverStageId] = (0, import_react.useState)(null);
+	const [draggedCardId, setDraggedCardId] = (0, import_react.useState)(null);
+	const [draggedCardSector, setDraggedCardSector] = (0, import_react.useState)(null);
 	const savingRef = (0, import_react.useRef)(false);
 	(0, import_react.useEffect)(() => {
 		if (isAdmin) supabase.from("profiles").select("id, name").eq("role", "dentist").order("name").then(({ data }) => {
@@ -41022,6 +41065,9 @@ function KanbanPage() {
 			const o = orders.find((x$1) => x$1.id === cardId);
 			if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(cardId, stage);
 		}
+		setDraggedCardId(null);
+		setDraggedCardSector(null);
+		setDragOverStageId(null);
 	};
 	const handleSaveStageName = async (id, oldName) => {
 		if (savingRef.current) return;
@@ -41103,18 +41149,23 @@ function KanbanPage() {
 								onDragStart: (e) => {
 									if (!isAdmin) return;
 									e.dataTransfer.setData("column-id", stage.id);
-									setDraggedStageId(stage.id);
+									setTimeout(() => setDraggedStageId(stage.id), 0);
 								},
 								onDragEnd: () => {
 									setDraggedStageId(null);
 									setDragOverStageId(null);
 								},
 								onDragOver: (e) => {
-									e.preventDefault();
-									if (draggedStageId && draggedStageId !== stage.id) setDragOverStageId(stage.id);
+									if (draggedStageId && draggedStageId !== stage.id) {
+										e.preventDefault();
+										setDragOverStageId(`${sector}-${stage.id}`);
+									} else if (draggedCardId && draggedCardSector === sector) {
+										e.preventDefault();
+										setDragOverStageId(`${sector}-${stage.id}`);
+									}
 								},
 								onDragLeave: () => {
-									if (dragOverStageId === stage.id) setDragOverStageId(null);
+									if (dragOverStageId === `${sector}-${stage.id}`) setDragOverStageId(null);
 								},
 								onDrop: (e) => {
 									e.preventDefault();
@@ -41122,7 +41173,7 @@ function KanbanPage() {
 									if (e.dataTransfer.getData("column-id")) handleColumnDrop(e, stage.id);
 									else handleDrop(e, stage.name, sector);
 								},
-								className: cn("w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200", draggedStageId === stage.id && "opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none", dragOverStageId === stage.id && draggedStageId && "border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]"),
+								className: cn("w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200", draggedStageId === stage.id && "opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none", dragOverStageId === `${sector}-${stage.id}` && (draggedStageId || draggedCardId) && "border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]"),
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 									className: "flex items-center justify-between px-1 mb-1 group",
 									children: [editingStageId === stage.id ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
@@ -41178,10 +41229,20 @@ function KanbanPage() {
 										onDragStart: (e) => {
 											e.stopPropagation();
 											e.dataTransfer.setData("card-id", o.id);
+											e.dataTransfer.setData("card-sector", o.sector);
 											e.dataTransfer.setData("text/plain", o.id);
+											setTimeout(() => {
+												setDraggedCardId(o.id);
+												setDraggedCardSector(o.sector);
+											}, 0);
+										},
+										onDragEnd: () => {
+											setDraggedCardId(null);
+											setDraggedCardSector(null);
+											setDragOverStageId(null);
 										},
 										onClick: () => isAdmin && setSelectedOrderId(o.id),
-										className: cn("bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden", isAdmin && "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md"),
+										className: cn("bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden", isAdmin && "cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md", draggedCardId === o.id && "opacity-50 scale-[0.98] border-dashed shadow-none"),
 										children: [
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" }),
 											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -41362,4 +41423,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-O7a3Hvdz.js.map
+//# sourceMappingURL=index-Cg8VFGAA.js.map

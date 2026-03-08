@@ -60,6 +60,9 @@ export default function KanbanPage() {
   const [draggedStageId, setDraggedStageId] = useState<string | null>(null)
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null)
 
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null)
+  const [draggedCardSector, setDraggedCardSector] = useState<string | null>(null)
+
   const savingRef = useRef(false)
 
   useEffect(() => {
@@ -116,6 +119,9 @@ export default function KanbanPage() {
       const o = orders.find((x) => x.id === cardId)
       if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(cardId, stage)
     }
+    setDraggedCardId(null)
+    setDraggedCardSector(null)
+    setDragOverStageId(null)
   }
 
   const handleSaveStageName = async (id: string, oldName: string) => {
@@ -204,19 +210,23 @@ export default function KanbanPage() {
                       onDragStart={(e) => {
                         if (!isAdmin) return
                         e.dataTransfer.setData('column-id', stage.id)
-                        setDraggedStageId(stage.id)
+                        setTimeout(() => setDraggedStageId(stage.id), 0)
                       }}
                       onDragEnd={() => {
                         setDraggedStageId(null)
                         setDragOverStageId(null)
                       }}
                       onDragOver={(e) => {
-                        e.preventDefault()
-                        if (draggedStageId && draggedStageId !== stage.id)
-                          setDragOverStageId(stage.id)
+                        if (draggedStageId && draggedStageId !== stage.id) {
+                          e.preventDefault()
+                          setDragOverStageId(`${sector}-${stage.id}`)
+                        } else if (draggedCardId && draggedCardSector === sector) {
+                          e.preventDefault()
+                          setDragOverStageId(`${sector}-${stage.id}`)
+                        }
                       }}
                       onDragLeave={() => {
-                        if (dragOverStageId === stage.id) setDragOverStageId(null)
+                        if (dragOverStageId === `${sector}-${stage.id}`) setDragOverStageId(null)
                       }}
                       onDrop={(e) => {
                         e.preventDefault()
@@ -229,8 +239,8 @@ export default function KanbanPage() {
                         'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
                         draggedStageId === stage.id &&
                           'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
-                        dragOverStageId === stage.id &&
-                          draggedStageId &&
+                        dragOverStageId === `${sector}-${stage.id}` &&
+                          (draggedStageId || draggedCardId) &&
                           'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
                       )}
                     >
@@ -305,13 +315,25 @@ export default function KanbanPage() {
                             onDragStart={(e) => {
                               e.stopPropagation()
                               e.dataTransfer.setData('card-id', o.id)
+                              e.dataTransfer.setData('card-sector', o.sector)
                               e.dataTransfer.setData('text/plain', o.id)
+                              setTimeout(() => {
+                                setDraggedCardId(o.id)
+                                setDraggedCardSector(o.sector)
+                              }, 0)
+                            }}
+                            onDragEnd={() => {
+                              setDraggedCardId(null)
+                              setDraggedCardSector(null)
+                              setDragOverStageId(null)
                             }}
                             onClick={() => isAdmin && setSelectedOrderId(o.id)}
                             className={cn(
                               'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
                               isAdmin &&
                                 'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                              draggedCardId === o.id &&
+                                'opacity-50 scale-[0.98] border-dashed shadow-none',
                             )}
                           >
                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
