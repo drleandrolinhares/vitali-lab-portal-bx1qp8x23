@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/Logo'
 import { ChevronRight, HeartHandshake, Diamond, ShieldCheck } from 'lucide-react'
+import allanImg from '@/assets/allan-queiroz-25-13390.jpeg'
 
 export default function LandingPage() {
   return (
@@ -83,9 +84,9 @@ export default function LandingPage() {
               <div className="group relative overflow-hidden rounded-3xl bg-card border border-border transition-all hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 flex flex-col">
                 <div className="aspect-[4/3] overflow-hidden bg-muted">
                   <img
-                    src="https://img.usecurling.com/p/800/600?q=ceramic%20dental%20veneers&color=black&dpr=2"
+                    src={allanImg}
                     alt="Soluções Cerâmicas"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 mix-blend-luminosity group-hover:mix-blend-normal"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
                 <div className="p-8 md:p-10 flex-1 flex flex-col">
@@ -189,12 +190,11 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="relative order-1 lg:order-2">
-                <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-transparent opacity-50 blur-3xl rounded-full" />
-                <div className="relative z-10 rounded-3xl overflow-hidden border border-border shadow-2xl aspect-square lg:aspect-auto bg-muted">
+                <div className="relative z-10 rounded-3xl overflow-hidden border border-border aspect-square lg:aspect-auto bg-muted">
                   <img
-                    src="https://img.usecurling.com/p/800/800?q=dentist%20consultation&color=black&dpr=2"
+                    src="https://img.usecurling.com/p/800/800?q=dentist%20consultation&dpr=2"
                     alt="Atendimento Humanizado"
-                    className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-500"
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   />
                 </div>
               </div>
