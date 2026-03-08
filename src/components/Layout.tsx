@@ -25,6 +25,7 @@ import {
   Contact,
   Package,
   ShieldAlert,
+  PieChart,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -79,6 +80,12 @@ const ADMIN_MENUS = [
     group: 'FINANCEIRO',
     items: [
       { id: 'dashboard', title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' },
+      {
+        id: 'comparative-dashboard',
+        title: 'DASH COMPARATIVO',
+        icon: PieChart,
+        path: '/comparative-dashboard',
+      },
       { id: 'finances', title: 'Finanças', icon: TrendingUp, path: '/admin-financial' },
       {
         id: 'accounts-payable',

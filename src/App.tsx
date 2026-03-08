@@ -22,6 +22,7 @@ import SettingsPage from './pages/Settings'
 import AuditTrail from './pages/AuditTrail'
 import AccountsPayable from './pages/AccountsPayable'
 import Inventory from './pages/Inventory'
+import ComparativeDashboard from './pages/ComparativeDashboard'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/dentists" element={<DentistsPage />} />
               <Route path="/patients" element={<PatientsPage />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
+              <Route path="/comparative-dashboard" element={<ComparativeDashboard />} />
               <Route path="/admin-financial" element={<AdminFinancial />} />
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />

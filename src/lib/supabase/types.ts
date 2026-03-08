@@ -73,6 +73,7 @@ export type Database = {
           description: string
           due_date: string
           id: string
+          sector: string
           status: string
         }
         Insert: {
@@ -82,6 +83,7 @@ export type Database = {
           description: string
           due_date: string
           id?: string
+          sector?: string
           status?: string
         }
         Update: {
@@ -91,6 +93,7 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          sector?: string
           status?: string
         }
         Relationships: []
@@ -100,22 +103,37 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          packaging_type: string | null
+          purchase_cost: number | null
           quantity: number
+          sector: string
+          storage_location: string | null
           unit_price: number
+          usage_factor: number | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          packaging_type?: string | null
+          purchase_cost?: number | null
           quantity?: number
+          sector?: string
+          storage_location?: string | null
           unit_price?: number
+          usage_factor?: number | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          packaging_type?: string | null
+          purchase_cost?: number | null
           quantity?: number
+          sector?: string
+          storage_location?: string | null
           unit_price?: number
+          usage_factor?: number | null
         }
         Relationships: []
       }
@@ -285,6 +303,7 @@ export type Database = {
           id: string
           notes: string | null
           price: string
+          sector: string
           work_type: string
         }
         Insert: {
@@ -293,6 +312,7 @@ export type Database = {
           id?: string
           notes?: string | null
           price: string
+          sector?: string
           work_type: string
         }
         Update: {
@@ -301,6 +321,7 @@ export type Database = {
           id?: string
           notes?: string | null
           price?: string
+          sector?: string
           work_type?: string
         }
         Relationships: []
@@ -348,6 +369,7 @@ export type Database = {
           clinic_contact_phone: string | null
           clinic_contact_role: string | null
           closing_date: number | null
+          created_at: string
           email: string
           id: string
           name: string
@@ -364,6 +386,7 @@ export type Database = {
           clinic_contact_phone?: string | null
           clinic_contact_role?: string | null
           closing_date?: number | null
+          created_at?: string
           email: string
           id: string
           name: string
@@ -380,6 +403,7 @@ export type Database = {
           clinic_contact_phone?: string | null
           clinic_contact_role?: string | null
           closing_date?: number | null
+          created_at?: string
           email?: string
           id?: string
           name?: string
@@ -590,12 +614,18 @@ export const Constants = {
 //   amount: numeric (not null)
 //   status: text (not null, default: 'pending'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+//   sector: text (not null, default: 'Soluções Cerâmicas'::text)
 // Table: inventory_items
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
 //   unit_price: numeric (not null, default: 0)
 //   quantity: integer (not null, default: 0)
 //   created_at: timestamp with time zone (not null, default: now())
+//   sector: text (not null, default: 'Soluções Cerâmicas'::text)
+//   purchase_cost: numeric (nullable, default: 0)
+//   packaging_type: text (nullable, default: ''::text)
+//   usage_factor: numeric (nullable, default: 1)
+//   storage_location: text (nullable, default: ''::text)
 // Table: inventory_transactions
 //   id: uuid (not null, default: gen_random_uuid())
 //   item_id: uuid (not null)
@@ -640,6 +670,7 @@ export const Constants = {
 //   price: text (not null)
 //   notes: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   sector: text (not null, default: 'Soluções Cerâmicas'::text)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)
@@ -662,6 +693,7 @@ export const Constants = {
 //   whatsapp_group_link: text (nullable)
 //   avatar_url: text (nullable)
 //   permissions: jsonb (nullable, default: '[]'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

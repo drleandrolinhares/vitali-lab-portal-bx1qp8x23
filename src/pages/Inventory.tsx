@@ -43,6 +43,7 @@ export default function Inventory() {
     packaging_type: 'Frasco',
     usage_factor: '1',
     storage_location: '',
+    initial_quantity: '',
   })
 
   const [transactionModal, setTransactionModal] = useState<{
@@ -54,8 +55,21 @@ export default function Inventory() {
 
   const fetchItems = async () => {
     setLoading(true)
-    const { data } = await supabase.from('inventory_items').select('*').order('name')
-    if (data) setItems(data)
+    const { data } = await supabase
+      .from('inventory_items')
+      .select('*, inventory_transactions(*)')
+      .order('name')
+    if (data) {
+      const processedItems = data.map((item) => {
+        const calculatedQty = (item.inventory_transactions || []).reduce((acc: number, t: any) => {
+          if (t.type === 'in') return acc + t.quantity
+          if (t.type === 'out') return acc - t.quantity
+          return acc
+        }, 0)
+        return { ...item, quantity: calculatedQty }
+      })
+      setItems(processedItems)
+    }
     setLoading(false)
   }
 
@@ -77,30 +91,45 @@ export default function Inventory() {
     if (!newProduct.name || !newProduct.purchase_cost || !newProduct.usage_factor)
       return toast({ title: 'Preencha os campos obrigatórios' })
 
-    const { error } = await supabase.from('inventory_items').insert({
-      name: newProduct.name,
-      unit_price: unitPrice,
-      quantity: 0,
-      sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
-      purchase_cost: Number(newProduct.purchase_cost.replace(/[^0-9,-]+/g, '').replace(',', '.')),
-      packaging_type: newProduct.packaging_type,
-      usage_factor: Number(newProduct.usage_factor),
-      storage_location: newProduct.storage_location,
-    })
-
-    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-    else {
-      toast({ title: 'Produto cadastrado!' })
-      setProductModal(false)
-      setNewProduct({
-        name: '',
-        purchase_cost: '',
-        packaging_type: 'Frasco',
-        usage_factor: '1',
-        storage_location: '',
+    const { data: insertedItem, error } = await supabase
+      .from('inventory_items')
+      .insert({
+        name: newProduct.name,
+        unit_price: unitPrice,
+        quantity: 0,
+        sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+        purchase_cost: Number(newProduct.purchase_cost.replace(/[^0-9,-]+/g, '').replace(',', '.')),
+        packaging_type: newProduct.packaging_type,
+        usage_factor: Number(newProduct.usage_factor),
+        storage_location: newProduct.storage_location,
       })
-      fetchItems()
+      .select()
+      .single()
+
+    if (error) {
+      return toast({ title: 'Erro', description: error.message, variant: 'destructive' })
     }
+
+    const initQty = parseInt(newProduct.initial_quantity) || 0
+    if (initQty > 0 && insertedItem) {
+      await supabase.from('inventory_transactions').insert({
+        item_id: insertedItem.id,
+        type: 'in',
+        quantity: initQty,
+      })
+    }
+
+    toast({ title: 'Produto cadastrado!' })
+    setProductModal(false)
+    setNewProduct({
+      name: '',
+      purchase_cost: '',
+      packaging_type: 'Frasco',
+      usage_factor: '1',
+      storage_location: '',
+      initial_quantity: '',
+    })
+    fetchItems()
   }
 
   const handleTransaction = async () => {
@@ -297,6 +326,16 @@ export default function Inventory() {
             <div className="space-y-2">
               <Label>Custo Unitário (Calculado)</Label>
               <Input readOnly className="bg-muted font-semibold" value={formatBRL(unitPrice)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Qtd. Comprada (Inicial)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Ex: 10"
+                value={newProduct.initial_quantity}
+                onChange={(e) => setNewProduct({ ...newProduct, initial_quantity: e.target.value })}
+              />
             </div>
             <div className="col-span-2 space-y-2">
               <Label>Local de Armazenamento</Label>
