@@ -7,10 +7,15 @@ export default function PendingUsersPage() {
   const { pendingUsers, approveUser, rejectUser } = useAppStore()
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(dateString))
+    if (!dateString) return 'Data não disponível'
+    try {
+      return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(dateString))
+    } catch (e) {
+      return 'Data inválida'
+    }
   }
 
   return (

@@ -120,23 +120,32 @@ function useAdminBadges(currentUser: any) {
     if (!currentUser || currentUser.role !== 'admin') return
 
     const fetchBadges = async () => {
-      const { data: inv } = await supabase
-        .from('inventory_items')
-        .select('quantity, minimum_stock_level')
-      if (inv) {
-        setLowStock(
-          inv.filter((i: any) => Number(i.quantity) < Number(i.minimum_stock_level || 0)).length,
-        )
+      try {
+        const { data: inv, error: invError } = await supabase
+          .from('inventory_items')
+          .select('quantity, minimum_stock_level')
+
+        if (inv && !invError) {
+          setLowStock(
+            inv.filter((i: any) => Number(i.quantity) < Number(i.minimum_stock_level || 0)).length,
+          )
+        }
+
+        const today = new Date().toLocaleDateString('en-CA')
+
+        // Remove `head: true` to prevent "Unexpected end of JSON input" errors.
+        const { count: expCount, error: expError } = await supabase
+          .from('expenses')
+          .select('id', { count: 'exact' })
+          .eq('status', 'pending')
+          .lt('due_date', today)
+
+        if (expCount !== null && !expError) {
+          setOverduePayables(expCount)
+        }
+      } catch (err) {
+        console.error('Error fetching admin badges:', err)
       }
-
-      const today = new Date().toLocaleDateString('en-CA')
-      const { count: expCount } = await supabase
-        .from('expenses')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .lt('due_date', today)
-
-      if (expCount !== null) setOverduePayables(expCount)
     }
 
     fetchBadges()
