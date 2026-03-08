@@ -41716,29 +41716,35 @@ function PriceList() {
 												onChange: (e) => updateStage(i, "name", e.target.value),
 												className: "h-8 text-sm bg-background"
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												className: "flex flex-col sm:flex-row gap-2",
+												className: "flex flex-col sm:flex-row gap-2 items-start",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 													placeholder: "Valor (ex: 100,00)",
 													value: st.price,
 													onChange: (e) => updateStage(i, "price", e.target.value),
 													className: "h-8 text-sm sm:w-1/3 bg-background"
-												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-													value: st.kanban_stage,
-													onValueChange: (v) => updateStage(i, "kanban_stage", v),
-													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-														className: "h-8 text-sm flex-1 bg-background",
-														children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Gatilho: Fase do Kanban" })
-													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: kanbanStages.map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-														value: k.name,
-														children: k.name
-													}, k.id)) })]
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "flex-1 w-full space-y-1",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+														value: st.kanban_stage,
+														onValueChange: (v) => updateStage(i, "kanban_stage", v),
+														children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+															className: "h-8 text-sm bg-background",
+															children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Gatilho: Fase do Kanban" })
+														}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: kanbanStages.map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+															value: k.name,
+															children: k.name
+														}, k.id)) })]
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+														className: "text-[10px] text-muted-foreground italic pl-1 text-amber-600 dark:text-amber-500 font-medium",
+														children: "* Valor cobrado ao sair do bloco selecionado"
+													})]
 												})]
 											})]
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 											type: "button",
 											variant: "ghost",
 											size: "icon",
-											className: "h-8 w-8 text-destructive shrink-0",
+											className: "h-8 w-8 text-destructive shrink-0 mt-8",
 											onClick: () => removeStage(i),
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "w-4 h-4" })
 										})]
@@ -42167,7 +42173,7 @@ function FinancialPage() {
 		let completedCost = 0;
 		let pendingCost = 0;
 		const mappedStages = stages.map((st) => {
-			const isCompleted = currentOrderIndex >= (kanbanIndexMap[st.kanban_stage] || 0);
+			const isCompleted = currentOrderIndex > (kanbanIndexMap[st.kanban_stage] || 0);
 			if (isCompleted) completedCost += st.price;
 			else pendingCost += st.price;
 			return {
@@ -42393,4 +42399,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-C7ZvIAEJ.js.map
+//# sourceMappingURL=index-BlMO6sGT.js.map

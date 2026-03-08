@@ -48,7 +48,8 @@ export default function FinancialPage() {
 
     const mappedStages = stages.map((st) => {
       const stIndex = kanbanIndexMap[st.kanban_stage] || 0
-      const isCompleted = currentOrderIndex >= stIndex
+      // Valido apenas quando o card SAI do bloco mapeado (entrou em um bloco com index maior)
+      const isCompleted = currentOrderIndex > stIndex
       if (isCompleted) completedCost += st.price
       else pendingCost += st.price
       return { ...st, isCompleted }

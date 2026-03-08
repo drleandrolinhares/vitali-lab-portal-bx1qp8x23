@@ -373,35 +373,40 @@ export default function PriceList() {
                         onChange={(e) => updateStage(i, 'name', e.target.value)}
                         className="h-8 text-sm bg-background"
                       />
-                      <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 items-start">
                         <Input
                           placeholder="Valor (ex: 100,00)"
                           value={st.price}
                           onChange={(e) => updateStage(i, 'price', e.target.value)}
                           className="h-8 text-sm sm:w-1/3 bg-background"
                         />
-                        <Select
-                          value={st.kanban_stage}
-                          onValueChange={(v) => updateStage(i, 'kanban_stage', v)}
-                        >
-                          <SelectTrigger className="h-8 text-sm flex-1 bg-background">
-                            <SelectValue placeholder="Gatilho: Fase do Kanban" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {kanbanStages.map((k) => (
-                              <SelectItem key={k.id} value={k.name}>
-                                {k.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex-1 w-full space-y-1">
+                          <Select
+                            value={st.kanban_stage}
+                            onValueChange={(v) => updateStage(i, 'kanban_stage', v)}
+                          >
+                            <SelectTrigger className="h-8 text-sm bg-background">
+                              <SelectValue placeholder="Gatilho: Fase do Kanban" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {kanbanStages.map((k) => (
+                                <SelectItem key={k.id} value={k.name}>
+                                  {k.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[10px] text-muted-foreground italic pl-1 text-amber-600 dark:text-amber-500 font-medium">
+                            * Valor cobrado ao sair do bloco selecionado
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive shrink-0"
+                      className="h-8 w-8 text-destructive shrink-0 mt-8"
                       onClick={() => removeStage(i)}
                     >
                       <X className="w-4 h-4" />
