@@ -95,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           id: o.id,
           friendlyId: o.friendly_id,
           patientName: o.patient_name,
+          dentistId: o.dentist_id,
           dentistName: o.profiles?.name || 'Desconhecido',
           sector: o.sector,
           kanbanStage: o.kanban_stage,

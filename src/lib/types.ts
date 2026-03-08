@@ -19,6 +19,7 @@ export interface Order {
   id: string
   friendlyId: string
   patientName: string
+  dentistId: string
   dentistName: string
   sector: string
   kanbanStage: KanbanStage

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2, Edit2, GripHorizontal } from 'lucide-react'
+import { Users, Plus, Trash2, Edit2, GripHorizontal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
 
 const SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
 
@@ -39,7 +40,9 @@ export default function KanbanPage() {
     reorderKanbanStages,
   } = useAppStore()
   const isAdmin = currentUser?.role === 'admin'
-  const [dentist, setDentist] = useState('all')
+  const [selectedDentistId, setSelectedDentistId] = useState('all')
+  const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
+
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = useMemo(
     () => orders.find((o) => o.id === selectedOrderId) || null,
@@ -60,14 +63,29 @@ export default function KanbanPage() {
   const savingRef = useRef(false)
 
   useEffect(() => {
+    if (isAdmin) {
+      supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('role', 'dentist')
+        .order('name')
+        .then(({ data }) => {
+          if (data) setDentistsList(data)
+        })
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
     if (selectedOrder) setObsText(selectedOrder.observations || '')
   }, [selectedOrder])
 
-  const visibleOrders = useMemo(
-    () =>
-      !isAdmin || dentist === 'all' ? orders : orders.filter((o) => o.dentistName === dentist),
-    [orders, isAdmin, dentist],
-  )
+  const visibleOrders = useMemo(() => {
+    if (!isAdmin) return orders
+    if (selectedDentistId === 'all') return []
+    return orders.filter((o) => o.dentistId === selectedDentistId)
+  }, [orders, isAdmin, selectedDentistId])
+
+  const shouldShowBoard = !isAdmin || selectedDentistId !== 'all'
   const hasOrders = useMemo(
     () => (deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false),
     [deleteStageData, orders],
@@ -119,7 +137,6 @@ export default function KanbanPage() {
   const handleSaveObs = () => {
     if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText)
   }
-  const dentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort()
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background">
@@ -133,188 +150,212 @@ export default function KanbanPage() {
         {isAdmin && (
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" />
-            <Select value={dentist} onValueChange={setDentist}>
+            <Select
+              value={selectedDentistId === 'all' ? undefined : selectedDentistId}
+              onValueChange={setSelectedDentistId}
+            >
               <SelectTrigger className="w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background">
-                <SelectValue placeholder="Filtrar por Dentista" />
+                <SelectValue placeholder="Selecione o Dentista" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Dentistas</SelectItem>
-                {dentists.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
+                {dentistsList.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedDentistId !== 'all' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedDentistId('all')}
+                className="text-muted-foreground shrink-0"
+                title="Limpar seleção"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-10 pb-6 pr-2">
-        {SECTORS.map((sector) => (
-          <div key={sector} className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
-              <div className="w-2 h-6 bg-primary rounded-full" /> {sector}
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-start">
-              {kanbanStages.map((stage) => {
-                const cols = visibleOrders.filter(
-                  (o) => o.sector === sector && o.kanbanStage === stage.name,
-                )
-                return (
-                  <div
-                    key={stage.id}
-                    draggable={isAdmin && !editingStageId}
-                    onDragStart={(e) => {
-                      if (!isAdmin) return
-                      e.dataTransfer.setData('column-id', stage.id)
-                      setDraggedStageId(stage.id)
-                    }}
-                    onDragEnd={() => {
-                      setDraggedStageId(null)
-                      setDragOverStageId(null)
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      if (draggedStageId && draggedStageId !== stage.id)
-                        setDragOverStageId(stage.id)
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverStageId === stage.id) setDragOverStageId(null)
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      setDragOverStageId(null)
-                      const columnId = e.dataTransfer.getData('column-id')
-                      if (columnId) handleColumnDrop(e, stage.id)
-                      else handleDrop(e, stage.name, sector)
-                    }}
-                    className={cn(
-                      'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
-                      draggedStageId === stage.id &&
-                        'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
-                      dragOverStageId === stage.id &&
-                        draggedStageId &&
-                        'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
-                    )}
-                  >
-                    <div className="flex items-center justify-between px-1 mb-1 group">
-                      {editingStageId === stage.id ? (
-                        <Input
-                          autoFocus
-                          value={editStageName}
-                          onChange={(e) => setEditStageName(e.target.value)}
-                          onBlur={() => handleSaveStageName(stage.id, stage.name)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleSaveStageName(stage.id, stage.name)
-                            }
-                            if (e.key === 'Escape') setEditingStageId(null)
-                          }}
-                          className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-                          {isAdmin && (
-                            <GripHorizontal
-                              className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
-                              title="Arraste para reordenar"
-                            />
-                          )}
-                          <h4
-                            onClick={() => {
-                              if (isAdmin) {
-                                setEditingStageId(stage.id)
-                                setEditStageName(stage.name)
-                              }
-                            }}
-                            className={cn(
-                              'font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5',
-                              isAdmin && 'cursor-pointer hover:text-primary transition-colors',
-                            )}
-                            title={isAdmin ? 'Clique para renomear' : ''}
-                          >
-                            {stage.name}
-                            {isAdmin && (
-                              <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            )}
-                          </h4>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0"
-                              onClick={() => {
-                                setDeleteStageData(stage)
-                                setFallbackStageName(
-                                  kanbanStages.find((s) => s.id !== stage.id)?.name || '',
-                                )
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
+      {!shouldShowBoard ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4">
+          <Users className="w-16 h-16 opacity-20" />
+          <p className="text-lg font-medium tracking-widest">SELECIONE O DENTISTA...</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto space-y-10 pb-6 pr-2">
+          {SECTORS.map((sector) => (
+            <div key={sector} className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
+                <div className="w-2 h-6 bg-primary rounded-full" /> {sector}
+              </h3>
+              <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-start">
+                {kanbanStages.map((stage) => {
+                  const cols = visibleOrders.filter(
+                    (o) => o.sector === sector && o.kanbanStage === stage.name,
+                  )
+                  return (
+                    <div
+                      key={stage.id}
+                      draggable={isAdmin && !editingStageId}
+                      onDragStart={(e) => {
+                        if (!isAdmin) return
+                        e.dataTransfer.setData('column-id', stage.id)
+                        setDraggedStageId(stage.id)
+                      }}
+                      onDragEnd={() => {
+                        setDraggedStageId(null)
+                        setDragOverStageId(null)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        if (draggedStageId && draggedStageId !== stage.id)
+                          setDragOverStageId(stage.id)
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverStageId === stage.id) setDragOverStageId(null)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setDragOverStageId(null)
+                        const columnId = e.dataTransfer.getData('column-id')
+                        if (columnId) handleColumnDrop(e, stage.id)
+                        else handleDrop(e, stage.name, sector)
+                      }}
+                      className={cn(
+                        'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
+                        draggedStageId === stage.id &&
+                          'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
+                        dragOverStageId === stage.id &&
+                          draggedStageId &&
+                          'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
                       )}
-                      <span className="bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary shrink-0">
-                        {cols.length}
-                      </span>
-                    </div>
-                    <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
-                      {cols.map((o) => (
-                        <div
-                          key={o.id}
-                          draggable={isAdmin}
-                          onDragStart={(e) => {
-                            e.stopPropagation()
-                            e.dataTransfer.setData('card-id', o.id)
-                            e.dataTransfer.setData('text/plain', o.id)
-                          }}
-                          onClick={() => isAdmin && setSelectedOrderId(o.id)}
-                          className={cn(
-                            'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
-                            isAdmin &&
-                              'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
-                          )}
-                        >
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
-                          <div className="flex justify-between items-start mb-2 pl-1">
-                            <span className="text-xs font-bold text-slate-500">{o.friendlyId}</span>
-                            <StatusBadge
-                              status={o.status}
-                              className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
-                            />
+                    >
+                      <div className="flex items-center justify-between px-1 mb-1 group">
+                        {editingStageId === stage.id ? (
+                          <Input
+                            autoFocus
+                            value={editStageName}
+                            onChange={(e) => setEditStageName(e.target.value)}
+                            onBlur={() => handleSaveStageName(stage.id, stage.name)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleSaveStageName(stage.id, stage.name)
+                              }
+                              if (e.key === 'Escape') setEditingStageId(null)
+                            }}
+                            className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
+                            {isAdmin && (
+                              <GripHorizontal
+                                className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
+                                title="Arraste para reordenar"
+                              />
+                            )}
+                            <h4
+                              onClick={() => {
+                                if (isAdmin) {
+                                  setEditingStageId(stage.id)
+                                  setEditStageName(stage.name)
+                                }
+                              }}
+                              className={cn(
+                                'font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5',
+                                isAdmin && 'cursor-pointer hover:text-primary transition-colors',
+                              )}
+                              title={isAdmin ? 'Clique para renomear' : ''}
+                            >
+                              {stage.name}
+                              {isAdmin && (
+                                <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </h4>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0"
+                                onClick={() => {
+                                  setDeleteStageData(stage)
+                                  setFallbackStageName(
+                                    kanbanStages.find((s) => s.id !== stage.id)?.name || '',
+                                  )
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
-                          <p className="font-medium text-sm truncate pl-1" title={o.patientName}>
-                            {o.patientName}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1 truncate pl-1">{o.workType}</p>
-                          {isAdmin && (
-                            <p className="text-[10px] font-medium text-slate-400 mt-3 pt-2 border-t truncate pl-1">
-                              {o.dentistName}
+                        )}
+                        <span className="bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary shrink-0">
+                          {cols.length}
+                        </span>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
+                        {cols.map((o) => (
+                          <div
+                            key={o.id}
+                            draggable={isAdmin}
+                            onDragStart={(e) => {
+                              e.stopPropagation()
+                              e.dataTransfer.setData('card-id', o.id)
+                              e.dataTransfer.setData('text/plain', o.id)
+                            }}
+                            onClick={() => isAdmin && setSelectedOrderId(o.id)}
+                            className={cn(
+                              'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
+                              isAdmin &&
+                                'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                            )}
+                          >
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
+                            <div className="flex justify-between items-start mb-2 pl-1">
+                              <span className="text-xs font-bold text-slate-500">
+                                {o.friendlyId}
+                              </span>
+                              <StatusBadge
+                                status={o.status}
+                                className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
+                              />
+                            </div>
+                            <p className="font-medium text-sm truncate pl-1" title={o.patientName}>
+                              {o.patientName}
                             </p>
-                          )}
-                        </div>
-                      ))}
+                            <p className="text-xs text-slate-500 mt-1 truncate pl-1">
+                              {o.workType}
+                            </p>
+                            {isAdmin && (
+                              <p className="text-[10px] font-medium text-slate-400 mt-3 pt-2 border-t truncate pl-1">
+                                {o.dentistName}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-              {isAdmin && (
-                <Button
-                  variant="outline"
-                  className="w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30"
-                  onClick={() => setIsAddColumnOpen(true)}
-                >
-                  <Plus className="w-6 h-6 mb-2" />
-                  <span className="font-medium text-sm">Adicionar Coluna</span>
-                </Button>
-              )}
+                  )
+                })}
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    className="w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30"
+                    onClick={() => setIsAddColumnOpen(true)}
+                  >
+                    <Plus className="w-6 h-6 mb-2" />
+                    <span className="font-medium text-sm">Adicionar Coluna</span>
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <OrderDetailsSheet
         order={selectedOrder}

@@ -32008,6 +32008,7 @@ function AppProvider({ children }) {
 			id: o.id,
 			friendlyId: o.friendly_id,
 			patientName: o.patient_name,
+			dentistId: o.dentist_id,
 			dentistName: o.profiles?.name || "Desconhecido",
 			sector: o.sector,
 			kanbanStage: o.kanban_stage,
@@ -40858,7 +40859,8 @@ var SECTORS = ["SOLUÇÕES CERÂMICAS", "STÚDIO ACRÍLICO"];
 function KanbanPage() {
 	const { orders, currentUser, updateOrderKanbanStage, updateOrderObservations, kanbanStages, addKanbanStage, updateKanbanStage, deleteKanbanStage, reorderKanbanStages } = useAppStore();
 	const isAdmin = currentUser?.role === "admin";
-	const [dentist, setDentist] = (0, import_react.useState)("all");
+	const [selectedDentistId, setSelectedDentistId] = (0, import_react.useState)("all");
+	const [dentistsList, setDentistsList] = (0, import_react.useState)([]);
 	const [selectedOrderId, setSelectedOrderId] = (0, import_react.useState)(null);
 	const selectedOrder = (0, import_react.useMemo)(() => orders.find((o) => o.id === selectedOrderId) || null, [orders, selectedOrderId]);
 	const [obsText, setObsText] = (0, import_react.useState)("");
@@ -40872,13 +40874,23 @@ function KanbanPage() {
 	const [dragOverStageId, setDragOverStageId] = (0, import_react.useState)(null);
 	const savingRef = (0, import_react.useRef)(false);
 	(0, import_react.useEffect)(() => {
+		if (isAdmin) supabase.from("profiles").select("id, name").eq("role", "dentist").order("name").then(({ data }) => {
+			if (data) setDentistsList(data);
+		});
+	}, [isAdmin]);
+	(0, import_react.useEffect)(() => {
 		if (selectedOrder) setObsText(selectedOrder.observations || "");
 	}, [selectedOrder]);
-	const visibleOrders = (0, import_react.useMemo)(() => !isAdmin || dentist === "all" ? orders : orders.filter((o) => o.dentistName === dentist), [
+	const visibleOrders = (0, import_react.useMemo)(() => {
+		if (!isAdmin) return orders;
+		if (selectedDentistId === "all") return [];
+		return orders.filter((o) => o.dentistId === selectedDentistId);
+	}, [
 		orders,
 		isAdmin,
-		dentist
+		selectedDentistId
 	]);
+	const shouldShowBoard = !isAdmin || selectedDentistId !== "all";
 	const hasOrders = (0, import_react.useMemo)(() => deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false, [deleteStageData, orders]);
 	const handleColumnDrop = (e, targetStageId) => {
 		e.preventDefault();
@@ -40925,7 +40937,6 @@ function KanbanPage() {
 	const handleSaveObs = () => {
 		if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText);
 	};
-	const dentists = Array.from(new Set(orders.map((o) => o.dentistName))).sort();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background",
 		children: [
@@ -40939,23 +40950,37 @@ function KanbanPage() {
 					children: "Acompanhe o progresso do fluxo de produção."
 				})] }), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex items-center gap-2 w-full sm:w-auto",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						value: dentist,
-						onValueChange: setDentist,
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							className: "w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Filtrar por Dentista" })
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-							value: "all",
-							children: "Todos os Dentistas"
-						}), dentists.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-							value: d,
-							children: d
-						}, d))] })]
-					})]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+							value: selectedDentistId === "all" ? void 0 : selectedDentistId,
+							onValueChange: setSelectedDentistId,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+								className: "w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione o Dentista" })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: dentistsList.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								value: d.id,
+								children: d.name
+							}, d.id)) })]
+						}),
+						selectedDentistId !== "all" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							variant: "ghost",
+							size: "icon",
+							onClick: () => setSelectedDentistId("all"),
+							className: "text-muted-foreground shrink-0",
+							title: "Limpar seleção",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "w-4 h-4" })
+						})
+					]
 				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			!shouldShowBoard ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-16 h-16 opacity-20" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-lg font-medium tracking-widest",
+					children: "SELECIONE O DENTISTA..."
+				})]
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "flex-1 overflow-y-auto space-y-10 pb-6 pr-2",
 				children: SECTORS.map((sector) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "space-y-4",
@@ -41234,4 +41259,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-DetXLTCP.js.map
+//# sourceMappingURL=index-BmGa8x2Z.js.map

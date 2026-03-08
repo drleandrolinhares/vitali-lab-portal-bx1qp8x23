@@ -2643,6 +2643,10 @@ section[aria-label='Notifications alt+T'] {
   opacity: 0;
 }
 
+.opacity-20{
+  opacity: 0.2;
+}
+
 .opacity-40{
   opacity: 0.4;
 }
@@ -4104,6 +4108,11 @@ section[aria-label='Notifications alt+T'] {
 .dark\:text-slate-400:is(.dark *){
   --tw-text-opacity: 1;
   color: rgb(148 163 184 / var(--tw-text-opacity, 1));
+}
+
+.dark\:text-slate-500:is(.dark *){
+  --tw-text-opacity: 1;
+  color: rgb(100 116 139 / var(--tw-text-opacity, 1));
 }
 
 .dark\:text-white:is(.dark *){
