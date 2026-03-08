@@ -56,6 +56,8 @@ export default function SettingsPage() {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
+      if (!currentUser) return
+
       setUploadingAvatar(true)
       const file = event.target.files?.[0]
       if (!file) return
@@ -82,6 +84,14 @@ export default function SettingsPage() {
     } finally {
       setUploadingAvatar(false)
     }
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
