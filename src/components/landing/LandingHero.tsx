@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import heroBgImg from '@/assets/allan-queiroz-64-c1e37.jpeg'
+import heroBgImg from '@/assets/allan-queiroz-17-bb76a.jpeg'
 
 export function LandingHero() {
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden flex items-center justify-center">
-      <div className="absolute inset-0 z-0 opacity-[0.55]">
+      <div className="absolute inset-0 z-0 opacity-[0.45]">
         <img
           src={heroBgImg}
           alt="Premium dental laboratory"
-          className="w-full h-full object-cover object-right"
+          className="w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
