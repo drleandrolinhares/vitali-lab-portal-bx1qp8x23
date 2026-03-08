@@ -321,13 +321,16 @@ export default function KanbanPage() {
                                     <Info className="w-3.5 h-3.5 text-slate-500" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs text-center z-50">
+                                <TooltipContent
+                                  side="top"
+                                  className="bg-primary text-primary-foreground border-primary shadow-xl max-w-xs text-center z-50"
+                                >
                                   {stage.description ? (
                                     <p className="text-sm font-medium leading-relaxed">
                                       {stage.description}
                                     </p>
                                   ) : (
-                                    <p className="text-sm italic text-muted-foreground">
+                                    <p className="text-sm italic opacity-80">
                                       Sem descrição. Clique para adicionar.
                                     </p>
                                   )}
