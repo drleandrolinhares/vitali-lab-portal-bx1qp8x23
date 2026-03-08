@@ -34,7 +34,7 @@ export function LandingContact() {
 
           {/* Instagram */}
           <a
-            href="https://www.instagram.com/vitali_lab?igsh=dmRjcHg0eG5meHVm&utm_source=qr"
+            href="https://www.instagram.com/vitali_lab/"
             target="_blank"
             rel="noopener noreferrer"
             className="group relative overflow-hidden rounded-3xl bg-card border border-border p-8 md:p-10 transition-all hover:border-pink-500/50 hover:shadow-2xl hover:shadow-pink-500/10 flex flex-col items-center text-center"
