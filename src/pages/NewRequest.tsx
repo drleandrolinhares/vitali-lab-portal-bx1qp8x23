@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
+import { supabase } from '@/lib/supabase/client'
 import {
   Card,
   CardContent,
@@ -28,6 +29,9 @@ export default function NewRequest() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
+  const [priceListItems, setPriceListItems] = useState<{ category: string; workType: string }[]>([])
+  const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
+
   const [formData, setFormData] = useState({
     patientName: '',
     sector: '',
@@ -41,6 +45,35 @@ export default function NewRequest() {
   })
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const { data } = await supabase.from('price_list' as any).select('category, work_type')
+      if (data) {
+        setPriceListItems(data.map((d: any) => ({ category: d.category, workType: d.work_type })))
+      }
+    }
+    fetchPrices()
+  }, [])
+
+  useEffect(() => {
+    if (formData.sector) {
+      const filtered = Array.from(
+        new Set(
+          priceListItems
+            .filter((p) => p.category.toLowerCase() === formData.sector.toLowerCase())
+            .map((p) => p.workType),
+        ),
+      ).sort()
+      setAvailableWorkTypes(filtered)
+
+      if (formData.workType && !filtered.includes(formData.workType)) {
+        setFormData((prev) => ({ ...prev, workType: '' }))
+      }
+    } else {
+      setAvailableWorkTypes([])
+    }
+  }, [formData.sector, priceListItems])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,16 +140,25 @@ export default function NewRequest() {
                   value={formData.workType}
                   onValueChange={(v) => setFormData({ ...formData, workType: v })}
                   required
+                  disabled={!formData.sector || availableWorkTypes.length === 0}
                 >
                   <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue
+                      placeholder={
+                        !formData.sector
+                          ? 'Selecione o setor...'
+                          : availableWorkTypes.length === 0
+                            ? 'Nenhum trabalho cadastrado'
+                            : 'Selecione...'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Coroa">Coroa Total</SelectItem>
-                    <SelectItem value="Faceta">Faceta/Lente</SelectItem>
-                    <SelectItem value="Inlay/Onlay">Inlay/Onlay</SelectItem>
-                    <SelectItem value="Protocolo">Protocolo</SelectItem>
-                    <SelectItem value="Placa">Placa de Bruxismo</SelectItem>
+                    {availableWorkTypes.map((wt) => (
+                      <SelectItem key={wt} value={wt}>
+                        {wt}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

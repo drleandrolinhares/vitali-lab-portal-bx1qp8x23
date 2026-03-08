@@ -64,6 +64,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          cleared_balance: number
           color_and_considerations: string | null
           created_at: string
           dentist_id: string
@@ -82,6 +83,7 @@ export type Database = {
           work_type: string
         }
         Insert: {
+          cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
           dentist_id: string
@@ -100,6 +102,7 @@ export type Database = {
           work_type: string
         }
         Update: {
+          cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
           dentist_id?: string
@@ -192,26 +195,64 @@ export type Database = {
       profiles: {
         Row: {
           clinic: string | null
+          closing_date: number | null
           email: string
           id: string
           name: string
+          payment_due_date: number | null
           role: string
         }
         Insert: {
           clinic?: string | null
+          closing_date?: number | null
           email: string
           id: string
           name: string
+          payment_due_date?: number | null
           role?: string
         }
         Update: {
           clinic?: string | null
+          closing_date?: number | null
           email?: string
           id?: string
           name?: string
+          payment_due_date?: number | null
           role?: string
         }
         Relationships: []
+      }
+      settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          dentist_id: string
+          id: string
+          orders_snapshot: Json
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          dentist_id: string
+          id?: string
+          orders_snapshot: Json
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          dentist_id?: string
+          id?: string
+          orders_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'settlements_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
     Views: {
@@ -388,6 +429,7 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'SOLUÇÕES CERÂMICAS'::text)
 //   kanban_stage: text (not null, default: 'TRIAGEM'::text)
+//   cleared_balance: numeric (not null, default: 0)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -408,6 +450,14 @@ export const Constants = {
 //   name: text (not null)
 //   role: text (not null, default: 'dentist'::text)
 //   clinic: text (nullable)
+//   closing_date: integer (nullable)
+//   payment_due_date: integer (nullable)
+// Table: settlements
+//   id: uuid (not null, default: gen_random_uuid())
+//   dentist_id: uuid (not null)
+//   amount: numeric (not null)
+//   orders_snapshot: jsonb (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
 // Table: kanban_stages
@@ -427,6 +477,9 @@ export const Constants = {
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+// Table: settlements
+//   FOREIGN KEY settlements_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   PRIMARY KEY settlements_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: kanban_stages
@@ -469,6 +522,11 @@ export const Constants = {
 //     USING: true
 //   Policy "Users can update own profile." (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = id)
+// Table: settlements
+//   Policy "Admin insert settlements" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin view all settlements, dentists view own" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text]))))))
 
 // --- DATABASE FUNCTIONS ---
 // FUNCTION handle_new_order()

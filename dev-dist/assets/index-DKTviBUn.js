@@ -19350,6 +19350,10 @@ var MapPin = createLucideIcon("map-pin", [["path", {
 	r: "3",
 	key: "ilqhr7"
 }]]);
+var MessageSquare = createLucideIcon("message-square", [["path", {
+	d: "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z",
+	key: "18887p"
+}]]);
 var PackageCheck = createLucideIcon("package-check", [
 	["path", {
 		d: "m16 16 2 2 4-4",
@@ -19407,6 +19411,10 @@ var PanelLeft = createLucideIcon("panel-left", [["rect", {
 var Pen = createLucideIcon("pen", [["path", {
 	d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
 	key: "1a8usu"
+}]]);
+var Phone = createLucideIcon("phone", [["path", {
+	d: "M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384",
+	key: "9njp5v"
 }]]);
 var Play = createLucideIcon("play", [["path", {
 	d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
@@ -32018,6 +32026,7 @@ function AppProvider({ children }) {
 	const [currentUser, setCurrentUser] = (0, import_react.useState)(null);
 	const [orders, setOrders] = (0, import_react.useState)([]);
 	const [kanbanStages, setKanbanStages] = (0, import_react.useState)([]);
+	const [appSettings, setAppSettings] = (0, import_react.useState)({});
 	const [loading, setLoading] = (0, import_react.useState)(false);
 	const [profileLoading, setProfileLoading] = (0, import_react.useState)(true);
 	const fetchProfile = async () => {
@@ -32025,6 +32034,7 @@ function AppProvider({ children }) {
 			setCurrentUser(null);
 			setOrders([]);
 			setKanbanStages([]);
+			setAppSettings({});
 			setProfileLoading(false);
 			return;
 		}
@@ -32054,6 +32064,13 @@ function AppProvider({ children }) {
 			name: s.name,
 			orderIndex: s.order_index
 		})));
+	}, []);
+	const fetchSettings = (0, import_react.useCallback)(async () => {
+		const { data } = await supabase.from("app_settings").select("*");
+		if (data) setAppSettings(data.reduce((acc, row) => {
+			acc[row.key] = row.value;
+			return acc;
+		}, {}));
 	}, []);
 	const fetchOrders = (0, import_react.useCallback)(async () => {
 		if (!session?.user || !currentUser) return;
@@ -32092,6 +32109,7 @@ function AppProvider({ children }) {
 		if (currentUser) {
 			fetchOrders();
 			fetchStages();
+			fetchSettings();
 			const channel = supabase.channel("app-updates").on("postgres_changes", {
 				event: "*",
 				schema: "public",
@@ -32100,7 +32118,11 @@ function AppProvider({ children }) {
 				event: "*",
 				schema: "public",
 				table: "kanban_stages"
-			}, () => fetchStages()).subscribe();
+			}, () => fetchStages()).on("postgres_changes", {
+				event: "*",
+				schema: "public",
+				table: "app_settings"
+			}, () => fetchSettings()).subscribe();
 			return () => {
 				supabase.removeChannel(channel);
 			};
@@ -32108,7 +32130,8 @@ function AppProvider({ children }) {
 	}, [
 		currentUser,
 		fetchOrders,
-		fetchStages
+		fetchStages,
+		fetchSettings
 	]);
 	const switchRole = () => toast({
 		title: "Aviso",
@@ -32287,11 +32310,29 @@ function AppProvider({ children }) {
 			fetchStages();
 		}
 	};
+	const updateSetting = async (key, value) => {
+		const { error } = await supabase.from("app_settings").upsert({
+			key,
+			value,
+			updated_at: (/* @__PURE__ */ new Date()).toISOString()
+		});
+		if (error) {
+			toast({
+				title: "Erro",
+				description: "Erro ao salvar configuração.",
+				variant: "destructive"
+			});
+			return;
+		}
+		toast({ title: "Configuração atualizada" });
+		fetchSettings();
+	};
 	if (session && profileLoading) return import_react.createElement("div", { className: "min-h-screen flex items-center justify-center font-medium" }, "Carregando...");
 	return import_react.createElement(AppContext.Provider, { value: {
 		currentUser,
 		orders,
 		kanbanStages,
+		appSettings,
 		loading,
 		switchRole,
 		addOrder,
@@ -32302,6 +32343,7 @@ function AppProvider({ children }) {
 		updateKanbanStage,
 		deleteKanbanStage,
 		reorderKanbanStages,
+		updateSetting,
 		refreshOrders: fetchOrders
 	} }, children);
 }
@@ -36860,7 +36902,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				var cachedValue = getSnapshot();
 				objectIs(value, cachedValue) || (console.error("The result of getSnapshot should be cached to avoid an infinite loop"), didWarnUncachedGetSnapshot = !0);
 			}
-			cachedValue = useState$13({ inst: {
+			cachedValue = useState$14({ inst: {
 				value,
 				getSnapshot
 			} });
@@ -36874,7 +36916,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				value,
 				getSnapshot
 			]);
-			useEffect$10(function() {
+			useEffect$12(function() {
 				checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 				return subscribe$1(function() {
 					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
@@ -36897,7 +36939,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 			return getSnapshot();
 		}
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-		var React$4 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$13 = React$4.useState, useEffect$10 = React$4.useEffect, useLayoutEffect$1 = React$4.useLayoutEffect, useDebugValue = React$4.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+		var React$4 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$14 = React$4.useState, useEffect$12 = React$4.useEffect, useLayoutEffect$1 = React$4.useLayoutEffect, useDebugValue = React$4.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
 		exports.useSyncExternalStore = void 0 !== React$4.useSyncExternalStore ? React$4.useSyncExternalStore : shim;
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
 	})();
@@ -37891,7 +37933,7 @@ function NewOrderNotification() {
 	});
 }
 function AppSidebar() {
-	const { currentUser } = useAppStore();
+	const { currentUser, appSettings } = useAppStore();
 	const { signOut } = useAuth();
 	const location = useLocation();
 	if (!currentUser) return null;
@@ -37956,8 +37998,22 @@ function AppSidebar() {
 			title: "Tabela de Preços",
 			icon: DollarSign,
 			path: "/prices"
+		}] : [],
+		...currentUser.role === "admin" ? [{
+			title: "Configurações",
+			icon: Settings,
+			path: "/settings"
 		}] : []
 	];
+	const commLinks = [{
+		title: "Grupo de WhatsApp Clínica/Vitali Lab",
+		icon: MessageSquare,
+		url: appSettings?.whatsapp_group_link
+	}, {
+		title: "WhatsApp Vitali Lab",
+		icon: Phone,
+		url: appSettings?.whatsapp_lab_link
+	}].filter((l) => Boolean(l.url));
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
 		variant: "inset",
 		children: [
@@ -37967,7 +38023,7 @@ function AppSidebar() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
 				className: "px-2",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, { children: navItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarMenu, { children: [navItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
 					asChild: true,
 					isActive: location.pathname === item.path,
 					tooltip: item.title,
@@ -37975,7 +38031,23 @@ function AppSidebar() {
 						to: item.path,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
 					})
-				}) }, item.path)) })
+				}) }, item.path)), commLinks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
+					className: "mt-4 mb-1 px-2",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-[10px] font-semibold text-muted-foreground uppercase tracking-wider",
+						children: "Comunicação"
+					})
+				}), commLinks.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
+					asChild: true,
+					tooltip: item.title,
+					className: "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+						href: item.url,
+						target: "_blank",
+						rel: "noopener noreferrer",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(item.icon, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item.title })]
+					})
+				}) }, item.title))] })] })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarFooter, {
 				className: "p-4",
@@ -39499,6 +39571,8 @@ function NewRequest() {
 	const { addOrder } = useAppStore();
 	const navigate = useNavigate();
 	const [submitting, setSubmitting] = (0, import_react.useState)(false);
+	const [priceListItems, setPriceListItems] = (0, import_react.useState)([]);
+	const [availableWorkTypes, setAvailableWorkTypes] = (0, import_react.useState)([]);
 	const [formData, setFormData] = (0, import_react.useState)({
 		patientName: "",
 		sector: "",
@@ -39512,6 +39586,26 @@ function NewRequest() {
 	});
 	const [selectedTeeth, setSelectedTeeth] = (0, import_react.useState)([]);
 	const [selectedArches, setSelectedArches] = (0, import_react.useState)([]);
+	(0, import_react.useEffect)(() => {
+		const fetchPrices = async () => {
+			const { data } = await supabase.from("price_list").select("category, work_type");
+			if (data) setPriceListItems(data.map((d) => ({
+				category: d.category,
+				workType: d.work_type
+			})));
+		};
+		fetchPrices();
+	}, []);
+	(0, import_react.useEffect)(() => {
+		if (formData.sector) {
+			const filtered = Array.from(new Set(priceListItems.filter((p) => p.category.toLowerCase() === formData.sector.toLowerCase()).map((p) => p.workType))).sort();
+			setAvailableWorkTypes(filtered);
+			if (formData.workType && !filtered.includes(formData.workType)) setFormData((prev) => ({
+				...prev,
+				workType: ""
+			}));
+		} else setAvailableWorkTypes([]);
+	}, [formData.sector, priceListItems]);
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!formData.patientName || !formData.workType || !formData.sector) return;
@@ -39594,31 +39688,14 @@ function NewRequest() {
 										workType: v
 									}),
 									required: true,
+									disabled: !formData.sector || availableWorkTypes.length === 0,
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
 										className: "h-11",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Selecione..." })
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, { children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											value: "Coroa",
-											children: "Coroa Total"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											value: "Faceta",
-											children: "Faceta/Lente"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											value: "Inlay/Onlay",
-											children: "Inlay/Onlay"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											value: "Protocolo",
-											children: "Protocolo"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											value: "Placa",
-											children: "Placa de Bruxismo"
-										})
-									] })]
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: !formData.sector ? "Selecione o setor..." : availableWorkTypes.length === 0 ? "Nenhum trabalho cadastrado" : "Selecione..." })
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: availableWorkTypes.map((wt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+										value: wt,
+										children: wt
+									}, wt)) })]
 								})]
 							})]
 						}),
@@ -42829,6 +42906,93 @@ function FinancialPage() {
 		})]
 	});
 }
+function SettingsPage() {
+	const { currentUser, appSettings, updateSetting } = useAppStore();
+	const [groupLink, setGroupLink] = (0, import_react.useState)("");
+	const [labLink, setLabLink] = (0, import_react.useState)("");
+	const [loading, setLoading] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		setGroupLink(appSettings?.whatsapp_group_link || "");
+		setLabLink(appSettings?.whatsapp_lab_link || "");
+	}, [appSettings]);
+	if (currentUser?.role !== "admin") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
+		to: "/",
+		replace: true
+	});
+	const handleSave = async () => {
+		setLoading(true);
+		await updateSetting("whatsapp_group_link", groupLink);
+		await updateSetting("whatsapp_lab_link", labLink);
+		setLoading(false);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "max-w-4xl mx-auto py-6 space-y-6 animate-fade-in",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-col gap-1",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "text-2xl font-bold tracking-tight text-primary",
+				children: "Configurações"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-muted-foreground",
+				children: "Gerencie as configurações gerais e links de comunicação do sistema."
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+			className: "shadow-subtle",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, { children: "Canais de Comunicação" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, { children: "Defina os links do WhatsApp para acesso rápido pelo menu lateral." })] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
+					className: "space-y-6",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Label, {
+								className: "flex items-center gap-2 font-semibold",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageSquare, { className: "w-4 h-4 text-emerald-500" }), "Grupo de WhatsApp Clínica/Vitali Lab"]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								value: groupLink,
+								onChange: (e) => setGroupLink(e.target.value),
+								placeholder: "Ex: https://chat.whatsapp.com/...",
+								className: "font-mono text-sm"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground",
+								children: "Este link será exibido para dentistas e administradores."
+							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Label, {
+								className: "flex items-center gap-2 font-semibold",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Phone, { className: "w-4 h-4 text-emerald-500" }), "WhatsApp Vitali Lab"]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								value: labLink,
+								onChange: (e) => setLabLink(e.target.value),
+								placeholder: "Ex: https://wa.me/5511999999999",
+								className: "font-mono text-sm"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground",
+								children: "Link direto para o número do laboratório."
+							})
+						]
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardFooter, {
+					className: "bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						onClick: handleSave,
+						disabled: loading,
+						className: "w-full sm:w-auto min-w-[150px]",
+						children: loading ? "Salvando..." : "Salvar Configurações"
+					})
+				})
+			]
+		})]
+	});
+}
 var PrivateRoute = ({ children }) => {
 	const { session, loading } = useAuth();
 	if (loading) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -42888,6 +43052,10 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
 					path: "/financial",
 					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FinancialPage, {})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+					path: "/settings",
+					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SettingsPage, {})
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
@@ -42899,4 +43067,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-NWxdQ1Au.js.map
+//# sourceMappingURL=index-DKTviBUn.js.map

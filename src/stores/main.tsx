@@ -15,6 +15,7 @@ interface AppState {
   currentUser: User
   orders: any[]
   kanbanStages: Stage[]
+  appSettings: Record<string, string>
   loading: boolean
   switchRole: (role: UserRole) => void
   addOrder: (order: any) => Promise<void>
@@ -25,6 +26,7 @@ interface AppState {
   updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
+  updateSetting: (key: string, value: string) => Promise<void>
   refreshOrders: () => void
 }
 
@@ -35,6 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
+  const [appSettings, setAppSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
@@ -43,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentUser(null)
       setOrders([])
       setKanbanStages([])
+      setAppSettings({})
       setProfileLoading(false)
       return
     }
@@ -80,6 +84,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .order('order_index', { ascending: true })
     if (data)
       setKanbanStages(data.map((s: any) => ({ id: s.id, name: s.name, orderIndex: s.order_index })))
+  }, [])
+
+  const fetchSettings = useCallback(async () => {
+    const { data } = await supabase.from('app_settings' as any).select('*')
+    if (data) {
+      const settings = data.reduce((acc: any, row: any) => {
+        acc[row.key] = row.value
+        return acc
+      }, {})
+      setAppSettings(settings)
+    }
   }, [])
 
   const fetchOrders = useCallback(async () => {
@@ -132,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (currentUser) {
       fetchOrders()
       fetchStages()
+      fetchSettings()
 
       const channel = supabase
         .channel('app-updates')
@@ -141,13 +157,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'kanban_stages' }, () =>
           fetchStages(),
         )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () =>
+          fetchSettings(),
+        )
         .subscribe()
 
       return () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [currentUser, fetchOrders, fetchStages])
+  }, [currentUser, fetchOrders, fetchStages, fetchSettings])
 
   const switchRole = () => toast({ title: 'Aviso', description: 'Modo demonstração desativado.' })
 
@@ -229,11 +248,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .update({ kanban_stage: stage, status: newStatus })
         .eq('id', dbId)
       if (error) throw error
-      await supabase.from('order_history' as any).insert({
-        order_id: dbId,
-        status: newStatus,
-        note: `${currentUser.name} moveu o cartão para ${stage}`,
-      })
+      await supabase
+        .from('order_history' as any)
+        .insert({
+          order_id: dbId,
+          status: newStatus,
+          note: `${currentUser.name} moveu o cartão para ${stage}`,
+        })
       toast({ title: 'Cartão Movido' })
     } catch (error) {
       console.error(error)
@@ -327,6 +348,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateSetting = async (key: string, value: string) => {
+    const { error } = await supabase
+      .from('app_settings' as any)
+      .upsert({ key, value, updated_at: new Date().toISOString() })
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao salvar configuração.', variant: 'destructive' })
+      return
+    }
+    toast({ title: 'Configuração atualizada' })
+    fetchSettings()
+  }
+
   if (session && profileLoading)
     return React.createElement(
       'div',
@@ -341,6 +374,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         currentUser: currentUser as User,
         orders,
         kanbanStages,
+        appSettings,
         loading,
         switchRole,
         addOrder,
@@ -351,6 +385,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateKanbanStage,
         deleteKanbanStage,
         reorderKanbanStages,
+        updateSetting,
         refreshOrders: fetchOrders,
       },
     },

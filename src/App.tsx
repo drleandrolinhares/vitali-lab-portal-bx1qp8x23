@@ -17,6 +17,7 @@ import AdminFinancial from './pages/AdminFinancial'
 import KanbanPage from './pages/Kanban'
 import PriceList from './pages/PriceList'
 import FinancialPage from './pages/Financial'
+import SettingsPage from './pages/Settings'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/admin-financial" element={<AdminFinancial />} />
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

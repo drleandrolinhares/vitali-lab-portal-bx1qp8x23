@@ -14,6 +14,9 @@ import {
   KanbanSquare,
   DollarSign,
   TrendingUp,
+  Settings,
+  MessageSquare,
+  Phone,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -38,7 +41,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { NewOrderNotification } from '@/components/NewOrderNotification'
 
 function AppSidebar() {
-  const { currentUser } = useAppStore()
+  const { currentUser, appSettings } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
 
@@ -67,7 +70,19 @@ function AppSidebar() {
           ...(currentUser.role === 'admin'
             ? [{ title: 'Tabela de Preços', icon: DollarSign, path: '/prices' }]
             : []),
+          ...(currentUser.role === 'admin'
+            ? [{ title: 'Configurações', icon: Settings, path: '/settings' }]
+            : []),
         ]
+
+  const commLinks = [
+    {
+      title: 'Grupo de WhatsApp Clínica/Vitali Lab',
+      icon: MessageSquare,
+      url: appSettings?.whatsapp_group_link,
+    },
+    { title: 'WhatsApp Vitali Lab', icon: Phone, url: appSettings?.whatsapp_lab_link },
+  ].filter((l) => Boolean(l.url))
 
   return (
     <Sidebar variant="inset">
@@ -90,6 +105,30 @@ function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+
+          {commLinks.length > 0 && (
+            <>
+              <SidebarMenuItem className="mt-4 mb-1 px-2">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Comunicação
+                </span>
+              </SidebarMenuItem>
+              {commLinks.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                  >
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-4">
