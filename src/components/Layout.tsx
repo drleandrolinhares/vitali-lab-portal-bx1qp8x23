@@ -12,6 +12,7 @@ import {
   FileText,
   BarChart3,
   KanbanSquare,
+  DollarSign,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -58,6 +59,9 @@ function AppSidebar() {
           { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
           { title: 'Histórico Global', icon: History, path: '/history' },
           { title: 'Dentistas', icon: Users, path: '/dentists' },
+          ...(currentUser.role === 'admin'
+            ? [{ title: 'Tabela de Preços', icon: DollarSign, path: '/prices' }]
+            : []),
         ]
 
   return (

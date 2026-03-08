@@ -19133,6 +19133,16 @@ var Clock = createLucideIcon("clock", [["circle", {
 	d: "M12 6v6l4 2",
 	key: "mmk7yg"
 }]]);
+var DollarSign = createLucideIcon("dollar-sign", [["line", {
+	x1: "12",
+	x2: "12",
+	y1: "2",
+	y2: "22",
+	key: "7eqyqh"
+}], ["path", {
+	d: "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+	key: "1b0p4s"
+}]]);
 var Ellipsis = createLucideIcon("ellipsis", [
 	["circle", {
 		cx: "12",
@@ -36836,7 +36846,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				var cachedValue = getSnapshot();
 				objectIs(value, cachedValue) || (console.error("The result of getSnapshot should be cached to avoid an infinite loop"), didWarnUncachedGetSnapshot = !0);
 			}
-			cachedValue = useState$10({ inst: {
+			cachedValue = useState$11({ inst: {
 				value,
 				getSnapshot
 			} });
@@ -36850,7 +36860,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 				value,
 				getSnapshot
 			]);
-			useEffect$7(function() {
+			useEffect$8(function() {
 				checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 				return subscribe$1(function() {
 					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
@@ -36873,7 +36883,7 @@ var require_use_sync_external_store_shim_development = /* @__PURE__ */ __commonJ
 			return getSnapshot();
 		}
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$10 = React$3.useState, useEffect$7 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+		var React$3 = require_react(), objectIs = "function" === typeof Object.is ? Object.is : is, useState$11 = React$3.useState, useEffect$8 = React$3.useEffect, useLayoutEffect$1 = React$3.useLayoutEffect, useDebugValue = React$3.useDebugValue, didWarnOld18Alpha = !1, didWarnUncachedGetSnapshot = !1, shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
 		exports.useSyncExternalStore = void 0 !== React$3.useSyncExternalStore ? React$3.useSyncExternalStore : shim;
 		"undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
 	})();
@@ -37917,7 +37927,12 @@ function AppSidebar() {
 			title: "Dentistas",
 			icon: Users,
 			path: "/dentists"
-		}
+		},
+		...currentUser.role === "admin" ? [{
+			title: "Tabela de Preços",
+			icon: DollarSign,
+			path: "/prices"
+		}] : []
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
 		variant: "inset",
@@ -41365,6 +41380,253 @@ function KanbanPage() {
 		]
 	});
 }
+var CATEGORIES = ["Soluções Cerâmicas", "Studio Acrílico"];
+function PriceList() {
+	const { currentUser } = useAppStore();
+	const isAdmin = currentUser?.role === "admin";
+	const [items, setItems] = (0, import_react.useState)([]);
+	const [isOpen, setIsOpen] = (0, import_react.useState)(false);
+	const [editingId, setEditingId] = (0, import_react.useState)(null);
+	const [formData, setFormData] = (0, import_react.useState)({
+		category: "",
+		work_type: "",
+		price: "",
+		notes: ""
+	});
+	const fetchItems = async () => {
+		const { data } = await supabase.from("price_list").select("*").order("created_at", { ascending: true });
+		if (data) setItems(data);
+	};
+	(0, import_react.useEffect)(() => {
+		fetchItems();
+	}, []);
+	const openModal = (category, item) => {
+		if (item) {
+			setEditingId(item.id);
+			setFormData({
+				category: item.category,
+				work_type: item.work_type,
+				price: item.price,
+				notes: item.notes || ""
+			});
+		} else {
+			setEditingId(null);
+			setFormData({
+				category,
+				work_type: "",
+				price: "",
+				notes: ""
+			});
+		}
+		setIsOpen(true);
+	};
+	const handleSave = async () => {
+		if (!formData.work_type || !formData.price) return toast({
+			title: "Preencha os campos obrigatórios",
+			variant: "destructive"
+		});
+		const payload = {
+			...formData,
+			notes: formData.notes || null
+		};
+		if (editingId) {
+			const { error } = await supabase.from("price_list").update(payload).eq("id", editingId);
+			if (error) return toast({
+				title: "Erro ao salvar alterações",
+				variant: "destructive"
+			});
+		} else {
+			const { error } = await supabase.from("price_list").insert([payload]);
+			if (error) return toast({
+				title: "Erro ao adicionar item",
+				variant: "destructive"
+			});
+		}
+		toast({ title: "Tabela atualizada com sucesso!" });
+		setIsOpen(false);
+		fetchItems();
+	};
+	const handleDelete = async (id) => {
+		if (!confirm("Tem certeza que deseja excluir este item?")) return;
+		const { error } = await supabase.from("price_list").delete().eq("id", id);
+		if (error) return toast({
+			title: "Erro ao excluir",
+			variant: "destructive"
+		});
+		toast({ title: "Item excluído" });
+		fetchItems();
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6 max-w-5xl mx-auto animate-fade-in",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-center gap-3 mb-6",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "p-2.5 bg-primary/10 rounded-xl",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DollarSign, { className: "w-6 h-6 text-primary" })
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-2xl font-bold tracking-tight text-primary",
+					children: "Tabela de Preços"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-muted-foreground text-sm",
+					children: isAdmin ? "Gerencie os valores e informações dos trabalhos oferecidos." : "Consulte os valores de nossos serviços."
+				})] })]
+			}),
+			CATEGORIES.map((category) => {
+				const categoryItems = items.filter((i) => i.category === category);
+				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+					className: "shadow-subtle border-t-4 border-t-primary/80",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+						className: "flex flex-row items-center justify-between pb-2 bg-muted/20",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+							className: "text-lg font-semibold",
+							children: category
+						}), isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+							size: "sm",
+							onClick: () => openModal(category),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "w-4 h-4 mr-2" }), " Adicionar Item"]
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+						className: "pt-4",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+								className: "w-[30%]",
+								children: "Trabalho"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+								className: "w-[20%]",
+								children: "Valor da etapa"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, { children: "Informações importantes" }),
+							isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+								className: "w-[100px] text-right",
+								children: "Ações"
+							})
+						] }) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableBody, { children: categoryItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+							colSpan: isAdmin ? 4 : 3,
+							className: "text-center text-muted-foreground py-8",
+							children: "Nenhum serviço cadastrado nesta categoria."
+						}) }) : categoryItems.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
+							className: "hover:bg-muted/30",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+									className: "font-medium text-foreground",
+									children: item.work_type
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+									className: "font-semibold text-emerald-600 dark:text-emerald-400",
+									children: item.price
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+									className: "text-muted-foreground text-sm",
+									children: item.notes || "-"
+								}),
+								isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+									className: "text-right",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex justify-end gap-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											variant: "ghost",
+											size: "icon",
+											className: "h-8 w-8 text-muted-foreground hover:text-primary",
+											onClick: () => openModal(category, item),
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, { className: "w-4 h-4" })
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											variant: "ghost",
+											size: "icon",
+											className: "h-8 w-8 text-muted-foreground hover:text-destructive",
+											onClick: () => handleDelete(item.id),
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "w-4 h-4" })
+										})]
+									})
+								})
+							]
+						}, item.id)) })] })
+					})]
+				}, category);
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
+				open: isOpen,
+				onOpenChange: setIsOpen,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+					className: "sm:max-w-[425px]",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, { children: editingId ? "Editar Serviço" : "Novo Serviço" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "text-sm text-muted-foreground",
+							children: ["Categoria: ", formData.category]
+						})] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "space-y-4 py-4",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "space-y-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Label, {
+										htmlFor: "work_type",
+										children: ["Trabalho ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-destructive",
+											children: "*"
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+										id: "work_type",
+										value: formData.work_type,
+										onChange: (e) => setFormData({
+											...formData,
+											work_type: e.target.value
+										}),
+										placeholder: "Ex: Coroa Emax",
+										autoFocus: true
+									})]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "space-y-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Label, {
+										htmlFor: "price",
+										children: ["Valor da etapa ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-destructive",
+											children: "*"
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+										id: "price",
+										value: formData.price,
+										onChange: (e) => setFormData({
+											...formData,
+											price: e.target.value
+										}),
+										placeholder: "Ex: R$ 350,00"
+									})]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "space-y-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+										htmlFor: "notes",
+										children: "Informações importantes"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+										id: "notes",
+										value: formData.notes,
+										onChange: (e) => setFormData({
+											...formData,
+											notes: e.target.value
+										}),
+										placeholder: "Observações sobre o serviço (opcional)",
+										className: "resize-none"
+									})]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogFooter, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							variant: "outline",
+							onClick: () => setIsOpen(false),
+							children: "Cancelar"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							onClick: handleSave,
+							children: editingId ? "Salvar Alterações" : "Adicionar"
+						})] })
+					]
+				})
+			})
+		]
+	});
+}
 var PrivateRoute = ({ children }) => {
 	const { session, loading } = useAuth();
 	if (loading) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -41412,6 +41674,10 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
 					path: "/dashboard",
 					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminDashboard, {})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+					path: "/prices",
+					element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PriceList, {})
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
@@ -41423,4 +41689,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-Cg8VFGAA.js.map
+//# sourceMappingURL=index-ppBJ3Flq.js.map
