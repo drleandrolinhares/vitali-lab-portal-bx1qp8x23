@@ -69,8 +69,8 @@ export default function HistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((order) => (
-                <TableRow key={order.id}>
+              {filtered.map((order, index) => (
+                <TableRow key={`${order.id}-${index}`}>
                   <TableCell className="pl-6 font-medium">{order.friendlyId}</TableCell>
                   {showDentistCol && <TableCell>{order.dentistName}</TableCell>}
                   <TableCell>{order.patientName}</TableCell>
