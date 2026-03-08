@@ -19,7 +19,7 @@ import {
   endOfMonth,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Plus, CheckCircle, Trash2, XCircle } from 'lucide-react'
+import { Plus, CheckCircle, Trash2, XCircle, Edit2 } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 import { cn } from '@/lib/utils'
 import { ExpenseFormModal } from '@/components/ExpenseFormModal'
@@ -37,6 +37,7 @@ export default function AccountsPayable() {
   const { selectedLab } = useAppStore()
   const [expenses, setExpenses] = useState<any[]>([])
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<any | null>(null)
   const [filterStatus, setFilterStatus] = useState({ pending: true, paid: true })
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -89,21 +90,40 @@ export default function AccountsPayable() {
     return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]))
   }, [filteredExpenses])
 
-  const handleSaveModal = async (entries: any[]) => {
-    const { error } = await supabase
-      .from('expenses')
-      .insert(
-        entries.map((e) => ({
-          ...e,
-          sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
-        })),
-      )
-    if (error)
-      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
-    else {
-      toast({ title: 'Salvo com sucesso!' })
-      fetchExpenses()
+  const handleSaveModal = async (entries: any[], isEdit?: boolean) => {
+    if (isEdit && editingExpense) {
+      const updateData = {
+        ...entries[0],
+        sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+      }
+      delete updateData.id
+      const { error } = await supabase
+        .from('expenses')
+        .update(updateData)
+        .eq('id', editingExpense.id)
+      if (error)
+        toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' })
+      else {
+        toast({ title: 'Atualizado com sucesso!' })
+        fetchExpenses()
+      }
+    } else {
+      const { error } = await supabase
+        .from('expenses')
+        .insert(
+          entries.map((e) => ({
+            ...e,
+            sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+          })),
+        )
+      if (error)
+        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
+      else {
+        toast({ title: 'Salvo com sucesso!' })
+        fetchExpenses()
+      }
     }
+    setEditingExpense(null)
   }
 
   const markAsPaid = async (id: string) => {
@@ -122,6 +142,16 @@ export default function AccountsPayable() {
     fetchExpenses()
   }
 
+  const handleNewAccount = () => {
+    setEditingExpense(null)
+    setModalOpen(true)
+  }
+
+  const handleEditAccount = (item: any) => {
+    setEditingExpense(item)
+    setModalOpen(true)
+  }
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -131,7 +161,7 @@ export default function AccountsPayable() {
             Gerencie despesas, parcelamentos e contas recorrentes.
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
+        <Button onClick={handleNewAccount}>
           <Plus className="w-4 h-4 mr-2" /> Nova Conta
         </Button>
       </div>
@@ -261,6 +291,14 @@ export default function AccountsPayable() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                            onClick={() => handleEditAccount(item)}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-red-500 hover:bg-red-50"
                             onClick={() => deleteExpense(item.id)}
                           >
@@ -274,10 +312,10 @@ export default function AccountsPayable() {
                           {item.classification}
                         </div>
                         <div
-                          className="col-span-1 md:col-span-2 text-sm truncate font-medium"
-                          title={item.dre_category || item.category}
+                          className="col-span-1 md:col-span-2 text-sm truncate font-medium text-blue-600"
+                          title={item.dre_category}
                         >
-                          {item.dre_category || item.category}
+                          {item.dre_category}
                         </div>
                         <div className="col-span-1 md:col-span-3 text-sm truncate font-medium">
                           {item.description}
@@ -304,7 +342,12 @@ export default function AccountsPayable() {
           </div>
         </div>
       )}
-      <ExpenseFormModal open={modalOpen} onOpenChange={setModalOpen} onSave={handleSaveModal} />
+      <ExpenseFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onSave={handleSaveModal}
+        expenseToEdit={editingExpense}
+      />
     </div>
   )
 }

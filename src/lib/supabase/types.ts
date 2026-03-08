@@ -73,6 +73,7 @@ export type Database = {
           cost_center: string
           created_at: string
           description: string
+          dre_category: string
           due_date: string
           id: string
           installment_current: number | null
@@ -91,6 +92,7 @@ export type Database = {
           cost_center: string
           created_at?: string
           description: string
+          dre_category?: string
           due_date: string
           id?: string
           installment_current?: number | null
@@ -109,6 +111,7 @@ export type Database = {
           cost_center?: string
           created_at?: string
           description?: string
+          dre_category?: string
           due_date?: string
           id?: string
           installment_current?: number | null
@@ -273,6 +276,7 @@ export type Database = {
           color_and_considerations: string | null
           created_at: string
           dentist_id: string
+          dre_category: string
           friendly_id: string
           id: string
           kanban_stage: string
@@ -294,6 +298,7 @@ export type Database = {
           color_and_considerations?: string | null
           created_at?: string
           dentist_id: string
+          dre_category?: string
           friendly_id?: string
           id?: string
           kanban_stage?: string
@@ -315,6 +320,7 @@ export type Database = {
           color_and_considerations?: string | null
           created_at?: string
           dentist_id?: string
+          dre_category?: string
           friendly_id?: string
           id?: string
           kanban_stage?: string
@@ -671,6 +677,7 @@ export const Constants = {
 //   recurring_day: integer (nullable)
 //   installment_current: integer (nullable)
 //   installment_total: integer (nullable)
+//   dre_category: text (not null, default: 'Outros'::text)
 // Table: inventory_items
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -726,6 +733,7 @@ export const Constants = {
 //   cleared_balance: numeric (not null, default: 0)
 //   patient_cpf: text (nullable)
 //   patient_birth_date: date (nullable)
+//   dre_category: text (not null, default: 'Receita'::text)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
