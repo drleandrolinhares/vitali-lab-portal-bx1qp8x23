@@ -1,8 +1,8 @@
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns'
 import {
   Wrench,
@@ -11,7 +11,6 @@ import {
   Users,
   AlertCircle,
   ArrowUpRight,
-  ArrowDownRight,
   Clock,
   CalendarDays,
   DollarSign,
@@ -20,7 +19,45 @@ import { Navigate } from 'react-router-dom'
 import { Label } from '@/components/ui/label'
 import { DateRange } from 'react-day-picker'
 import { DatePickerWithRange } from '@/components/ui/date-range-picker'
-import { formatCurrency } from '@/lib/utils'
+
+const RankingList = ({ items, title, icon: Icon, valueKey, valueFormatter, colorClass }: any) => (
+  <Card className="shadow-subtle flex flex-col hover:shadow-md transition-shadow">
+    <CardHeader className="pb-3 border-b bg-muted/10">
+      <CardTitle className="text-base flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${colorClass}`} /> {title}
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="pt-4 flex-1">
+      <div className="space-y-4">
+        {items.length > 0 ? (
+          items.map((item: any, index: number) => (
+            <div key={item.id} className="flex items-center justify-between group">
+              <div className="flex items-center gap-3">
+                <div className="w-5 text-xs font-bold text-muted-foreground text-right">
+                  {index + 1}.
+                </div>
+                <Avatar className="w-8 h-8 border border-border/50 group-hover:border-primary/50 transition-colors">
+                  <AvatarImage src={item.avatar} className="object-cover" />
+                  <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
+                    {item.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-sm truncate max-w-[140px]" title={item.name}>
+                  {item.name}
+                </span>
+              </div>
+              <span className="font-bold text-sm bg-muted px-2 py-0.5 rounded-md">
+                {valueFormatter ? valueFormatter(item[valueKey]) : item[valueKey]}
+              </span>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-6 text-xs text-muted-foreground">Sem dados no período</div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+)
 
 export default function AdminDashboard() {
   const { currentUser, orders } = useAppStore()
@@ -52,22 +89,24 @@ export default function AdminDashboard() {
     }
   }, [currentUser])
 
-  if (currentUser?.role !== 'admin') {
-    return <Navigate to="/" replace />
-  }
-
   // Formatting helper
-  const formatBRL = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+  const formatBRL = useCallback(
+    (val: number) =>
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val),
+    [],
+  )
 
   // Parse price logic
-  const getPriceForOrder = (workType: string) => {
-    const item = priceList.find((p) => p.work_type === workType)
-    if (!item || !item.price) return 0
-    // Try to parse R$ 150,00 to 150.00
-    const parsed = parseFloat(item.price.replace(/[R$\s.]/g, '').replace(',', '.'))
-    return isNaN(parsed) ? 0 : parsed
-  }
+  const getPriceForOrder = useCallback(
+    (workType: string) => {
+      const item = priceList.find((p) => p.work_type === workType)
+      if (!item || !item.price) return 0
+      // Try to parse R$ 150,00 to 150.00
+      const parsed = parseFloat(item.price.replace(/[R$\s.]/g, '').replace(',', '.'))
+      return isNaN(parsed) ? 0 : parsed
+    },
+    [priceList],
+  )
 
   const { filteredOrders, filteredSettlements } = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to)
@@ -179,48 +218,11 @@ export default function AdminDashboard() {
         .slice(0, 5)
         .filter((i) => i.latePayments > 0),
     }
-  }, [filteredOrders, filteredSettlements, profiles, priceList])
+  }, [filteredOrders, filteredSettlements, profiles, getPriceForOrder])
 
-  const RankingList = ({ items, title, icon: Icon, valueKey, valueFormatter, colorClass }: any) => (
-    <Card className="shadow-subtle flex flex-col hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3 border-b bg-muted/10">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Icon className={`w-4 h-4 ${colorClass}`} /> {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4 flex-1">
-        <div className="space-y-4">
-          {items.length > 0 ? (
-            items.map((item: any, index: number) => (
-              <div key={item.id} className="flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 text-xs font-bold text-muted-foreground text-right">
-                    {index + 1}.
-                  </div>
-                  <Avatar className="w-8 h-8 border border-border/50 group-hover:border-primary/50 transition-colors">
-                    <AvatarImage src={item.avatar} className="object-cover" />
-                    <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
-                      {item.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium text-sm truncate max-w-[140px]" title={item.name}>
-                    {item.name}
-                  </span>
-                </div>
-                <span className="font-bold text-sm bg-muted px-2 py-0.5 rounded-md">
-                  {valueFormatter ? valueFormatter(item[valueKey]) : item[valueKey]}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-6 text-xs text-muted-foreground">
-              Sem dados no período
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
+  if (currentUser?.role !== 'admin') {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-fade-in pb-10">
