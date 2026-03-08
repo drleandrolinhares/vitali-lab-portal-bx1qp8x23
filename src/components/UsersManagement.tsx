@@ -64,10 +64,7 @@ export function UsersManagement() {
 
   const fetchUsers = async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('profiles').select('*').order('name', { ascending: true })
     if (data) setUsers(data)
     setLoading(false)
   }

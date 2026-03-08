@@ -65,6 +65,92 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          cost_center: string
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          cost_center: string
+          created_at?: string
+          description: string
+          due_date: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          cost_center?: string
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      inventory_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      inventory_transactions: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          quantity: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          quantity: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'inventory_transactions_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'inventory_items'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       kanban_stages: {
         Row: {
           created_at: string
@@ -266,6 +352,7 @@ export type Database = {
           id: string
           name: string
           payment_due_date: number | null
+          permissions: Json | null
           personal_phone: string | null
           role: string
           whatsapp_group_link: string | null
@@ -281,6 +368,7 @@ export type Database = {
           id: string
           name: string
           payment_due_date?: number | null
+          permissions?: Json | null
           personal_phone?: string | null
           role?: string
           whatsapp_group_link?: string | null
@@ -296,6 +384,7 @@ export type Database = {
           id?: string
           name?: string
           payment_due_date?: number | null
+          permissions?: Json | null
           personal_phone?: string | null
           role?: string
           whatsapp_group_link?: string | null
@@ -493,6 +582,26 @@ export const Constants = {
 //   entity_id: text (nullable)
 //   details: jsonb (nullable, default: '{}'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: expenses
+//   id: uuid (not null, default: gen_random_uuid())
+//   description: text (not null)
+//   cost_center: text (not null)
+//   due_date: date (not null)
+//   amount: numeric (not null)
+//   status: text (not null, default: 'pending'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: inventory_items
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   unit_price: numeric (not null, default: 0)
+//   quantity: integer (not null, default: 0)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: inventory_transactions
+//   id: uuid (not null, default: gen_random_uuid())
+//   item_id: uuid (not null)
+//   type: text (not null)
+//   quantity: integer (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: kanban_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -552,6 +661,7 @@ export const Constants = {
 //   clinic_contact_phone: text (nullable)
 //   whatsapp_group_link: text (nullable)
 //   avatar_url: text (nullable)
+//   permissions: jsonb (nullable, default: '[]'::jsonb)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -565,6 +675,13 @@ export const Constants = {
 // Table: audit_logs
 //   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
+// Table: expenses
+//   PRIMARY KEY expenses_pkey: PRIMARY KEY (id)
+// Table: inventory_items
+//   PRIMARY KEY inventory_items_pkey: PRIMARY KEY (id)
+// Table: inventory_transactions
+//   FOREIGN KEY inventory_transactions_item_id_fkey: FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE
+//   PRIMARY KEY inventory_transactions_pkey: PRIMARY KEY (id)
 // Table: kanban_stages
 //   UNIQUE kanban_stages_name_key: UNIQUE (name)
 //   PRIMARY KEY kanban_stages_pkey: PRIMARY KEY (id)
@@ -597,6 +714,29 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Authenticated insert audit logs" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
+// Table: expenses
+//   Policy "Admin/Reception delete expenses" (DELETE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception insert expenses" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception update expenses" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception view expenses" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+// Table: inventory_items
+//   Policy "Admin/Reception delete inventory_items" (DELETE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception insert inventory_items" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception update inventory_items" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception view inventory_items" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+// Table: inventory_transactions
+//   Policy "Admin/Reception insert inventory_transactions" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Admin/Reception view inventory_transactions" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
 // Table: kanban_stages
 //   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
@@ -687,8 +827,25 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_inventory_quantity()
+//   CREATE OR REPLACE FUNCTION public.update_inventory_quantity()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//       IF NEW.type = 'in' THEN
+//           UPDATE inventory_items SET quantity = quantity + NEW.quantity WHERE id = NEW.item_id;
+//       ELSIF NEW.type = 'out' THEN
+//           UPDATE inventory_items SET quantity = quantity - NEW.quantity WHERE id = NEW.item_id;
+//       END IF;
+//       RETURN NEW;
+//   END;
+//   $function$
+//
 
 // --- TRIGGERS ---
+// Table: inventory_transactions
+//   on_inventory_transaction: CREATE TRIGGER on_inventory_transaction AFTER INSERT ON public.inventory_transactions FOR EACH ROW EXECUTE FUNCTION update_inventory_quantity()
 // Table: orders
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
 
