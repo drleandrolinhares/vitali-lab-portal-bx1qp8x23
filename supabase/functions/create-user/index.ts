@@ -32,7 +32,7 @@ Deno.serve(async (req: Request) => {
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    const updateData: any = {}
+    const updateData: any = { is_approved: true }
     if (permissions && permissions.length > 0) updateData.permissions = permissions
     if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
 

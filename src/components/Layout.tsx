@@ -26,6 +26,7 @@ import {
   Package,
   ShieldAlert,
   PieChart,
+  UserPlus,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -40,6 +41,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  SidebarMenuBadge,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -74,6 +76,7 @@ const ADMIN_MENUS = [
     items: [
       { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
+      { id: 'pending-users', title: 'Cadastros Pendentes', icon: UserPlus, path: '/pending-users' },
     ],
   },
   {
@@ -107,7 +110,7 @@ const ADMIN_MENUS = [
 ]
 
 function AppSidebar() {
-  const { currentUser, appSettings, orders } = useAppStore()
+  const { currentUser, appSettings, orders, pendingUsers } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
 
@@ -186,7 +189,10 @@ function AppSidebar() {
           </SidebarMenu>
         ) : (
           ADMIN_MENUS.map((group) => {
-            const visibleItems = group.items.filter((i) => hasPerm(i.id))
+            const visibleItems = group.items.filter((i) => {
+              if (i.id === 'pending-users' && currentUser.role !== 'admin') return false
+              return hasPerm(i.id)
+            })
             if (visibleItems.length === 0) return null
             return (
               <SidebarGroup key={group.group} className="px-0 py-0 mb-4">
@@ -207,6 +213,11 @@ function AppSidebar() {
                             <span>{item.title}</span>
                           </Link>
                         </SidebarMenuButton>
+                        {item.id === 'pending-users' && pendingUsers?.length > 0 && (
+                          <SidebarMenuBadge className="bg-red-500 text-white rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                            {pendingUsers.length}
+                          </SidebarMenuBadge>
+                        )}
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>

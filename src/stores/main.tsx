@@ -12,10 +12,11 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 
 interface AppState {
-  currentUser: User
+  currentUser: User & { is_approved?: boolean }
   orders: any[]
   kanbanStages: Stage[]
   appSettings: Record<string, string>
+  pendingUsers: any[]
   loading: boolean
   selectedLab: string
   setSelectedLab: (lab: string) => void
@@ -34,16 +35,19 @@ interface AppState {
   updateProfile: (updates: Partial<User>) => Promise<void>
   refreshOrders: () => void
   logAudit: (action: string, entityType: string, entityId: string, details?: any) => Promise<void>
+  approveUser: (userId: string) => Promise<void>
+  rejectUser: (userId: string) => Promise<void>
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<(User & { is_approved?: boolean }) | null>(null)
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
   const [appSettings, setAppSettings] = useState<Record<string, string>>({})
+  const [pendingUsers, setPendingUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
@@ -60,12 +64,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentUser(null)
       setOrders([])
       setKanbanStages([])
-      setAppSettings({})
+      setAppSettings([])
+      setPendingUsers([])
       setProfileLoading(false)
       return
     }
 
-    // Only show loading screen if we don't have the user yet
     if (currentUser?.id !== session.user.id) {
       setProfileLoading(true)
     }
@@ -85,6 +89,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         whatsapp_group_link: data.whatsapp_group_link,
         avatar_url: data.avatar_url,
         permissions: data.permissions || [],
+        is_approved: data.is_approved,
       } as any)
     } else {
       setCurrentUser({
@@ -93,7 +98,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         role: session.user.user_metadata?.role || 'dentist',
         clinic: session.user.user_metadata?.clinic,
         permissions: [],
-      })
+        is_approved: false,
+      } as any)
     }
     setProfileLoading(false)
   }
@@ -128,6 +134,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAppSettings(settings)
     }
   }, [])
+
+  const fetchPendingUsers = useCallback(async () => {
+    if (!currentUser || currentUser.role !== 'admin') return
+    const { data } = await supabase
+      .from('profiles' as any)
+      .select('*')
+      .eq('is_approved', false)
+      .order('created_at', { ascending: false })
+    if (data) setPendingUsers(data)
+  }, [currentUser])
 
   const fetchOrders = useCallback(async () => {
     if (!session?.user || !currentUser) return
@@ -186,6 +202,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchOrders()
       fetchStages()
       fetchSettings()
+      if (currentUser.role === 'admin') fetchPendingUsers()
 
       const channel = supabase
         .channel('app-updates')
@@ -198,13 +215,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () =>
           fetchSettings(),
         )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+          if (currentUser.role === 'admin') fetchPendingUsers()
+          if (payload.new && payload.new.id === currentUser.id) {
+            setCurrentUser((prev: any) =>
+              prev ? { ...prev, is_approved: payload.new.is_approved } : prev,
+            )
+          }
+        })
         .subscribe()
 
       return () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [currentUser, fetchOrders, fetchStages, fetchSettings])
+  }, [
+    currentUser?.id,
+    currentUser?.role,
+    fetchOrders,
+    fetchStages,
+    fetchSettings,
+    fetchPendingUsers,
+  ])
+
+  const approveUser = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles' as any)
+      .update({ is_approved: true })
+      .eq('id', userId)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível aprovar o usuário.',
+        variant: 'destructive',
+      })
+    } else {
+      toast({ title: 'Usuário aprovado com sucesso!' })
+      setPendingUsers((prev) => prev.filter((u) => u.id !== userId))
+    }
+  }
+
+  const rejectUser = async (userId: string) => {
+    const { error } = await supabase
+      .from('profiles' as any)
+      .delete()
+      .eq('id', userId)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível rejeitar o usuário.',
+        variant: 'destructive',
+      })
+    } else {
+      toast({ title: 'Usuário rejeitado e removido do sistema.' })
+      setPendingUsers((prev) => prev.filter((u) => u.id !== userId))
+    }
+  }
 
   const logAudit = async (
     action: string,
@@ -568,7 +634,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
     await logAudit('UPDATE_PROFILE', 'profile', currentUser.id, { updates })
-    setCurrentUser({ ...currentUser, ...updates } as User)
+    setCurrentUser({ ...currentUser, ...updates } as any)
     toast({ title: 'Perfil atualizado com sucesso' })
   }
 
@@ -583,10 +649,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     AppContext.Provider,
     {
       value: {
-        currentUser: currentUser as User,
+        currentUser: currentUser as any,
         orders,
         kanbanStages,
         appSettings,
+        pendingUsers,
         loading,
         selectedLab,
         setSelectedLab,
@@ -605,6 +672,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateProfile,
         refreshOrders: fetchOrders,
         logAudit,
+        approveUser,
+        rejectUser,
       },
     },
     children,

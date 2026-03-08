@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppProvider } from '@/stores/main'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
+import { useAppStore } from '@/stores/main'
 import LandingPage from './pages/LandingPage'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
@@ -24,14 +25,23 @@ import AuditTrail from './pages/AuditTrail'
 import AccountsPayable from './pages/AccountsPayable'
 import Inventory from './pages/Inventory'
 import ComparativeDashboard from './pages/ComparativeDashboard'
+import PendingApproval from './pages/PendingApproval'
+import PendingUsersPage from './pages/PendingUsers'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
+  const { currentUser } = useAppStore()
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center font-medium">Carregando...</div>
     )
   if (!session) return <AuthPage />
+
+  if (currentUser && currentUser.is_approved === false && currentUser.role !== 'admin') {
+    return <PendingApproval />
+  }
+
   return <>{children}</>
 }
 
@@ -67,6 +77,7 @@ const App = () => (
               <Route path="/audit-logs" element={<AuditTrail />} />
               <Route path="/accounts-payable" element={<AccountsPayable />} />
               <Route path="/inventory" element={<Inventory />} />
+              <Route path="/pending-users" element={<PendingUsersPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
