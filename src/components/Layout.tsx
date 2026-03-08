@@ -15,6 +15,7 @@ import {
   DollarSign,
   TrendingUp,
   Settings,
+  Contact,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -73,6 +74,7 @@ function AppSidebar() {
           { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
           { title: 'Histórico Global', icon: History, path: '/history' },
           { title: 'Dentistas', icon: Users, path: '/dentists' },
+          { title: 'Pacientes', icon: Contact, path: '/patients' },
           ...(currentUser.role === 'admin'
             ? [{ title: 'Tabela de Preços', icon: DollarSign, path: '/prices' }]
             : []),

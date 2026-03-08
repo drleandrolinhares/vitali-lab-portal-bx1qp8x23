@@ -50,6 +50,22 @@ export default function OrderDetails() {
                 <p className="text-sm text-muted-foreground">Dentista Responsável</p>
                 <p className="font-medium">{order.dentistName}</p>
               </div>
+
+              {order.patientCpf && (
+                <div>
+                  <p className="text-sm text-muted-foreground">CPF do Paciente</p>
+                  <p className="font-medium">{order.patientCpf}</p>
+                </div>
+              )}
+              {order.patientBirthDate && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Data de Nascimento</p>
+                  <p className="font-medium">
+                    {format(new Date(order.patientBirthDate + 'T00:00:00'), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-sm text-muted-foreground">Trabalho</p>
                 <p className="font-medium">{order.workType}</p>

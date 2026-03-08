@@ -115,6 +115,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           id: o.id,
           friendlyId: o.friendly_id,
           patientName: o.patient_name,
+          patientCpf: o.patient_cpf,
+          patientBirthDate: o.patient_birth_date,
           dentistId: o.dentist_id,
           dentistName: o.profiles?.name || 'Desconhecido',
           dentistGroupLink: o.profiles?.whatsapp_group_link || '',
@@ -205,6 +207,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('orders' as any)
       .insert({
         patient_name: orderData.patientName,
+        patient_cpf: orderData.patientCpf || null,
+        patient_birth_date: orderData.patientBirthDate || null,
         dentist_id: targetDentistId,
         sector: orderData.sector,
         kanban_stage: defaultStage,
@@ -241,7 +245,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const order = orders.find((o) => o.id === dbId)
     if (!order) return
 
-    // Optimistic UI update to ensure immediate dashboard recalculation
     setOrders((prev) => prev.filter((o) => o.id !== dbId))
 
     const { error } = await supabase
@@ -250,7 +253,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', dbId)
 
     if (error) {
-      // Revert optimistic update on error
       fetchOrders()
       return toast({
         title: 'Erro',

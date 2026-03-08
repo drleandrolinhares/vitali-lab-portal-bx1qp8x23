@@ -11,6 +11,7 @@ import NewRequest from './pages/NewRequest'
 import OrderDetails from './pages/OrderDetails'
 import HistoryPage from './pages/History'
 import DentistsPage from './pages/Dentists'
+import PatientsPage from './pages/Patients'
 import AuthPage from './pages/Auth'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminFinancial from './pages/AdminFinancial'
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/kanban" element={<KanbanPage />} />
               <Route path="/dentists" element={<DentistsPage />} />
+              <Route path="/patients" element={<PatientsPage />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
               <Route path="/admin-financial" element={<AdminFinancial />} />
               <Route path="/prices" element={<PriceList />} />

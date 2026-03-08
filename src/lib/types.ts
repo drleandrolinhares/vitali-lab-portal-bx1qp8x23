@@ -30,6 +30,8 @@ export interface Order {
   id: string
   friendlyId: string
   patientName: string
+  patientCpf?: string
+  patientBirthDate?: string
   dentistId: string
   dentistName: string
   dentistGroupLink: string

@@ -37,6 +37,8 @@ export default function NewRequest() {
   const [formData, setFormData] = useState({
     dentistId: '',
     patientName: '',
+    patientCpf: '',
+    patientBirthDate: '',
     sector: '',
     workType: '',
     material: '',
@@ -55,7 +57,7 @@ export default function NewRequest() {
     const fetchPrices = async () => {
       const { data } = await supabase.from('price_list' as any).select('category, work_type')
       if (data) {
-        setPriceListItems(data.map((d: any) => ({ category: d.category, workType: d.work_type })))
+        setPriceListItems(data.map((d: any) => ({ category: d.category, workType: d.workType })))
       }
     }
     fetchPrices()
@@ -172,6 +174,31 @@ export default function NewRequest() {
                 onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
                 className="h-12 text-lg font-medium"
               />
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                  CPF do Paciente (Opcional)
+                </Label>
+                <Input
+                  placeholder="000.000.000-00"
+                  value={formData.patientCpf}
+                  onChange={(e) => setFormData({ ...formData, patientCpf: e.target.value })}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                  Data de Nascimento (Opcional)
+                </Label>
+                <Input
+                  type="date"
+                  value={formData.patientBirthDate}
+                  onChange={(e) => setFormData({ ...formData, patientBirthDate: e.target.value })}
+                  className="h-11"
+                />
+              </div>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2">
