@@ -17,7 +17,11 @@ export function Logo({ className, variant = 'default', size = 'lg' }: LogoProps)
           className,
         )}
       >
-        <img src={logoImg} alt="Vitali Lab Logo" className="w-full h-full object-contain" />
+        <img
+          src={logoImg}
+          alt="Vitali Lab Logo"
+          className="w-full h-full object-contain scale-[1.85]"
+        />
       </div>
     )
   }
@@ -25,7 +29,11 @@ export function Logo({ className, variant = 'default', size = 'lg' }: LogoProps)
   return (
     <div className={cn('flex items-center gap-2 font-display tracking-tight text-xl', className)}>
       <div className="flex flex-col items-center justify-center bg-primary shrink-0 shadow-sm overflow-hidden rounded-md w-8 h-8 border border-primary/20">
-        <img src={logoImg} alt="Vitali Lab Logo" className="w-full h-full object-contain" />
+        <img
+          src={logoImg}
+          alt="Vitali Lab Logo"
+          className="w-full h-full object-contain scale-[1.85]"
+        />
       </div>
       <div className="flex items-center gap-1">
         <span className="font-extrabold text-foreground uppercase">Vitali</span>

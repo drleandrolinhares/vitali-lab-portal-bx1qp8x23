@@ -34306,7 +34306,7 @@ function Logo({ className, variant = "default", size: size$3 = "lg" }) {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 			src: vitalli_03_4bb8e_default,
 			alt: "Vitali Lab Logo",
-			className: "w-full h-full object-contain"
+			className: "w-full h-full object-contain scale-[1.85]"
 		})
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -34316,7 +34316,7 @@ function Logo({ className, variant = "default", size: size$3 = "lg" }) {
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 				src: vitalli_03_4bb8e_default,
 				alt: "Vitali Lab Logo",
-				className: "w-full h-full object-contain"
+				className: "w-full h-full object-contain scale-[1.85]"
 			})
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex items-center gap-1",
@@ -43136,4 +43136,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-B4V2NJ9m.js.map
+//# sourceMappingURL=index-DOz_ftzh.js.map
