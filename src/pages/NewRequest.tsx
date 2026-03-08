@@ -23,16 +23,19 @@ import {
 } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TeethSelector } from '@/components/TeethSelector'
+import { toast } from '@/hooks/use-toast'
 
 export default function NewRequest() {
-  const { addOrder } = useAppStore()
+  const { addOrder, currentUser } = useAppStore()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
   const [priceListItems, setPriceListItems] = useState<{ category: string; workType: string }[]>([])
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
+  const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
 
   const [formData, setFormData] = useState({
+    dentistId: '',
     patientName: '',
     sector: '',
     workType: '',
@@ -46,6 +49,8 @@ export default function NewRequest() {
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
+  const isAdminOrReception = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
+
   useEffect(() => {
     const fetchPrices = async () => {
       const { data } = await supabase.from('price_list' as any).select('category, work_type')
@@ -54,7 +59,25 @@ export default function NewRequest() {
       }
     }
     fetchPrices()
-  }, [])
+
+    if (isAdminOrReception) {
+      const fetchDentists = async () => {
+        const { data } = await supabase
+          .from('profiles' as any)
+          .select('id, name, clinic')
+          .eq('role', 'dentist')
+        if (data) {
+          setDentistsList(
+            data.map((d: any) => ({
+              id: d.id,
+              name: `${d.name} ${d.clinic ? `(${d.clinic})` : ''}`,
+            })),
+          )
+        }
+      }
+      fetchDentists()
+    }
+  }, [isAdminOrReception])
 
   useEffect(() => {
     if (formData.sector) {
@@ -78,6 +101,16 @@ export default function NewRequest() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.patientName || !formData.workType || !formData.sector) return
+
+    if (isAdminOrReception && !formData.dentistId) {
+      toast({
+        title: 'Atenção',
+        description: 'Selecione um dentista para este pedido.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSubmitting(true)
     await addOrder({
       ...formData,
@@ -104,6 +137,30 @@ export default function NewRequest() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
+            {isAdminOrReception && (
+              <div className="space-y-2 p-5 border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl">
+                <Label className="uppercase font-bold text-xs text-emerald-800 dark:text-emerald-300">
+                  Selecione o Cliente (Modo Lab) *
+                </Label>
+                <Select
+                  value={formData.dentistId}
+                  onValueChange={(v) => setFormData({ ...formData, dentistId: v })}
+                  required
+                >
+                  <SelectTrigger className="h-11 bg-background">
+                    <SelectValue placeholder="Escolha um dentista cadastrado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dentistsList.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="uppercase font-semibold text-xs text-muted-foreground">
                 NOME COMPLETO DO PACIENTE *

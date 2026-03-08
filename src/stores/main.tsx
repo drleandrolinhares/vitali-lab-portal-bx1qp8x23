@@ -56,20 +56,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', session.user.id)
       .maybeSingle()
-    if (data)
+    if (data) {
       setCurrentUser({
         id: data.id,
         name: data.name,
         role: data.role as UserRole,
         clinic: data.clinic,
-      })
-    else
+        whatsapp_group_link: data.whatsapp_group_link,
+      } as any)
+    } else {
       setCurrentUser({
         id: session.user.id,
         name: session.user.user_metadata?.name || 'Usuário',
         role: session.user.user_metadata?.role || 'dentist',
         clinic: session.user.user_metadata?.clinic,
       })
+    }
     setProfileLoading(false)
   }
 
@@ -102,7 +104,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     const { data: dbOrders } = await supabase
       .from('orders' as any)
-      .select(`*, profiles!orders_dentist_id_fkey(name), order_history(*)`)
+      .select(`*, profiles!orders_dentist_id_fkey(name, whatsapp_group_link), order_history(*)`)
       .order('created_at', { ascending: false })
     if (dbOrders) {
       setOrders(
@@ -112,6 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           patientName: o.patient_name,
           dentistId: o.dentist_id,
           dentistName: o.profiles?.name || 'Desconhecido',
+          dentistGroupLink: o.profiles?.whatsapp_group_link || '',
           sector: o.sector,
           kanbanStage: o.kanban_stage,
           workType: o.work_type,
@@ -173,9 +176,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addOrder = async (orderData: any) => {
     if (!currentUser) return
     const defaultStage = kanbanStages.length > 0 ? kanbanStages[0].name : 'TRIAGEM'
+
+    const targetDentistId =
+      (currentUser.role === 'admin' || currentUser.role === 'receptionist') && orderData.dentistId
+        ? orderData.dentistId
+        : currentUser.id
+
     const { error } = await supabase.from('orders' as any).insert({
       patient_name: orderData.patientName,
-      dentist_id: currentUser.id,
+      dentist_id: targetDentistId,
       sector: orderData.sector,
       kanban_stage: defaultStage,
       work_type: orderData.workType,
@@ -248,11 +257,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .update({ kanban_stage: stage, status: newStatus })
         .eq('id', dbId)
       if (error) throw error
-      await supabase.from('order_history' as any).insert({
-        order_id: dbId,
-        status: newStatus,
-        note: `${currentUser.name} moveu o cartão para ${stage}`,
-      })
+      await supabase
+        .from('order_history' as any)
+        .insert({
+          order_id: dbId,
+          status: newStatus,
+          note: `${currentUser.name} moveu o cartão para ${stage}`,
+        })
       toast({ title: 'Cartão Movido' })
     } catch (error) {
       console.error(error)

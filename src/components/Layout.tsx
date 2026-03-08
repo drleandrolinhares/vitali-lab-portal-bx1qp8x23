@@ -46,7 +46,7 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 function AppSidebar() {
-  const { currentUser, appSettings } = useAppStore()
+  const { currentUser, appSettings, orders } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
 
@@ -69,6 +69,7 @@ function AppSidebar() {
             ? [{ title: 'Painel Financeiro', icon: TrendingUp, path: '/admin-financial' }]
             : []),
           { title: 'Caixa de Entrada', icon: FileText, path: '/' },
+          { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
           { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
           { title: 'Histórico Global', icon: History, path: '/history' },
           { title: 'Dentistas', icon: Users, path: '/dentists' },
@@ -80,13 +81,41 @@ function AppSidebar() {
             : []),
         ]
 
+  let adminDynamicLink = appSettings?.whatsapp_group_link
+  let viewingClient = false
+
+  if (
+    (currentUser.role === 'admin' || currentUser.role === 'receptionist') &&
+    location.pathname.startsWith('/order/')
+  ) {
+    const orderId = location.pathname.split('/').pop()
+    const order = orders.find((o: any) => o.id === orderId)
+    if (order && order.dentistGroupLink) {
+      adminDynamicLink = order.dentistGroupLink
+      viewingClient = true
+    }
+  }
+
   const clinicName = currentUser.clinic?.trim()
   const groupTitle = clinicName ? `Grupo ${clinicName}/Vitali Lab` : 'Grupo Clínica/Vitali Lab'
 
-  const commLinks = [
-    { title: groupTitle, icon: WhatsAppIcon, url: appSettings?.whatsapp_group_link },
-    { title: 'Vitali Lab Recepção', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
-  ]
+  const commLinks =
+    currentUser.role === 'dentist'
+      ? [
+          {
+            title: groupTitle,
+            icon: WhatsAppIcon,
+            url: (currentUser as any).whatsapp_group_link || appSettings?.whatsapp_group_link,
+          },
+          { title: 'Vitali Lab Recepção', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
+        ]
+      : [
+          {
+            title: viewingClient ? 'WhatsApp Cliente (Grupo)' : 'Vitali Lab Recepção',
+            icon: WhatsAppIcon,
+            url: viewingClient ? adminDynamicLink : appSettings?.whatsapp_lab_link,
+          },
+        ]
 
   return (
     <Sidebar variant="inset">

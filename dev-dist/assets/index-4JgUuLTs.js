@@ -19118,6 +19118,24 @@ var CirclePlus = createLucideIcon("circle-plus", [
 		key: "napkw2"
 	}]
 ]);
+var CircleUser = createLucideIcon("circle-user", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["circle", {
+		cx: "12",
+		cy: "10",
+		r: "3",
+		key: "ilqhr7"
+	}],
+	["path", {
+		d: "M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662",
+		key: "154egf"
+	}]
+]);
 var Circle = createLucideIcon("circle", [["circle", {
 	cx: "12",
 	cy: "12",
@@ -19345,14 +19363,9 @@ var Mail = createLucideIcon("mail", [["path", {
 	rx: "2",
 	key: "izxlao"
 }]]);
-var MapPin = createLucideIcon("map-pin", [["path", {
-	d: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
-	key: "1r0f0z"
-}], ["circle", {
-	cx: "12",
-	cy: "10",
-	r: "3",
-	key: "ilqhr7"
+var MessageCircle = createLucideIcon("message-circle", [["path", {
+	d: "M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719",
+	key: "1sd12s"
 }]]);
 var MessageSquare = createLucideIcon("message-square", [["path", {
 	d: "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z",
@@ -32066,7 +32079,8 @@ function AppProvider({ children }) {
 			id: data.id,
 			name: data.name,
 			role: data.role,
-			clinic: data.clinic
+			clinic: data.clinic,
+			whatsapp_group_link: data.whatsapp_group_link
 		});
 		else setCurrentUser({
 			id: session.user.id,
@@ -32097,13 +32111,14 @@ function AppProvider({ children }) {
 	const fetchOrders = (0, import_react.useCallback)(async () => {
 		if (!session?.user || !currentUser) return;
 		setLoading(true);
-		const { data: dbOrders } = await supabase.from("orders").select(`*, profiles!orders_dentist_id_fkey(name), order_history(*)`).order("created_at", { ascending: false });
+		const { data: dbOrders } = await supabase.from("orders").select(`*, profiles!orders_dentist_id_fkey(name, whatsapp_group_link), order_history(*)`).order("created_at", { ascending: false });
 		if (dbOrders) setOrders(dbOrders.map((o) => ({
 			id: o.id,
 			friendlyId: o.friendly_id,
 			patientName: o.patient_name,
 			dentistId: o.dentist_id,
 			dentistName: o.profiles?.name || "Desconhecido",
+			dentistGroupLink: o.profiles?.whatsapp_group_link || "",
 			sector: o.sector,
 			kanbanStage: o.kanban_stage,
 			workType: o.work_type,
@@ -32162,9 +32177,10 @@ function AppProvider({ children }) {
 	const addOrder = async (orderData) => {
 		if (!currentUser) return;
 		const defaultStage = kanbanStages.length > 0 ? kanbanStages[0].name : "TRIAGEM";
+		const targetDentistId = (currentUser.role === "admin" || currentUser.role === "receptionist") && orderData.dentistId ? orderData.dentistId : currentUser.id;
 		const { error } = await supabase.from("orders").insert({
 			patient_name: orderData.patientName,
-			dentist_id: currentUser.id,
+			dentist_id: targetDentistId,
 			sector: orderData.sector,
 			kanban_stage: defaultStage,
 			work_type: orderData.workType,
@@ -37998,7 +38014,7 @@ var WhatsAppIcon = (props) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg",
 	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" })
 });
 function AppSidebar() {
-	const { currentUser, appSettings } = useAppStore();
+	const { currentUser, appSettings, orders } = useAppStore();
 	const { signOut } = useAuth();
 	const location = useLocation();
 	if (!currentUser) return null;
@@ -38045,6 +38061,11 @@ function AppSidebar() {
 			path: "/"
 		},
 		{
+			title: "Novo Pedido",
+			icon: CirclePlus,
+			path: "/new-request"
+		},
+		{
 			title: "Evolução dos Trabalhos",
 			icon: SquareKanban,
 			path: "/kanban"
@@ -38070,15 +38091,30 @@ function AppSidebar() {
 			path: "/settings"
 		}] : []
 	];
+	let adminDynamicLink = appSettings?.whatsapp_group_link;
+	let viewingClient = false;
+	if ((currentUser.role === "admin" || currentUser.role === "receptionist") && location.pathname.startsWith("/order/")) {
+		const orderId = location.pathname.split("/").pop();
+		const order = orders.find((o) => o.id === orderId);
+		if (order && order.dentistGroupLink) {
+			adminDynamicLink = order.dentistGroupLink;
+			viewingClient = true;
+		}
+	}
 	const clinicName = currentUser.clinic?.trim();
-	const commLinks = [{
-		title: clinicName ? `Grupo ${clinicName}/Vitali Lab` : "Grupo Clínica/Vitali Lab",
+	const groupTitle = clinicName ? `Grupo ${clinicName}/Vitali Lab` : "Grupo Clínica/Vitali Lab";
+	const commLinks = currentUser.role === "dentist" ? [{
+		title: groupTitle,
 		icon: WhatsAppIcon,
-		url: appSettings?.whatsapp_group_link
+		url: currentUser.whatsapp_group_link || appSettings?.whatsapp_group_link
 	}, {
 		title: "Vitali Lab Recepção",
 		icon: WhatsAppIcon,
 		url: appSettings?.whatsapp_lab_link
+	}] : [{
+		title: viewingClient ? "WhatsApp Cliente (Grupo)" : "Vitali Lab Recepção",
+		icon: WhatsAppIcon,
+		url: viewingClient ? adminDynamicLink : appSettings?.whatsapp_lab_link
 	}];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
 		variant: "inset",
@@ -39651,12 +39687,14 @@ function ToothBtn({ t, selected, onClick }) {
 	});
 }
 function NewRequest() {
-	const { addOrder } = useAppStore();
+	const { addOrder, currentUser } = useAppStore();
 	const navigate = useNavigate();
 	const [submitting, setSubmitting] = (0, import_react.useState)(false);
 	const [priceListItems, setPriceListItems] = (0, import_react.useState)([]);
 	const [availableWorkTypes, setAvailableWorkTypes] = (0, import_react.useState)([]);
+	const [dentistsList, setDentistsList] = (0, import_react.useState)([]);
 	const [formData, setFormData] = (0, import_react.useState)({
+		dentistId: "",
 		patientName: "",
 		sector: "",
 		workType: "",
@@ -39669,6 +39707,7 @@ function NewRequest() {
 	});
 	const [selectedTeeth, setSelectedTeeth] = (0, import_react.useState)([]);
 	const [selectedArches, setSelectedArches] = (0, import_react.useState)([]);
+	const isAdminOrReception = currentUser?.role === "admin" || currentUser?.role === "receptionist";
 	(0, import_react.useEffect)(() => {
 		const fetchPrices = async () => {
 			const { data } = await supabase.from("price_list").select("category, work_type");
@@ -39678,7 +39717,17 @@ function NewRequest() {
 			})));
 		};
 		fetchPrices();
-	}, []);
+		if (isAdminOrReception) {
+			const fetchDentists = async () => {
+				const { data } = await supabase.from("profiles").select("id, name, clinic").eq("role", "dentist");
+				if (data) setDentistsList(data.map((d) => ({
+					id: d.id,
+					name: `${d.name} ${d.clinic ? `(${d.clinic})` : ""}`
+				})));
+			};
+			fetchDentists();
+		}
+	}, [isAdminOrReception]);
 	(0, import_react.useEffect)(() => {
 		if (formData.sector) {
 			const filtered = Array.from(new Set(priceListItems.filter((p) => p.category.toLowerCase() === formData.sector.toLowerCase()).map((p) => p.workType))).sort();
@@ -39692,6 +39741,14 @@ function NewRequest() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!formData.patientName || !formData.workType || !formData.sector) return;
+		if (isAdminOrReception && !formData.dentistId) {
+			toast({
+				title: "Atenção",
+				description: "Selecione um dentista para este pedido.",
+				variant: "destructive"
+			});
+			return;
+		}
 		setSubmitting(true);
 		await addOrder({
 			...formData,
@@ -39718,6 +39775,27 @@ function NewRequest() {
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
 					className: "space-y-8 pt-8",
 					children: [
+						isAdminOrReception && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "space-y-2 p-5 border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+								className: "uppercase font-bold text-xs text-emerald-800 dark:text-emerald-300",
+								children: "Selecione o Cliente (Modo Lab) *"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+								value: formData.dentistId,
+								onValueChange: (v) => setFormData({
+									...formData,
+									dentistId: v
+								}),
+								required: true,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+									className: "h-11 bg-background",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, { placeholder: "Escolha um dentista cadastrado..." })
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, { children: dentistsList.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									value: d.id,
+									children: d.name
+								}, d.id)) })]
+							})]
+						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "space-y-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
@@ -40187,7 +40265,12 @@ function DentistsPage() {
 	const [editingDentist, setEditingDentist] = (0, import_react.useState)(null);
 	const [formData, setFormData] = (0, import_react.useState)({
 		closing_date: "",
-		payment_due_date: ""
+		payment_due_date: "",
+		personal_phone: "",
+		clinic_contact_name: "",
+		clinic_contact_role: "",
+		clinic_contact_phone: "",
+		whatsapp_group_link: ""
 	});
 	const hasAccess = currentUser?.role === "receptionist" || currentUser?.role === "admin";
 	const fetchDentists = async () => {
@@ -40201,6 +40284,11 @@ function DentistsPage() {
 			email: p.email,
 			closing_date: p.closing_date,
 			payment_due_date: p.payment_due_date,
+			personal_phone: p.personal_phone,
+			clinic_contact_name: p.clinic_contact_name,
+			clinic_contact_role: p.clinic_contact_role,
+			clinic_contact_phone: p.clinic_contact_phone,
+			whatsapp_group_link: p.whatsapp_group_link,
 			activeCases: orders ? orders.filter((o) => o.dentist_id === p.id).length : 0
 		})));
 		setLoading(false);
@@ -40212,7 +40300,12 @@ function DentistsPage() {
 		setEditingDentist(dentist);
 		setFormData({
 			closing_date: dentist.closing_date?.toString() || "",
-			payment_due_date: dentist.payment_due_date?.toString() || ""
+			payment_due_date: dentist.payment_due_date?.toString() || "",
+			personal_phone: dentist.personal_phone || "",
+			clinic_contact_name: dentist.clinic_contact_name || "",
+			clinic_contact_role: dentist.clinic_contact_role || "",
+			clinic_contact_phone: dentist.clinic_contact_phone || "",
+			whatsapp_group_link: dentist.whatsapp_group_link || ""
 		});
 	};
 	const handleSave = async () => {
@@ -40221,7 +40314,12 @@ function DentistsPage() {
 		const payment_due_date = formData.payment_due_date ? parseInt(formData.payment_due_date) : null;
 		const { error } = await supabase.from("profiles").update({
 			closing_date,
-			payment_due_date
+			payment_due_date,
+			personal_phone: formData.personal_phone,
+			clinic_contact_name: formData.clinic_contact_name,
+			clinic_contact_role: formData.clinic_contact_role,
+			clinic_contact_phone: formData.clinic_contact_phone,
+			whatsapp_group_link: formData.whatsapp_group_link
 		}).eq("id", editingDentist.id);
 		if (error) toast({
 			title: "Erro",
@@ -40250,7 +40348,7 @@ function DentistsPage() {
 				children: "Diretório de Dentistas"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "text-muted-foreground",
-				children: "Gerencie seus clientes, clínicas parceiras e ciclos de faturamento."
+				children: "Gerencie seus clientes, clínicas parceiras e informações de contato."
 			})] }),
 			dentists.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "p-12 text-center border rounded-lg bg-muted/20",
@@ -40300,13 +40398,40 @@ function DentistsPage() {
 									})
 								]
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							dentist.personal_phone && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "flex items-center gap-2 text-muted-foreground",
 								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, { className: "w-4 h-4 flex-shrink-0" }),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Phone, { className: "w-4 h-4 flex-shrink-0" }),
 									" ",
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Brasil" })
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: dentist.personal_phone })
 								]
+							}),
+							dentist.clinic_contact_name && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-center gap-2 text-muted-foreground truncate",
+								title: `${dentist.clinic_contact_name} - ${dentist.clinic_contact_phone}`,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleUser, { className: "w-4 h-4 flex-shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "truncate",
+									children: [
+										dentist.clinic_contact_name,
+										" ",
+										dentist.clinic_contact_phone && `(${dentist.clinic_contact_phone})`
+									]
+								})]
+							}),
+							dentist.whatsapp_group_link && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-2",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									asChild: true,
+									variant: "outline",
+									size: "sm",
+									className: "w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+										href: dentist.whatsapp_group_link,
+										target: "_blank",
+										rel: "noopener noreferrer",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, { className: "w-3 h-3 mr-2" }), " Grupo WhatsApp"]
+									})
+								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "bg-muted/40 rounded-md p-2 mt-2 border border-border/50 grid grid-cols-2 gap-2 text-xs",
@@ -40347,65 +40472,150 @@ function DentistsPage() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
 				open: !!editingDentist,
 				onOpenChange: (open) => !open && setEditingDentist(null),
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, { children: "Configurações Financeiras" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardDescription, { children: [
-						"Defina os dias de fechamento e vencimento para ",
-						editingDentist?.name,
-						"."
-					] })] }),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "space-y-4 py-4",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-2",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Dia de Fechamento" }),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-									type: "number",
-									min: "1",
-									max: "31",
-									placeholder: "Ex: 25",
-									value: formData.closing_date,
-									onChange: (e) => setFormData({
-										...formData,
-										closing_date: e.target.value
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+					className: "max-w-2xl",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, { children: "Perfil do Dentista" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardDescription, { children: [
+							"Atualize as informações de contato, faturamento e integrações de",
+							" ",
+							editingDentist?.name,
+							"."
+						] })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "grid grid-cols-1 md:grid-cols-2 gap-6 py-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-4",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "pt-1 pb-2 border-b",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+											className: "text-sm font-semibold text-foreground",
+											children: "Contato Pessoal"
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Telefone Pessoal" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											placeholder: "Ex: (11) 99999-9999",
+											value: formData.personal_phone,
+											onChange: (e) => setFormData({
+												...formData,
+												personal_phone: e.target.value
+											})
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Link Grupo WhatsApp (Clínica/Lab)" }),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+												placeholder: "https://chat.whatsapp.com/...",
+												value: formData.whatsapp_group_link,
+												onChange: (e) => setFormData({
+													...formData,
+													whatsapp_group_link: e.target.value
+												})
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-[10px] text-muted-foreground",
+												children: "Usado no atalho do sidebar para o cliente."
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "pt-4 pb-2 border-b",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+											className: "text-sm font-semibold text-foreground",
+											children: "Faturamento"
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "grid grid-cols-2 gap-4",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "space-y-2",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Dia de Fechamento" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+												type: "number",
+												min: "1",
+												max: "31",
+												placeholder: "Ex: 25",
+												value: formData.closing_date,
+												onChange: (e) => setFormData({
+													...formData,
+													closing_date: e.target.value
+												})
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "space-y-2",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Dia de Vencimento" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+												type: "number",
+												min: "1",
+												max: "31",
+												placeholder: "Ex: 5",
+												value: formData.payment_due_date,
+												onChange: (e) => setFormData({
+													...formData,
+													payment_due_date: e.target.value
+												})
+											})]
+										})]
 									})
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-xs text-muted-foreground",
-									children: "Dia do mês em que o faturamento é fechado."
-								})
-							]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "space-y-2",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Dia de Vencimento" }),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-									type: "number",
-									min: "1",
-									max: "31",
-									placeholder: "Ex: 5",
-									value: formData.payment_due_date,
-									onChange: (e) => setFormData({
-										...formData,
-										payment_due_date: e.target.value
+								]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "space-y-4",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "pt-1 pb-2 border-b",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+											className: "text-sm font-semibold text-foreground",
+											children: "Informações da Clínica"
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Nome do Contato Secundário" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											placeholder: "Ex: Maria",
+											value: formData.clinic_contact_name,
+											onChange: (e) => setFormData({
+												...formData,
+												clinic_contact_name: e.target.value
+											})
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Cargo do Contato" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											placeholder: "Ex: Secretária",
+											value: formData.clinic_contact_role,
+											onChange: (e) => setFormData({
+												...formData,
+												clinic_contact_role: e.target.value
+											})
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "space-y-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { children: "Telefone da Clínica / Contato" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											placeholder: "Ex: (11) 3333-3333",
+											value: formData.clinic_contact_phone,
+											onChange: (e) => setFormData({
+												...formData,
+												clinic_contact_phone: e.target.value
+											})
+										})]
 									})
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-xs text-muted-foreground",
-									children: "Dia do mês em que o pagamento deve ser realizado."
-								})
-							]
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogFooter, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						variant: "outline",
-						onClick: () => setEditingDentist(null),
-						children: "Cancelar"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						onClick: handleSave,
-						children: "Salvar Configurações"
-					})] })
-				] })
+								]
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogFooter, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							variant: "outline",
+							onClick: () => setEditingDentist(null),
+							children: "Cancelar"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							onClick: handleSave,
+							children: "Salvar Informações"
+						})] })
+					]
+				})
 			})
 		]
 	});
@@ -43154,4 +43364,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, { chil
 var App_default = App;
 (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App_default, {}));
 
-//# sourceMappingURL=index-CJ7WZBAe.js.map
+//# sourceMappingURL=index-4JgUuLTs.js.map

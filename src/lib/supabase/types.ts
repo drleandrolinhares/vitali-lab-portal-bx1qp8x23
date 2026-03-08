@@ -549,6 +549,8 @@ export const Constants = {
 // Table: profiles
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
+//   Policy "Users can insert own profile." (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (auth.uid() = id)
 //   Policy "Users can update own profile." (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = id)
 // Table: settlements
@@ -585,7 +587,12 @@ export const Constants = {
 //       COALESCE(NEW.raw_user_meta_data->>'name', 'Usuário'),
 //       COALESCE(NEW.raw_user_meta_data->>'role', 'dentist'),
 //       NEW.raw_user_meta_data->>'clinic'
-//     );
+//     )
+//     ON CONFLICT (id) DO UPDATE SET
+//       email = EXCLUDED.email,
+//       name = EXCLUDED.name,
+//       role = EXCLUDED.role,
+//       clinic = EXCLUDED.clinic;
 //     RETURN NEW;
 //   END;
 //   $function$
