@@ -1,8 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { supabase } from '@/lib/supabase/client'
+import { getOrderFinancials } from '@/lib/financial'
 import {
   Select,
   SelectContent,
@@ -109,10 +112,74 @@ const ADMIN_MENUS = [
   },
 ]
 
+function useAdminBadges(currentUser: any) {
+  const [lowStock, setLowStock] = useState(0)
+  const [overduePayables, setOverduePayables] = useState(0)
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'admin') return
+
+    const fetchBadges = async () => {
+      const { data: inv } = await supabase
+        .from('inventory_items')
+        .select('quantity, minimum_stock_level')
+      if (inv) {
+        setLowStock(
+          inv.filter((i: any) => Number(i.quantity) < Number(i.minimum_stock_level || 0)).length,
+        )
+      }
+
+      const today = new Date().toLocaleDateString('en-CA')
+      const { count: expCount } = await supabase
+        .from('expenses')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .lt('due_date', today)
+
+      if (expCount !== null) setOverduePayables(expCount)
+    }
+
+    fetchBadges()
+
+    const channel = supabase
+      .channel('admin-badges')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory_items' },
+        fetchBadges,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory_transactions' },
+        fetchBadges,
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchBadges)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentUser])
+
+  return { lowStock, overduePayables }
+}
+
 function AppSidebar() {
-  const { currentUser, appSettings, orders, pendingUsers } = useAppStore()
+  const { currentUser, appSettings, orders, pendingUsers, kanbanStages, priceList } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
+
+  const { lowStock, overduePayables } = useAdminBadges(currentUser)
+
+  const pendingReceivables = useMemo(() => {
+    if (currentUser?.role !== 'admin' || !priceList?.length || !kanbanStages?.length) return 0
+    let count = 0
+    orders.forEach((o: any) => {
+      const fin = getOrderFinancials(o, priceList, kanbanStages)
+      if (fin.outstandingCost > 0) count++
+    })
+    return count
+  }, [orders, priceList, kanbanStages, currentUser])
 
   if (!currentUser) return null
 
@@ -201,25 +268,33 @@ function AppSidebar() {
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {visibleItems.map((item) => (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={location.pathname === item.path}
-                          tooltip={item.title}
-                        >
-                          <Link to={item.path}>
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                        {item.id === 'pending-users' && pendingUsers?.length > 0 && (
-                          <SidebarMenuBadge className="bg-red-500 text-white rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center text-[10px] font-bold shadow-sm">
-                            {pendingUsers.length}
-                          </SidebarMenuBadge>
-                        )}
-                      </SidebarMenuItem>
-                    ))}
+                    {visibleItems.map((item) => {
+                      let badgeCount = 0
+                      if (item.id === 'pending-users') badgeCount = pendingUsers?.length || 0
+                      if (item.id === 'inventory') badgeCount = lowStock
+                      if (item.id === 'accounts-payable') badgeCount = overduePayables
+                      if (item.id === 'finances') badgeCount = pendingReceivables
+
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.pathname === item.path}
+                            tooltip={item.title}
+                          >
+                            <Link to={item.path}>
+                              <item.icon />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                          {badgeCount > 0 && (
+                            <SidebarMenuBadge className="bg-red-500 text-white rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                              {badgeCount}
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+                      )
+                    })}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>

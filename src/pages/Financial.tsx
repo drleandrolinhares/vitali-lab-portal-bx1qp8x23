@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,21 +19,14 @@ import {
   FileDown,
   History,
 } from 'lucide-react'
-import { getOrderFinancials, PriceItem, formatBRL } from '@/lib/financial'
+import { getOrderFinancials, formatBRL } from '@/lib/financial'
 import { Button } from '@/components/ui/button'
 
 export default function FinancialPage() {
-  const { orders, kanbanStages, currentUser } = useAppStore()
-  const [priceList, setPriceList] = useState<PriceItem[]>([])
+  const { orders, kanbanStages, currentUser, priceList } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
 
   useEffect(() => {
-    supabase
-      .from('price_list' as any)
-      .select('id, work_type, price_stages(*)')
-      .then(({ data }) => {
-        if (data) setPriceList(data)
-      })
     if (currentUser?.id) {
       supabase
         .from('settlements' as any)

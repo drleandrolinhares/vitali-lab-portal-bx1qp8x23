@@ -57,6 +57,7 @@ export default function Inventory() {
     packagingTypes: [''],
     items_per_box: '1',
     usage_factor: '1',
+    minimum_stock_level: '0',
     storage_location: '',
     initial_quantity: '',
     last_purchase_brand: '',
@@ -122,6 +123,7 @@ export default function Inventory() {
         packagingTypes: initialPackaging,
         items_per_box: String(item.items_per_box || '1'),
         usage_factor: String(item.usage_factor || '1'),
+        minimum_stock_level: String(item.minimum_stock_level || '0'),
         storage_location: item.storage_location || '',
         initial_quantity: '',
         last_purchase_brand: item.last_purchase_brand || '',
@@ -135,6 +137,7 @@ export default function Inventory() {
         packagingTypes: [''],
         items_per_box: '1',
         usage_factor: '1',
+        minimum_stock_level: '0',
         storage_location: '',
         initial_quantity: '',
         last_purchase_brand: '',
@@ -191,6 +194,7 @@ export default function Inventory() {
       packaging_types: packTypes,
       items_per_box: Number(formData.items_per_box) || 1,
       usage_factor: yieldProd,
+      minimum_stock_level: Number(formData.minimum_stock_level) || 0,
       storage_location: formData.storage_location,
       last_purchase_brand: formData.last_purchase_brand,
       last_purchase_value:
@@ -406,7 +410,7 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell className="text-center">
                         <span
-                          className={`font-bold px-2 py-1 rounded-md ${Number(item.quantity) <= 5 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-muted'}`}
+                          className={`font-bold px-2 py-1 rounded-md ${Number(item.quantity) < Number(item.minimum_stock_level || 0) ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-muted'}`}
                         >
                           {formatQty(item.quantity)}
                         </span>
@@ -581,6 +585,21 @@ export default function Inventory() {
                     readOnly={productModal.mode === 'view'}
                     className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
                     onChange={(e) => setFormData({ ...formData, usage_factor: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estoque Mínimo (Aviso)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 5"
+                    value={formData.minimum_stock_level}
+                    readOnly={productModal.mode === 'view'}
+                    className={cn(productModal.mode === 'view' && 'bg-muted opacity-80')}
+                    onChange={(e) =>
+                      setFormData({ ...formData, minimum_stock_level: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">

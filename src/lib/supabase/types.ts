@@ -390,6 +390,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_approved: boolean
           name: string
           payment_due_date: number | null
           permissions: Json | null
@@ -407,6 +408,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_approved?: boolean
           name: string
           payment_due_date?: number | null
           permissions?: Json | null
@@ -424,6 +426,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_approved?: boolean
           name?: string
           payment_due_date?: number | null
           permissions?: Json | null
@@ -718,6 +721,7 @@ export const Constants = {
 //   avatar_url: text (nullable)
 //   permissions: jsonb (nullable, default: '[]'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+//   is_approved: boolean (not null, default: false)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -883,6 +887,27 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION protect_is_approved()
+//   CREATE OR REPLACE FUNCTION public.protect_is_approved()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     IF NEW.is_approved IS DISTINCT FROM OLD.is_approved THEN
+//       IF auth.uid() IS NOT NULL THEN
+//         IF NOT EXISTS (
+//           SELECT 1 FROM public.profiles
+//           WHERE id = auth.uid() AND role IN ('admin', 'receptionist')
+//         ) THEN
+//           NEW.is_approved = OLD.is_approved;
+//         END IF;
+//       END IF;
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION update_inventory_quantity()
 //   CREATE OR REPLACE FUNCTION public.update_inventory_quantity()
 //    RETURNS trigger
@@ -904,6 +929,8 @@ export const Constants = {
 //   on_inventory_transaction: CREATE TRIGGER on_inventory_transaction AFTER INSERT ON public.inventory_transactions FOR EACH ROW EXECUTE FUNCTION update_inventory_quantity()
 // Table: orders
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
+// Table: profiles
+//   protect_is_approved_trigger: CREATE TRIGGER protect_is_approved_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_is_approved()
 
 // --- INDEXES ---
 // Table: audit_logs

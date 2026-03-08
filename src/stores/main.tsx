@@ -17,6 +17,7 @@ interface AppState {
   kanbanStages: Stage[]
   appSettings: Record<string, string>
   pendingUsers: any[]
+  priceList: any[]
   loading: boolean
   selectedLab: string
   setSelectedLab: (lab: string) => void
@@ -48,6 +49,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
   const [appSettings, setAppSettings] = useState<Record<string, string>>({})
   const [pendingUsers, setPendingUsers] = useState<any[]>([])
+  const [priceList, setPriceList] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
@@ -66,6 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setKanbanStages([])
       setAppSettings([])
       setPendingUsers([])
+      setPriceList([])
       setProfileLoading(false)
       return
     }
@@ -145,6 +148,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) setPendingUsers(data)
   }, [currentUser])
 
+  const fetchPriceList = useCallback(async () => {
+    const { data } = await supabase
+      .from('price_list' as any)
+      .select('id, work_type, sector, price_stages(*)')
+    if (data) setPriceList(data)
+  }, [])
+
   const fetchOrders = useCallback(async () => {
     if (!session?.user || !currentUser) return
     setLoading(true)
@@ -202,6 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchOrders()
       fetchStages()
       fetchSettings()
+      fetchPriceList()
       if (currentUser.role === 'admin') fetchPendingUsers()
 
       const channel = supabase
@@ -214,6 +225,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () =>
           fetchSettings(),
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'price_list' }, () =>
+          fetchPriceList(),
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'price_stages' }, () =>
+          fetchPriceList(),
         )
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
           if (currentUser.role === 'admin') fetchPendingUsers()
@@ -235,6 +252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchOrders,
     fetchStages,
     fetchSettings,
+    fetchPriceList,
     fetchPendingUsers,
   ])
 
@@ -654,6 +672,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         kanbanStages,
         appSettings,
         pendingUsers,
+        priceList,
         loading,
         selectedLab,
         setSelectedLab,
