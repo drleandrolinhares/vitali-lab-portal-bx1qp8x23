@@ -36,6 +36,7 @@ const PERMISSION_OPTIONS = [
   { id: 'kanban', label: 'Evolução dos Trabalhos' },
   { id: 'history', label: 'Histórico Global' },
   { id: 'dashboard', label: 'DASHBOARD' },
+  { id: 'comparative-dashboard', label: 'DASH COMPARATIVO' },
   { id: 'finances', label: 'Finanças' },
   { id: 'accounts-payable', label: 'Contas a Pagar' },
   { id: 'inventory', label: 'Estoque' },
@@ -43,6 +44,7 @@ const PERMISSION_OPTIONS = [
   { id: 'patients', label: 'Pacientes' },
   { id: 'prices', label: 'Tabela de Preços' },
   { id: 'settings', label: 'Configurações e Usuários' },
+  { id: 'dre-categories', label: 'Categorias DRE' },
   { id: 'audit', label: 'Logs de Auditoria' },
 ]
 

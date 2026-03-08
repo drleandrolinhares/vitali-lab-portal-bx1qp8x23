@@ -30,6 +30,7 @@ import {
   ShieldAlert,
   PieChart,
   UserPlus,
+  Tags,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -107,6 +108,7 @@ const ADMIN_MENUS = [
     group: 'CONFIGURAÇÕES',
     items: [
       { id: 'settings', title: 'Configurações e Usuários', icon: Settings, path: '/settings' },
+      { id: 'dre-categories', title: 'Categorias DRE', icon: Tags, path: '/dre-categories' },
       { id: 'audit', title: 'Logs de Auditoria', icon: ShieldAlert, path: '/audit-logs' },
     ],
   },
@@ -133,7 +135,6 @@ function useAdminBadges(currentUser: any) {
 
         const today = new Date().toLocaleDateString('en-CA')
 
-        // Remove `head: true` to prevent "Unexpected end of JSON input" errors.
         const { count: expCount, error: expError } = await supabase
           .from('expenses')
           .select('id', { count: 'exact' })

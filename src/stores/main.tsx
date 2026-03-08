@@ -327,15 +327,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     details: any = {},
   ) => {
     if (!currentUser) return
-    await supabase
-      .from('audit_logs')
-      .insert({
-        user_id: currentUser.id,
-        action,
-        entity_type: entityType,
-        entity_id: entityId,
-        details,
-      })
+    await supabase.from('audit_logs').insert({
+      user_id: currentUser.id,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details,
+    })
   }
 
   const switchRole = () => {}

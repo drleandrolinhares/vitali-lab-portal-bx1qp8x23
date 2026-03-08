@@ -65,6 +65,24 @@ export type Database = {
           },
         ]
       }
+      dre_categories: {
+        Row: {
+          category_type: string
+          created_at: string
+          name: string
+        }
+        Insert: {
+          category_type?: string
+          created_at?: string
+          name: string
+        }
+        Update: {
+          category_type?: string
+          created_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -123,7 +141,15 @@ export type Database = {
           sector?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'expenses_dre_category_fkey'
+            columns: ['dre_category']
+            isOneToOne: false
+            referencedRelation: 'dre_categories'
+            referencedColumns: ['name']
+          },
+        ]
       }
       inventory_items: {
         Row: {
@@ -344,6 +370,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: 'profiles'
             referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'orders_dre_category_fkey'
+            columns: ['dre_category']
+            isOneToOne: false
+            referencedRelation: 'dre_categories'
+            referencedColumns: ['name']
           },
         ]
       }
@@ -660,6 +693,10 @@ export const Constants = {
 //   entity_id: text (nullable)
 //   details: jsonb (nullable, default: '{}'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: dre_categories
+//   name: text (not null)
+//   category_type: text (not null, default: 'fixed'::text)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: expenses
 //   id: uuid (not null, default: gen_random_uuid())
 //   description: text (not null)
@@ -779,7 +816,10 @@ export const Constants = {
 // Table: audit_logs
 //   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
+// Table: dre_categories
+//   PRIMARY KEY dre_categories_pkey: PRIMARY KEY (name)
 // Table: expenses
+//   FOREIGN KEY expenses_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
 //   PRIMARY KEY expenses_pkey: PRIMARY KEY (id)
 // Table: inventory_items
 //   PRIMARY KEY inventory_items_pkey: PRIMARY KEY (id)
@@ -794,6 +834,7 @@ export const Constants = {
 //   PRIMARY KEY order_history_pkey: PRIMARY KEY (id)
 // Table: orders
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   FOREIGN KEY orders_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
 // Table: price_list
 //   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
@@ -818,6 +859,11 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Authenticated insert audit logs" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
+// Table: dre_categories
+//   Policy "Admin write dre_categories" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//   Policy "Public read dre_categories" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: expenses
 //   Policy "Admin/Reception delete expenses" (DELETE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
