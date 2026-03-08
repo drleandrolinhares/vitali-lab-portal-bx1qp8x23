@@ -204,13 +204,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', dbId)
     if (error)
       return toast({ title: 'Erro', description: 'Erro ao mover cartão', variant: 'destructive' })
-    await supabase
-      .from('order_history' as any)
-      .insert({
-        order_id: dbId,
-        status: newStatus,
-        note: `${currentUser.name} moveu o cartão para ${stage}`,
-      })
+    await supabase.from('order_history' as any).insert({
+      order_id: dbId,
+      status: newStatus,
+      note: `${currentUser.name} moveu o cartão para ${stage}`,
+    })
     toast({ title: 'Cartão Movido' })
   }
 

@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/use-auth'
+import { NewOrderNotification } from '@/components/NewOrderNotification'
 
 function AppSidebar() {
   const { currentUser } = useAppStore()
@@ -149,6 +150,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <NewOrderNotification />
     </SidebarProvider>
   )
 }
