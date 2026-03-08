@@ -66,6 +66,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clinic: data.clinic,
         whatsapp_group_link: data.whatsapp_group_link,
         avatar_url: data.avatar_url,
+        permissions: data.permissions || [],
       } as any)
     } else {
       setCurrentUser({
@@ -73,6 +74,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: session.user.user_metadata?.name || 'Usuário',
         role: session.user.user_metadata?.role || 'dentist',
         clinic: session.user.user_metadata?.clinic,
+        permissions: [],
       })
     }
     setProfileLoading(false)

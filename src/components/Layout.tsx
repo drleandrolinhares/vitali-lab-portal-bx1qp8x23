@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Settings,
   Contact,
+  Package,
+  ShieldAlert,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -27,6 +29,9 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -46,6 +51,42 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+const ADMIN_MENUS = [
+  {
+    group: 'OPERACIONAL',
+    items: [
+      { id: 'inbox', title: 'Caixa de Entrada', icon: FileText, path: '/' },
+      { id: 'new-request', title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
+      { id: 'kanban', title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
+      { id: 'history', title: 'Histórico Global', icon: History, path: '/history' },
+    ],
+  },
+  {
+    group: 'ADMINISTRATIVO E FINANCEIRO',
+    items: [
+      { id: 'dashboard', title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' },
+      { id: 'finances', title: 'Finanças', icon: TrendingUp, path: '/admin-financial' },
+      {
+        id: 'accounts-payable',
+        title: 'Contas a Pagar',
+        icon: DollarSign,
+        path: '/accounts-payable',
+      },
+      { id: 'inventory', title: 'Estoque', icon: Package, path: '/inventory' },
+      { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
+      { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
+      { id: 'prices', title: 'Tabela de Preços', icon: DollarSign, path: '/prices' },
+    ],
+  },
+  {
+    group: 'CONFIGURAÇÕES',
+    items: [
+      { id: 'settings', title: 'Configurações e Usuários', icon: Settings, path: '/settings' },
+      { id: 'audit', title: 'Logs de Auditoria', icon: ShieldAlert, path: '/audit-logs' },
+    ],
+  },
+]
+
 function AppSidebar() {
   const { currentUser, appSettings, orders } = useAppStore()
   const { signOut } = useAuth()
@@ -53,35 +94,17 @@ function AppSidebar() {
 
   if (!currentUser) return null
 
-  const navItems =
-    currentUser.role === 'dentist'
-      ? [
-          { title: 'Meu Painel', icon: LayoutDashboard, path: '/' },
-          { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
-          { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
-          { title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
-          { title: 'Histórico', icon: History, path: '/history' },
-        ]
-      : [
-          ...(currentUser.role === 'admin'
-            ? [{ title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' }]
-            : []),
-          ...(currentUser.role === 'admin'
-            ? [{ title: 'Painel Financeiro', icon: TrendingUp, path: '/admin-financial' }]
-            : []),
-          { title: 'Caixa de Entrada', icon: FileText, path: '/' },
-          { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
-          { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
-          { title: 'Histórico Global', icon: History, path: '/history' },
-          { title: 'Dentistas', icon: Users, path: '/dentists' },
-          { title: 'Pacientes', icon: Contact, path: '/patients' },
-          ...(currentUser.role === 'admin'
-            ? [{ title: 'Tabela de Preços', icon: DollarSign, path: '/prices' }]
-            : []),
-          ...(currentUser.role === 'admin'
-            ? [{ title: 'Configurações', icon: Settings, path: '/settings' }]
-            : []),
-        ]
+  const permissions = currentUser.permissions || []
+  const hasPerm = (id: string) =>
+    currentUser.role === 'admin' && permissions.length === 0 ? true : permissions.includes(id)
+
+  const dentistNavItems = [
+    { title: 'Meu Painel', icon: LayoutDashboard, path: '/' },
+    { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
+    { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
+    { title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
+    { title: 'Histórico', icon: History, path: '/history' },
+  ]
 
   let adminDynamicLink = appSettings?.whatsapp_group_link
   let viewingClient = false
@@ -125,23 +148,57 @@ function AppSidebar() {
         <Logo variant="square" size="lg" className="mb-2" />
       </SidebarHeader>
       <SidebarContent className="px-2">
-        <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.path}>
-              <SidebarMenuButton
-                asChild
-                isActive={location.pathname === item.path}
-                tooltip={item.title}
-              >
-                <Link to={item.path}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+        {currentUser.role === 'dentist' ? (
+          <SidebarMenu>
+            {dentistNavItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === item.path}
+                  tooltip={item.title}
+                >
+                  <Link to={item.path}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        ) : (
+          ADMIN_MENUS.map((group) => {
+            const visibleItems = group.items.filter((i) => hasPerm(i.id))
+            if (visibleItems.length === 0) return null
+            return (
+              <SidebarGroup key={group.group} className="px-0 py-0 mb-4">
+                <SidebarGroupLabel className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-2">
+                  {group.group}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {visibleItems.map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location.pathname === item.path}
+                          tooltip={item.title}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )
+          })
+        )}
 
-          <SidebarMenuItem className="mt-4 mb-1 px-2">
+        <SidebarMenu className="mt-4">
+          <SidebarMenuItem className="mb-1 px-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Comunicação
             </span>

@@ -635,6 +635,8 @@ export const Constants = {
 //   Policy "Public price_stages view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: profiles
+//   Policy "Lab users can update profiles." (UPDATE, PERMISSIVE) roles={public}
+//     USING: (( SELECT profiles_1.role    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid())) = ANY (ARRAY['admin'::text, 'receptionist'::text]))
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "Users can insert own profile." (INSERT, PERMISSIVE) roles={authenticated}

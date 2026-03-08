@@ -20,6 +20,8 @@ import PriceList from './pages/PriceList'
 import FinancialPage from './pages/Financial'
 import SettingsPage from './pages/Settings'
 import AuditTrail from './pages/AuditTrail'
+import AccountsPayable from './pages/AccountsPayable'
+import Inventory from './pages/Inventory'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -59,6 +61,8 @@ const App = () => (
               <Route path="/financial" element={<FinancialPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/audit-logs" element={<AuditTrail />} />
+              <Route path="/accounts-payable" element={<AccountsPayable />} />
+              <Route path="/inventory" element={<Inventory />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

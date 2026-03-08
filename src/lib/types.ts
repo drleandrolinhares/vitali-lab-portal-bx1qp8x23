@@ -7,6 +7,7 @@ export interface User {
   clinic?: string | null
   whatsapp_group_link?: string | null
   avatar_url?: string | null
+  permissions?: string[] | null
 }
 
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered' | 'cancelled'

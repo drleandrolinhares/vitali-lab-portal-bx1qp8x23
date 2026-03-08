@@ -20,28 +20,35 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { TrendingUp, Wallet, CheckCircle } from 'lucide-react'
+import { TrendingUp, Wallet, CheckCircle, TrendingDown, DollarSign } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
 export default function AdminFinancial() {
   const { currentUser, orders, kanbanStages, refreshOrders } = useAppStore()
   const [priceList, setPriceList] = useState<PriceItem[]>([])
   const [dentists, setDentists] = useState<any[]>([])
+  const [expenses, setExpenses] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
 
   useEffect(() => {
     supabase
-      .from('price_list' as any)
+      .from('price_list')
       .select('id, work_type, price_stages(*)')
       .then(({ data }) => {
-        if (data) setPriceList(data)
+        if (data) setPriceList(data as PriceItem[])
       })
     supabase
-      .from('profiles' as any)
+      .from('profiles')
       .select('id, name, clinic, closing_date, payment_due_date')
       .eq('role', 'dentist')
       .then(({ data }) => {
         if (data) setDentists(data)
+      })
+    supabase
+      .from('expenses')
+      .select('*')
+      .then(({ data }) => {
+        if (data) setExpenses(data)
       })
   }, [])
 
@@ -49,10 +56,44 @@ export default function AdminFinancial() {
     return orders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
   }, [orders, priceList, kanbanStages])
 
-  if (currentUser?.role !== 'admin') return <Navigate to="/" replace />
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
+    return <Navigate to="/" replace />
 
-  const globalTotalReceivable = financials.reduce((acc, o) => acc + o.outstandingCost, 0)
-  const globalValueToProduce = financials.reduce((acc, o) => acc + o.pendingCost, 0)
+  const currentMonth = new Date().getMonth()
+  const currentYear = new Date().getFullYear()
+
+  const monthlyRevenue = useMemo(
+    () =>
+      orders.reduce((acc, o) => {
+        const isCompletedThisMonth = o.history.some(
+          (h: any) =>
+            (h.status === 'completed' || h.status === 'delivered') &&
+            new Date(h.date).getMonth() === currentMonth &&
+            new Date(h.date).getFullYear() === currentYear,
+        )
+        if (isCompletedThisMonth) {
+          const orderFin = getOrderFinancials(o, priceList, kanbanStages)
+          return acc + orderFin.totalCost
+        }
+        return acc
+      }, 0),
+    [orders, priceList, kanbanStages],
+  )
+
+  const monthlyExpenses = useMemo(
+    () =>
+      expenses
+        .filter(
+          (e) =>
+            new Date(e.due_date + 'T00:00:00').getMonth() === currentMonth &&
+            new Date(e.due_date + 'T00:00:00').getFullYear() === currentYear,
+        )
+        .reduce((acc, e) => acc + Number(e.amount), 0),
+    [expenses],
+  )
+
+  const monthlyProfit = monthlyRevenue - monthlyExpenses
+  const profitability = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0
 
   const dentistStats = dentists
     .map((d) => {
@@ -76,28 +117,23 @@ export default function AdminFinancial() {
       clearedAmount: o.outstandingCost,
     }))
 
-    const { error } = await supabase.from('settlements' as any).insert({
+    const { error } = await supabase.from('settlements').insert({
       dentist_id: dentistId,
       amount: outstandingBalance,
       orders_snapshot: snapshot,
     })
 
     if (error) {
-      toast({
+      return toast({
         title: 'Erro',
         description: 'Não foi possível liquidar o pagamento.',
         variant: 'destructive',
       })
-      return
     }
 
     const updates = ordersToSettle.map((o: any) =>
-      supabase
-        .from('orders' as any)
-        .update({ cleared_balance: o.completedCost })
-        .eq('id', o.id),
+      supabase.from('orders').update({ cleared_balance: o.completedCost }).eq('id', o.id),
     )
-
     await Promise.all(updates)
 
     toast({ title: 'Pagamento Liquidado com Sucesso!' })
@@ -106,42 +142,62 @@ export default function AdminFinancial() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2.5 bg-primary/10 rounded-xl">
           <TrendingUp className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Dashboard Financeiro</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-primary">Painel Financeiro</h2>
           <p className="text-muted-foreground text-sm">
-            Visão global de faturamento e pagamentos pendentes.
+            Resultados operacionais, lucros e contas a receber.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-4 mb-8">
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Faturamento Projetado (A Receber)
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Receitas do Mês
             </CardTitle>
+            <DollarSign className="w-4 h-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              {formatBRL(globalTotalReceivable)}
-            </div>
+            <div className="text-2xl font-bold text-emerald-600">{formatBRL(monthlyRevenue)}</div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Valor a Produzir (Pipeline)
+        <Card className="shadow-subtle border-l-4 border-l-red-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Despesas do Mês
             </CardTitle>
+            <TrendingDown className="w-4 h-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              {formatBRL(globalValueToProduce)}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{formatBRL(monthlyExpenses)}</div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Lucro Operacional
+            </CardTitle>
+            <Wallet className="w-4 h-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{formatBRL(monthlyProfit)}</div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Rentabilidade (%)
+            </CardTitle>
+            <TrendingUp className="w-4 h-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{profitability.toFixed(1)}%</div>
           </CardContent>
         </Card>
       </div>
@@ -149,7 +205,7 @@ export default function AdminFinancial() {
       <Card className="shadow-subtle mt-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-muted-foreground" /> Saldos por Dentista
+            <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber (Por Dentista)
           </CardTitle>
         </CardHeader>
         <CardContent>
