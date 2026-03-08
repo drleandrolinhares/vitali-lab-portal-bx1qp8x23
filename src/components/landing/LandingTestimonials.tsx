@@ -2,20 +2,14 @@ import { Star } from 'lucide-react'
 
 const testimonials = [
   {
-    name: 'Dr. Roberto Almeida',
-    role: 'Especialista em Implantodontia',
     content:
       'O Vitali Lab transformou a previsibilidade dos meus casos. A qualidade das peças em zircônia e o atendimento próximo da equipe fazem toda a diferença na minha prática clínica diária.',
   },
   {
-    name: 'Dra. Carolina Mendes',
-    role: 'Odontologia Estética',
     content:
       'As lentes de contato dental produzidas por eles são verdadeiras obras de arte. A adaptação é sempre perfeita e a naturalidade impressiona meus pacientes.',
   },
   {
-    name: 'Dr. Fernando Costa',
-    role: 'Reabilitação Oral',
     content:
       'Ter um laboratório que entende não só da técnica, mas também da comunicação com o dentista é essencial. O portal digital facilitou muito a gestão dos meus pedidos.',
   },
@@ -46,15 +40,9 @@ export function LandingTestimonials() {
                   <Star key={i} className="w-5 h-5 fill-current" />
                 ))}
               </div>
-              <p className="text-muted-foreground text-center leading-relaxed flex-1 mb-8 italic text-lg">
+              <p className="text-muted-foreground text-center leading-relaxed flex-1 italic text-lg">
                 "{testimonial.content}"
               </p>
-              <div className="flex flex-col items-center justify-center pt-6 border-t border-border/50 mt-auto">
-                <h4 className="font-bold text-foreground text-base text-center">
-                  {testimonial.name}
-                </h4>
-                <p className="text-sm text-muted-foreground text-center">{testimonial.role}</p>
-              </div>
             </div>
           ))}
         </div>
