@@ -44,6 +44,16 @@ export default function FinancialPage() {
   const monthOptions = useMemo(() => generateMonthOptions(), [])
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
 
+  const safeOrders = Array.isArray(orders) ? orders : []
+  const safePriceList = Array.isArray(priceList) ? priceList : []
+  const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
+
+  // Filter orders by selected month to provide accurate historical view
+  const monthFilteredOrders = useMemo(
+    () => filterOrdersForFinancials(safeOrders, selectedMonth),
+    [safeOrders, selectedMonth],
+  )
+
   useEffect(() => {
     let isMounted = true
 
@@ -84,16 +94,6 @@ export default function FinancialPage() {
   }, [currentUser?.id])
 
   if (currentUser?.role !== 'dentist') return <div className="p-8">Acesso restrito</div>
-
-  const safeOrders = Array.isArray(orders) ? orders : []
-  const safePriceList = Array.isArray(priceList) ? priceList : []
-  const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
-
-  // Filter orders by selected month to provide accurate historical view
-  const monthFilteredOrders = useMemo(
-    () => filterOrdersForFinancials(safeOrders, selectedMonth),
-    [safeOrders, selectedMonth],
-  )
 
   // Calculate financials for the filtered orders. We do NOT filter out 0 costs here
   // to fix the "Nenhum pedido com saldo pendente" bug when data exists but price is unconfigured.
