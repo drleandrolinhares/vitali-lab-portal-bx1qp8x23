@@ -80,7 +80,9 @@ export default function NewRequest() {
       if (data && data.value) {
         try {
           setAvailableScales(JSON.parse(data.value))
-        } catch (e) {}
+        } catch (e) {
+          console.error('Failed to parse shade_scales', e)
+        }
       }
     }
     fetchScales()

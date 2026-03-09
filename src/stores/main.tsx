@@ -11,6 +11,7 @@ import { Order, OrderStatus, KanbanStage, User, UserRole, Stage, DRECategory } f
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { getOrderFinancials } from '@/lib/financial'
 
 interface AppState {
   currentUser: User & { is_approved?: boolean }
@@ -422,7 +423,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
 
     if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
-      const { getOrderFinancials } = await import('@/lib/financial')
       const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
       const financials = getOrderFinancials(updatedOrder, priceList, kanbanStages)
 

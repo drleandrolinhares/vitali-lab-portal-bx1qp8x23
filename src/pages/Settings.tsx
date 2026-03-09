@@ -40,7 +40,9 @@ export default function SettingsPage() {
       if (appSettings?.shade_scales) {
         setScales(JSON.parse(appSettings.shade_scales))
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to parse shade scales', e)
+    }
   }, [appSettings])
 
   useEffect(() => {
