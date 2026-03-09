@@ -5,7 +5,6 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase/client'
-import { getOrderFinancials } from '@/lib/financial'
 import {
   Select,
   SelectContent,
@@ -175,21 +174,11 @@ function useAdminBadges(currentUser: any) {
 }
 
 function AppSidebar() {
-  const { currentUser, appSettings, orders, pendingUsers, kanbanStages, priceList } = useAppStore()
+  const { currentUser, appSettings, orders, pendingUsers } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
 
   const { lowStock, overduePayables } = useAdminBadges(currentUser)
-
-  const pendingReceivables = useMemo(() => {
-    if (currentUser?.role !== 'admin' || !priceList?.length || !kanbanStages?.length) return 0
-    let count = 0
-    orders.forEach((o: any) => {
-      const fin = getOrderFinancials(o, priceList, kanbanStages)
-      if (fin.outstandingCost > 0) count++
-    })
-    return count
-  }, [orders, priceList, kanbanStages, currentUser])
 
   if (!currentUser) return null
 
@@ -289,7 +278,6 @@ function AppSidebar() {
                       if (item.id === 'pending-users') badgeCount = pendingUsers?.length || 0
                       if (item.id === 'inventory') badgeCount = lowStock
                       if (item.id === 'accounts-payable') badgeCount = overduePayables
-                      if (item.id === 'finances') badgeCount = pendingReceivables
                       if (item.id === 'inbox')
                         badgeCount = orders.filter((o: any) => !o.isAcknowledged).length
 

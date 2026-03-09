@@ -74,7 +74,10 @@ export default function AdminFinancial() {
   }, [])
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => selectedLab === 'Todos' || o.sector === selectedLab)
+    return orders.filter((o) => {
+      if (selectedLab === 'Todos') return true
+      return (o.sector || '').trim().toUpperCase() === selectedLab.trim().toUpperCase()
+    })
   }, [orders, selectedLab])
 
   // Filter orders and expenses by the selected month
@@ -99,7 +102,10 @@ export default function AdminFinancial() {
   )
 
   const filteredExpenses = useMemo(() => {
-    return expenses.filter((e) => selectedLab === 'Todos' || e.sector === selectedLab)
+    return expenses.filter((e) => {
+      if (selectedLab === 'Todos') return true
+      return (e.sector || '').trim().toUpperCase() === selectedLab.trim().toUpperCase()
+    })
   }, [expenses, selectedLab])
 
   const revenueCategories = useMemo(() => {
