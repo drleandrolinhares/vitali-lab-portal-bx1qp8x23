@@ -901,7 +901,7 @@ export const Constants = {
 //   Policy "Admin can delete orders" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Dentists can insert own orders" (INSERT, PERMISSIVE) roles={authenticated}
-//     WITH CHECK: (dentist_id = auth.uid())
+//     WITH CHECK: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text]))))))
 //   Policy "Dentists can view own orders, lab can view all" (SELECT, PERMISSIVE) roles={public}
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
 //   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={public}

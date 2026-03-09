@@ -1,0 +1,3 @@
+ALTER TABLE public.expenses
+ADD COLUMN IF NOT EXISTS dentist_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL;

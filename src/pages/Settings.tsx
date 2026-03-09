@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Phone, User, Building, Camera, Loader2, Link as LinkIcon } from 'lucide-react'
+import { Phone, User, Building, Camera, Loader2, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { UsersManagement } from '@/components/UsersManagement'
 
@@ -31,8 +31,16 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
+  const [scales, setScales] = useState<string[]>([])
+  const [newScale, setNewScale] = useState('')
+
   useEffect(() => {
     setLabLink(appSettings?.whatsapp_lab_link || '')
+    try {
+      if (appSettings?.shade_scales) {
+        setScales(JSON.parse(appSettings.shade_scales))
+      }
+    } catch (e) {}
   }, [appSettings])
 
   useEffect(() => {
@@ -53,6 +61,7 @@ export default function SettingsPage() {
     await updateSetting('whatsapp_lab_link', finalLink)
     setLabLink(finalLink)
     setSavingSystem(false)
+    toast({ title: 'Configurações salvas' })
   }
 
   const handleSaveProfile = async () => {
@@ -109,6 +118,19 @@ export default function SettingsPage() {
     }
   }
 
+  const handleAddScale = async () => {
+    const trimmed = newScale.trim()
+    if (!trimmed || scales.includes(trimmed)) return
+    const updated = [...scales, trimmed]
+    await updateSetting('shade_scales', JSON.stringify(updated))
+    setNewScale('')
+  }
+
+  const handleRemoveScale = async (scale: string) => {
+    const updated = scales.filter((s) => s !== scale)
+    await updateSetting('shade_scales', JSON.stringify(updated))
+  }
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -126,14 +148,37 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="profile">Meu Perfil</TabsTrigger>
-          <TabsTrigger value="system" disabled={!isAdmin}>
-            Sistema
+        <TabsList className="mb-6 flex flex-wrap w-full max-w-2xl bg-transparent gap-2 h-auto p-0">
+          <TabsTrigger
+            value="profile"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+          >
+            Meu Perfil
           </TabsTrigger>
-          <TabsTrigger value="users" disabled={!isAdmin}>
-            Usuários
-          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger
+              value="system"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+            >
+              Sistema
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger
+              value="users"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+            >
+              Usuários
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger
+              value="scales"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+            >
+              Escalas de Cor
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -262,6 +307,61 @@ export default function SettingsPage() {
 
             <TabsContent value="users">
               <UsersManagement />
+            </TabsContent>
+
+            <TabsContent value="scales" className="space-y-6">
+              <Card className="shadow-subtle">
+                <CardHeader>
+                  <CardTitle>Escalas de Cor</CardTitle>
+                  <CardDescription>
+                    Gerencie as opções de escalas de cor disponíveis para os dentistas ao criar
+                    novos pedidos.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Nova escala (ex: VITA Clássica, BL, 3D Master)"
+                      value={newScale}
+                      onChange={(e) => setNewScale(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddScale()
+                      }}
+                      className="max-w-xs"
+                    />
+                    <Button onClick={handleAddScale}>Adicionar</Button>
+                  </div>
+                  <div className="space-y-2 mt-6">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                      Escalas Cadastradas
+                    </h3>
+                    {scales.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
+                        Nenhuma escala cadastrada.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {scales.map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
+                          >
+                            <span className="font-semibold text-sm">{s}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleRemoveScale(s)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </>
         )}

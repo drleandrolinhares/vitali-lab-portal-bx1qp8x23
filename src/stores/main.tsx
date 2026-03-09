@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
   useCallback,
+  useRef,
 } from 'react'
 import { Order, OrderStatus, KanbanStage, User, UserRole, Stage, DRECategory } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
@@ -61,6 +62,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
+  const hasFetchedOrders = useRef(false)
+
   const [selectedLab, setSelectedLab] = useState<string>(
     () => localStorage.getItem('vitali_selected_lab') || 'Soluções Cerâmicas',
   )
@@ -79,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPriceList([])
       setDreCategories([])
       setProfileLoading(false)
+      hasFetchedOrders.current = false
       return
     }
     if (currentUser?.id !== session.user.id) setProfileLoading(true)
@@ -170,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const fetchOrders = useCallback(async () => {
     if (!session?.user || !currentUser) return
-    setLoading(true)
+    if (!hasFetchedOrders.current) setLoading(true)
     const { data: dbOrders } = await supabase
       .from('orders')
       .select(
@@ -214,6 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })),
       )
     }
+    hasFetchedOrders.current = true
     setLoading(false)
   }, [session?.user, currentUser])
 
@@ -303,7 +308,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return true
   }
 
-  // Rest of the existing methods...
   const approveUser = async (userId: string) => {
     const { error } = await supabase.from('profiles').update({ is_approved: true }).eq('id', userId)
     if (!error) {
@@ -391,10 +395,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateOrderKanbanStage = async (dbId: string, stage: KanbanStage) => {
     if (!currentUser) return
+    const order = orders.find((o) => o.id === dbId)
+    if (!order) return
+
     let newStatus: OrderStatus = 'in_production'
-    if (stage === 'TRIAGEM' || stage === 'PENDÊNCIAS') newStatus = 'pending'
-    else if (stage === 'PRONTO PARA ENVIO') newStatus = 'completed'
+    const stg = stage.toUpperCase()
+    if (stg === 'TRIAGEM' || stg === 'CAIXA DE ENTRADA' || stg === 'PENDÊNCIAS') {
+      newStatus = 'pending'
+    } else if (
+      stg === 'PRONTO PARA ENVIO' ||
+      stg.includes('FINALIZADO') ||
+      stg.includes('ENTREGUE')
+    ) {
+      newStatus = 'completed'
+    }
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === dbId ? { ...o, kanbanStage: stage, status: newStatus } : o)),
+    )
+
     await supabase.from('orders').update({ kanban_stage: stage, status: newStatus }).eq('id', dbId)
+    await supabase.from('order_history').insert({
+      order_id: dbId,
+      status: newStatus,
+      note: `Movido para ${stage}`,
+    })
+
+    if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
+      const { getOrderFinancials } = await import('@/lib/financial')
+      const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
+      const financials = getOrderFinancials(updatedOrder, priceList, kanbanStages)
+
+      if (financials.totalCost > 0) {
+        await supabase.from('expenses').insert({
+          description: `Serviço Concluído: Pedido ${order.friendlyId} - ${order.patientName}`,
+          cost_center: order.dentistName || 'Dentista',
+          dentist_id: order.dentistId,
+          order_id: dbId,
+          amount: financials.totalCost,
+          due_date: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          sector: order.sector,
+          category: 'Serviços Realizados',
+          dre_category: order.dre_category || 'Receita',
+        } as any)
+      }
+    }
   }
 
   const updateOrderObservations = async (dbId: string, observations: string) => {

@@ -35,6 +35,7 @@ export default function NewRequest() {
   >([])
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
+  const [availableScales, setAvailableScales] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     dentistId: '',
@@ -69,6 +70,20 @@ export default function NewRequest() {
       }
     }
     fetchPrices()
+
+    const fetchScales = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'shade_scales')
+        .maybeSingle()
+      if (data && data.value) {
+        try {
+          setAvailableScales(JSON.parse(data.value))
+        } catch (e) {}
+      }
+    }
+    fetchScales()
 
     if (isAdminOrReception) {
       const fetchDentists = async () => {
@@ -302,12 +317,30 @@ export default function NewRequest() {
               </div>
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
-                <Input
-                  placeholder="Ex: VITA..."
-                  value={formData.shadeScale}
-                  onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
-                  className="h-11"
-                />
+                {availableScales.length > 0 ? (
+                  <Select
+                    value={formData.shadeScale}
+                    onValueChange={(v) => setFormData({ ...formData, shadeScale: v })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableScales.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="Ex: VITA..."
+                    value={formData.shadeScale}
+                    onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
+                    className="h-11"
+                  />
+                )}
               </div>
             </div>
 
