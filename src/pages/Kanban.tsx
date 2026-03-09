@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2, Edit2, GripHorizontal, X, Info } from 'lucide-react'
+import { Users, Plus, Trash2, Edit2, GripHorizontal, X, Info, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,6 +28,7 @@ import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { KanbanCardTimer } from '@/components/KanbanCardTimer'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
+import { toast } from '@/hooks/use-toast'
 
 const SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
 
@@ -82,6 +83,8 @@ export default function KanbanPage() {
 
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null)
   const [draggedCardSector, setDraggedCardSector] = useState<string | null>(null)
+
+  const [finishingOrderId, setFinishingOrderId] = useState<string | null>(null)
 
   const savingRef = useRef(false)
 
@@ -169,6 +172,32 @@ export default function KanbanPage() {
 
   const handleSaveObs = () => {
     if (selectedOrder) updateOrderObservations(selectedOrder.id, obsText)
+  }
+
+  const handleQuickFinish = async (orderId: string) => {
+    setFinishingOrderId(orderId)
+    try {
+      let targetStageName = 'FINALIZADOS E ENTREGUES'
+      const existingExact = kanbanStages.find((s) => s.name.toUpperCase() === targetStageName)
+
+      if (!existingExact) {
+        const fallback = kanbanStages.find(
+          (s) =>
+            s.name.toUpperCase().includes('FINALIZADO') ||
+            s.name.toUpperCase().includes('ENTREGUE'),
+        )
+        if (fallback) {
+          targetStageName = fallback.name
+        } else {
+          await addKanbanStage(targetStageName)
+        }
+      }
+
+      await updateOrderKanbanStage(orderId, targetStageName)
+      toast({ title: 'Pedido Finalizado!', description: `Trabalho movido para ${targetStageName}` })
+    } finally {
+      setFinishingOrderId(null)
+    }
   }
 
   return (
@@ -415,11 +444,35 @@ export default function KanbanPage() {
                                 <p className="text-xs text-slate-500 mt-1 truncate pl-1">
                                   {o.workType}
                                 </p>
-                                <div className="flex justify-between items-center mt-3 pt-2 border-t pl-1 gap-2">
-                                  <div className="text-[10px] font-medium text-slate-400 truncate flex-1">
+                                <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
+                                  <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
                                     {isAdmin && o.dentistName}
                                   </div>
-                                  <KanbanCardTimer order={o} currentStage={stage.name} />
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {isAdmin &&
+                                      !stage.name.toUpperCase().includes('FINALIZADO') &&
+                                      !stage.name.toUpperCase().includes('ENTREGUE') && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={finishingOrderId === o.id}
+                                          className="h-[22px] px-2 py-0 text-[10px] font-bold border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleQuickFinish(o.id)
+                                          }}
+                                          title="Mover para Finalizados e Entregues"
+                                        >
+                                          {finishingOrderId === o.id ? (
+                                            <div className="w-3 h-3 mr-1 border-[1.5px] border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                          ) : (
+                                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                                          )}
+                                          Finalizar
+                                        </Button>
+                                      )}
+                                    <KanbanCardTimer order={o} currentStage={stage.name} />
+                                  </div>
                                 </div>
                               </div>
                             </TooltipTrigger>
