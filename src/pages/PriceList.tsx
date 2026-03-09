@@ -38,7 +38,7 @@ export default function PriceList() {
   const [modalOpen, setModalOpen] = useState(false)
   const [formData, setFormData] = useState({
     work_type: '',
-    category: 'Prótese Fixa',
+    category: 'PROTESE FIXA',
     material: '',
     price: '',
     sector: 'Soluções Cerâmicas',
@@ -70,6 +70,10 @@ export default function PriceList() {
       return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
     }
 
+    if (!['PROTESE FIXA', 'PRÓTESE MÓVEL'].includes(formData.category)) {
+      return toast({ title: 'Categoria inválida.', variant: 'destructive' })
+    }
+
     const { error } = await supabase.from('price_list').insert({
       work_type: formData.work_type,
       category: formData.category,
@@ -85,7 +89,7 @@ export default function PriceList() {
       setModalOpen(false)
       setFormData({
         work_type: '',
-        category: 'Prótese Fixa',
+        category: 'PROTESE FIXA',
         material: '',
         price: '',
         sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
@@ -194,12 +198,19 @@ export default function PriceList() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Input
-                placeholder="Ex: Prótese Fixa"
+              <Label>Categoria *</Label>
+              <Select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              />
+                onValueChange={(v) => setFormData({ ...formData, category: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PROTESE FIXA">PROTESE FIXA</SelectItem>
+                  <SelectItem value="PRÓTESE MÓVEL">PRÓTESE MÓVEL</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Material</Label>

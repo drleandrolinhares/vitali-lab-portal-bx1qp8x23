@@ -324,6 +324,7 @@ export type Database = {
           created_at: string
           dentist_id: string
           dre_category: string
+          file_urls: Json | null
           friendly_id: string
           id: string
           is_acknowledged: boolean
@@ -348,6 +349,7 @@ export type Database = {
           created_at?: string
           dentist_id: string
           dre_category?: string
+          file_urls?: Json | null
           friendly_id?: string
           id?: string
           is_acknowledged?: boolean
@@ -372,6 +374,7 @@ export type Database = {
           created_at?: string
           dentist_id?: string
           dre_category?: string
+          file_urls?: Json | null
           friendly_id?: string
           id?: string
           is_acknowledged?: boolean
@@ -411,6 +414,7 @@ export type Database = {
           category: string
           created_at: string
           id: string
+          material: string
           notes: string | null
           price: string
           sector: string
@@ -420,6 +424,7 @@ export type Database = {
           category: string
           created_at?: string
           id?: string
+          material?: string
           notes?: string | null
           price: string
           sector?: string
@@ -429,6 +434,7 @@ export type Database = {
           category?: string
           created_at?: string
           id?: string
+          material?: string
           notes?: string | null
           price?: string
           sector?: string
@@ -801,6 +807,7 @@ export const Constants = {
 //   dre_category: text (not null, default: 'Receita'::text)
 //   is_acknowledged: boolean (not null, default: false)
 //   base_price: numeric (not null, default: 0)
+//   file_urls: jsonb (nullable, default: '[]'::jsonb)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -809,6 +816,7 @@ export const Constants = {
 //   notes: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'Soluções Cerâmicas'::text)
+//   material: text (not null, default: ''::text)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)
