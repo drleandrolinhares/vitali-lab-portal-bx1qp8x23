@@ -152,7 +152,7 @@ export default function NewRequest() {
     }
 
     setSubmitting(true)
-    await addOrder({
+    const success = await addOrder({
       ...formData,
       material: formData.material || 'Padrão',
       stlDeliveryMethod:
@@ -161,7 +161,10 @@ export default function NewRequest() {
       arches: selectedArches,
     })
     setSubmitting(false)
-    navigate('/app')
+
+    if (success) {
+      navigate('/app')
+    }
   }
 
   return (

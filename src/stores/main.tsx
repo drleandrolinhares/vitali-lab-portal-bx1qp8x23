@@ -25,7 +25,7 @@ interface AppState {
   selectedLab: string
   setSelectedLab: (lab: string) => void
   switchRole: (role: UserRole) => void
-  addOrder: (order: any) => Promise<void>
+  addOrder: (order: any) => Promise<boolean>
   deleteOrder: (dbId: string, reason: string) => Promise<void>
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
@@ -358,8 +358,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const switchRole = () => {}
 
-  const addOrder = async (orderData: any) => {
-    if (!currentUser) return
+  const addOrder = async (orderData: any): Promise<boolean> => {
+    if (!currentUser) return false
     const targetDentistId =
       (currentUser.role === 'admin' || currentUser.role === 'receptionist') && orderData.dentistId
         ? orderData.dentistId
@@ -402,14 +402,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .select()
       .single()
 
-    if (!error && data) {
+    if (error) {
+      toast({ title: 'Erro ao criar pedido', description: error.message, variant: 'destructive' })
+      return false
+    }
+
+    if (data) {
       await logAudit('CREATE', 'order', data.id, {
         friendlyId: data.friendly_id,
         patientName: orderData.patientName,
         basePrice,
       })
+      await fetchOrders()
       toast({ title: 'Pedido enviado!' })
+      return true
     }
+
+    return false
   }
 
   const deleteOrder = async (dbId: string, reason: string) => {
