@@ -49,6 +49,7 @@ export interface Order {
   stlDeliveryMethod?: string
   observations?: string
   status: OrderStatus
+  isAcknowledged: boolean
   createdAt: string
   clearedBalance: number
   history: OrderHistory[]

@@ -30,6 +30,7 @@ interface AppState {
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
+  acknowledgeOrder: (id: string) => Promise<void>
   addKanbanStage: (name: string) => Promise<boolean>
   updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
   updateKanbanStageDescription: (id: string, description: string) => Promise<void>
@@ -207,6 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           stlDeliveryMethod: o.shipping_details,
           observations: o.observations,
           status: o.status,
+          isAcknowledged: o.is_acknowledged || false,
           createdAt: o.created_at,
           clearedBalance: o.cleared_balance || 0,
           dre_category: o.dre_category,
@@ -394,6 +396,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('order_history').insert({ order_id: dbId, status, note })
   }
 
+  const acknowledgeOrder = async (dbId: string) => {
+    setOrders((prev) => prev.map((o) => (o.id === dbId ? { ...o, isAcknowledged: true } : o)))
+    await supabase.from('orders').update({ is_acknowledged: true }).eq('id', dbId)
+  }
+
   const updateOrderKanbanStage = async (dbId: string, stage: KanbanStage) => {
     if (!currentUser) return
     const order = orders.find((o) => o.id === dbId)
@@ -411,11 +418,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newStatus = 'completed'
     }
 
+    const shouldAcknowledge =
+      !order.isAcknowledged && (newStatus === 'in_production' || newStatus === 'completed')
+
     setOrders((prev) =>
-      prev.map((o) => (o.id === dbId ? { ...o, kanbanStage: stage, status: newStatus } : o)),
+      prev.map((o) =>
+        o.id === dbId
+          ? {
+              ...o,
+              kanbanStage: stage,
+              status: newStatus,
+              isAcknowledged: shouldAcknowledge ? true : o.isAcknowledged,
+            }
+          : o,
+      ),
     )
 
-    await supabase.from('orders').update({ kanban_stage: stage, status: newStatus }).eq('id', dbId)
+    const updates: any = { kanban_stage: stage, status: newStatus }
+    if (shouldAcknowledge) updates.is_acknowledged = true
+
+    await supabase.from('orders').update(updates).eq('id', dbId)
     await supabase.from('order_history').insert({
       order_id: dbId,
       status: newStatus,
@@ -523,6 +545,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateOrderStatus,
         updateOrderKanbanStage,
         updateOrderObservations,
+        acknowledgeOrder,
         addKanbanStage,
         updateKanbanStage,
         updateKanbanStageDescription,

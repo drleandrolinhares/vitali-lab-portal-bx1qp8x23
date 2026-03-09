@@ -290,6 +290,8 @@ function AppSidebar() {
                       if (item.id === 'inventory') badgeCount = lowStock
                       if (item.id === 'accounts-payable') badgeCount = overduePayables
                       if (item.id === 'finances') badgeCount = pendingReceivables
+                      if (item.id === 'inbox')
+                        badgeCount = orders.filter((o: any) => !o.isAcknowledged).length
 
                       return (
                         <SidebarMenuItem key={item.path}>

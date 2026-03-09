@@ -90,6 +90,7 @@ export type Database = {
           classification: string | null
           cost_center: string
           created_at: string
+          dentist_id: string | null
           description: string
           dre_category: string
           due_date: string
@@ -97,6 +98,7 @@ export type Database = {
           installment_current: number | null
           installment_total: number | null
           is_recurring: boolean | null
+          order_id: string | null
           payment_method: string | null
           purchase_date: string | null
           recurring_day: number | null
@@ -109,6 +111,7 @@ export type Database = {
           classification?: string | null
           cost_center: string
           created_at?: string
+          dentist_id?: string | null
           description: string
           dre_category?: string
           due_date: string
@@ -116,6 +119,7 @@ export type Database = {
           installment_current?: number | null
           installment_total?: number | null
           is_recurring?: boolean | null
+          order_id?: string | null
           payment_method?: string | null
           purchase_date?: string | null
           recurring_day?: number | null
@@ -128,6 +132,7 @@ export type Database = {
           classification?: string | null
           cost_center?: string
           created_at?: string
+          dentist_id?: string | null
           description?: string
           dre_category?: string
           due_date?: string
@@ -135,6 +140,7 @@ export type Database = {
           installment_current?: number | null
           installment_total?: number | null
           is_recurring?: boolean | null
+          order_id?: string | null
           payment_method?: string | null
           purchase_date?: string | null
           recurring_day?: number | null
@@ -143,11 +149,25 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: 'expenses_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
             foreignKeyName: 'expenses_dre_category_fkey'
             columns: ['dre_category']
             isOneToOne: false
             referencedRelation: 'dre_categories'
             referencedColumns: ['name']
+          },
+          {
+            foreignKeyName: 'expenses_order_id_fkey'
+            columns: ['order_id']
+            isOneToOne: false
+            referencedRelation: 'orders'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -715,6 +735,8 @@ export const Constants = {
 //   installment_current: integer (nullable)
 //   installment_total: integer (nullable)
 //   dre_category: text (not null, default: 'Outros'::text)
+//   dentist_id: uuid (nullable)
+//   order_id: uuid (nullable)
 // Table: inventory_items
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -819,7 +841,9 @@ export const Constants = {
 // Table: dre_categories
 //   PRIMARY KEY dre_categories_pkey: PRIMARY KEY (name)
 // Table: expenses
+//   FOREIGN KEY expenses_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE SET NULL
 //   FOREIGN KEY expenses_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
+//   FOREIGN KEY expenses_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
 //   PRIMARY KEY expenses_pkey: PRIMARY KEY (id)
 // Table: inventory_items
 //   PRIMARY KEY inventory_items_pkey: PRIMARY KEY (id)

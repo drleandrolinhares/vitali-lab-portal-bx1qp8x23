@@ -372,97 +372,108 @@ export default function KanbanPage() {
                         </span>
                       </div>
                       <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
-                        {cols.map((o) => (
-                          <Tooltip key={o.id} delayDuration={300}>
-                            <TooltipTrigger asChild>
-                              <div
-                                draggable={isAdmin}
-                                onDragStart={(e) => {
-                                  e.stopPropagation()
-                                  e.dataTransfer.setData('card-id', o.id)
-                                  e.dataTransfer.setData('card-sector', o.sector)
-                                  e.dataTransfer.setData('text/plain', o.id)
-                                  setTimeout(() => {
-                                    setDraggedCardId(o.id)
-                                    setDraggedCardSector(o.sector)
-                                  }, 0)
-                                }}
-                                onDragEnd={() => {
-                                  setDraggedCardId(null)
-                                  setDraggedCardSector(null)
-                                  setDragOverStageId(null)
-                                }}
-                                onClick={() => isAdmin && setSelectedOrderId(o.id)}
-                                className={cn(
-                                  'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
-                                  isAdmin &&
-                                    'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
-                                  draggedCardId === o.id &&
-                                    'opacity-50 scale-[0.98] border-dashed shadow-none',
-                                )}
-                              >
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
-                                <div className="flex justify-between items-start mb-2 pl-1">
-                                  <span className="text-xs font-bold text-slate-500">
-                                    {o.friendlyId}
-                                  </span>
-                                  <StatusBadge
-                                    status={o.status}
-                                    className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
-                                  />
-                                </div>
-                                <p className="font-medium text-sm truncate pl-1">{o.patientName}</p>
-                                <p className="text-xs text-slate-500 mt-1 truncate pl-1">
-                                  {o.workType}
-                                </p>
-                                <div className="flex justify-between items-center mt-3 pt-2 border-t pl-1 gap-2">
-                                  <div className="text-[10px] font-medium text-slate-400 truncate flex-1">
-                                    {isAdmin && o.dentistName}
+                        {cols.map((o) => {
+                          const derivedStatus =
+                            stage.name.toUpperCase().includes('FINALIZADO') ||
+                            stage.name.toUpperCase().includes('ENTREGUE')
+                              ? 'completed'
+                              : o.status
+                          return (
+                            <Tooltip key={o.id} delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  draggable={isAdmin}
+                                  onDragStart={(e) => {
+                                    e.stopPropagation()
+                                    e.dataTransfer.setData('card-id', o.id)
+                                    e.dataTransfer.setData('card-sector', o.sector)
+                                    e.dataTransfer.setData('text/plain', o.id)
+                                    setTimeout(() => {
+                                      setDraggedCardId(o.id)
+                                      setDraggedCardSector(o.sector)
+                                    }, 0)
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedCardId(null)
+                                    setDraggedCardSector(null)
+                                    setDragOverStageId(null)
+                                  }}
+                                  onClick={() => isAdmin && setSelectedOrderId(o.id)}
+                                  className={cn(
+                                    'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
+                                    isAdmin &&
+                                      'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                                    draggedCardId === o.id &&
+                                      'opacity-50 scale-[0.98] border-dashed shadow-none',
+                                  )}
+                                >
+                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
+                                  <div className="flex justify-between items-start mb-2 pl-1">
+                                    <span className="text-xs font-bold text-slate-500">
+                                      {o.friendlyId}
+                                    </span>
+                                    <StatusBadge
+                                      status={derivedStatus}
+                                      className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
+                                    />
                                   </div>
-                                  <KanbanCardTimer order={o} currentStage={stage.name} />
-                                </div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              side="right"
-                              sideOffset={8}
-                              className="bg-primary text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95"
-                            >
-                              <div className="space-y-2">
-                                <div>
-                                  <p className="font-bold text-sm leading-tight">{o.patientName}</p>
-                                  <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
-                                    {o.friendlyId}
+                                  <p className="font-medium text-sm truncate pl-1">
+                                    {o.patientName}
                                   </p>
-                                </div>
-                                <div className="text-xs space-y-1 opacity-90">
-                                  <p>
-                                    <span className="font-semibold opacity-100">Dr(a):</span>{' '}
-                                    {o.dentistName}
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold opacity-100">Trabalho:</span>{' '}
+                                  <p className="text-xs text-slate-500 mt-1 truncate pl-1">
                                     {o.workType}
                                   </p>
-                                  {o.material && (
-                                    <p>
-                                      <span className="font-semibold opacity-100">Material:</span>{' '}
-                                      {o.material}
-                                    </p>
-                                  )}
+                                  <div className="flex justify-between items-center mt-3 pt-2 border-t pl-1 gap-2">
+                                    <div className="text-[10px] font-medium text-slate-400 truncate flex-1">
+                                      {isAdmin && o.dentistName}
+                                    </div>
+                                    <KanbanCardTimer order={o} currentStage={stage.name} />
+                                  </div>
                                 </div>
-                                {o.observations && (
-                                  <div className="mt-2 pt-2 border-t border-primary-foreground/20 text-xs">
-                                    <p className="font-semibold mb-1">Observações:</p>
-                                    <p className="opacity-90 line-clamp-4 leading-relaxed">
-                                      {o.observations}
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="right"
+                                sideOffset={8}
+                                className="bg-primary text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95"
+                              >
+                                <div className="space-y-2">
+                                  <div>
+                                    <p className="font-bold text-sm leading-tight">
+                                      {o.patientName}
+                                    </p>
+                                    <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
+                                      {o.friendlyId}
                                     </p>
                                   </div>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        ))}
+                                  <div className="text-xs space-y-1 opacity-90">
+                                    <p>
+                                      <span className="font-semibold opacity-100">Dr(a):</span>{' '}
+                                      {o.dentistName}
+                                    </p>
+                                    <p>
+                                      <span className="font-semibold opacity-100">Trabalho:</span>{' '}
+                                      {o.workType}
+                                    </p>
+                                    {o.material && (
+                                      <p>
+                                        <span className="font-semibold opacity-100">Material:</span>{' '}
+                                        {o.material}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {o.observations && (
+                                    <div className="mt-2 pt-2 border-t border-primary-foreground/20 text-xs">
+                                      <p className="font-semibold mb-1">Observações:</p>
+                                      <p className="opacity-90 line-clamp-4 leading-relaxed">
+                                        {o.observations}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          )
+                        })}
                       </div>
                     </div>
                   )
