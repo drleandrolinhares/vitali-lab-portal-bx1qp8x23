@@ -423,10 +423,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteOrder = async (dbId: string, reason: string) => {
     if (currentUser?.role !== 'admin') return
+
+    const orderToDelete = orders.find((o) => o.id === dbId)
+
+    // Cascading deletion for financial records (since constraint might be SET NULL)
+    await supabase.from('expenses').delete().eq('order_id', dbId)
+
     const { error } = await supabase.from('orders').delete().eq('id', dbId)
     if (!error) {
-      toast({ title: 'Pedido Excluído' })
+      if (orderToDelete) {
+        await logAudit('DELETE', 'order', dbId, {
+          reason,
+          friendlyId: orderToDelete.friendlyId,
+          patientName: orderToDelete.patientName,
+        })
+      }
+      toast({
+        title: 'Pedido Excluído',
+        description: 'O pedido e seus dados associados foram removidos.',
+      })
       fetchOrders()
+    } else {
+      toast({
+        title: 'Erro ao excluir pedido',
+        description: error.message,
+        variant: 'destructive',
+      })
     }
   }
 
