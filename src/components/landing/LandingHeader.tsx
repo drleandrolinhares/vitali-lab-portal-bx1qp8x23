@@ -7,7 +7,13 @@ export function LandingHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6 max-w-7xl">
-        <Logo variant="default" size="lg" className="scale-90 sm:scale-100 origin-left" />
+        <Link
+          to="/"
+          className="cursor-pointer transition-opacity hover:opacity-80 active:opacity-70"
+          title="Início"
+        >
+          <Logo variant="default" size="lg" className="scale-90 sm:scale-100 origin-left" />
+        </Link>
         <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <a href="#solucoes" className="hover:text-foreground transition-colors">
             Especialidades

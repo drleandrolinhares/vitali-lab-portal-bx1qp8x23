@@ -244,7 +244,13 @@ function AppSidebar() {
   return (
     <Sidebar variant="inset">
       <SidebarHeader className="py-6 flex flex-col items-center justify-center">
-        <Logo variant="square" size="lg" className="mb-2" />
+        <Link
+          to={currentUser.role === 'dentist' ? '/app' : '/dashboard'}
+          className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          title="Ir para o Dashboard"
+        >
+          <Logo variant="square" size="lg" className="mb-2" />
+        </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
         {currentUser.role === 'dentist' ? (
