@@ -404,8 +404,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateOrderStatus = async (dbId: string, status: OrderStatus, note?: string) => {
-    await supabase.from('orders').update({ status }).eq('id', dbId)
+    const newHistoryEntry = {
+      id: crypto.randomUUID(),
+      status,
+      date: new Date().toISOString(),
+      note,
+    }
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === dbId ? { ...o, status, history: [newHistoryEntry, ...o.history] } : o,
+      ),
+    )
+
     await supabase.from('order_history').insert({ order_id: dbId, status, note })
+    await supabase.from('orders').update({ status }).eq('id', dbId)
   }
 
   const acknowledgeOrder = async (dbId: string) => {
@@ -422,6 +435,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const shouldAcknowledge =
       !order.isAcknowledged && (newStatus === 'in_production' || newStatus === 'completed')
 
+    const newHistoryEntry = {
+      id: crypto.randomUUID(),
+      status: newStatus,
+      date: new Date().toISOString(),
+      note: `Movido para ${stage}`,
+    }
+
     setOrders((prev) =>
       prev.map((o) =>
         o.id === dbId
@@ -430,20 +450,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
               kanbanStage: stage,
               status: newStatus,
               isAcknowledged: shouldAcknowledge ? true : o.isAcknowledged,
+              history: [newHistoryEntry, ...o.history],
             }
           : o,
       ),
     )
 
-    const updates: any = { kanban_stage: stage, status: newStatus }
-    if (shouldAcknowledge) updates.is_acknowledged = true
-
-    await supabase.from('orders').update(updates).eq('id', dbId)
     await supabase.from('order_history').insert({
       order_id: dbId,
       status: newStatus,
       note: `Movido para ${stage}`,
     })
+
+    const updates: any = { kanban_stage: stage, status: newStatus }
+    if (shouldAcknowledge) updates.is_acknowledged = true
+
+    await supabase.from('orders').update(updates).eq('id', dbId)
 
     if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
       const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }

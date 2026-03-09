@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { FileText, Activity, Clock } from 'lucide-react'
+import { FileText, Activity, Clock, ArrowLeft, ArrowRight, Circle, Calendar } from 'lucide-react'
 import { Order } from '@/lib/types'
-import { getStatusLabel } from '@/components/StatusBadge'
+import { useAppStore } from '@/stores/main'
+import { cn, processOrderHistory } from '@/lib/utils'
 
 interface Props {
   order: Order | null
@@ -30,7 +31,12 @@ export function OrderDetailsSheet({
   setObsText,
   onSaveObs,
 }: Props) {
+  const { kanbanStages } = useAppStore()
+
   if (!order) return null
+
+  const processedHistory = processOrderHistory(order.history, kanbanStages)
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:w-[540px] flex flex-col h-full bg-white dark:bg-background z-[100] border-l">
@@ -59,26 +65,45 @@ export function OrderDetailsSheet({
           </div>
           <div className="space-y-4">
             <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-              <Activity className="w-4 h-4 text-primary" /> Histórico de Atividades
+              <Activity className="w-4 h-4 text-primary" /> Histórico de Etapas
             </h4>
-            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
-              {order.history.map((ev) => (
-                <div key={ev.id} className="relative flex items-start gap-4">
-                  <div className="absolute left-0 mt-1.5 w-2 h-2 ml-2 rounded-full bg-primary z-10" />
-                  <div className="ml-8 space-y-1 w-full">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {getStatusLabel(ev.status)}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(ev.date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                    </div>
-                    {ev.note && (
-                      <div className="text-sm text-slate-700 dark:text-slate-300 mt-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-                        {ev.note}
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-px before:bg-border">
+              {processedHistory.map((item) => (
+                <div key={item.id} className="relative flex items-start gap-4">
+                  <div
+                    className={cn(
+                      'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
+                      item.isCurrent
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border',
+                    )}
+                  >
+                    {item.direction === 'backward' ? (
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    ) : item.direction === 'forward' ? (
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    ) : (
+                      <Circle className="w-2.5 h-2.5 fill-current" />
+                    )}
+                  </div>
+                  <div className="ml-10 w-full space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium leading-none">{item.stageName}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(item.date), "dd/MM 'às' HH:mm")}
+                        </p>
                       </div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
+                        <Clock className="w-3 h-3" />
+                        {item.durationStr}
+                      </div>
+                    </div>
+                    {item.note && !item.note.startsWith('Movido para') && (
+                      <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
+                        {item.note}
+                      </p>
                     )}
                   </div>
                 </div>
