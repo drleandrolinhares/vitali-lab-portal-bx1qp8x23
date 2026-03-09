@@ -352,12 +352,12 @@ export default function NewRequest() {
                 <Label className="uppercase font-semibold text-xs">Material</Label>
                 <Input
                   value={formData.material}
-                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                  className="h-11"
+                  readOnly
+                  className="h-11 bg-muted/50 cursor-not-allowed text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                   placeholder="Ex: Zircônia, Resina..."
                 />
                 <p className="text-[10px] text-muted-foreground ml-1">
-                  Preenchido automaticamente se configurado no sistema
+                  Preenchido automaticamente pelo tipo de trabalho
                 </p>
               </div>
               <div className="space-y-2">

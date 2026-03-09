@@ -3,7 +3,16 @@ import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Mail, Briefcase, Settings, Phone, UserCircle, MessageCircle, Trash2 } from 'lucide-react'
+import {
+  Mail,
+  Briefcase,
+  Settings,
+  Phone,
+  UserCircle,
+  MessageCircle,
+  Trash2,
+  Tag,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,6 +38,7 @@ export default function DentistsPage() {
     clinic_contact_role: '',
     clinic_contact_phone: '',
     whatsapp_group_link: '',
+    commercial_agreement: '',
   })
 
   const hasAccess = currentUser?.role === 'receptionist' || currentUser?.role === 'admin'
@@ -58,6 +68,7 @@ export default function DentistsPage() {
         clinic_contact_role: p.clinic_contact_role,
         clinic_contact_phone: p.clinic_contact_phone,
         whatsapp_group_link: p.whatsapp_group_link,
+        commercial_agreement: p.commercial_agreement || 0,
         activeCases: orders ? orders.filter((o: any) => o.dentist_id === p.id).length : 0,
       }))
       setDentists(mapped)
@@ -79,6 +90,7 @@ export default function DentistsPage() {
       clinic_contact_role: dentist.clinic_contact_role || '',
       clinic_contact_phone: dentist.clinic_contact_phone || '',
       whatsapp_group_link: dentist.whatsapp_group_link || '',
+      commercial_agreement: dentist.commercial_agreement?.toString() || '0',
     })
   }
 
@@ -103,6 +115,7 @@ export default function DentistsPage() {
     if (!editingDentist) return
     const closing_date = formData.closing_date ? parseInt(formData.closing_date) : null
     const payment_due_date = formData.payment_due_date ? parseInt(formData.payment_due_date) : null
+    const commercial_agreement = parseFloat(formData.commercial_agreement) || 0
 
     const { data, error } = await supabase
       .from('profiles' as any)
@@ -114,6 +127,7 @@ export default function DentistsPage() {
         clinic_contact_role: formData.clinic_contact_role,
         clinic_contact_phone: formData.clinic_contact_phone,
         whatsapp_group_link: formData.whatsapp_group_link,
+        commercial_agreement,
       })
       .eq('id', editingDentist.id)
       .select()
@@ -228,6 +242,13 @@ export default function DentistsPage() {
                   </div>
                 )}
 
+                {dentist.commercial_agreement > 0 && (
+                  <div className="flex items-center gap-2 text-emerald-600 font-medium">
+                    <Tag className="w-4 h-4 flex-shrink-0" />{' '}
+                    <span>Acordo Comercial: -{dentist.commercial_agreement}%</span>
+                  </div>
+                )}
+
                 <div className="bg-muted/40 rounded-md p-2 mt-2 border border-border/50 grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-muted-foreground block mb-0.5">Fechamento</span>
@@ -313,7 +334,7 @@ export default function DentistsPage() {
               )}
 
               <div className="pt-4 pb-2 border-b">
-                <h4 className="text-sm font-semibold text-foreground">Faturamento</h4>
+                <h4 className="text-sm font-semibold text-foreground">Faturamento & Condições</h4>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -338,6 +359,23 @@ export default function DentistsPage() {
                     onChange={(e) => setFormData({ ...formData, payment_due_date: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="space-y-2 mt-4">
+                <Label>Acordo Comercial (Desconto %)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="Ex: 10"
+                  value={formData.commercial_agreement}
+                  onChange={(e) =>
+                    setFormData({ ...formData, commercial_agreement: e.target.value })
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Será aplicado automaticamente como desconto nos novos pedidos deste dentista.
+                </p>
               </div>
             </div>
 

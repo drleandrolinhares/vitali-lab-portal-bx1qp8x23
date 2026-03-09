@@ -13,6 +13,7 @@ import {
   TrendingUp,
   ChevronRight,
   Medal,
+  Radio,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 
@@ -126,6 +127,7 @@ function Top10List({
 export default function AdminDashboard() {
   const { orders, selectedLab, currentUser } = useAppStore()
 
+  // Ensure orders list filters correctly and re-evaluates seamlessly
   const filteredOrders = useMemo(
     () => orders.filter((o) => selectedLab === 'Todos' || o.sector === selectedLab),
     [orders, selectedLab],
@@ -134,7 +136,8 @@ export default function AdminDashboard() {
   const metrics = useMemo(
     () => ({
       total: filteredOrders.length,
-      pending: filteredOrders.filter((o) => o.status === 'pending').length,
+      pending: filteredOrders.filter((o) => o.status === 'pending' || o.kanbanStage === 'TRIAGEM')
+        .length,
       production: filteredOrders.filter((o) => o.status === 'in_production').length,
       completed: filteredOrders.filter((o) => o.status === 'completed' || o.status === 'delivered')
         .length,
@@ -161,7 +164,8 @@ export default function AdminDashboard() {
       }
       const stat = map.get(o.dentistId)!
       stat.totalOrders += 1
-      stat.totalValue += Number(o.clearedBalance) || 0
+      // Use basePrice to calculate accurate financial rankings including discounts
+      stat.totalValue += Number(o.basePrice) || 0
       if (new Date(o.createdAt) >= thirtyDaysAgo) stat.recentOrders += 1
     })
 
@@ -191,15 +195,23 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 max-w-screen-2xl mx-auto animate-fade-in pb-10">
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-primary/10 rounded-xl shadow-inner border border-primary/20">
-          <BarChart3 className="w-6 h-6 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-primary/10 rounded-xl shadow-inner border border-primary/20">
+            <BarChart3 className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+              Dashboard Gerencial
+            </h2>
+            <p className="text-muted-foreground">
+              Visão geral de desempenho e parceiros de destaque.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Gerencial</h2>
-          <p className="text-muted-foreground">
-            Visão geral de desempenho e parceiros de destaque.
-          </p>
+        <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm">
+          <Radio className="w-4 h-4 animate-pulse" />
+          Sincronização em Tempo Real Ativa
         </div>
       </div>
 
@@ -207,12 +219,12 @@ export default function AdminDashboard() {
         <Card className="shadow-subtle border-l-4 border-l-blue-500 hover:shadow-md transition-all">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Total de Pedidos
+              Novos Pedidos (Total)
             </CardTitle>
             <Activity className="w-5 h-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-blue-600 dark:text-blue-500">
+            <div className="text-3xl font-black text-blue-600 dark:text-blue-500 transition-all duration-500">
               {metrics.total}
             </div>
           </CardContent>
@@ -225,7 +237,7 @@ export default function AdminDashboard() {
             <Clock className="w-5 h-5 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-amber-600 dark:text-amber-500">
+            <div className="text-3xl font-black text-amber-600 dark:text-amber-500 transition-all duration-500">
               {metrics.pending}
             </div>
           </CardContent>
@@ -238,7 +250,7 @@ export default function AdminDashboard() {
             <PackageCheck className="w-5 h-5 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+            <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 transition-all duration-500">
               {metrics.production}
             </div>
           </CardContent>
@@ -251,7 +263,7 @@ export default function AdminDashboard() {
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+            <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 transition-all duration-500">
               {metrics.completed}
             </div>
           </CardContent>
@@ -281,8 +293,8 @@ export default function AdminDashboard() {
           }}
         />
         <Top10List
-          title="Receita Gerada"
-          description="Maior retorno financeiro"
+          title="Receita Bruta"
+          description="Maior valor em pedidos (c/ descontos)"
           icon={Wallet}
           data={rankings.byValue}
           metricKey="totalValue"

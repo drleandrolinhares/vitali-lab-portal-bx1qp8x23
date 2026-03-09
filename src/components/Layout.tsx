@@ -92,7 +92,7 @@ const ADMIN_MENUS = [
         icon: PieChart,
         path: '/comparative-dashboard',
       },
-      { id: 'finances', title: 'Finanças', icon: TrendingUp, path: '/admin-financial' },
+      { id: 'finances', title: 'DASH FINANCEIRO', icon: TrendingUp, path: '/admin-financial' },
       {
         id: 'accounts-payable',
         title: 'Contas a Pagar',

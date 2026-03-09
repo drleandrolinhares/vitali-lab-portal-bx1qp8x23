@@ -366,6 +366,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? orderData.dentistId
         : currentUser.id
 
+    const { data: dentistProfile } = await supabase
+      .from('profiles' as any)
+      .select('commercial_agreement')
+      .eq('id', targetDentistId)
+      .maybeSingle()
+
+    const discountPercent = dentistProfile?.commercial_agreement || 0
+
     const priceItem =
       priceList.find(
         (p) => p.work_type === orderData.workType && (!p.sector || p.sector === orderData.sector),
@@ -378,6 +386,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .replace(/\./g, '')
         .replace(',', '.')
       basePrice = parseFloat(numericString) || 0
+
+      if (discountPercent > 0) {
+        basePrice = basePrice * (1 - discountPercent / 100)
+      }
     }
 
     const { data, error } = await supabase

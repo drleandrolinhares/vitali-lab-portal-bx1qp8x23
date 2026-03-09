@@ -8,6 +8,7 @@ export interface User {
   whatsapp_group_link?: string | null
   avatar_url?: string | null
   permissions?: string[] | null
+  commercial_agreement?: number
 }
 
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered' | 'cancelled'
