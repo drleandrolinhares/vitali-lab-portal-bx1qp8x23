@@ -15,7 +15,24 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   const isFullyCompleted = order.status === 'completed' || order.status === 'delivered'
   const isCancelled = order.status === 'cancelled'
 
-  const basePrice = order.basePrice || 0
+  let basePrice = order.basePrice || 0
+
+  // Fallback to priceList if basePrice is 0 (prevents 0-value revenue bugs)
+  if (basePrice === 0 && priceList && priceList.length > 0) {
+    const priceItem =
+      priceList.find(
+        (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
+      ) || priceList.find((p) => p.work_type === order.workType)
+
+    if (priceItem && priceItem.price) {
+      const numericString = String(priceItem.price)
+        .replace(/[^\d,.-]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.')
+      basePrice = parseFloat(numericString) || 0
+    }
+  }
+
   const completedCost = isFullyCompleted ? basePrice : 0
   const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0
 

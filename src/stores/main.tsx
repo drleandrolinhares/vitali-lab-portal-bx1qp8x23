@@ -469,6 +469,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       note: `Movido para ${stage}`,
     }
 
+    const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
+    const financials = getOrderFinancials(updatedOrder, priceList)
+
     setOrders((prev) =>
       prev.map((o) =>
         o.id === dbId
@@ -476,6 +479,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ...o,
               kanbanStage: stage,
               status: newStatus,
+              basePrice: financials.basePrice,
               isAcknowledged: shouldAcknowledge ? true : o.isAcknowledged,
               history: [newHistoryEntry, ...o.history],
             }
@@ -491,13 +495,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const updates: any = { kanban_stage: stage, status: newStatus }
     if (shouldAcknowledge) updates.is_acknowledged = true
+    if (order.basePrice === 0 && financials.basePrice > 0) {
+      updates.base_price = financials.basePrice
+    }
 
     await supabase.from('orders').update(updates).eq('id', dbId)
 
     if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
-      const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
-      const financials = getOrderFinancials(updatedOrder)
-
       if (financials.totalCost > 0) {
         await supabase.from('expenses').insert({
           description: `Serviço Concluído: Pedido ${order.friendlyId} - ${order.patientName}`,

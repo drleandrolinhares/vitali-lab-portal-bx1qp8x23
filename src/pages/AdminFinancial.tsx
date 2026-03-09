@@ -47,7 +47,8 @@ import { Navigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
 
 export default function AdminFinancial() {
-  const { currentUser, orders, refreshOrders, selectedLab } = useAppStore()
+  const { currentUser, orders, refreshOrders, selectedLab, priceList, dreCategories } =
+    useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
@@ -83,30 +84,41 @@ export default function AdminFinancial() {
   )
 
   const financials = useMemo(() => {
-    return monthFilteredOrders.map((o) => getOrderFinancials(o))
-  }, [monthFilteredOrders])
+    return monthFilteredOrders.map((o) => getOrderFinancials(o, priceList))
+  }, [monthFilteredOrders, priceList])
 
   const monthlyRevenue = useMemo(
     () =>
-      monthFilteredOrders.reduce((acc, o) => {
+      financials.reduce((acc, o) => {
         if (o.status === 'completed' || o.status === 'delivered') {
-          return acc + getOrderFinancials(o).totalCost
+          return acc + o.totalCost
         }
         return acc
       }, 0),
-    [monthFilteredOrders],
+    [financials],
   )
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => selectedLab === 'Todos' || e.sector === selectedLab)
   }, [expenses, selectedLab])
 
+  const revenueCategories = useMemo(() => {
+    return dreCategories.filter((c) => c.category_type === 'revenue').map((c) => c.name)
+  }, [dreCategories])
+
   const monthlyExpenses = useMemo(
     () =>
       filteredExpenses
-        .filter((e) => e.due_date && e.due_date.startsWith(selectedMonth))
+        .filter((e) => {
+          // Avoid double counting auto-generated revenue records as expenses
+          const isRevenue =
+            revenueCategories.includes(e.dre_category) ||
+            e.dre_category === 'Receita' ||
+            e.category === 'Serviços Realizados'
+          return e.due_date && e.due_date.startsWith(selectedMonth) && !isRevenue
+        })
         .reduce((acc, e) => acc + Number(e.amount), 0),
-    [filteredExpenses, selectedMonth],
+    [filteredExpenses, selectedMonth, revenueCategories],
   )
 
   const monthlyProfit = monthlyRevenue - monthlyExpenses
@@ -119,7 +131,9 @@ export default function AdminFinancial() {
       const pipelineBalance = dentistOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
       return { ...d, outstandingBalance, pipelineBalance, dentistOrders }
     })
-    .filter((d) => d.outstandingBalance > 0 || d.pipelineBalance > 0 || d.dentistOrders.length > 0)
+    .filter((d) => d.outstandingBalance > 0 || d.pipelineBalance > 0)
+
+  const dentistsWithOutstanding = dentistStats.filter((d) => d.outstandingBalance > 0)
 
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
     return <Navigate to="/" replace />
@@ -256,6 +270,11 @@ export default function AdminFinancial() {
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
             {selectedMonthLabel})
+            {dentistStats.length > 0 && (
+              <div className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-bold ml-2">
+                {dentistsWithOutstanding.length}
+              </div>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
