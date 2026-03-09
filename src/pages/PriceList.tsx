@@ -39,6 +39,7 @@ export default function PriceList() {
   const [formData, setFormData] = useState({
     work_type: '',
     category: 'Prótese Fixa',
+    material: '',
     price: '',
     sector: 'Soluções Cerâmicas',
   })
@@ -66,12 +67,13 @@ export default function PriceList() {
 
   const handleSave = async () => {
     if (!formData.work_type || !formData.price) {
-      return toast({ title: 'Preencha todos os campos.', variant: 'destructive' })
+      return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
     }
 
     const { error } = await supabase.from('price_list').insert({
       work_type: formData.work_type,
       category: formData.category,
+      material: formData.material,
       price: formData.price,
       sector: formData.sector,
     })
@@ -84,6 +86,7 @@ export default function PriceList() {
       setFormData({
         work_type: '',
         category: 'Prótese Fixa',
+        material: '',
         price: '',
         sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
       })
@@ -126,6 +129,7 @@ export default function PriceList() {
               <TableRow>
                 <TableHead className="pl-6">Procedimento</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead>Material</TableHead>
                 <TableHead>Setor / Laboratório</TableHead>
                 <TableHead className="text-right">Valor Base</TableHead>
                 <TableHead className="text-right pr-6">Ações</TableHead>
@@ -134,7 +138,7 @@ export default function PriceList() {
             <TableBody>
               {filteredPrices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                     Nenhum procedimento encontrado.
                   </TableCell>
                 </TableRow>
@@ -143,6 +147,7 @@ export default function PriceList() {
                   <TableRow key={item.id}>
                     <TableCell className="pl-6 font-medium">{item.work_type}</TableCell>
                     <TableCell>{item.category}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.material || '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -181,7 +186,7 @@ export default function PriceList() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nome do Procedimento</Label>
+              <Label>Nome do Procedimento *</Label>
               <Input
                 placeholder="Ex: Coroa Emax"
                 value={formData.work_type}
@@ -194,6 +199,14 @@ export default function PriceList() {
                 placeholder="Ex: Prótese Fixa"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Material</Label>
+              <Input
+                placeholder="Ex: Zircônia, Resina Acrílica..."
+                value={formData.material}
+                onChange={(e) => setFormData({ ...formData, material: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -212,7 +225,7 @@ export default function PriceList() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Valor (R$)</Label>
+              <Label>Valor (R$) *</Label>
               <Input
                 placeholder="150.00"
                 value={formData.price}

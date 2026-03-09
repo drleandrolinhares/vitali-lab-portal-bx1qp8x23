@@ -19,6 +19,8 @@ import {
   Circle,
   Calendar,
   Trash2,
+  Paperclip,
+  Download,
 } from 'lucide-react'
 import { Order, OrderHistory } from '@/lib/types'
 import { useAppStore } from '@/stores/main'
@@ -125,6 +127,33 @@ export function OrderDetailsSheet({
             </div>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto mt-6 space-y-8 pr-2 pb-6">
+            {order.fileUrls && order.fileUrls.length > 0 && (
+              <div className="space-y-3 bg-muted/30 p-4 rounded-xl border border-border/50">
+                <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <Paperclip className="w-4 h-4 text-primary" /> Arquivos Anexados
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {order.fileUrls.map((url, i) => {
+                    const filename = url.split('/').pop() || `Arquivo ${i + 1}`
+                    return (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 text-sm p-2 rounded-md bg-background border hover:border-primary/50 transition-colors group"
+                      >
+                        <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform shrink-0" />
+                        <span className="truncate text-foreground group-hover:text-primary transition-colors">
+                          {filename}
+                        </span>
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <FileText className="w-4 h-4 text-primary" /> Observações Administrativas
@@ -139,6 +168,7 @@ export function OrderDetailsSheet({
                 Salvar Observações
               </Button>
             </div>
+
             <div className="space-y-4">
               <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Activity className="w-4 h-4 text-primary" /> Histórico de Etapas

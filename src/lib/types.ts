@@ -54,6 +54,7 @@ export interface Order {
   clearedBalance: number
   basePrice: number
   history: OrderHistory[]
+  fileUrls?: string[]
 }
 
 export interface AuditLog {

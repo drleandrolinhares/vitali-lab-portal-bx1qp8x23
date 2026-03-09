@@ -24,18 +24,29 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TeethSelector } from '@/components/TeethSelector'
 import { toast } from '@/hooks/use-toast'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Check, ChevronsUpDown, UploadCloud, X, File as FileIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function NewRequest() {
-  const { addOrder, currentUser } = useAppStore()
+  const { addOrder, currentUser, priceList } = useAppStore()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
-  const [priceListItems, setPriceListItems] = useState<
-    { category: string; sector: string; workType: string }[]
-  >([])
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [availableScales, setAvailableScales] = useState<string[]>([])
+  const [scaleOpen, setScaleOpen] = useState(false)
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const [formData, setFormData] = useState({
     dentistId: '',
@@ -57,20 +68,6 @@ export default function NewRequest() {
   const isAdminOrReception = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
 
   useEffect(() => {
-    const fetchPrices = async () => {
-      const { data } = await supabase.from('price_list').select('category, sector, work_type')
-      if (data) {
-        setPriceListItems(
-          data.map((d: any) => ({
-            category: d.category || '',
-            sector: d.sector || '',
-            workType: d.work_type,
-          })),
-        )
-      }
-    }
-    fetchPrices()
-
     const fetchScales = async () => {
       const { data } = await supabase
         .from('app_settings')
@@ -117,13 +114,13 @@ export default function NewRequest() {
 
       const filtered = Array.from(
         new Set(
-          priceListItems
+          priceList
             .filter((p) => {
               const catMatch = p.category && normalize(p.category) === normalizedFormSector
               const secMatch = p.sector && normalize(p.sector) === normalizedFormSector
               return catMatch || secMatch
             })
-            .map((p) => p.workType)
+            .map((p) => p.work_type)
             .filter(Boolean),
         ),
       ).sort()
@@ -136,7 +133,30 @@ export default function NewRequest() {
     } else {
       setAvailableWorkTypes([])
     }
-  }, [formData.sector, priceListItems])
+  }, [formData.sector, priceList])
+
+  useEffect(() => {
+    if (formData.workType && formData.sector) {
+      const priceItem =
+        priceList.find((p) => p.work_type === formData.workType && p.sector === formData.sector) ||
+        priceList.find((p) => p.work_type === formData.workType)
+
+      if (priceItem && priceItem.material) {
+        setFormData((prev) => ({ ...prev, material: priceItem.material }))
+      }
+    }
+  }, [formData.workType, formData.sector, priceList])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArr = Array.from(e.target.files)
+      setSelectedFiles((prev) => [...prev, ...filesArr])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -152,6 +172,31 @@ export default function NewRequest() {
     }
 
     setSubmitting(true)
+
+    let fileUrls: string[] = []
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `${currentUser?.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('order_files')
+          .upload(filePath, file)
+
+        if (!uploadError) {
+          const { data } = supabase.storage.from('order_files').getPublicUrl(filePath)
+          fileUrls.push(data.publicUrl)
+        } else {
+          toast({
+            title: 'Erro de upload',
+            description: `Falha ao enviar arquivo ${file.name}`,
+            variant: 'destructive',
+          })
+        }
+      }
+    }
+
     const success = await addOrder({
       ...formData,
       material: formData.material || 'Padrão',
@@ -159,6 +204,7 @@ export default function NewRequest() {
         formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
       teeth: selectedTeeth,
       arches: selectedArches,
+      fileUrls,
     })
     setSubmitting(false)
 
@@ -310,6 +356,9 @@ export default function NewRequest() {
                   className="h-11"
                   placeholder="Ex: Zircônia, Resina..."
                 />
+                <p className="text-[10px] text-muted-foreground ml-1">
+                  Preenchido automaticamente se configurado no sistema
+                </p>
               </div>
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">COR BASE</Label>
@@ -323,21 +372,54 @@ export default function NewRequest() {
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
                 {availableScales.length > 0 ? (
-                  <Select
-                    value={formData.shadeScale}
-                    onValueChange={(v) => setFormData({ ...formData, shadeScale: v })}
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableScales.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={scaleOpen} onOpenChange={setScaleOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={scaleOpen}
+                        className="w-full justify-between h-11 font-normal bg-background"
+                      >
+                        {formData.shadeScale
+                          ? availableScales.find((s) => s === formData.shadeScale) ||
+                            formData.shadeScale
+                          : 'Selecione a escala...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Buscar escala..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma escala encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {availableScales.map((scale) => (
+                              <CommandItem
+                                key={scale}
+                                value={scale}
+                                onSelect={(currentValue) => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    shadeScale:
+                                      currentValue === formData.shadeScale ? '' : currentValue,
+                                  }))
+                                  setScaleOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    formData.shadeScale === scale ? 'opacity-100' : 'opacity-0',
+                                  )}
+                                />
+                                {scale}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 ) : (
                   <Input
                     placeholder="Ex: VITA..."
@@ -367,24 +449,81 @@ export default function NewRequest() {
                 <div className="flex items-center space-x-3 bg-background p-3 rounded-lg border">
                   <RadioGroupItem value="dentist_send" id="r2" />
                   <Label htmlFor="r2" className="font-bold cursor-pointer flex-1">
-                    VOU ENVIAR ARQUIVO STL
+                    VOU ENVIAR ARQUIVO STL / LINK
                   </Label>
                 </div>
               </RadioGroup>
+
               {formData.shippingMethod === 'dentist_send' && (
-                <div className="mt-4 pt-4 border-t space-y-2 animate-fade-in-down">
-                  <Label className="uppercase font-semibold text-xs text-primary">
-                    FORMA DO ENVIO *
-                  </Label>
-                  <Input
-                    placeholder="Link ou método..."
-                    value={formData.stlDeliveryMethod}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stlDeliveryMethod: e.target.value })
-                    }
-                    className="h-11"
-                    required
-                  />
+                <div className="mt-4 pt-4 border-t space-y-6 animate-fade-in-down">
+                  <div className="space-y-3">
+                    <Label className="uppercase font-semibold text-xs text-primary">
+                      ANEXAR ARQUIVOS STL/DIGITAIS
+                    </Label>
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="dropzone-file"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-background hover:bg-muted/50 border-primary/20 hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <UploadCloud className="w-8 h-8 mb-2 text-primary/60" />
+                          <p className="mb-1 text-sm text-muted-foreground font-medium">
+                            <span className="font-semibold text-primary">Clique para anexar</span>{' '}
+                            ou arraste e solte
+                          </p>
+                          <p className="text-xs text-muted-foreground opacity-70">
+                            .STL, .PLY, .OBJ, .ZIP (Max 50MB)
+                          </p>
+                        </div>
+                        <input
+                          id="dropzone-file"
+                          type="file"
+                          className="hidden"
+                          multiple
+                          accept=".stl,.obj,.ply,.zip,.rar"
+                          onChange={handleFileChange}
+                        />
+                      </label>
+                    </div>
+                    {selectedFiles.length > 0 && (
+                      <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mt-3">
+                        {selectedFiles.map((file, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 text-sm bg-background border rounded-md"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <FileIcon className="w-4 h-4 text-primary shrink-0" />
+                              <span className="truncate max-w-[200px]">{file.name}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="w-6 h-6 text-destructive shrink-0"
+                              onClick={() => removeFile(idx)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="uppercase font-semibold text-xs text-primary">
+                      OU FORNEÇA UM LINK DE ENVIO (WeTransfer, Drive, etc)
+                    </Label>
+                    <Input
+                      placeholder="Cole o link aqui..."
+                      value={formData.stlDeliveryMethod}
+                      onChange={(e) =>
+                        setFormData({ ...formData, stlDeliveryMethod: e.target.value })
+                      }
+                      className="h-11"
+                    />
+                  </div>
                 </div>
               )}
             </div>

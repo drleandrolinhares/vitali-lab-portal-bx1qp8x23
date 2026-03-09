@@ -174,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchPriceList = useCallback(async () => {
     const { data } = await supabase
       .from('price_list')
-      .select('id, work_type, sector, price, price_stages(*)')
+      .select('id, work_type, sector, price, material, price_stages(*)')
     if (data) setPriceList(data)
   }, [])
 
@@ -225,6 +225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           clearedBalance: o.cleared_balance || 0,
           basePrice: o.base_price || 0,
           dre_category: o.dre_category,
+          fileUrls: o.file_urls || [],
           history: (o.order_history || [])
             .sort(
               (a: any, b: any) =>
@@ -398,6 +399,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         observations: orderData.observations,
         status: 'pending',
         base_price: basePrice,
+        file_urls: orderData.fileUrls || [],
       })
       .select()
       .single()
@@ -426,7 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const orderToDelete = orders.find((o) => o.id === dbId)
 
-    // Cascading deletion for financial records (since constraint might be SET NULL)
+    // Cascading deletion for financial records
     await supabase.from('expenses').delete().eq('order_id', dbId)
 
     const { error } = await supabase.from('orders').delete().eq('id', dbId)

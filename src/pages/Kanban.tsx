@@ -10,7 +10,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/StatusBadge'
-import { Users, Plus, Trash2, Edit2, GripHorizontal, X, Info, CheckCircle2 } from 'lucide-react'
+import {
+  Users,
+  Plus,
+  Trash2,
+  Edit2,
+  GripHorizontal,
+  X,
+  Info,
+  CheckCircle2,
+  Paperclip,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -432,9 +442,14 @@ export default function KanbanPage() {
                               >
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
                                 <div className="flex justify-between items-start mb-2 pl-1">
-                                  <span className="text-xs font-bold text-slate-500">
-                                    {o.friendlyId}
-                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-slate-500">
+                                      {o.friendlyId}
+                                    </span>
+                                    {o.fileUrls && o.fileUrls.length > 0 && (
+                                      <Paperclip className="w-3 h-3 text-primary opacity-70" />
+                                    )}
+                                  </div>
                                   <StatusBadge
                                     status={o.status}
                                     className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
@@ -501,6 +516,12 @@ export default function KanbanPage() {
                                     <p>
                                       <span className="font-semibold opacity-100">Material:</span>{' '}
                                       {o.material}
+                                    </p>
+                                  )}
+                                  {o.fileUrls && o.fileUrls.length > 0 && (
+                                    <p className="flex items-center gap-1 mt-1 text-primary-foreground/90">
+                                      <Paperclip className="w-3 h-3" /> {o.fileUrls.length}{' '}
+                                      arquivo(s) anexo(s)
                                     </p>
                                   )}
                                 </div>
