@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -10,9 +11,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { FileText, Activity, Clock, ArrowLeft, ArrowRight, Circle, Calendar } from 'lucide-react'
-import { Order } from '@/lib/types'
+import { Order, OrderHistory } from '@/lib/types'
 import { useAppStore } from '@/stores/main'
 import { cn, processOrderHistory } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
 
 interface Props {
   order: Order | null
@@ -32,10 +34,40 @@ export function OrderDetailsSheet({
   onSaveObs,
 }: Props) {
   const { kanbanStages } = useAppStore()
+  const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
+
+  useEffect(() => {
+    if (isOpen && order?.id) {
+      const fetchHistory = async () => {
+        const { data, error } = await supabase
+          .from('order_history')
+          .select('*')
+          .eq('order_id', order.id)
+          .order('created_at', { ascending: true })
+
+        if (data && !error) {
+          setHistoryItems(
+            data.map((h: any) => ({
+              id: h.id,
+              status: h.status,
+              date: h.created_at,
+              note: h.note,
+            })),
+          )
+        } else {
+          setHistoryItems(order.history || [])
+        }
+      }
+      fetchHistory()
+    } else {
+      setHistoryItems([])
+    }
+  }, [isOpen, order?.id, order?.history])
 
   if (!order) return null
 
-  const processedHistory = processOrderHistory(order.history, kanbanStages)
+  const actualHistory = historyItems.length > 0 ? historyItems : order.history
+  const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>

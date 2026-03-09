@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,6 +8,8 @@ import { ArrowLeft, Calendar, FileText, Activity, Clock, ArrowRight, Circle } fr
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn, processOrderHistory } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
+import { OrderHistory } from '@/lib/types'
 
 export default function OrderDetails() {
   const { id } = useParams()
@@ -15,9 +18,38 @@ export default function OrderDetails() {
 
   const order = orders.find((o) => o.id === id)
 
+  const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
+
+  useEffect(() => {
+    if (order?.id) {
+      const fetchHistory = async () => {
+        const { data, error } = await supabase
+          .from('order_history')
+          .select('*')
+          .eq('order_id', order.id)
+          .order('created_at', { ascending: true })
+
+        if (data && !error) {
+          setHistoryItems(
+            data.map((h: any) => ({
+              id: h.id,
+              status: h.status,
+              date: h.created_at,
+              note: h.note,
+            })),
+          )
+        } else {
+          setHistoryItems(order.history || [])
+        }
+      }
+      fetchHistory()
+    }
+  }, [order?.id, order?.history])
+
   if (!order) return <div className="p-8 text-center">Pedido não encontrado.</div>
 
-  const processedHistory = processOrderHistory(order.history, kanbanStages)
+  const actualHistory = historyItems.length > 0 ? historyItems : order.history
+  const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
