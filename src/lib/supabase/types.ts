@@ -318,6 +318,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          base_price: number
           cleared_balance: number
           color_and_considerations: string | null
           created_at: string
@@ -341,6 +342,7 @@ export type Database = {
           work_type: string
         }
         Insert: {
+          base_price?: number
           cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
@@ -364,6 +366,7 @@ export type Database = {
           work_type: string
         }
         Update: {
+          base_price?: number
           cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
@@ -797,6 +800,7 @@ export const Constants = {
 //   patient_birth_date: date (nullable)
 //   dre_category: text (not null, default: 'Receita'::text)
 //   is_acknowledged: boolean (not null, default: false)
+//   base_price: numeric (not null, default: 0)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)

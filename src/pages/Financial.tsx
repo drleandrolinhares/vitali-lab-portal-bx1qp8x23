@@ -25,46 +25,85 @@ import { Button } from '@/components/ui/button'
 export default function FinancialPage() {
   const { orders, kanbanStages, currentUser, priceList } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (currentUser?.id) {
-      supabase
-        .from('settlements' as any)
-        .select('*')
-        .eq('dentist_id', currentUser.id)
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (data) setSettlements(data)
-        })
+    let isMounted = true
+
+    const fetchSettlements = async () => {
+      if (!currentUser?.id) return
+
+      try {
+        setFetchError(null)
+        const { data, error } = await supabase
+          .from('settlements')
+          .select('*')
+          .eq('dentist_id', currentUser.id)
+          .order('created_at', { ascending: false })
+
+        if (!isMounted) return
+
+        if (error) {
+          console.error('Database error fetching settlements:', error)
+          setFetchError('Não foi possível carregar o histórico no momento.')
+          return
+        }
+
+        if (data) {
+          setSettlements(data)
+        }
+      } catch (err) {
+        if (!isMounted) return
+        console.error('Network or unexpected error fetching settlements:', err)
+        setFetchError('Problema de conexão ao tentar carregar os dados.')
+      }
+    }
+
+    fetchSettlements()
+
+    return () => {
+      isMounted = false
     }
   }, [currentUser?.id])
 
   if (currentUser?.role !== 'dentist') return <div className="p-8">Acesso restrito</div>
 
-  const displayOrders = orders
-    .map((o) => getOrderFinancials(o, priceList, kanbanStages))
-    .filter((o) => o.outstandingCost > 0 || o.pendingCost > 0)
+  const safeOrders = Array.isArray(orders) ? orders : []
+  const safePriceList = Array.isArray(priceList) ? priceList : []
+  const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-  const totalAccumulated = displayOrders.reduce((acc, o) => acc + o.outstandingCost, 0)
-  const totalPending = displayOrders.reduce((acc, o) => acc + o.pendingCost, 0)
+  const displayOrders = safeOrders
+    .map((o) => getOrderFinancials(o, safePriceList, safeKanbanStages))
+    .filter((o) => (o?.outstandingCost || 0) > 0 || (o?.pendingCost || 0) > 0)
+
+  const totalAccumulated = displayOrders.reduce((acc, o) => acc + (o?.outstandingCost || 0), 0)
+  const totalPending = displayOrders.reduce((acc, o) => acc + (o?.pendingCost || 0), 0)
 
   const handleExportCSV = (settlement: any) => {
-    const snapshot = settlement.orders_snapshot || []
-    let csv = 'Data da Liquidação,Paciente,Trabalho,Valor Cobrado\n'
-    const date = new Date(settlement.created_at).toLocaleDateString('pt-BR')
-    snapshot.forEach((s: any) => {
-      csv += `"${date}","${s.patientName}","${s.workType}",${s.clearedAmount}\n`
-    })
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `Historico_Pagamento_${date}.csv`
-    a.click()
+    try {
+      const snapshot = settlement.orders_snapshot || []
+      let csv = 'Data da Liquidação,Paciente,Trabalho,Valor Cobrado\n'
+      const date = new Date(settlement.created_at).toLocaleDateString('pt-BR')
+      snapshot.forEach((s: any) => {
+        csv += `"${date}","${s.patientName || ''}","${s.workType || ''}",${s.clearedAmount || 0}\n`
+      })
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Historico_Pagamento_${date}.csv`
+      a.click()
+    } catch (err) {
+      console.error('Error exporting CSV:', err)
+    }
   }
 
   const handlePrintPDF = () => {
-    window.print()
+    try {
+      window.print()
+    } catch (err) {
+      console.error('Error printing PDF:', err)
+    }
   }
 
   return (
@@ -149,10 +188,10 @@ export default function FinancialPage() {
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="font-bold text-emerald-600 text-lg">
-                            {formatBRL(order.outstandingCost)}
+                            {formatBRL(order.outstandingCost || 0)}
                           </span>
                           <span className="text-xs font-medium text-muted-foreground">
-                            de {formatBRL(order.totalCost)} (Total)
+                            de {formatBRL(order.totalCost || 0)} (Total)
                           </span>
                         </div>
                       </div>
@@ -168,14 +207,14 @@ export default function FinancialPage() {
                               {order.kanbanStage}
                             </Badge>
                           </div>
-                          {order.clearedBalance > 0 && (
+                          {(order.clearedBalance || 0) > 0 && (
                             <div className="text-amber-600 font-medium text-xs">
                               Já Liquidado: {formatBRL(order.clearedBalance)}
                             </div>
                           )}
                         </div>
 
-                        {order.mappedStages.length > 0 ? (
+                        {order.mappedStages?.length > 0 ? (
                           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800 pl-2">
                             {order.mappedStages.map((st: any, i: number) => (
                               <div key={i} className="relative flex items-center gap-4 ml-8">
@@ -207,7 +246,7 @@ export default function FinancialPage() {
                                   <span
                                     className={`font-bold text-sm ${st.isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
                                   >
-                                    {formatBRL(st.price)}
+                                    {formatBRL(st.price || 0)}
                                   </span>
                                 </div>
                               </div>
@@ -251,7 +290,16 @@ export default function FinancialPage() {
             </p>
           </div>
 
-          {settlements.length === 0 ? (
+          {fetchError && (
+            <Card className="border-destructive/50 bg-destructive/5 mb-4 print:hidden">
+              <CardContent className="py-4 flex items-center gap-3 text-destructive">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-medium">{fetchError}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {!fetchError && settlements.length === 0 ? (
             <Card className="print:hidden">
               <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
                 <History className="w-12 h-12 mb-4 opacity-20" />
@@ -276,7 +324,7 @@ export default function FinancialPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-xl font-bold text-emerald-600 print:text-black">
-                        {formatBRL(settlement.amount)}
+                        {formatBRL(settlement.amount || 0)}
                       </span>
                       <Button
                         variant="ghost"
@@ -311,15 +359,17 @@ export default function FinancialPage() {
                           >
                             <td className="py-3 px-4 print:px-0">
                               <span className="font-medium text-foreground block">
-                                {s.patientName}
+                                {s.patientName || 'N/A'}
                               </span>
-                              <span className="text-xs text-muted-foreground">{s.friendlyId}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {s.friendlyId || '-'}
+                              </span>
                             </td>
                             <td className="py-3 px-4 text-muted-foreground print:px-0">
-                              {s.workType}
+                              {s.workType || 'N/A'}
                             </td>
                             <td className="py-3 px-4 text-right font-medium print:px-0">
-                              {formatBRL(s.clearedAmount)}
+                              {formatBRL(s.clearedAmount || 0)}
                             </td>
                           </tr>
                         ))}
