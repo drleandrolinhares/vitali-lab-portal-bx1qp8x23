@@ -2,22 +2,77 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StatusBadge, getStatusLabel } from '@/components/StatusBadge'
-import { ArrowLeft, Calendar, FileText, Activity } from 'lucide-react'
+import { StatusBadge } from '@/components/StatusBadge'
+import { ArrowLeft, Calendar, FileText, Activity, Clock, ArrowRight, Circle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
+const formatDuration = (diffMs: number) => {
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return '< 1 min'
+  if (diffMins < 60) return `${diffMins} min`
+  const hours = Math.floor(diffMins / 60)
+  const mins = diffMins % 60
+  if (hours < 24) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  const days = Math.floor(hours / 24)
+  const remHours = hours % 24
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`
+}
 
 export default function OrderDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { orders } = useAppStore()
+  const { orders, kanbanStages } = useAppStore()
 
   const order = orders.find((o) => o.id === id)
 
   if (!order) return <div className="p-8 text-center">Pedido não encontrado.</div>
 
+  const historyAsc = [...(order.history || [])].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+
+  let previousIndex = -1
+  const processedHistory = historyAsc
+    .map((event, i) => {
+      const nextEvent = historyAsc[i + 1]
+      const startDate = new Date(event.date)
+      const endDate = nextEvent ? new Date(nextEvent.date) : new Date()
+      const diffMs = endDate.getTime() - startDate.getTime()
+
+      let stageName = 'Criação'
+      if (event.note?.startsWith('Movido para ')) {
+        stageName = event.note.replace('Movido para ', '')
+      } else if (event.note) {
+        stageName = event.note
+      } else if (i === 0) {
+        stageName = kanbanStages[0]?.name || 'TRIAGEM'
+      }
+
+      const stageObj = kanbanStages.find((s) => s.name.toUpperCase() === stageName.toUpperCase())
+      const currentIndex = stageObj ? stageObj.orderIndex : -1
+
+      let direction: 'forward' | 'backward' | 'none' = 'none'
+      if (previousIndex !== -1 && currentIndex !== -1) {
+        if (currentIndex > previousIndex) direction = 'forward'
+        else if (currentIndex < previousIndex) direction = 'backward'
+      }
+
+      if (currentIndex !== -1) previousIndex = currentIndex
+
+      return {
+        ...event,
+        stageName,
+        durationStr: formatDuration(diffMs),
+        direction,
+        isCurrent: !nextEvent,
+      }
+    })
+    .reverse()
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 pb-10">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
@@ -34,7 +89,7 @@ export default function OrderDetails() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2 shadow-subtle">
+        <Card className="md:col-span-2 shadow-subtle h-fit">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" /> Detalhes Clínicos
@@ -103,7 +158,7 @@ export default function OrderDetails() {
               <div className="bg-muted/30 p-4 rounded-md border">
                 <p className="text-sm text-muted-foreground mb-2">Elementos Envolvidos</p>
                 <div className="flex flex-wrap gap-2">
-                  {order.arches?.map((a) => (
+                  {order.arches?.map((a: string) => (
                     <span
                       key={a}
                       className="bg-primary/10 text-primary px-2 py-1 rounded font-semibold text-sm border border-primary/20"
@@ -111,7 +166,7 @@ export default function OrderDetails() {
                       {a}
                     </span>
                   ))}
-                  {order.teeth.map((t) => (
+                  {order.teeth.map((t: string) => (
                     <span
                       key={t}
                       className="bg-primary/10 text-primary px-2 py-1 rounded font-mono text-sm border border-primary/20"
@@ -136,23 +191,46 @@ export default function OrderDetails() {
         <Card className="shadow-subtle h-fit">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" /> Histórico
+              <Activity className="w-5 h-5 text-primary" /> Histórico de Etapas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted before:to-transparent">
-              {order.history.map((event) => (
-                <div key={event.id} className="relative flex items-start gap-4">
-                  <div className="absolute left-0 mt-1.5 w-2 h-2 rounded-full ring-4 ring-background bg-primary z-10" />
-                  <div className="ml-6 space-y-1">
-                    <p className="text-sm font-medium">{getStatusLabel(event.status)}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />{' '}
-                      {format(new Date(event.date), "dd/MM 'às' HH:mm")}
-                    </p>
-                    {event.note && (
-                      <p className="text-xs text-muted-foreground mt-1 bg-muted/50 p-1.5 rounded">
-                        {event.note}
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-px before:bg-border">
+              {processedHistory.map((item) => (
+                <div key={item.id} className="relative flex items-start gap-4">
+                  <div
+                    className={cn(
+                      'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
+                      item.isCurrent
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border',
+                    )}
+                  >
+                    {item.direction === 'backward' ? (
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    ) : item.direction === 'forward' ? (
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    ) : (
+                      <Circle className="w-2.5 h-2.5 fill-current" />
+                    )}
+                  </div>
+                  <div className="ml-10 w-full space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium leading-none">{item.stageName}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(item.date), "dd/MM 'às' HH:mm")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
+                        <Clock className="w-3 h-3" />
+                        {item.durationStr}
+                      </div>
+                    </div>
+                    {item.note && !item.note.startsWith('Movido para') && (
+                      <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
+                        {item.note}
                       </p>
                     )}
                   </div>
