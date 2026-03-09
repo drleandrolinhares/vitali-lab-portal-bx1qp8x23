@@ -1,7 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
-import { getOrderFinancials, formatBRL } from '@/lib/financial'
+import {
+  getOrderFinancials,
+  formatBRL,
+  generateMonthOptions,
+  filterOrdersForFinancials,
+} from '@/lib/financial'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +26,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   TrendingUp,
   Wallet,
   CheckCircle,
@@ -29,8 +41,10 @@ import {
   BarChart3,
   List,
   Activity,
+  CalendarDays,
 } from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
+import { format } from 'date-fns'
 
 export default function AdminFinancial() {
   const { currentUser, orders, refreshOrders, selectedLab } = useAppStore()
@@ -38,6 +52,9 @@ export default function AdminFinancial() {
   const [expenses, setExpenses] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
+
+  const monthOptions = useMemo(() => generateMonthOptions(), [])
+  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
 
   useEffect(() => {
     supabase
@@ -59,29 +76,25 @@ export default function AdminFinancial() {
     return orders.filter((o) => selectedLab === 'Todos' || o.sector === selectedLab)
   }, [orders, selectedLab])
 
-  const financials = useMemo(() => {
-    return filteredOrders.map((o) => getOrderFinancials(o))
-  }, [filteredOrders])
+  // Filter orders and expenses by the selected month
+  const monthFilteredOrders = useMemo(
+    () => filterOrdersForFinancials(filteredOrders, selectedMonth),
+    [filteredOrders, selectedMonth],
+  )
 
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
+  const financials = useMemo(() => {
+    return monthFilteredOrders.map((o) => getOrderFinancials(o))
+  }, [monthFilteredOrders])
 
   const monthlyRevenue = useMemo(
     () =>
-      filteredOrders.reduce((acc, o) => {
-        const isCompletedThisMonth = o.history.some(
-          (h: any) =>
-            (h.status === 'completed' || h.status === 'delivered') &&
-            new Date(h.date).getMonth() === currentMonth &&
-            new Date(h.date).getFullYear() === currentYear,
-        )
-        if (isCompletedThisMonth) {
-          const orderFin = getOrderFinancials(o)
-          return acc + orderFin.totalCost
+      monthFilteredOrders.reduce((acc, o) => {
+        if (o.status === 'completed' || o.status === 'delivered') {
+          return acc + getOrderFinancials(o).totalCost
         }
         return acc
       }, 0),
-    [filteredOrders, currentMonth, currentYear],
+    [monthFilteredOrders],
   )
 
   const filteredExpenses = useMemo(() => {
@@ -91,13 +104,9 @@ export default function AdminFinancial() {
   const monthlyExpenses = useMemo(
     () =>
       filteredExpenses
-        .filter(
-          (e) =>
-            new Date(e.due_date + 'T00:00:00').getMonth() === currentMonth &&
-            new Date(e.due_date + 'T00:00:00').getFullYear() === currentYear,
-        )
+        .filter((e) => e.due_date && e.due_date.startsWith(selectedMonth))
         .reduce((acc, e) => acc + Number(e.amount), 0),
-    [filteredExpenses, currentMonth, currentYear],
+    [filteredExpenses, selectedMonth],
   )
 
   const monthlyProfit = monthlyRevenue - monthlyExpenses
@@ -153,9 +162,11 @@ export default function AdminFinancial() {
     refreshOrders()
   }
 
+  const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary/10 rounded-xl">
             <TrendingUp className="w-6 h-6 text-primary" />
@@ -167,18 +178,37 @@ export default function AdminFinancial() {
             </p>
           </div>
         </div>
-        <Button asChild>
-          <Link to="/dre">
-            <BarChart3 className="w-4 h-4 mr-2" /> Acessar Relatório DRE
-          </Link>
-        </Button>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm flex-1 sm:flex-initial">
+            <CalendarDays className="w-4 h-4 text-muted-foreground ml-2" />
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full sm:w-[180px] border-0 bg-transparent shadow-none focus:ring-0">
+                <SelectValue placeholder="Selecione o Mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button asChild variant="outline" className="hidden sm:flex">
+            <Link to="/dre">
+              <BarChart3 className="w-4 h-4 mr-2" /> Relatório DRE
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 mb-8">
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Receitas do Mês
+              Receitas ({selectedMonthLabel})
             </CardTitle>
             <DollarSign className="w-4 h-4 text-emerald-500" />
           </CardHeader>
@@ -189,7 +219,7 @@ export default function AdminFinancial() {
         <Card className="shadow-subtle border-l-4 border-l-red-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Despesas do Mês
+              Despesas ({selectedMonthLabel})
             </CardTitle>
             <TrendingDown className="w-4 h-4 text-red-500" />
           </CardHeader>
@@ -224,7 +254,8 @@ export default function AdminFinancial() {
       <Card className="shadow-subtle mt-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber (Por Dentista)
+            <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
+            {selectedMonthLabel})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -232,16 +263,16 @@ export default function AdminFinancial() {
             <TableHeader>
               <TableRow>
                 <TableHead>Dentista / Clínica</TableHead>
-                <TableHead className="text-right">Pipeline</TableHead>
-                <TableHead className="text-right">Saldo Devedor</TableHead>
+                <TableHead className="text-right">Pipeline no Mês</TableHead>
+                <TableHead className="text-right">Saldo Devedor (Faturado)</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {dentistStats.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                    Nenhum dado encontrado.
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    Nenhum pedido registrado ou pendente para este mês.
                   </TableCell>
                 </TableRow>
               )}
@@ -271,7 +302,7 @@ export default function AdminFinancial() {
                         disabled={d.outstandingBalance <= 0}
                         onClick={() => setSettleDialog(d)}
                       >
-                        <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar
+                        <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
                       </Button>
                     </div>
                   </TableCell>
@@ -285,12 +316,14 @@ export default function AdminFinancial() {
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Detalhes Financeiros - {detailsDialog?.name}</DialogTitle>
+            <DialogTitle>
+              Detalhes Financeiros - {detailsDialog?.name} ({selectedMonthLabel})
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4">
             <div>
               <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-red-600">
-                <Wallet className="w-4 h-4" /> Saldo Devedor (Finalizados)
+                <Wallet className="w-4 h-4" /> Saldo Devedor (Finalizados no Mês)
               </h4>
               <div className="border rounded-md">
                 <Table>
@@ -306,7 +339,7 @@ export default function AdminFinancial() {
                       .length === 0 && (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                          Nenhum pedido finalizado pendente.
+                          Nenhum pedido finalizado pendente para este mês.
                         </TableCell>
                       </TableRow>
                     )}
@@ -333,7 +366,7 @@ export default function AdminFinancial() {
 
             <div>
               <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-600">
-                <Activity className="w-4 h-4" /> Pipeline (Em Produção)
+                <Activity className="w-4 h-4" /> Pipeline (Em Produção neste Mês)
               </h4>
               <div className="border rounded-md">
                 <Table>
@@ -380,14 +413,14 @@ export default function AdminFinancial() {
       <Dialog open={!!settleDialog} onOpenChange={(open) => !open && setSettleDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Liquidação</DialogTitle>
+            <DialogTitle>Confirmar Liquidação do Mês</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Você está prestes a liquidar o saldo devedor atual de{' '}
-              <strong>{settleDialog?.name}</strong>. Isso arquivará o valor de{' '}
+              Você está prestes a liquidar o saldo devedor de <strong>{selectedMonthLabel}</strong>{' '}
+              para o dentista <strong>{settleDialog?.name}</strong>. Isso arquivará o valor de{' '}
               <strong>{settleDialog && formatBRL(settleDialog.outstandingBalance)}</strong> no
-              histórico de pagamentos e zerará o saldo pendente do dentista.
+              histórico de pagamentos e zerará o saldo destes pedidos específicos.
             </p>
             <p className="text-sm font-medium text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
               Atenção: Esta ação não pode ser desfeita.

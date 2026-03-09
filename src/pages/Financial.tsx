@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
@@ -18,14 +25,24 @@ import {
   Activity,
   FileDown,
   History,
+  CalendarDays,
 } from 'lucide-react'
-import { getOrderFinancials, formatBRL } from '@/lib/financial'
+import {
+  getOrderFinancials,
+  formatBRL,
+  generateMonthOptions,
+  filterOrdersForFinancials,
+} from '@/lib/financial'
 import { Button } from '@/components/ui/button'
+import { format } from 'date-fns'
 
 export default function FinancialPage() {
   const { orders, kanbanStages, currentUser, priceList } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
+
+  const monthOptions = useMemo(() => generateMonthOptions(), [])
+  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
 
   useEffect(() => {
     let isMounted = true
@@ -72,9 +89,17 @@ export default function FinancialPage() {
   const safePriceList = Array.isArray(priceList) ? priceList : []
   const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-  const displayOrders = safeOrders
-    .map((o) => getOrderFinancials(o, safePriceList, safeKanbanStages))
-    .filter((o) => (o?.outstandingCost || 0) > 0 || (o?.pendingCost || 0) > 0)
+  // Filter orders by selected month to provide accurate historical view
+  const monthFilteredOrders = useMemo(
+    () => filterOrdersForFinancials(safeOrders, selectedMonth),
+    [safeOrders, selectedMonth],
+  )
+
+  // Calculate financials for the filtered orders. We do NOT filter out 0 costs here
+  // to fix the "Nenhum pedido com saldo pendente" bug when data exists but price is unconfigured.
+  const displayOrders = monthFilteredOrders.map((o) =>
+    getOrderFinancials(o, safePriceList, safeKanbanStages),
+  )
 
   const totalAccumulated = displayOrders.reduce((acc, o) => acc + (o?.outstandingCost || 0), 0)
   const totalPending = displayOrders.reduce((acc, o) => acc + (o?.pendingCost || 0), 0)
@@ -108,15 +133,33 @@ export default function FinancialPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in print:max-w-none print:m-0 print:p-0">
-      <div className="flex items-center gap-3 mb-6 print:hidden">
-        <div className="p-2.5 bg-primary/10 rounded-xl">
-          <DollarSign className="w-6 h-6 text-primary" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <DollarSign className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Gestão Financeira</h2>
+            <p className="text-muted-foreground text-sm">
+              Acompanhe os custos pendentes e seu histórico de pagamentos.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Gestão Financeira</h2>
-          <p className="text-muted-foreground text-sm">
-            Acompanhe os custos pendentes e seu histórico de pagamentos.
-          </p>
+
+        <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm">
+          <CalendarDays className="w-4 h-4 text-muted-foreground ml-2" />
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[180px] border-0 bg-transparent shadow-none focus:ring-0">
+              <SelectValue placeholder="Selecione o Mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -131,7 +174,7 @@ export default function FinancialPage() {
             <Card className="shadow-subtle border-l-4 border-l-emerald-500">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Saldo Devedor Atual
+                  Saldo Devedor ({monthOptions.find((m) => m.value === selectedMonth)?.label})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -154,15 +197,14 @@ export default function FinancialPage() {
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-muted-foreground" /> Procedimentos Pendentes de
-              Faturamento
+              <Activity className="w-5 h-5 text-muted-foreground" /> Procedimentos do Período
             </h3>
 
             {displayOrders.length === 0 ? (
               <Card>
                 <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
                   <DollarSign className="w-12 h-12 mb-4 opacity-20" />
-                  Nenhum pedido com saldo pendente.
+                  Nenhum pedido registrado ou pendente neste mês.
                 </CardContent>
               </Card>
             ) : (
@@ -187,11 +229,19 @@ export default function FinancialPage() {
                           <span className="text-sm text-muted-foreground">{order.workType}</span>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className="font-bold text-emerald-600 text-lg">
-                            {formatBRL(order.outstandingCost || 0)}
+                          <span
+                            className={`font-bold text-lg ${order.status === 'completed' || order.status === 'delivered' ? 'text-emerald-600' : 'text-amber-600'}`}
+                          >
+                            {formatBRL(
+                              order.status === 'completed' || order.status === 'delivered'
+                                ? order.outstandingCost || 0
+                                : order.pipelineCost || 0,
+                            )}
                           </span>
                           <span className="text-xs font-medium text-muted-foreground">
-                            de {formatBRL(order.totalCost || 0)} (Total)
+                            {order.status === 'completed' || order.status === 'delivered'
+                              ? 'Saldo a Pagar'
+                              : 'Estimativa Pipeline'}
                           </span>
                         </div>
                       </div>
@@ -257,7 +307,8 @@ export default function FinancialPage() {
                             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                             <p className="leading-relaxed">
                               Nenhuma etapa de cobrança detalhada foi configurada para este tipo de
-                              trabalho. O valor será cobrado integralmente ao final do processo.
+                              trabalho. O valor será cobrado integralmente ao final do processo
+                              (Total: {formatBRL(order.totalCost || 0)}).
                             </p>
                           </div>
                         )}

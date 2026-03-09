@@ -1,4 +1,6 @@
 import { Stage } from '@/lib/types'
+import { format, subMonths } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export type PriceStage = { id: string; name: string; price: number; kanban_stage: string }
 export type PriceItem = {
@@ -35,3 +37,44 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
 
 export const formatBRL = (val: number) =>
   val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+export function getOrderCompletionDate(order: any): Date | null {
+  if (order.status !== 'completed' && order.status !== 'delivered') return null
+
+  if (order.history && order.history.length > 0) {
+    const completionEvents = order.history.filter(
+      (h: any) => h.status === 'completed' || h.status === 'delivered',
+    )
+    if (completionEvents.length > 0) {
+      completionEvents.sort(
+        (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      )
+      return new Date(completionEvents[0].date)
+    }
+  }
+  return new Date(order.createdAt)
+}
+
+export function generateMonthOptions() {
+  return Array.from({ length: 13 }).map((_, i) => {
+    const d = subMonths(new Date(), i)
+    return {
+      value: format(d, 'yyyy-MM'),
+      label: format(d, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase()),
+    }
+  })
+}
+
+export function filterOrdersForFinancials(orders: any[], selectedMonth: string) {
+  return orders.filter((o) => {
+    if (o.status === 'cancelled') return false
+
+    if (o.status === 'completed' || o.status === 'delivered') {
+      const compDate = getOrderCompletionDate(o)
+      return compDate && format(compDate, 'yyyy-MM') === selectedMonth
+    } else {
+      const createdStr = format(new Date(o.createdAt), 'yyyy-MM')
+      return createdStr <= selectedMonth
+    }
+  })
+}
