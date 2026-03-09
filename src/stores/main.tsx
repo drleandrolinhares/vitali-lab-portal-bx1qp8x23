@@ -52,6 +52,18 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
+const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
+  const stg = (stage || '').toUpperCase()
+  if (stg === 'TRIAGEM' || stg === 'CAIXA DE ENTRADA' || stg === 'PENDÊNCIAS') {
+    return 'pending'
+  }
+  if (stg === 'PRONTO PARA ENVIO' || stg.includes('FINALIZADO') || stg.includes('ENTREGUE')) {
+    return dbStatus === 'delivered' ? 'delivered' : 'completed'
+  }
+  if (dbStatus === 'pending' || dbStatus === 'completed') return 'in_production'
+  return dbStatus
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const [currentUser, setCurrentUser] = useState<(User & { is_approved?: boolean }) | null>(null)
@@ -207,7 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           shippingMethod: o.shipping_method,
           stlDeliveryMethod: o.shipping_details,
           observations: o.observations,
-          status: o.status,
+          status: deriveStatus(o.kanban_stage, o.status),
           isAcknowledged: o.is_acknowledged || false,
           createdAt: o.created_at,
           clearedBalance: o.cleared_balance || 0,
@@ -406,18 +418,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const order = orders.find((o) => o.id === dbId)
     if (!order) return
 
-    let newStatus: OrderStatus = 'in_production'
-    const stg = stage.toUpperCase()
-    if (stg === 'TRIAGEM' || stg === 'CAIXA DE ENTRADA' || stg === 'PENDÊNCIAS') {
-      newStatus = 'pending'
-    } else if (
-      stg === 'PRONTO PARA ENVIO' ||
-      stg.includes('FINALIZADO') ||
-      stg.includes('ENTREGUE')
-    ) {
-      newStatus = 'completed'
-    }
-
+    const newStatus = deriveStatus(stage, order.status)
     const shouldAcknowledge =
       !order.isAcknowledged && (newStatus === 'in_production' || newStatus === 'completed')
 

@@ -325,6 +325,7 @@ export type Database = {
           dre_category: string
           friendly_id: string
           id: string
+          is_acknowledged: boolean
           kanban_stage: string
           material: string
           observations: string | null
@@ -347,6 +348,7 @@ export type Database = {
           dre_category?: string
           friendly_id?: string
           id?: string
+          is_acknowledged?: boolean
           kanban_stage?: string
           material: string
           observations?: string | null
@@ -369,6 +371,7 @@ export type Database = {
           dre_category?: string
           friendly_id?: string
           id?: string
+          is_acknowledged?: boolean
           kanban_stage?: string
           material?: string
           observations?: string | null
@@ -793,6 +796,7 @@ export const Constants = {
 //   patient_cpf: text (nullable)
 //   patient_birth_date: date (nullable)
 //   dre_category: text (not null, default: 'Receita'::text)
+//   is_acknowledged: boolean (not null, default: false)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)

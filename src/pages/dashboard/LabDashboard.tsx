@@ -18,10 +18,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { MoreHorizontal, Eye, Play, Check, Package, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Eye, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { OrderStatus } from '@/lib/types'
 import { Logo } from '@/components/Logo'
 import {
   Dialog,
@@ -34,15 +33,11 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 
 export function LabDashboard() {
-  const { orders, updateOrderStatus, deleteOrder, currentUser } = useAppStore()
-  const activeOrders = orders.filter((o) => o.status !== 'delivered')
+  const { orders, deleteOrder, currentUser } = useAppStore()
+  const activeOrders = orders.filter((o) => o.status === 'pending')
 
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
   const [deleteReason, setDeleteReason] = useState('')
-
-  const changeStatus = (id: string, status: OrderStatus) => {
-    updateOrderStatus(id, status, `Status atualizado para ${status} pela recepção.`)
-  }
 
   const handleDeleteConfirm = async () => {
     if (deleteOrderId && deleteReason.trim()) {
@@ -124,21 +119,6 @@ export function LabDashboard() {
                             <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
                           </Link>
                         </DropdownMenuItem>
-                        {order.status === 'pending' && (
-                          <DropdownMenuItem onClick={() => changeStatus(order.id, 'in_production')}>
-                            <Play className="mr-2 h-4 w-4" /> Iniciar Produção
-                          </DropdownMenuItem>
-                        )}
-                        {order.status === 'in_production' && (
-                          <DropdownMenuItem onClick={() => changeStatus(order.id, 'completed')}>
-                            <Check className="mr-2 h-4 w-4" /> Marcar Concluído
-                          </DropdownMenuItem>
-                        )}
-                        {order.status === 'completed' && (
-                          <DropdownMenuItem onClick={() => changeStatus(order.id, 'delivered')}>
-                            <Package className="mr-2 h-4 w-4" /> Registrar Entrega
-                          </DropdownMenuItem>
-                        )}
                         {currentUser?.role === 'admin' && (
                           <DropdownMenuItem
                             onClick={() => {
