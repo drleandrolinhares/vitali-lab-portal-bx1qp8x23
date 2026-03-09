@@ -127,9 +127,14 @@ function Top10List({
 export default function AdminDashboard() {
   const { orders, selectedLab, currentUser } = useAppStore()
 
-  // Ensure orders list filters correctly and re-evaluates seamlessly
+  // Improved filtering logic to handle case-insensitivity since DB default is uppercase
   const filteredOrders = useMemo(
-    () => orders.filter((o) => selectedLab === 'Todos' || o.sector === selectedLab),
+    () =>
+      orders.filter(
+        (o) =>
+          selectedLab === 'Todos' ||
+          (o.sector || '').toLowerCase() === (selectedLab || '').toLowerCase(),
+      ),
     [orders, selectedLab],
   )
 
@@ -164,7 +169,6 @@ export default function AdminDashboard() {
       }
       const stat = map.get(o.dentistId)!
       stat.totalOrders += 1
-      // Use basePrice to calculate accurate financial rankings including discounts
       stat.totalValue += Number(o.basePrice) || 0
       if (new Date(o.createdAt) >= thirtyDaysAgo) stat.recentOrders += 1
     })

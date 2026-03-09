@@ -485,6 +485,7 @@ export type Database = {
           clinic_contact_phone: string | null
           clinic_contact_role: string | null
           closing_date: number | null
+          commercial_agreement: number
           created_at: string
           email: string
           id: string
@@ -503,6 +504,7 @@ export type Database = {
           clinic_contact_phone?: string | null
           clinic_contact_role?: string | null
           closing_date?: number | null
+          commercial_agreement?: number
           created_at?: string
           email: string
           id: string
@@ -521,6 +523,7 @@ export type Database = {
           clinic_contact_phone?: string | null
           clinic_contact_role?: string | null
           closing_date?: number | null
+          commercial_agreement?: number
           created_at?: string
           email?: string
           id?: string
@@ -841,6 +844,7 @@ export const Constants = {
 //   permissions: jsonb (nullable, default: '[]'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
 //   is_approved: boolean (not null, default: false)
+//   commercial_agreement: numeric (not null, default: 0)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
