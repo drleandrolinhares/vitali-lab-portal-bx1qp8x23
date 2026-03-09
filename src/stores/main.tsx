@@ -174,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchPriceList = useCallback(async () => {
     const { data } = await supabase
       .from('price_list')
-      .select('id, work_type, sector, price_stages(*)')
+      .select('id, work_type, sector, price, price_stages(*)')
     if (data) setPriceList(data)
   }, [])
 
@@ -223,6 +223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isAcknowledged: o.is_acknowledged || false,
           createdAt: o.created_at,
           clearedBalance: o.cleared_balance || 0,
+          basePrice: o.base_price || 0,
           dre_category: o.dre_category,
           history: (o.order_history || [])
             .sort(
@@ -363,6 +364,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (currentUser.role === 'admin' || currentUser.role === 'receptionist') && orderData.dentistId
         ? orderData.dentistId
         : currentUser.id
+
+    const priceItem =
+      priceList.find(
+        (p) => p.work_type === orderData.workType && (!p.sector || p.sector === orderData.sector),
+      ) || priceList.find((p) => p.work_type === orderData.workType)
+
+    let basePrice = 0
+    if (priceItem && priceItem.price) {
+      const numericString = String(priceItem.price)
+        .replace(/[^\d,.-]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.')
+      basePrice = parseFloat(numericString) || 0
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .insert({
@@ -381,6 +397,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         shipping_details: orderData.stlDeliveryMethod,
         observations: orderData.observations,
         status: 'pending',
+        base_price: basePrice,
       })
       .select()
       .single()
@@ -389,6 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await logAudit('CREATE', 'order', data.id, {
         friendlyId: data.friendly_id,
         patientName: orderData.patientName,
+        basePrice,
       })
       toast({ title: 'Pedido enviado!' })
     }
@@ -469,7 +487,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
       const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
-      const financials = getOrderFinancials(updatedOrder, priceList, kanbanStages)
+      const financials = getOrderFinancials(updatedOrder)
 
       if (financials.totalCost > 0) {
         await supabase.from('expenses').insert({

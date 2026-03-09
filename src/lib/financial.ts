@@ -5,44 +5,31 @@ export type PriceItem = {
   id: string
   work_type: string
   sector?: string
+  price?: string | number
   price_stages?: PriceStage[]
 }
 
-export function getOrderFinancials(order: any, priceList: PriceItem[], kanbanStages: Stage[]) {
-  const priceItem =
-    priceList.find(
-      (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
-    ) || priceList.find((p) => p.work_type === order.workType)
-  const stages = priceItem?.price_stages || []
-
-  const kanbanIndexMap: Record<string, number> = {}
-  kanbanStages.forEach((s) => (kanbanIndexMap[s.name] = s.orderIndex))
-
-  const currentOrderIndex = kanbanIndexMap[order.kanbanStage] || 0
+export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanStages?: Stage[]) {
   const isFullyCompleted = order.status === 'completed' || order.status === 'delivered'
+  const isCancelled = order.status === 'cancelled'
 
-  let completedCost = 0
-  let pendingCost = 0
-
-  const mappedStages = stages.map((st) => {
-    const stIndex = kanbanIndexMap[st.kanban_stage] || 0
-    const isCompleted = isFullyCompleted || currentOrderIndex > stIndex
-    if (isCompleted) completedCost += st.price
-    else pendingCost += st.price
-    return { ...st, isCompleted }
-  })
+  const basePrice = order.basePrice || 0
+  const completedCost = isFullyCompleted ? basePrice : 0
+  const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0
 
   const clearedBalance = order.clearedBalance || 0
   const outstandingCost = Math.max(0, completedCost - clearedBalance)
 
   return {
     ...order,
-    mappedStages,
+    basePrice,
+    mappedStages: [],
     completedCost,
-    pendingCost,
+    pendingCost: pipelineCost,
+    pipelineCost,
     clearedBalance,
     outstandingCost,
-    totalCost: completedCost + pendingCost,
+    totalCost: completedCost + pipelineCost,
   }
 }
 

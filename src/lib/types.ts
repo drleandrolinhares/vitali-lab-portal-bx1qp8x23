@@ -52,6 +52,7 @@ export interface Order {
   isAcknowledged: boolean
   createdAt: string
   clearedBalance: number
+  basePrice: number
   history: OrderHistory[]
 }
 

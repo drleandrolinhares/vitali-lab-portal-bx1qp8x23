@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
-import { getOrderFinancials, PriceItem, formatBRL } from '@/lib/financial'
+import { getOrderFinancials, formatBRL } from '@/lib/financial'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,23 +20,26 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { TrendingUp, Wallet, CheckCircle, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
+import {
+  TrendingUp,
+  Wallet,
+  CheckCircle,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
+  List,
+  Activity,
+} from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
 
 export default function AdminFinancial() {
-  const { currentUser, orders, kanbanStages, refreshOrders, selectedLab } = useAppStore()
-  const [priceList, setPriceList] = useState<PriceItem[]>([])
+  const { currentUser, orders, refreshOrders, selectedLab } = useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
+  const [detailsDialog, setDetailsDialog] = useState<any>(null)
 
   useEffect(() => {
-    supabase
-      .from('price_list')
-      .select('id, work_type, sector, price_stages(*)')
-      .then(({ data }) => {
-        if (data) setPriceList(data as PriceItem[])
-      })
     supabase
       .from('profiles')
       .select('id, name, clinic, closing_date, payment_due_date')
@@ -57,8 +60,8 @@ export default function AdminFinancial() {
   }, [orders, selectedLab])
 
   const financials = useMemo(() => {
-    return filteredOrders.map((o) => getOrderFinancials(o, priceList, kanbanStages))
-  }, [filteredOrders, priceList, kanbanStages])
+    return filteredOrders.map((o) => getOrderFinancials(o))
+  }, [filteredOrders])
 
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
@@ -73,12 +76,12 @@ export default function AdminFinancial() {
             new Date(h.date).getFullYear() === currentYear,
         )
         if (isCompletedThisMonth) {
-          const orderFin = getOrderFinancials(o, priceList, kanbanStages)
+          const orderFin = getOrderFinancials(o)
           return acc + orderFin.totalCost
         }
         return acc
       }, 0),
-    [filteredOrders, priceList, kanbanStages, currentMonth, currentYear],
+    [filteredOrders, currentMonth, currentYear],
   )
 
   const filteredExpenses = useMemo(() => {
@@ -104,9 +107,10 @@ export default function AdminFinancial() {
     .map((d) => {
       const dentistOrders = financials.filter((o) => o.dentistId === d.id)
       const outstandingBalance = dentistOrders.reduce((acc, o) => acc + o.outstandingCost, 0)
-      return { ...d, outstandingBalance, dentistOrders }
+      const pipelineBalance = dentistOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
+      return { ...d, outstandingBalance, pipelineBalance, dentistOrders }
     })
-    .filter((d) => d.outstandingBalance > 0 || d.dentistOrders.length > 0)
+    .filter((d) => d.outstandingBalance > 0 || d.pipelineBalance > 0 || d.dentistOrders.length > 0)
 
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
     return <Navigate to="/" replace />
@@ -228,8 +232,7 @@ export default function AdminFinancial() {
             <TableHeader>
               <TableRow>
                 <TableHead>Dentista / Clínica</TableHead>
-                <TableHead>Fechamento</TableHead>
-                <TableHead>Vencimento</TableHead>
+                <TableHead className="text-right">Pipeline</TableHead>
                 <TableHead className="text-right">Saldo Devedor</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
@@ -237,7 +240,7 @@ export default function AdminFinancial() {
             <TableBody>
               {dentistStats.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                     Nenhum dado encontrado.
                   </TableCell>
                 </TableRow>
@@ -250,21 +253,27 @@ export default function AdminFinancial() {
                       {d.clinic || 'Clínica não informada'}
                     </div>
                   </TableCell>
-                  <TableCell>{d.closing_date ? `Dia ${d.closing_date}` : '-'}</TableCell>
-                  <TableCell>{d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}</TableCell>
-                  <TableCell className="text-right font-bold text-emerald-600">
+                  <TableCell className="text-right font-medium text-amber-600">
+                    {formatBRL(d.pipelineBalance)}
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-red-600">
                     {formatBRL(d.outstandingBalance)}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                      disabled={d.outstandingBalance <= 0}
-                      onClick={() => setSettleDialog(d)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar
-                    </Button>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
+                        <List className="w-4 h-4 mr-1.5" /> Detalhes
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                        disabled={d.outstandingBalance <= 0}
+                        onClick={() => setSettleDialog(d)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -272,6 +281,101 @@ export default function AdminFinancial() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Detalhes Financeiros - {detailsDialog?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4">
+            <div>
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-red-600">
+                <Wallet className="w-4 h-4" /> Saldo Devedor (Finalizados)
+              </h4>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Trabalho</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detailsDialog?.dentistOrders.filter((o: any) => o.outstandingCost > 0)
+                      .length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                          Nenhum pedido finalizado pendente.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {detailsDialog?.dentistOrders
+                      .filter((o: any) => o.outstandingCost > 0)
+                      .map((o: any) => (
+                        <TableRow key={o.id}>
+                          <TableCell className="font-medium">
+                            {o.friendlyId}
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {o.patientName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatBRL(o.outstandingCost)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-600">
+                <Activity className="w-4 h-4" /> Pipeline (Em Produção)
+              </h4>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Trabalho</TableHead>
+                      <TableHead className="text-right">Estimativa</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detailsDialog?.dentistOrders.filter((o: any) => o.pipelineCost > 0).length ===
+                      0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                          Nenhum pedido em produção.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {detailsDialog?.dentistOrders
+                      .filter((o: any) => o.pipelineCost > 0)
+                      .map((o: any) => (
+                        <TableRow key={o.id}>
+                          <TableCell className="font-medium">
+                            {o.friendlyId}
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {o.patientName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatBRL(o.pipelineCost)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!settleDialog} onOpenChange={(open) => !open && setSettleDialog(null)}>
         <DialogContent>
