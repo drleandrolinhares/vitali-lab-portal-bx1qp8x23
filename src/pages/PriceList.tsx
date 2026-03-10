@@ -185,7 +185,9 @@ export default function PriceList() {
       if (appSettings['materials_list']) {
         list = JSON.parse(appSettings['materials_list'])
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to parse materials_list', e)
+    }
     const fromPriceList = prices.map((p) => p.material).filter(Boolean)
     return Array.from(new Set([...list, ...fromPriceList])).sort()
   }, [appSettings, prices])
