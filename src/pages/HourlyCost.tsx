@@ -13,16 +13,7 @@ import {
   TableFooter,
 } from '@/components/ui/table'
 import { toast } from '@/hooks/use-toast'
-import {
-  Calculator,
-  Plus,
-  Trash2,
-  Save,
-  ArrowLeft,
-  Clock,
-  DollarSign,
-  Activity,
-} from 'lucide-react'
+import { Calculator, Plus, Trash2, Save, ArrowLeft, Clock, DollarSign } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 
@@ -35,11 +26,41 @@ interface FixedCost {
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
+const INITIAL_COSTS = [
+  ['Pró-labore', 2000],
+  ['Salários Funcionários', 17000],
+  ['Exames Admissional', 50],
+  ['Provisionamento férias', 500],
+  ['Rescisões', 400],
+  ['GPS', 1000],
+  ['FGTS', 1200],
+  ['Contabilidade', 1000],
+  ['Taxas', 100],
+  ['Uniforme', 250],
+  ['Aluguel/IPTU', 2200],
+  ['Telefonia/Internet', 200],
+  ['Material Higiene', 100],
+  ['Dedetização', 50],
+  ['Manutenções', 100],
+  ['Software', 500],
+  ['Brindes', 250],
+  ['Café e açúcar', 100],
+  ['Gráfica', 100],
+  ['Marketing', 1000],
+  ['Material escritório', 100],
+  ['Fundo de reserva', 500],
+  ['Fundo de melhorias', 500],
+  ['Dental', 3500],
+].map(([desc, val]) => ({
+  id: crypto.randomUUID(),
+  description: desc as string,
+  value: val as number,
+}))
+
 export default function HourlyCost() {
   const { currentUser } = useAppStore()
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
   const [monthlyHours, setMonthlyHours] = useState<number>(176)
-  const [evaluationFactor, setEvaluationFactor] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -49,34 +70,24 @@ export default function HourlyCost() {
       const { data } = await supabase
         .from('app_settings')
         .select('*')
-        .in('key', [
-          'hourly_cost_fixed_items',
-          'hourly_cost_monthly_hours',
-          'hourly_cost_evaluation_factor',
-        ])
+        .in('key', ['hourly_cost_fixed_items', 'hourly_cost_monthly_hours'])
 
       if (data) {
         const items = data.find((d) => d.key === 'hourly_cost_fixed_items')
         const hours = data.find((d) => d.key === 'hourly_cost_monthly_hours')
-        const factor = data.find((d) => d.key === 'hourly_cost_evaluation_factor')
 
         if (items?.value) {
           try {
             setFixedCosts(JSON.parse(items.value))
           } catch (e) {
             console.error(e)
+            setFixedCosts(INITIAL_COSTS)
           }
         } else {
-          setFixedCosts([
-            { id: crypto.randomUUID(), description: 'Pró-labore', value: 2000 },
-            { id: crypto.randomUUID(), description: 'Salários Funcionários', value: 17000 },
-            { id: crypto.randomUUID(), description: 'Aluguel / IPTU / Condomínio', value: 2200 },
-            { id: crypto.randomUUID(), description: 'Energia / Água', value: 500 },
-          ])
+          setFixedCosts(INITIAL_COSTS)
         }
 
         if (hours?.value) setMonthlyHours(Number(hours.value))
-        if (factor?.value) setEvaluationFactor(Number(factor.value))
       }
       setLoading(false)
     }
@@ -88,8 +99,7 @@ export default function HourlyCost() {
     [fixedCosts],
   )
   const totalHourlyCost = monthlyHours > 0 ? totalFixedCosts / monthlyHours : 0
-  const hourlyCostWithFactor = totalHourlyCost + evaluationFactor
-  const costPerMinute = hourlyCostWithFactor / 60
+  const costPerMinute = totalHourlyCost / 60
 
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist') {
     return <Navigate to="/" replace />
@@ -106,11 +116,6 @@ export default function HourlyCost() {
       {
         key: 'hourly_cost_monthly_hours',
         value: monthlyHours.toString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        key: 'hourly_cost_evaluation_factor',
-        value: evaluationFactor.toString(),
         updated_at: new Date().toISOString(),
       },
     ]
@@ -166,11 +171,11 @@ export default function HourlyCost() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card className="shadow-subtle border-l-4 border-l-slate-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Total Custos Fixos
+              Total de Custos Fixos
             </CardTitle>
             <DollarSign className="w-4 h-4 text-slate-500" />
           </CardHeader>
@@ -183,7 +188,7 @@ export default function HourlyCost() {
         <Card className="shadow-subtle border-l-4 border-l-blue-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Custo Hora Base
+              Total Custo Hora
             </CardTitle>
             <Clock className="w-4 h-4 text-blue-500" />
           </CardHeader>
@@ -193,23 +198,10 @@ export default function HourlyCost() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Custo Hora + Avaliação
-            </CardTitle>
-            <Activity className="w-4 h-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(hourlyCostWithFactor)}
-            </div>
-          </CardContent>
-        </Card>
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Custo por Minuto
+              Total Custo por Minuto
             </CardTitle>
             <Calculator className="w-4 h-4 text-emerald-500" />
           </CardHeader>
@@ -305,16 +297,13 @@ export default function HourlyCost() {
         <div className="space-y-6">
           <Card className="shadow-subtle">
             <CardHeader>
-              <CardTitle>Parâmetros de Cálculo</CardTitle>
-              <CardDescription>Defina as horas de atendimento e fatores de ajuste.</CardDescription>
+              <CardTitle>PARÂMETROS DE CÁLCULO</CardTitle>
+              <CardDescription>DEFINA AS HORAS DE TRABALHADAS NO MÊS</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 <label className="text-sm font-medium text-slate-700 block">
-                  Total de Horas de Atendimento por Mês
-                  <span className="block text-xs text-muted-foreground font-normal mt-0.5">
-                    Considere ociosidade, faltas e desmarcados. (Ex: 176)
-                  </span>
+                  TOTAL DE HORAS TRABALHADAS POR MÊS
                 </label>
                 <Input
                   type="number"
@@ -322,37 +311,6 @@ export default function HourlyCost() {
                   onChange={(e) => setMonthlyHours(parseFloat(e.target.value))}
                   placeholder="Ex: 176"
                 />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700 block">
-                  Fator de Avaliação (R$)
-                  <span className="block text-xs text-muted-foreground font-normal mt-0.5">
-                    Valor adicionado ao custo hora base.
-                  </span>
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={evaluationFactor || ''}
-                  onChange={(e) => setEvaluationFactor(parseFloat(e.target.value))}
-                  placeholder="Ex: 0.00"
-                />
-              </div>
-
-              <div className="pt-4 border-t space-y-3">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Fórmula Custo Hora:</span>
-                  <span className="font-mono bg-slate-100 px-2 py-1 rounded text-xs">
-                    Custos / Horas
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Fórmula por Minuto:</span>
-                  <span className="font-mono bg-slate-100 px-2 py-1 rounded text-xs">
-                    Custo Hora / 60
-                  </span>
-                </div>
               </div>
             </CardContent>
           </Card>
