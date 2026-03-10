@@ -36,7 +36,9 @@ function RolePermissionsPanel() {
     if (appSettings?.role_permissions) {
       try {
         setPerms(JSON.parse(appSettings.role_permissions))
-      } catch (e) {}
+      } catch (e) {
+        console.error('Failed to parse role_permissions', e)
+      }
     }
   }, [appSettings])
 

@@ -7,7 +7,7 @@ INSERT INTO public.app_settings (key, value) VALUES
 ('role_permissions', '{"admin": ["inbox", "new-request", "kanban", "history", "dashboard", "comparative-dashboard", "finances", "accounts-payable", "inventory", "dentists", "patients", "prices", "settings", "dre-categories", "audit"], "receptionist": ["inbox", "kanban", "new-request", "history", "patients"], "dentist": ["new-request", "kanban", "history"]}')
 ON CONFLICT (key) DO NOTHING;
 
-DO $ 
+DO $$ 
 BEGIN
     -- app_settings
     DROP POLICY IF EXISTS "Admin app_settings all" ON app_settings;
@@ -157,7 +157,7 @@ BEGIN
         (dentist_id = auth.uid()) OR EXISTS ( SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'master', 'receptionist') )
     );
 
-END $;
+END $$;
 
 
 CREATE OR REPLACE FUNCTION public.delete_user(target_user_id uuid)
@@ -196,4 +196,3 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
-

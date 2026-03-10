@@ -185,7 +185,9 @@ function AppSidebar() {
       if (appSettings?.role_permissions) {
         return JSON.parse(appSettings.role_permissions)
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to parse role_permissions', e)
+    }
     return {}
   }, [appSettings])
 
