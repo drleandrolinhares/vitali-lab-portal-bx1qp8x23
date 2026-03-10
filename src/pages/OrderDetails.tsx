@@ -148,14 +148,25 @@ export default function OrderDetails() {
                     <p className="font-medium">{order.shadeScale}</p>
                   </div>
                 )}
+
                 <div>
-                  <p className="text-sm text-muted-foreground">Envio</p>
+                  <p className="text-sm text-muted-foreground">Origem do Pedido</p>
+                  <p className="font-medium">
+                    {order.createdBy &&
+                    ['admin', 'master', 'receptionist'].includes(order.createdBy.role)
+                      ? `Registrado por: ${order.createdBy.name}`
+                      : `Enviado por: ${order.createdBy?.name || order.dentistName}`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Logística de Envio</p>
                   <p className="font-medium">
                     {order.shippingMethod === 'lab_pickup'
                       ? 'Motoboy Laboratório'
-                      : 'Enviado pelo Dentista'}
+                      : 'Responsabilidade do Dentista'}
                   </p>
                 </div>
+
                 {order.stlDeliveryMethod && (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Detalhes do Envio</p>

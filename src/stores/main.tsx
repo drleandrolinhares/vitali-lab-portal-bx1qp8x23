@@ -207,16 +207,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchOrders = useCallback(async () => {
     if (!session?.user || !currentUser) return
     if (!hasFetchedOrders.current) setLoading(true)
-    const { data: dbOrders } = await supabase
+
+    const { data: dbOrders, error } = await supabase
       .from('orders')
       .select(
-        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), order_history(*)`,
+        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), creator:profiles!orders_created_by_fkey(name, role), order_history(*)`,
       )
       .order('created_at', { ascending: false })
 
-    if (dbOrders) {
+    let finalOrders = dbOrders
+    if (error) {
+      console.warn('Orders fetch error (might be missing creator relation), falling back:', error)
+      const { data: fallbackOrders } = await supabase
+        .from('orders')
+        .select(
+          `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), order_history(*)`,
+        )
+        .order('created_at', { ascending: false })
+      finalOrders = fallbackOrders
+    }
+
+    if (finalOrders) {
       setOrders(
-        dbOrders.map((o: any) => {
+        finalOrders.map((o: any) => {
           const teethCount = o.tooth_or_arch?.teeth?.length || 0
           const archesCount = o.tooth_or_arch?.arches?.length || 0
           const quantity = Math.max(1, teethCount + archesCount)
@@ -259,6 +272,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             implantBrand: o.implant_brand,
             implantType: o.implant_type,
             estruturaFixacao: o.estrutura_fixacao || 'SOBRE DENTE',
+            createdBy: o.creator
+              ? { id: o.created_by, name: o.creator.name, role: o.creator.role }
+              : undefined,
             history: (o.order_history || [])
               .sort(
                 (a: any, b: any) =>
@@ -488,6 +504,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         patient_cpf: orderData.patientCpf || null,
         patient_birth_date: orderData.patientBirthDate || null,
         dentist_id: targetDentistId,
+        created_by: currentUser.id,
         sector: orderData.sector,
         kanban_stage: kanbanStages[0]?.name || 'TRIAGEM',
         work_type: orderData.workType,

@@ -68,4 +68,9 @@ export interface Order {
   implantBrand?: string
   implantType?: string
   estruturaFixacao?: string
+  createdBy?: {
+    id: string
+    name: string
+    role: UserRole
+  }
 }
