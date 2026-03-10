@@ -179,6 +179,17 @@ export default function PriceList() {
     return prices.filter((p) => selectedLab === 'Todos' || p.sector === selectedLab)
   }, [prices, selectedLab])
 
+  const availableMaterials = useMemo(() => {
+    let list: string[] = []
+    try {
+      if (appSettings['materials_list']) {
+        list = JSON.parse(appSettings['materials_list'])
+      }
+    } catch (e) {}
+    const fromPriceList = prices.map((p) => p.material).filter(Boolean)
+    return Array.from(new Set([...list, ...fromPriceList])).sort()
+  }, [appSettings, prices])
+
   const getSetting = (key: string) => {
     const storeVal = appSettings[key]
     if (storeVal !== undefined && storeVal !== null && storeVal !== '') return storeVal
@@ -358,6 +369,11 @@ export default function PriceList() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <Button variant="outline" asChild>
+            <Link to="/materials">
+              <Settings className="w-4 h-4 mr-2" /> Materiais
+            </Link>
+          </Button>
           <Button variant="outline" onClick={handleOpenGlobalConfig}>
             <Settings className="w-4 h-4 mr-2" /> Taxas Globais
           </Button>
@@ -545,6 +561,21 @@ export default function PriceList() {
                       <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2 col-span-2">
+                  <Label>Material</Label>
+                  <Input
+                    list="materials-list"
+                    placeholder="Selecione ou digite um material..."
+                    value={formData.material}
+                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  />
+                  <datalist id="materials-list">
+                    {availableMaterials.map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
@@ -37,7 +37,7 @@ import { Check, ChevronsUpDown, UploadCloud, X, File as FileIcon } from 'lucide-
 import { cn } from '@/lib/utils'
 
 export default function NewRequest() {
-  const { addOrder, currentUser, priceList } = useAppStore()
+  const { addOrder, currentUser, priceList, appSettings } = useAppStore()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
@@ -45,6 +45,7 @@ export default function NewRequest() {
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [availableScales, setAvailableScales] = useState<string[]>([])
   const [scaleOpen, setScaleOpen] = useState(false)
+  const [materialOpen, setMaterialOpen] = useState(false)
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
@@ -66,6 +67,20 @@ export default function NewRequest() {
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
   const isAdminOrReception = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
+
+  const availableMaterials = useMemo(() => {
+    let list: string[] = []
+    try {
+      if (appSettings['materials_list']) {
+        list = JSON.parse(appSettings['materials_list'])
+      }
+    } catch (e) {
+      console.error('Failed to parse materials_list', e)
+    }
+
+    const fromPriceList = priceList.map((p) => p.material).filter(Boolean)
+    return Array.from(new Set([...list, ...fromPriceList])).sort()
+  }, [appSettings, priceList])
 
   useEffect(() => {
     const fetchScales = async () => {
@@ -171,6 +186,15 @@ export default function NewRequest() {
       return
     }
 
+    if (!formData.material) {
+      toast({
+        title: 'Atenção',
+        description: 'Selecione um material para o pedido.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSubmitting(true)
 
     let fileUrls: string[] = []
@@ -199,7 +223,7 @@ export default function NewRequest() {
 
     const success = await addOrder({
       ...formData,
-      material: formData.material || 'Padrão',
+      material: formData.material,
       stlDeliveryMethod:
         formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
       teeth: selectedTeeth,
@@ -349,15 +373,71 @@ export default function NewRequest() {
 
             <div className="grid gap-6 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Material</Label>
-                <Input
-                  value={formData.material}
-                  readOnly
-                  className="h-11 bg-muted/50 cursor-not-allowed text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-                  placeholder="Ex: Zircônia, Resina..."
-                />
+                <Label className="uppercase font-semibold text-xs">Material *</Label>
+                {availableMaterials.length > 0 ? (
+                  <Popover open={materialOpen} onOpenChange={setMaterialOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={materialOpen}
+                        className={cn(
+                          'w-full justify-between h-11 font-normal bg-background',
+                          !formData.material && 'text-muted-foreground',
+                        )}
+                      >
+                        {formData.material || 'Selecione o material...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Buscar material..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum material encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {availableMaterials.map((mat) => (
+                              <CommandItem
+                                key={mat}
+                                value={mat}
+                                onSelect={(currentValue) => {
+                                  const originalValue =
+                                    availableMaterials.find(
+                                      (m) => m.toLowerCase() === currentValue,
+                                    ) || currentValue
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    material:
+                                      originalValue === formData.material ? '' : originalValue,
+                                  }))
+                                  setMaterialOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    formData.material === mat ? 'opacity-100' : 'opacity-0',
+                                  )}
+                                />
+                                {mat}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Input
+                    placeholder="Ex: Zircônia, Resina..."
+                    value={formData.material}
+                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                    className="h-11"
+                    required
+                  />
+                )}
                 <p className="text-[10px] text-muted-foreground ml-1">
-                  Preenchido automaticamente pelo tipo de trabalho
+                  Preenchido automaticamente pelo tipo de trabalho, mas pode ser alterado.
                 </p>
               </div>
               <div className="space-y-2">
