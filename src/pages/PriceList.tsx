@@ -122,13 +122,17 @@ export default function PriceList() {
       try {
         const items = JSON.parse(itemsStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {}
+      } catch (e) {
+        // Ignore parse error
+      }
     }
     if (laborStr) {
       try {
         const items = JSON.parse(laborStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {}
+      } catch (e) {
+        // Ignore parse error
+      }
     }
 
     if (hoursStr) {
@@ -326,7 +330,13 @@ export default function PriceList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPrices.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                    Carregando procedimentos...
+                  </TableCell>
+                </TableRow>
+              ) : filteredPrices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                     Nenhum procedimento encontrado.
