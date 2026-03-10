@@ -98,23 +98,45 @@ export default function PriceList() {
     return prices.filter((p) => selectedLab === 'Todos' || p.sector === selectedLab)
   }, [prices, selectedLab])
 
-  // Calculate Cost Per Minute from Settings dynamically
+  // Calculate Cost Per Minute from Settings dynamically or fetch explicitly
   const costPerMinute = useMemo(() => {
+    // Priority: Fetch direct calculated value stored in settings (e.g. from HourlyCost page)
+    const directValue =
+      appSettings['cost_per_minute'] ||
+      appSettings['total_cost_per_minute'] ||
+      appSettings['hourly_cost_per_minute']
+
+    if (directValue !== undefined && directValue !== null && directValue !== '') {
+      return parseFloat(String(directValue).replace(',', '.')) || 0
+    }
+
+    // Fallback logic: Try calculating from standard keys if direct value not found
     const itemsStr = appSettings['hourly_cost_fixed_items']
+    const laborStr = appSettings['hourly_cost_labor_items']
     const hoursStr = appSettings['hourly_cost_monthly_hours']
-    let totalFixed = 0
+
+    let totalCosts = 0
     let hours = 176
+
     if (itemsStr) {
       try {
         const items = JSON.parse(itemsStr)
-        totalFixed = items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        // ignore parsing errors
-      }
+        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
+      } catch (e) {}
     }
-    if (hoursStr) hours = Number(hoursStr) || 176
+    if (laborStr) {
+      try {
+        const items = JSON.parse(laborStr)
+        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
+      } catch (e) {}
+    }
+
+    if (hoursStr) {
+      hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
+    }
+
     if (hours <= 0) return 0
-    return totalFixed / hours / 60
+    return totalCosts / (hours * 60)
   }, [appSettings])
 
   const handleOpenGlobalConfig = () => {
@@ -206,7 +228,7 @@ export default function PriceList() {
       const stagesToInsert = formData.stages.map((s) => ({
         price_list_id: priceListId,
         name: s.name,
-        price: parseFloat(s.price.replace(',', '.')) || 0,
+        price: parseFloat(String(s.price).replace(',', '.')) || 0,
         kanban_stage: s.kanban_stage || kanbanStages[0]?.name || 'TRIAGEM',
       }))
       await supabase.from('price_stages').insert(stagesToInsert)
@@ -238,11 +260,16 @@ export default function PriceList() {
   const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
   const materialVal = parseFloat(String(formData.material_cost).replace(',', '.')) || 0
 
-  const globalCardFee = parseFloat(appSettings['global_card_fee']) || 0
-  const globalCommission = parseFloat(appSettings['global_commission']) || 0
-  const globalInadimplency = parseFloat(appSettings['global_inadimplency']) || 0
-  const globalTaxes = parseFloat(appSettings['global_taxes']) || 0
+  const globalCardFee =
+    parseFloat(String(appSettings['global_card_fee'] || '0').replace(',', '.')) || 0
+  const globalCommission =
+    parseFloat(String(appSettings['global_commission'] || '0').replace(',', '.')) || 0
+  const globalInadimplency =
+    parseFloat(String(appSettings['global_inadimplency'] || '0').replace(',', '.')) || 0
+  const globalTaxes = parseFloat(String(appSettings['global_taxes'] || '0').replace(',', '.')) || 0
 
+  // The Fixed Cost accurately multiplies the exact duration set in the UI
+  // by the dynamically fetched "Total Custo Por Minuto" without interference from stages.
   const fixedCost = execTime * costPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
@@ -588,7 +615,7 @@ export default function PriceList() {
                     <span>
                       Custo Fixo{' '}
                       <span className="text-[10px] ml-1 px-1.5 py-0.5 bg-muted rounded-full">
-                        {execTime} min x R$ {costPerMinute.toFixed(2)}
+                        {execTime} min x {formatBRL(costPerMinute)}
                       </span>
                     </span>
                     <span className="flex items-center gap-2">
