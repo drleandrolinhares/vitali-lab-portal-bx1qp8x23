@@ -233,15 +233,19 @@ export default function PriceList() {
       return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
     }
 
+    const execTimeForSave = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
+    const calculatedFixedCost = execTimeForSave * finalCostPerMinute
+
     const payload = {
       work_type: formData.work_type,
       category: formData.category,
       material: formData.material,
       price: formData.price,
       sector: formData.sector,
-      execution_time: parseFloat(String(formData.execution_time).replace(',', '.')) || 0,
+      execution_time: execTimeForSave,
       cadista_cost: parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0,
       material_cost: parseFloat(String(formData.material_cost).replace(',', '.')) || 0,
+      fixed_cost: calculatedFixedCost,
     }
 
     let priceListId = formData.id
@@ -547,6 +551,23 @@ export default function PriceList() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Custo por Minuto (Ref.)</Label>
+                  <Input
+                    value={formatBRL(finalCostPerMinute)}
+                    disabled
+                    className="bg-muted text-muted-foreground font-medium"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Custo Fixo (Auto)</Label>
+                  <Input
+                    value={formatBRL(fixedCost)}
+                    disabled
+                    className="bg-muted font-semibold text-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>Custo Cadista / Terceiro (R$)</Label>
                   <Input
                     type="number"
@@ -665,12 +686,7 @@ export default function PriceList() {
                   <div className="h-px bg-border my-2" />
 
                   <div className="flex justify-between text-muted-foreground items-center">
-                    <span>
-                      Custo Fixo{' '}
-                      <span className="text-[10px] ml-1 px-1.5 py-0.5 bg-muted rounded-full">
-                        {execTime} min x {formatBRL(finalCostPerMinute)}
-                      </span>
-                    </span>
+                    <span>Custo Fixo</span>
                     <span className="flex items-center gap-2">
                       - {formatBRL(fixedCost)}{' '}
                       <span className="w-12 text-right text-[10px]">

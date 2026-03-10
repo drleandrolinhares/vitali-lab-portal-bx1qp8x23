@@ -1,0 +1,1 @@
+ALTER TABLE public.price_list ADD COLUMN IF NOT EXISTS fixed_cost NUMERIC DEFAULT 0;
