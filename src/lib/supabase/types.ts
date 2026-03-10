@@ -354,6 +354,7 @@ export type Database = {
           cleared_balance: number
           color_and_considerations: string | null
           created_at: string
+          created_by: string | null
           dentist_id: string
           dre_category: string
           estrutura_fixacao: string
@@ -382,6 +383,7 @@ export type Database = {
           cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
+          created_by?: string | null
           dentist_id: string
           dre_category?: string
           estrutura_fixacao?: string
@@ -410,6 +412,7 @@ export type Database = {
           cleared_balance?: number
           color_and_considerations?: string | null
           created_at?: string
+          created_by?: string | null
           dentist_id?: string
           dre_category?: string
           estrutura_fixacao?: string
@@ -434,6 +437,13 @@ export type Database = {
           work_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: 'orders_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'orders_dentist_id_fkey'
             columns: ['dentist_id']
@@ -554,6 +564,7 @@ export type Database = {
           payment_due_date: number | null
           permissions: Json | null
           personal_phone: string | null
+          requires_password_change: boolean
           role: string
           whatsapp_group_link: string | null
           work_end: string | null
@@ -579,6 +590,7 @@ export type Database = {
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
+          requires_password_change?: boolean
           role?: string
           whatsapp_group_link?: string | null
           work_end?: string | null
@@ -604,6 +616,7 @@ export type Database = {
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
+          requires_password_change?: boolean
           role?: string
           whatsapp_group_link?: string | null
           work_end?: string | null
@@ -894,6 +907,7 @@ export const Constants = {
 //   implant_brand: text (nullable)
 //   implant_type: text (nullable)
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
+//   created_by: uuid (nullable)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -939,6 +953,7 @@ export const Constants = {
 //   lunch_start: text (nullable)
 //   lunch_end: text (nullable)
 //   work_end: text (nullable)
+//   requires_password_change: boolean (not null, default: false)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -975,6 +990,7 @@ export const Constants = {
 //   FOREIGN KEY order_history_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 //   PRIMARY KEY order_history_pkey: PRIMARY KEY (id)
 // Table: orders
+//   FOREIGN KEY orders_created_by_fkey: FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   FOREIGN KEY orders_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
