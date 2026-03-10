@@ -40,6 +40,7 @@ import {
   PieChart,
   TrendingUp,
   TrendingDown,
+  AlertCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -58,6 +59,7 @@ export default function PriceList() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
+  const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
 
   // Local state purely for the dialog form fields
   const [configForm, setConfigForm] = useState({
@@ -80,6 +82,21 @@ export default function PriceList() {
     stages: [] as StageInput[],
   })
 
+  // Fallback fetch to ensure settings are always available even if global state is lagging
+  useEffect(() => {
+    const fetchDbSettings = async () => {
+      const { data } = await supabase.from('app_settings').select('*')
+      if (data) {
+        const mapped = data.reduce(
+          (acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }),
+          {},
+        )
+        setLocalConfig(mapped)
+      }
+    }
+    fetchDbSettings()
+  }, [])
+
   const fetchPrices = async () => {
     setLoading(true)
     const { data } = await supabase
@@ -98,22 +115,28 @@ export default function PriceList() {
     return prices.filter((p) => selectedLab === 'Todos' || p.sector === selectedLab)
   }, [prices, selectedLab])
 
+  const getSetting = (key: string) => {
+    const storeVal = appSettings[key]
+    if (storeVal !== undefined && storeVal !== null && storeVal !== '') return storeVal
+    return localConfig[key]
+  }
+
   // Calculate Cost Per Minute from Settings dynamically or fetch explicitly
-  const costPerMinute = useMemo(() => {
+  const finalCostPerMinute = useMemo(() => {
     // Priority: Fetch direct calculated value stored in settings (e.g. from HourlyCost page)
     const directValue =
-      appSettings['cost_per_minute'] ||
-      appSettings['total_cost_per_minute'] ||
-      appSettings['hourly_cost_per_minute']
+      getSetting('cost_per_minute') ||
+      getSetting('total_cost_per_minute') ||
+      getSetting('hourly_cost_per_minute')
 
     if (directValue !== undefined && directValue !== null && directValue !== '') {
       return parseFloat(String(directValue).replace(',', '.')) || 0
     }
 
     // Fallback logic: Try calculating from standard keys if direct value not found
-    const itemsStr = appSettings['hourly_cost_fixed_items']
-    const laborStr = appSettings['hourly_cost_labor_items']
-    const hoursStr = appSettings['hourly_cost_monthly_hours']
+    const itemsStr = getSetting('hourly_cost_fixed_items')
+    const laborStr = getSetting('hourly_cost_labor_items')
+    const hoursStr = getSetting('hourly_cost_monthly_hours')
 
     let totalCosts = 0
     let hours = 176
@@ -122,44 +145,45 @@ export default function PriceList() {
       try {
         const items = JSON.parse(itemsStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        // Ignore parse error
-      }
+      } catch (e) {}
     }
     if (laborStr) {
       try {
         const items = JSON.parse(laborStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        // Ignore parse error
-      }
+      } catch (e) {}
     }
-
     if (hoursStr) {
       hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
     }
 
     if (hours <= 0) return 0
     return totalCosts / (hours * 60)
-  }, [appSettings])
+  }, [appSettings, localConfig])
 
   const handleOpenGlobalConfig = () => {
     setConfigForm({
-      cardFee: appSettings['global_card_fee'] || '0',
-      commission: appSettings['global_commission'] || '0',
-      inadimplency: appSettings['global_inadimplency'] || '0',
-      taxes: appSettings['global_taxes'] || '0',
+      cardFee: getSetting('global_card_fee') || '0',
+      commission: getSetting('global_commission') || '0',
+      inadimplency: getSetting('global_inadimplency') || '0',
+      taxes: getSetting('global_taxes') || '0',
     })
     setGlobalConfigOpen(true)
   }
 
   const handleSaveGlobalConfig = async () => {
-    await updateSettings({
-      global_card_fee: configForm.cardFee,
-      global_commission: configForm.commission,
-      global_inadimplency: configForm.inadimplency,
-      global_taxes: configForm.taxes,
-    })
+    const updates = {
+      global_card_fee: configForm.cardFee || '0',
+      global_commission: configForm.commission || '0',
+      global_inadimplency: configForm.inadimplency || '0',
+      global_taxes: configForm.taxes || '0',
+    }
+
+    await updateSettings(updates)
+
+    // Optimistic fallback update to prevent any lag
+    setLocalConfig((prev) => ({ ...prev, ...updates }))
+
     toast({ title: 'Taxas globais salvas com sucesso!' })
     setGlobalConfigOpen(false)
   }
@@ -258,23 +282,23 @@ export default function PriceList() {
     setFormData({ ...formData, stages: newStages })
   }
 
-  // Profitability Calculations using direct appSettings logic
+  // Profitability Calculations using direct appSettings / local fallback
   const priceNum = parseFloat(String(formData.price).replace(',', '.')) || 0
   const execTime = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
   const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
   const materialVal = parseFloat(String(formData.material_cost).replace(',', '.')) || 0
 
   const globalCardFee =
-    parseFloat(String(appSettings['global_card_fee'] || '0').replace(',', '.')) || 0
+    parseFloat(String(getSetting('global_card_fee') || '0').replace(',', '.')) || 0
   const globalCommission =
-    parseFloat(String(appSettings['global_commission'] || '0').replace(',', '.')) || 0
+    parseFloat(String(getSetting('global_commission') || '0').replace(',', '.')) || 0
   const globalInadimplency =
-    parseFloat(String(appSettings['global_inadimplency'] || '0').replace(',', '.')) || 0
-  const globalTaxes = parseFloat(String(appSettings['global_taxes'] || '0').replace(',', '.')) || 0
+    parseFloat(String(getSetting('global_inadimplency') || '0').replace(',', '.')) || 0
+  const globalTaxes = parseFloat(String(getSetting('global_taxes') || '0').replace(',', '.')) || 0
 
   // The Fixed Cost accurately multiplies the exact duration set in the UI
   // by the dynamically fetched "Total Custo Por Minuto" without interference from stages.
-  const fixedCost = execTime * costPerMinute
+  const fixedCost = execTime * finalCostPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
@@ -303,6 +327,21 @@ export default function PriceList() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="hidden sm:flex items-center gap-2 text-sm bg-muted/40 px-3 py-2 rounded-md border border-border/50">
+            <span className="text-muted-foreground font-medium">Custo/Min:</span>
+            {finalCostPerMinute > 0 ? (
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {formatBRL(finalCostPerMinute)}
+              </span>
+            ) : (
+              <span
+                className="font-semibold text-amber-500 flex items-center gap-1.5"
+                title="Configure o Custo por Minuto no sistema."
+              >
+                <AlertCircle className="w-4 h-4" /> 0,00
+              </span>
+            )}
+          </div>
           <Button variant="outline" onClick={handleOpenGlobalConfig}>
             <Settings className="w-4 h-4 mr-2" /> Taxas Globais
           </Button>
@@ -625,7 +664,7 @@ export default function PriceList() {
                     <span>
                       Custo Fixo{' '}
                       <span className="text-[10px] ml-1 px-1.5 py-0.5 bg-muted rounded-full">
-                        {execTime} min x {formatBRL(costPerMinute)}
+                        {execTime} min x {formatBRL(finalCostPerMinute)}
                       </span>
                     </span>
                     <span className="flex items-center gap-2">
