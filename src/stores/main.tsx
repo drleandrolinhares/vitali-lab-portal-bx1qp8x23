@@ -177,15 +177,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from('price_list')
       .select('id, work_type, sector, price, material, price_stages(*)')
-    if (data) setPriceList(data)
+      .order('work_type', { ascending: true })
+    if (data) {
+      const sorted = data.sort((a, b) =>
+        (a.work_type || '').localeCompare(b.work_type || '', 'pt-BR'),
+      )
+      setPriceList(sorted)
+    }
   }, [])
 
   const fetchDRECategories = useCallback(async () => {
     const { data } = await supabase
       .from('dre_categories' as any)
       .select('*')
-      .order('created_at', { ascending: true })
-    if (data) setDreCategories(data as DRECategory[])
+      .order('name', { ascending: true })
+    if (data) {
+      const sorted = data.sort((a: any, b: any) =>
+        (a.name || '').localeCompare(b.name || '', 'pt-BR'),
+      )
+      setDreCategories(sorted as DRECategory[])
+    }
   }, [])
 
   const fetchOrders = useCallback(async () => {

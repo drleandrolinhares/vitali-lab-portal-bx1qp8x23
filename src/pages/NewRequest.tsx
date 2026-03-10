@@ -79,7 +79,9 @@ export default function NewRequest() {
     }
 
     const fromPriceList = priceList.map((p) => p.material).filter(Boolean)
-    return Array.from(new Set([...list, ...fromPriceList])).sort()
+    return Array.from(new Set([...list, ...fromPriceList])).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    )
   }, [appSettings, priceList])
 
   useEffect(() => {
@@ -91,7 +93,8 @@ export default function NewRequest() {
         .maybeSingle()
       if (data && data.value) {
         try {
-          setAvailableScales(JSON.parse(data.value))
+          const scales = JSON.parse(data.value)
+          setAvailableScales(scales.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR')))
         } catch (e) {
           console.error('Failed to parse shade_scales', e)
         }
@@ -106,12 +109,13 @@ export default function NewRequest() {
           .select('id, name, clinic')
           .eq('role', 'dentist')
         if (data) {
-          setDentistsList(
-            data.map((d: any) => ({
+          const sorted = data
+            .map((d: any) => ({
               id: d.id,
               name: `${d.name} ${d.clinic ? `(${d.clinic})` : ''}`,
-            })),
-          )
+            }))
+            .sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'))
+          setDentistsList(sorted)
         }
       }
       fetchDentists()
@@ -138,7 +142,7 @@ export default function NewRequest() {
             .map((p) => p.work_type)
             .filter(Boolean),
         ),
-      ).sort()
+      ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
       setAvailableWorkTypes(filtered)
 

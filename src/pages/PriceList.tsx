@@ -117,8 +117,13 @@ export default function PriceList() {
     const { data } = await supabase
       .from('price_list')
       .select('*, price_stages(*)')
-      .order('work_type')
-    if (data) setPrices(data)
+      .order('work_type', { ascending: true })
+    if (data) {
+      const sorted = data.sort((a, b) =>
+        (a.work_type || '').localeCompare(b.work_type || '', 'pt-BR'),
+      )
+      setPrices(sorted)
+    }
     setLoading(false)
   }
 
@@ -156,7 +161,7 @@ export default function PriceList() {
   )
 
   const filteredPrices = useMemo(() => {
-    return prices.filter((p) => {
+    const result = prices.filter((p) => {
       // Filtragem por setor
       if (selectedLab !== 'Todos' && p.sector !== selectedLab) return false
 
@@ -172,6 +177,8 @@ export default function PriceList() {
 
       return true
     })
+
+    return result.sort((a, b) => (a.work_type || '').localeCompare(b.work_type || '', 'pt-BR'))
   }, [prices, selectedLab, profitFilter, getMargin])
 
   const availableMaterials = useMemo(() => {
@@ -184,7 +191,9 @@ export default function PriceList() {
       console.error('Failed to parse materials_list', e)
     }
     const fromPriceList = prices.map((p) => p.material).filter(Boolean)
-    return Array.from(new Set([...list, ...fromPriceList])).sort()
+    return Array.from(new Set([...list, ...fromPriceList])).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    )
   }, [appSettings, prices])
 
   const handleOpenGlobalConfig = () => {
