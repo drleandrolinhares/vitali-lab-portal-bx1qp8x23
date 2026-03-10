@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
 import { cn } from '@/lib/utils'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,9 +40,9 @@ import {
   PieChart,
   TrendingUp,
   TrendingDown,
-  Clock,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
 
 interface StageInput {
   name: string
@@ -112,12 +112,22 @@ export default function PriceList() {
     }
   }
 
-  const [costs, setCosts] = useState({ totalFixedCosts: 0, totalHourlyCost: 0, costPerMinute: 0 })
+  const [tableCosts, setTableCosts] = useState({
+    totalFixedCosts: 0,
+    totalHourlyCost: 0,
+    costPerMinute: 0,
+  })
+
+  const [modalCosts, setModalCosts] = useState({
+    totalFixedCosts: 0,
+    totalHourlyCost: 0,
+    costPerMinute: 0,
+  })
 
   useEffect(() => {
     const computed = computeCosts(appSettings)
     if (computed.totalFixedCosts > 0 || computed.totalHourlyCost > 0) {
-      setCosts(computed)
+      setTableCosts(computed)
     } else {
       const fetchDb = async () => {
         const { data } = await supabase
@@ -130,7 +140,7 @@ export default function PriceList() {
             {},
           )
           setLocalConfig((prev) => ({ ...prev, ...config }))
-          setCosts(computeCosts(config))
+          setTableCosts(computeCosts(config))
         }
       }
       fetchDb()
@@ -243,7 +253,7 @@ export default function PriceList() {
     }
 
     const execTimeForSave = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
-    const calculatedFixedCost = execTimeForSave * costs.costPerMinute
+    const calculatedFixedCost = execTimeForSave * modalCosts.costPerMinute
 
     const payload = {
       work_type: formData.work_type,
@@ -299,6 +309,13 @@ export default function PriceList() {
     setFormData({ ...formData, stages: newStages })
   }
 
+  const handleModalCostsFetched = useCallback(
+    (costs: { totalFixedCosts: number; totalHourlyCost: number; costPerMinute: number }) => {
+      setModalCosts(costs)
+    },
+    [],
+  )
+
   const priceNum = parseFloat(String(formData.price).replace(',', '.')) || 0
   const execTime = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
   const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
@@ -312,7 +329,7 @@ export default function PriceList() {
     parseFloat(String(getSetting('global_inadimplency') || '0').replace(',', '.')) || 0
   const globalTaxes = parseFloat(String(getSetting('global_taxes') || '0').replace(',', '.')) || 0
 
-  const fixedCost = execTime * costs.costPerMinute
+  const fixedCost = execTime * modalCosts.costPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
@@ -399,10 +416,10 @@ export default function PriceList() {
                       {item.execution_time ? `${item.execution_time} min` : '-'}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground font-medium">
-                      {formatBRL(costs.costPerMinute)}
+                      {formatBRL(tableCosts.costPerMinute)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {formatBRL((item.execution_time || 0) * costs.costPerMinute)}
+                      {formatBRL((item.execution_time || 0) * tableCosts.costPerMinute)}
                     </TableCell>
                     <TableCell className="text-right pr-6 space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
@@ -486,48 +503,7 @@ export default function PriceList() {
             <DialogTitle>{formData.id ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
           </DialogHeader>
 
-          {/* Mirrored Custo Hora Clínica Dashboard */}
-          <div className="grid gap-3 md:grid-cols-3 mb-2 px-1">
-            <Card className="shadow-sm border-l-4 border-l-slate-500 bg-slate-50/50 dark:bg-slate-900/50">
-              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Total de Custos Fixos
-                </CardTitle>
-                <DollarSign className="w-4 h-4 text-slate-500" />
-              </CardHeader>
-              <CardContent className="p-3 pt-2">
-                <div className="text-lg font-bold text-slate-700">
-                  {formatBRL(costs.totalFixedCosts)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20">
-              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Total Custo Hora
-                </CardTitle>
-                <Clock className="w-4 h-4 text-blue-500" />
-              </CardHeader>
-              <CardContent className="p-3 pt-2">
-                <div className="text-lg font-bold text-blue-600">
-                  {formatBRL(costs.totalHourlyCost)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20">
-              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Total Custo por Minuto
-                </CardTitle>
-                <Calculator className="w-4 h-4 text-emerald-500" />
-              </CardHeader>
-              <CardContent className="p-3 pt-2">
-                <div className="text-lg font-bold text-emerald-600">
-                  {formatBRL(costs.costPerMinute)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {modalOpen && <HourlyCostDashboard onFetched={handleModalCostsFetched} />}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-2">
             {/* Left Column: Form Fields */}
