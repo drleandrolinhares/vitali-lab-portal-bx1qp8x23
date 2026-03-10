@@ -25,12 +25,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Soft reconciliation logic to prevent 406 errors on missing profiles
   const reconcileProfile = async (currentUser: User) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, personal_phone')
         .eq('id', currentUser.id)
         .maybeSingle()
 
@@ -41,7 +40,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name: currentUser.user_metadata?.name || 'Usuário',
           role: currentUser.user_metadata?.role || 'dentist',
           clinic: currentUser.user_metadata?.clinic || null,
+          personal_phone: currentUser.user_metadata?.phone || null,
         })
+      } else if (data && !data.personal_phone && currentUser.user_metadata?.phone) {
+        await supabase
+          .from('profiles')
+          .update({
+            personal_phone: currentUser.user_metadata.phone,
+          })
+          .eq('id', currentUser.id)
       }
     } catch (e) {
       console.error('Failed to reconcile profile:', e)

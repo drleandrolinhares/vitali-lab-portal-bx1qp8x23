@@ -56,6 +56,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [clinic, setClinic] = useState('')
+  const [phone, setPhone] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -75,6 +76,41 @@ export default function AuthPage() {
     if (error) setError(error.message)
     else setMessage('Ação concluída com sucesso.')
     setLoading(false)
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '')
+    if (val.length > 11) val = val.slice(0, 11)
+
+    if (val.length === 0) {
+      setPhone('')
+      return
+    }
+    if (val.length <= 2) {
+      setPhone(`(${val}`)
+      return
+    }
+    if (val.length <= 6) {
+      setPhone(`(${val.slice(0, 2)}) ${val.slice(2)}`)
+      return
+    }
+    if (val.length <= 10) {
+      setPhone(`(${val.slice(0, 2)}) ${val.slice(2, 6)}-${val.slice(6)}`)
+      return
+    }
+    setPhone(`(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`)
+  }
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault()
+    const rawPhone = phone.replace(/\D/g, '')
+    if (rawPhone.length < 10) {
+      setError('Telefone inválido. Inclua o DDD e número correto.')
+      return
+    }
+    handleAction(e, () =>
+      signUp(email, password, { name, clinic, role: 'dentist', phone: rawPhone }),
+    )
   }
 
   return (
@@ -201,14 +237,7 @@ export default function AuthPage() {
               </TabsContent>
               {!isAdminView && (
                 <TabsContent value="register" className="animate-fade-in">
-                  <form
-                    onSubmit={(e) =>
-                      handleAction(e, () =>
-                        signUp(email, password, { name, clinic, role: 'dentist' }),
-                      )
-                    }
-                    className="space-y-4"
-                  >
+                  <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-2">
                       <Label>Nome Completo</Label>
                       <Input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -216,6 +245,16 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label>Clínica</Label>
                       <Input value={clinic} onChange={(e) => setClinic(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone (com DDD)</Label>
+                      <Input
+                        type="tel"
+                        value={phone}
+                        onChange={handlePhoneChange}
+                        placeholder="(11) 99999-9999"
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>

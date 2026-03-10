@@ -18,14 +18,14 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { email, password, name, role, clinic, permissions, whatsapp_group_link } =
+    const { email, password, name, role, clinic, phone, permissions, whatsapp_group_link } =
       await req.json()
 
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { name, role, clinic, whatsapp_group_link },
+      user_metadata: { name, role, clinic, phone, whatsapp_group_link },
     })
 
     if (error) throw error
@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
     const updateData: any = { is_approved: true }
     if (permissions && permissions.length > 0) updateData.permissions = permissions
     if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
+    if (phone) updateData.personal_phone = phone
 
     if (Object.keys(updateData).length > 0) {
       await supabase.from('profiles').update(updateData).eq('id', data.user.id)

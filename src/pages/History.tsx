@@ -15,10 +15,13 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 export default function HistoryPage() {
   const { orders, currentUser } = useAppStore()
   const [search, setSearch] = useState('')
+  const [showCompleted, setShowCompleted] = useState(false)
 
   if (!currentUser) {
     return (
@@ -28,11 +31,22 @@ export default function HistoryPage() {
     )
   }
 
-  const filtered = orders.filter(
-    (o) =>
+  const filtered = orders.filter((o) => {
+    const matchesSearch =
       o.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      o.friendlyId.toLowerCase().includes(search.toLowerCase()),
-  )
+      o.friendlyId.toLowerCase().includes(search.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    const isFinished =
+      o.status === 'completed' || o.status === 'delivered' || o.status === 'cancelled'
+
+    if (isFinished && !showCompleted && !search.trim()) {
+      return false
+    }
+
+    return true
+  })
 
   const showDentistCol = currentUser?.role !== 'dentist'
 
@@ -43,14 +57,29 @@ export default function HistoryPage() {
           <h2 className="text-2xl font-bold tracking-tight">Histórico de Pedidos</h2>
           <p className="text-muted-foreground">Consulte todos os casos registrados.</p>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por paciente ou ID..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          <div className="flex items-center space-x-2 bg-background border px-3 py-2 rounded-md h-10 w-full sm:w-auto shadow-sm">
+            <Switch
+              id="show-completed"
+              checked={showCompleted}
+              onCheckedChange={setShowCompleted}
+            />
+            <Label
+              htmlFor="show-completed"
+              className="text-sm font-medium cursor-pointer whitespace-nowrap"
+            >
+              Mostrar Concluídos
+            </Label>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por paciente ou ID..."
+              className="pl-9 h-10 shadow-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
