@@ -415,6 +415,7 @@ export type Database = {
           category: string
           created_at: string
           execution_time: number | null
+          fixed_cost: number | null
           id: string
           material: string
           material_cost: number | null
@@ -428,6 +429,7 @@ export type Database = {
           category: string
           created_at?: string
           execution_time?: number | null
+          fixed_cost?: number | null
           id?: string
           material?: string
           material_cost?: number | null
@@ -441,6 +443,7 @@ export type Database = {
           category?: string
           created_at?: string
           execution_time?: number | null
+          fixed_cost?: number | null
           id?: string
           material?: string
           material_cost?: number | null
@@ -832,6 +835,7 @@ export const Constants = {
 //   execution_time: numeric (nullable, default: 0)
 //   cadista_cost: numeric (nullable, default: 0)
 //   material_cost: numeric (nullable, default: 0)
+//   fixed_cost: numeric (nullable, default: 0)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)

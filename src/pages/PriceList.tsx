@@ -551,7 +551,9 @@ export default function PriceList() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Custo por Minuto (Ref.)</Label>
+                  <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
+                    TOTAL CUSTO POR MINUTO
+                  </Label>
                   <Input
                     value={formatBRL(finalCostPerMinute)}
                     disabled
@@ -559,7 +561,9 @@ export default function PriceList() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Custo Fixo (Auto)</Label>
+                  <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
+                    CUSTO FIXO
+                  </Label>
                   <Input
                     value={formatBRL(fixedCost)}
                     disabled
