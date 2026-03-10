@@ -42,6 +42,7 @@ import {
   List,
   Activity,
   CalendarDays,
+  Calculator,
 } from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -199,7 +200,7 @@ export default function AdminFinancial() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm flex-1 sm:flex-initial">
             <CalendarDays className="w-4 h-4 text-muted-foreground ml-2" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -219,6 +220,12 @@ export default function AdminFinancial() {
           <Button asChild variant="outline" className="hidden sm:flex">
             <Link to="/dre">
               <BarChart3 className="w-4 h-4 mr-2" /> Relatório DRE
+            </Link>
+          </Button>
+
+          <Button asChild variant="outline" className="hidden sm:flex">
+            <Link to="/hourly-cost">
+              <Calculator className="w-4 h-4 mr-2" /> Custo Hora
             </Link>
           </Button>
         </div>

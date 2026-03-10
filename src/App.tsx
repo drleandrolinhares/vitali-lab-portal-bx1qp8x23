@@ -29,6 +29,7 @@ import PendingApproval from './pages/PendingApproval'
 import PendingUsersPage from './pages/PendingUsers'
 import DREPage from './pages/DRE'
 import DRECategories from './pages/DRECategories'
+import HourlyCost from './pages/HourlyCost'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/accounts-payable" element={<AccountsPayable />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/pending-users" element={<PendingUsersPage />} />
+              <Route path="/hourly-cost" element={<HourlyCost />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
