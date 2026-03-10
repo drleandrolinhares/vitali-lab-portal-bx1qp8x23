@@ -527,15 +527,15 @@ export default function PriceList() {
         </div>
         <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+            <div className="w-4 h-4 rounded bg-emerald-500 shadow-sm" />
             <span>Alta Margem (&gt; 20%)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-amber-500 ring-2 ring-amber-500/20" />
+            <div className="w-4 h-4 rounded bg-amber-500 shadow-sm" />
             <span>Margem Média (10% a 20%)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-500/20" />
+            <div className="w-4 h-4 rounded bg-red-500 shadow-sm" />
             <span>Baixa Margem (&lt; 10%)</span>
           </div>
         </div>
@@ -571,24 +571,37 @@ export default function PriceList() {
               ) : (
                 filteredPrices.map((item) => {
                   const margin = getMargin(item)
-                  let indicatorClass = 'border rounded-lg p-2.5 transition-colors '
+                  let containerClass =
+                    'flex items-center justify-between gap-3 p-3 rounded-xl border shadow-sm transition-colors text-white '
+                  let badgeClass = 'px-2.5 py-1 rounded-md text-sm font-bold shadow-sm '
+
                   if (margin > 20) {
-                    indicatorClass +=
-                      'border-emerald-500/50 bg-emerald-500/5 dark:border-emerald-500/30'
+                    containerClass +=
+                      'bg-emerald-500 border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700'
+                    badgeClass += 'bg-emerald-600/50 border border-emerald-400/50'
                   } else if (margin >= 10) {
-                    indicatorClass += 'border-amber-500/50 bg-amber-500/5 dark:border-amber-500/30'
+                    containerClass +=
+                      'bg-amber-500 border-amber-600 dark:bg-amber-600 dark:border-amber-700'
+                    badgeClass += 'bg-amber-600/50 border border-amber-400/50'
                   } else {
-                    indicatorClass += 'border-red-500/50 bg-red-500/5 dark:border-red-500/30'
+                    containerClass +=
+                      'bg-red-500 border-red-600 dark:bg-red-600 dark:border-red-700'
+                    badgeClass += 'bg-red-600/50 border border-red-400/50'
                   }
 
                   return (
                     <TableRow key={item.id}>
-                      <TableCell className="pl-6 py-3 min-w-[280px]">
-                        <div className={indicatorClass}>
-                          <div className="font-semibold text-foreground">{item.work_type}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {item.category}
+                      <TableCell className="pl-6 py-3 min-w-[320px]">
+                        <div className={containerClass}>
+                          <div className="flex flex-col">
+                            <span className="font-bold tracking-tight leading-tight">
+                              {item.work_type}
+                            </span>
+                            <span className="text-[11px] font-medium text-white/80 mt-0.5 uppercase tracking-wider">
+                              {item.category}
+                            </span>
                           </div>
+                          <div className={badgeClass}>{margin.toFixed(1)}%</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1033,9 +1046,11 @@ export default function PriceList() {
                 <div
                   className={cn(
                     'mt-6 p-4 rounded-lg border transition-colors',
-                    profitMargin < 20
-                      ? 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950'
-                      : 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950',
+                    profitMargin >= 20
+                      ? 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950'
+                      : profitMargin >= 10
+                        ? 'bg-amber-500 border-amber-600 text-white dark:bg-amber-600 dark:border-amber-700'
+                        : 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950',
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -1059,7 +1074,7 @@ export default function PriceList() {
                       </p>
                     </div>
                   </div>
-                  {profitMargin < 20 && (
+                  {profitMargin < 10 && (
                     <div className="mt-3 pt-3 border-t border-white/20">
                       <p className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 uppercase">
                         <AlertTriangle className="w-4 h-4" />
