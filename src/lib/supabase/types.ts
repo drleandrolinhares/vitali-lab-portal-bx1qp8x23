@@ -533,14 +533,19 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_active: boolean
           is_approved: boolean
           job_function: string | null
+          lunch_end: string | null
+          lunch_start: string | null
           name: string
           payment_due_date: number | null
           permissions: Json | null
           personal_phone: string | null
           role: string
           whatsapp_group_link: string | null
+          work_end: string | null
+          work_start: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -553,14 +558,19 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_active?: boolean
           is_approved?: boolean
           job_function?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           name: string
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
           role?: string
           whatsapp_group_link?: string | null
+          work_end?: string | null
+          work_start?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -573,14 +583,19 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_active?: boolean
           is_approved?: boolean
           job_function?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           name?: string
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
           role?: string
           whatsapp_group_link?: string | null
+          work_end?: string | null
+          work_start?: string | null
         }
         Relationships: []
       }
@@ -903,6 +918,11 @@ export const Constants = {
 //   is_approved: boolean (not null, default: false)
 //   commercial_agreement: numeric (not null, default: 0)
 //   job_function: text (nullable)
+//   is_active: boolean (not null, default: true)
+//   work_start: text (nullable)
+//   lunch_start: text (nullable)
+//   lunch_end: text (nullable)
+//   work_end: text (nullable)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

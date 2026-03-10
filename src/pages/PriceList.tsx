@@ -106,6 +106,7 @@ export default function PriceList() {
     material: '',
     price: '',
     sector: 'Soluções Cerâmicas',
+    estrutura_fixacao: 'SOBRE DENTE',
     execution_time: '',
     cadista_cost: '',
     material_cost: '',
@@ -162,10 +163,8 @@ export default function PriceList() {
 
   const filteredPrices = useMemo(() => {
     const result = prices.filter((p) => {
-      // Filtragem por setor
       if (selectedLab !== 'Todos' && p.sector !== selectedLab) return false
 
-      // Filtragem por status de rentabilidade
       if (profitFilter.length > 0) {
         const margin = getMargin(p)
         let category = 'low'
@@ -257,6 +256,7 @@ export default function PriceList() {
       material: '',
       price: '',
       sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+      estrutura_fixacao: 'SOBRE DENTE',
       execution_time: '',
       cadista_cost: '',
       material_cost: '',
@@ -275,6 +275,7 @@ export default function PriceList() {
       material: item.material || '',
       price: item.price,
       sector: item.sector || 'Soluções Cerâmicas',
+      estrutura_fixacao: item.estrutura_fixacao || 'SOBRE DENTE',
       execution_time: item.execution_time ? String(item.execution_time) : '',
       cadista_cost: item.cadista_cost ? String(item.cadista_cost) : '',
       material_cost: item.material_cost ? String(item.material_cost) : '',
@@ -336,6 +337,7 @@ export default function PriceList() {
       material: formData.material,
       price: formData.price,
       sector: formData.sector,
+      estrutura_fixacao: formData.estrutura_fixacao,
       execution_time: execTimeForSave,
       cadista_cost: parseLocalNum(formData.cadista_cost),
       material_cost: parseLocalNum(formData.material_cost),
@@ -579,6 +581,14 @@ export default function PriceList() {
                           </div>
                           <div className={badgeClass}>{margin.toFixed(1)}%</div>
                         </div>
+                        {item.estrutura_fixacao === 'SOBRE IMPLANTE' && (
+                          <Badge
+                            variant="outline"
+                            className="mt-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 text-[10px] py-0 h-4"
+                          >
+                            SOBRE IMPLANTE
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="py-1.5">
                         <Badge variant="outline" className="bg-muted/50 text-[10px] py-0 h-5">
@@ -763,6 +773,24 @@ export default function PriceList() {
                     <SelectContent>
                       <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
                       <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 col-span-2">
+                  <Label>
+                    Estrutura de Fixação <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.estrutura_fixacao}
+                    onValueChange={(v) => handleFormChange('estrutura_fixacao', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                      <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

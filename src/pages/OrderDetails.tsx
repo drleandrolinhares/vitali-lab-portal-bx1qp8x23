@@ -120,6 +120,24 @@ export default function OrderDetails() {
                   <p className="text-sm text-muted-foreground">Material</p>
                   <p className="font-medium">{order.material}</p>
                 </div>
+
+                {order.implantBrand && (
+                  <div>
+                    <p className="text-sm text-muted-foreground text-blue-600 dark:text-blue-400 font-semibold">
+                      Marca do Implante
+                    </p>
+                    <p className="font-medium">{order.implantBrand}</p>
+                  </div>
+                )}
+                {order.implantType && (
+                  <div>
+                    <p className="text-sm text-muted-foreground text-blue-600 dark:text-blue-400 font-semibold">
+                      Tipo do Componente
+                    </p>
+                    <p className="font-medium">{order.implantType}</p>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-muted-foreground">Cor</p>
                   <p className="font-medium">{order.shade || 'Não especificada'}</p>

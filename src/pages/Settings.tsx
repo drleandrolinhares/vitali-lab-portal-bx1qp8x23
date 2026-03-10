@@ -166,14 +166,28 @@ export default function SettingsPage() {
   const [scales, setScales] = useState<string[]>([])
   const [newScale, setNewScale] = useState('')
 
+  const [implantBrands, setImplantBrands] = useState<string[]>([])
+  const [newBrand, setNewBrand] = useState('')
+
   useEffect(() => {
     setLabLink(appSettings?.whatsapp_lab_link || '')
     try {
       if (appSettings?.shade_scales) {
-        setScales(JSON.parse(appSettings.shade_scales))
+        setScales(
+          JSON.parse(appSettings.shade_scales).sort((a: string, b: string) =>
+            a.localeCompare(b, 'pt-BR'),
+          ),
+        )
+      }
+      if (appSettings?.implant_brands) {
+        setImplantBrands(
+          JSON.parse(appSettings.implant_brands).sort((a: string, b: string) =>
+            a.localeCompare(b, 'pt-BR'),
+          ),
+        )
       }
     } catch (e) {
-      console.error('Failed to parse shade scales', e)
+      console.error('Failed to parse settings JSON', e)
     }
   }, [appSettings])
 
@@ -257,7 +271,7 @@ export default function SettingsPage() {
   const handleAddScale = async () => {
     const trimmed = newScale.trim()
     if (!trimmed || scales.includes(trimmed)) return
-    const updated = [...scales, trimmed]
+    const updated = [...scales, trimmed].sort((a, b) => a.localeCompare(b, 'pt-BR'))
     await updateSetting('shade_scales', JSON.stringify(updated))
     setNewScale('')
   }
@@ -265,6 +279,19 @@ export default function SettingsPage() {
   const handleRemoveScale = async (scale: string) => {
     const updated = scales.filter((s) => s !== scale)
     await updateSetting('shade_scales', JSON.stringify(updated))
+  }
+
+  const handleAddBrand = async () => {
+    const trimmed = newBrand.trim()
+    if (!trimmed || implantBrands.includes(trimmed)) return
+    const updated = [...implantBrands, trimmed].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    await updateSetting('implant_brands', JSON.stringify(updated))
+    setNewBrand('')
+  }
+
+  const handleRemoveBrand = async (brand: string) => {
+    const updated = implantBrands.filter((b) => b !== brand)
+    await updateSetting('implant_brands', JSON.stringify(updated))
   }
 
   if (!currentUser) {
@@ -322,6 +349,14 @@ export default function SettingsPage() {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
               Escalas de Cor
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger
+              value="brands"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+            >
+              Marcas de Implantes
             </TabsTrigger>
           )}
           {isMaster && (
@@ -520,6 +555,61 @@ export default function SettingsPage() {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => handleRemoveScale(s)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="brands" className="space-y-6">
+              <Card className="shadow-subtle">
+                <CardHeader>
+                  <CardTitle>Marcas de Componentes (Implantes)</CardTitle>
+                  <CardDescription>
+                    Gerencie as opções de marcas disponíveis para seleção em trabalhos sobre
+                    implante.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Nova marca (ex: Neodent, Straumann)"
+                      value={newBrand}
+                      onChange={(e) => setNewBrand(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddBrand()
+                      }}
+                      className="max-w-xs"
+                    />
+                    <Button onClick={handleAddBrand}>Adicionar</Button>
+                  </div>
+                  <div className="space-y-2 mt-6">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                      Marcas Cadastradas
+                    </h3>
+                    {implantBrands.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
+                        Nenhuma marca cadastrada.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {implantBrands.map((b, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
+                          >
+                            <span className="font-semibold text-sm">{b}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleRemoveBrand(b)}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>

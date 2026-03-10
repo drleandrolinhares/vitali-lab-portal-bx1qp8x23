@@ -43,9 +43,9 @@ export default function NewRequest() {
 
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
-  const [availableScales, setAvailableScales] = useState<string[]>([])
   const [scaleOpen, setScaleOpen] = useState(false)
   const [materialOpen, setMaterialOpen] = useState(false)
+  const [brandOpen, setBrandOpen] = useState(false)
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
@@ -62,6 +62,8 @@ export default function NewRequest() {
     shippingMethod: 'lab_pickup',
     stlDeliveryMethod: '',
     observations: '',
+    implantBrand: '',
+    implantType: '',
   })
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
@@ -84,24 +86,27 @@ export default function NewRequest() {
     )
   }, [appSettings, priceList])
 
-  useEffect(() => {
-    const fetchScales = async () => {
-      const { data } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'shade_scales')
-        .maybeSingle()
-      if (data && data.value) {
-        try {
-          const scales = JSON.parse(data.value)
-          setAvailableScales(scales.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR')))
-        } catch (e) {
-          console.error('Failed to parse shade_scales', e)
-        }
-      }
+  const availableScales = useMemo(() => {
+    if (appSettings['shade_scales']) {
+      try {
+        const parsed = JSON.parse(appSettings['shade_scales'])
+        return parsed.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR'))
+      } catch {}
     }
-    fetchScales()
+    return []
+  }, [appSettings])
 
+  const availableImplantBrands = useMemo(() => {
+    if (appSettings['implant_brands']) {
+      try {
+        const parsed = JSON.parse(appSettings['implant_brands'])
+        return parsed.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR'))
+      } catch {}
+    }
+    return []
+  }, [appSettings])
+
+  useEffect(() => {
     if (isAdminOrReception) {
       const fetchDentists = async () => {
         const { data } = await supabase
@@ -166,6 +171,22 @@ export default function NewRequest() {
     }
   }, [formData.workType, formData.sector, priceList])
 
+  const isSobreImplante = useMemo(() => {
+    if (formData.workType && formData.sector) {
+      const priceItem =
+        priceList.find((p) => p.work_type === formData.workType && p.sector === formData.sector) ||
+        priceList.find((p) => p.work_type === formData.workType)
+      return priceItem?.estrutura_fixacao === 'SOBRE IMPLANTE'
+    }
+    return false
+  }, [formData.workType, formData.sector, priceList])
+
+  useEffect(() => {
+    if (!isSobreImplante) {
+      setFormData((prev) => ({ ...prev, implantBrand: '', implantType: '' }))
+    }
+  }, [isSobreImplante])
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArr = Array.from(e.target.files)
@@ -197,6 +218,25 @@ export default function NewRequest() {
         variant: 'destructive',
       })
       return
+    }
+
+    if (isSobreImplante) {
+      if (!formData.implantBrand) {
+        toast({
+          title: 'Atenção',
+          description: 'A Marca do Componente é obrigatória para este procedimento.',
+          variant: 'destructive',
+        })
+        return
+      }
+      if (!formData.implantType) {
+        toast({
+          title: 'Atenção',
+          description: 'O Tipo do Componente é obrigatório para este procedimento.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setSubmitting(true)
@@ -362,6 +402,88 @@ export default function NewRequest() {
                 </Select>
               </div>
             </div>
+
+            {isSobreImplante && (
+              <div className="grid gap-6 sm:grid-cols-2 bg-muted/10 p-5 rounded-xl border animate-fade-in-down">
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">Marca do Componente *</Label>
+                  {availableImplantBrands.length > 0 ? (
+                    <Popover open={brandOpen} onOpenChange={setBrandOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={brandOpen}
+                          className={cn(
+                            'w-full justify-between h-11 font-normal bg-background',
+                            !formData.implantBrand && 'text-muted-foreground',
+                          )}
+                        >
+                          {formData.implantBrand || 'Selecione a marca...'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar marca..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma marca encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              {availableImplantBrands.map((b) => (
+                                <CommandItem
+                                  key={b}
+                                  value={b}
+                                  onSelect={(currentValue) => {
+                                    const originalValue =
+                                      availableImplantBrands.find(
+                                        (m) => m.toLowerCase() === currentValue,
+                                      ) || currentValue
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      implantBrand:
+                                        originalValue === formData.implantBrand
+                                          ? ''
+                                          : originalValue,
+                                    }))
+                                    setBrandOpen(false)
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      formData.implantBrand === b ? 'opacity-100' : 'opacity-0',
+                                    )}
+                                  />
+                                  {b}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Input
+                      placeholder="Ex: Neodent, Straumann..."
+                      value={formData.implantBrand}
+                      onChange={(e) => setFormData({ ...formData, implantBrand: e.target.value })}
+                      className="h-11"
+                      required
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">Tipo do Componente *</Label>
+                  <Input
+                    placeholder="Ex: Munhão Universal..."
+                    value={formData.implantType}
+                    onChange={(e) => setFormData({ ...formData, implantType: e.target.value })}
+                    className="h-11"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
               <Label className="uppercase font-semibold text-xs text-muted-foreground">

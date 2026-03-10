@@ -65,4 +65,6 @@ export interface Order {
   quantity: number
   dre_category?: string
   fileUrls?: string[]
+  implantBrand?: string
+  implantType?: string
 }
