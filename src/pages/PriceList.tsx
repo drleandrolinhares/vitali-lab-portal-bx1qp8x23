@@ -145,13 +145,17 @@ export default function PriceList() {
       try {
         const items = JSON.parse(itemsStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {}
+      } catch (e) {
+        console.error('Failed to parse hourly_cost_fixed_items', e)
+      }
     }
     if (laborStr) {
       try {
         const items = JSON.parse(laborStr)
         totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {}
+      } catch (e) {
+        console.error('Failed to parse hourly_cost_labor_items', e)
+      }
     }
     if (hoursStr) {
       hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
