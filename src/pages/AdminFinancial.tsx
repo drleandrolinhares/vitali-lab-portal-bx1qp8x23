@@ -339,7 +339,7 @@ export default function AdminFinancial() {
       </Card>
 
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               Detalhes Financeiros - {detailsDialog?.name} ({selectedMonthLabel})
@@ -356,14 +356,16 @@ export default function AdminFinancial() {
                     <TableRow>
                       <TableHead>Pedido</TableHead>
                       <TableHead>Trabalho</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-center">Qtd.</TableHead>
+                      <TableHead className="text-right">Unitário</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {detailsDialog?.dentistOrders.filter((o: any) => o.outstandingCost > 0)
                       .length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
                           Nenhum pedido finalizado pendente para este mês.
                         </TableCell>
                       </TableRow>
@@ -379,6 +381,12 @@ export default function AdminFinancial() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">
+                            {o.quantity}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatBRL(o.unitPrice || 0)}
+                          </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatBRL(o.outstandingCost)}
                           </TableCell>
@@ -399,6 +407,8 @@ export default function AdminFinancial() {
                     <TableRow>
                       <TableHead>Pedido</TableHead>
                       <TableHead>Trabalho</TableHead>
+                      <TableHead className="text-center">Qtd.</TableHead>
+                      <TableHead className="text-right">Unitário</TableHead>
                       <TableHead className="text-right">Estimativa</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -406,7 +416,7 @@ export default function AdminFinancial() {
                     {detailsDialog?.dentistOrders.filter((o: any) => o.pipelineCost > 0).length ===
                       0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
                           Nenhum pedido em produção.
                         </TableCell>
                       </TableRow>
@@ -422,6 +432,12 @@ export default function AdminFinancial() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">
+                            {o.quantity}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatBRL(o.unitPrice || 0)}
+                          </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatBRL(o.pipelineCost)}
                           </TableCell>

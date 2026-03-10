@@ -4,12 +4,22 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { ArrowLeft, Calendar, FileText, Activity, Clock, ArrowRight, Circle } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  FileText,
+  Activity,
+  Clock,
+  ArrowRight,
+  Circle,
+  DollarSign,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn, processOrderHistory } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { OrderHistory } from '@/lib/types'
+import { formatBRL } from '@/lib/financial'
 
 export default function OrderDetails() {
   const { id } = useParams()
@@ -69,156 +79,182 @@ export default function OrderDetails() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2 shadow-subtle h-fit">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" /> Detalhes Clínicos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Paciente</p>
-                <p className="font-medium text-lg">{order.patientName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Dentista Responsável</p>
-                <p className="font-medium">{order.dentistName}</p>
-              </div>
-
-              {order.patientCpf && (
+        <div className="md:col-span-2 space-y-6">
+          <Card className="shadow-subtle h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" /> Detalhes Clínicos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">CPF do Paciente</p>
-                  <p className="font-medium">{order.patientCpf}</p>
+                  <p className="text-sm text-muted-foreground">Paciente</p>
+                  <p className="font-medium text-lg">{order.patientName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Dentista Responsável</p>
+                  <p className="font-medium">{order.dentistName}</p>
+                </div>
+
+                {order.patientCpf && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">CPF do Paciente</p>
+                    <p className="font-medium">{order.patientCpf}</p>
+                  </div>
+                )}
+                {order.patientBirthDate && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data de Nascimento</p>
+                    <p className="font-medium">
+                      {format(new Date(order.patientBirthDate + 'T00:00:00'), 'dd/MM/yyyy')}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm text-muted-foreground">Trabalho</p>
+                  <p className="font-medium">{order.workType}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Material</p>
+                  <p className="font-medium">{order.material}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cor</p>
+                  <p className="font-medium">{order.shade || 'Não especificada'}</p>
+                </div>
+                {order.shadeScale && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Escala</p>
+                    <p className="font-medium">{order.shadeScale}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Envio</p>
+                  <p className="font-medium">
+                    {order.shippingMethod === 'lab_pickup'
+                      ? 'Motoboy Laboratório'
+                      : 'Enviado pelo Dentista'}
+                  </p>
+                </div>
+                {order.stlDeliveryMethod && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Detalhes do Envio</p>
+                    <p className="font-medium">{order.stlDeliveryMethod}</p>
+                  </div>
+                )}
+              </div>
+              {(order.teeth.length > 0 || (order.arches && order.arches.length > 0)) && (
+                <div className="bg-muted/30 p-4 rounded-md border">
+                  <p className="text-sm text-muted-foreground mb-2">Elementos Envolvidos</p>
+                  <div className="flex flex-wrap gap-2">
+                    {order.arches?.map((a: string) => (
+                      <span
+                        key={a}
+                        className="bg-primary/10 text-primary px-2 py-1 rounded font-semibold text-sm border border-primary/20"
+                      >
+                        {a}
+                      </span>
+                    ))}
+                    {order.teeth.map((t: string) => (
+                      <span
+                        key={t}
+                        className="bg-primary/10 text-primary px-2 py-1 rounded font-mono text-sm border border-primary/20"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
-              {order.patientBirthDate && (
+              {order.observations && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Data de Nascimento</p>
-                  <p className="font-medium">
-                    {format(new Date(order.patientBirthDate + 'T00:00:00'), 'dd/MM/yyyy')}
+                  <p className="text-sm text-muted-foreground mb-1">Observações</p>
+                  <p className="text-sm bg-muted/50 p-3 rounded-md italic border-l-4 border-l-primary whitespace-pre-wrap">
+                    {order.observations}
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Trabalho</p>
-                <p className="font-medium">{order.workType}</p>
+        <div className="space-y-6">
+          <Card className="shadow-subtle h-fit border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" /> Financeiro
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Valor Unitário</span>
+                <span className="font-medium">{formatBRL(order.unitPrice || 0)}</span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Material</p>
-                <p className="font-medium">{order.material}</p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Quantidade (Elementos)</span>
+                <span className="font-medium">{order.quantity || 1}</span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Cor</p>
-                <p className="font-medium">{order.shade || 'Não especificada'}</p>
+              <div className="flex justify-between items-center pt-2 border-t font-semibold">
+                <span>Total do Pedido</span>
+                <span className="text-primary">{formatBRL(order.basePrice)}</span>
               </div>
-              {order.shadeScale && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Escala</p>
-                  <p className="font-medium">{order.shadeScale}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-muted-foreground">Envio</p>
-                <p className="font-medium">
-                  {order.shippingMethod === 'lab_pickup'
-                    ? 'Motoboy Laboratório'
-                    : 'Enviado pelo Dentista'}
-                </p>
-              </div>
-              {order.stlDeliveryMethod && (
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Detalhes do Envio</p>
-                  <p className="font-medium">{order.stlDeliveryMethod}</p>
-                </div>
-              )}
-            </div>
-            {(order.teeth.length > 0 || (order.arches && order.arches.length > 0)) && (
-              <div className="bg-muted/30 p-4 rounded-md border">
-                <p className="text-sm text-muted-foreground mb-2">Elementos Envolvidos</p>
-                <div className="flex flex-wrap gap-2">
-                  {order.arches?.map((a: string) => (
-                    <span
-                      key={a}
-                      className="bg-primary/10 text-primary px-2 py-1 rounded font-semibold text-sm border border-primary/20"
-                    >
-                      {a}
-                    </span>
-                  ))}
-                  {order.teeth.map((t: string) => (
-                    <span
-                      key={t}
-                      className="bg-primary/10 text-primary px-2 py-1 rounded font-mono text-sm border border-primary/20"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {order.observations && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm bg-muted/50 p-3 rounded-md italic border-l-4 border-l-primary whitespace-pre-wrap">
-                  {order.observations}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-subtle h-fit">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" /> Histórico de Etapas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-px before:bg-border">
-              {processedHistory.map((item) => (
-                <div key={item.id} className="relative flex items-start gap-4">
-                  <div
-                    className={cn(
-                      'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
-                      item.isCurrent
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted text-muted-foreground border-border',
-                    )}
-                  >
-                    {item.direction === 'backward' ? (
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                    ) : item.direction === 'forward' ? (
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    ) : (
-                      <Circle className="w-2.5 h-2.5 fill-current" />
-                    )}
-                  </div>
-                  <div className="ml-10 w-full space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium leading-none">{item.stageName}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(item.date), "dd/MM 'às' HH:mm")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
-                        <Clock className="w-3 h-3" />
-                        {item.durationStr}
-                      </div>
+          <Card className="shadow-subtle h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" /> Histórico de Etapas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-px before:bg-border">
+                {processedHistory.map((item) => (
+                  <div key={item.id} className="relative flex items-start gap-4">
+                    <div
+                      className={cn(
+                        'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
+                        item.isCurrent
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted text-muted-foreground border-border',
+                      )}
+                    >
+                      {item.direction === 'backward' ? (
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                      ) : item.direction === 'forward' ? (
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      ) : (
+                        <Circle className="w-2.5 h-2.5 fill-current" />
+                      )}
                     </div>
-                    {item.note && !item.note.startsWith('Movido para') && (
-                      <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
-                        {item.note}
-                      </p>
-                    )}
+                    <div className="ml-10 w-full space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium leading-none">{item.stageName}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(item.date), "dd/MM 'às' HH:mm")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
+                          <Clock className="w-3 h-3" />
+                          {item.durationStr}
+                        </div>
+                      </div>
+                      {item.note && !item.note.startsWith('Movido para') && (
+                        <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
+                          {item.note}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

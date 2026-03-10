@@ -54,6 +54,8 @@ export interface Order {
   createdAt: string
   clearedBalance: number
   basePrice: number
+  unitPrice?: number
+  quantity?: number
   history: OrderHistory[]
   fileUrls?: string[]
 }

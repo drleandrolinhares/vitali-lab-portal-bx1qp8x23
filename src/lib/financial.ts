@@ -15,6 +15,7 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   const isFullyCompleted = order.status === 'completed' || order.status === 'delivered'
   const isCancelled = order.status === 'cancelled'
 
+  const quantity = Math.max(1, (order.teeth?.length || 0) + (order.arches?.length || 0))
   let basePrice = order.basePrice || 0
 
   // Fallback to priceList if basePrice is 0 (prevents 0-value revenue bugs for old orders)
@@ -30,9 +31,12 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
         .replace(/\./g, '')
         .replace(',', '.')
       const parsed = parseFloat(numericString)
-      basePrice = !isNaN(parsed) ? parsed : 0
+      const unitPrice = !isNaN(parsed) ? parsed : 0
+      basePrice = unitPrice * quantity
     }
   }
+
+  const unitPrice = quantity > 0 ? basePrice / quantity : 0
 
   const completedCost = isFullyCompleted ? basePrice : 0
   const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0
@@ -43,6 +47,8 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   return {
     ...order,
     basePrice,
+    unitPrice,
+    quantity,
     mappedStages: [],
     completedCost,
     pendingCost: pipelineCost,

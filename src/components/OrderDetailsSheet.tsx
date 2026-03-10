@@ -21,11 +21,13 @@ import {
   Trash2,
   Paperclip,
   Download,
+  DollarSign,
 } from 'lucide-react'
 import { Order, OrderHistory } from '@/lib/types'
 import { useAppStore } from '@/stores/main'
 import { cn, processOrderHistory } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
+import { formatBRL } from '@/lib/financial'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -153,6 +155,26 @@ export function OrderDetailsSheet({
                 </div>
               </div>
             )}
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                <DollarSign className="w-4 h-4 text-primary" /> Financeiro
+              </h4>
+              <div className="bg-muted/30 p-4 rounded-xl border border-border/50 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Valor Unitário</span>
+                  <span className="font-medium">{formatBRL(order.unitPrice || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Quantidade (Elementos)</span>
+                  <span className="font-medium">{order.quantity || 1}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t font-semibold">
+                  <span>Total do Pedido</span>
+                  <span className="text-primary">{formatBRL(order.basePrice)}</span>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">

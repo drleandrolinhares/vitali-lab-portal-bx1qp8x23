@@ -199,41 +199,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (dbOrders) {
       setOrders(
-        dbOrders.map((o: any) => ({
-          id: o.id,
-          friendlyId: o.friendly_id,
-          patientName: o.patient_name,
-          patientCpf: o.patient_cpf,
-          patientBirthDate: o.patient_birth_date,
-          dentistId: o.dentist_id,
-          dentistName: o.profiles?.name || 'Desconhecido',
-          dentistClinic: o.profiles?.clinic || '',
-          dentistGroupLink: o.profiles?.whatsapp_group_link || '',
-          sector: o.sector,
-          kanbanStage: o.kanban_stage,
-          workType: o.work_type,
-          material: o.material,
-          teeth: o.tooth_or_arch?.teeth || [],
-          arches: o.tooth_or_arch?.arches || [],
-          shade: o.color_and_considerations,
-          shadeScale: o.scale_used,
-          shippingMethod: o.shipping_method,
-          stlDeliveryMethod: o.shipping_details,
-          observations: o.observations,
-          status: deriveStatus(o.kanban_stage, o.status),
-          isAcknowledged: o.is_acknowledged || false,
-          createdAt: o.created_at,
-          clearedBalance: o.cleared_balance || 0,
-          basePrice: o.base_price || 0,
-          dre_category: o.dre_category,
-          fileUrls: o.file_urls || [],
-          history: (o.order_history || [])
-            .sort(
-              (a: any, b: any) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-            )
-            .map((h: any) => ({ id: h.id, status: h.status, date: h.created_at, note: h.note })),
-        })),
+        dbOrders.map((o: any) => {
+          const teethCount = o.tooth_or_arch?.teeth?.length || 0
+          const archesCount = o.tooth_or_arch?.arches?.length || 0
+          const quantity = Math.max(1, teethCount + archesCount)
+          const basePrice = o.base_price || 0
+          const unitPrice = quantity > 0 ? basePrice / quantity : 0
+
+          return {
+            id: o.id,
+            friendlyId: o.friendly_id,
+            patientName: o.patient_name,
+            patientCpf: o.patient_cpf,
+            patientBirthDate: o.patient_birth_date,
+            dentistId: o.dentist_id,
+            dentistName: o.profiles?.name || 'Desconhecido',
+            dentistClinic: o.profiles?.clinic || '',
+            dentistGroupLink: o.profiles?.whatsapp_group_link || '',
+            sector: o.sector,
+            kanbanStage: o.kanban_stage,
+            workType: o.work_type,
+            material: o.material,
+            teeth: o.tooth_or_arch?.teeth || [],
+            arches: o.tooth_or_arch?.arches || [],
+            shade: o.color_and_considerations,
+            shadeScale: o.scale_used,
+            shippingMethod: o.shipping_method,
+            stlDeliveryMethod: o.shipping_details,
+            observations: o.observations,
+            status: deriveStatus(o.kanban_stage, o.status),
+            isAcknowledged: o.is_acknowledged || false,
+            createdAt: o.created_at,
+            clearedBalance: o.cleared_balance || 0,
+            basePrice,
+            unitPrice,
+            quantity,
+            dre_category: o.dre_category,
+            fileUrls: o.file_urls || [],
+            history: (o.order_history || [])
+              .sort(
+                (a: any, b: any) =>
+                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              )
+              .map((h: any) => ({ id: h.id, status: h.status, date: h.created_at, note: h.note })),
+          }
+        }),
       )
     }
     hasFetchedOrders.current = true
@@ -380,19 +390,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (p) => p.work_type === orderData.workType && (!p.sector || p.sector === orderData.sector),
       ) || priceList.find((p) => p.work_type === orderData.workType)
 
-    let basePrice = 0
+    let unitPrice = 0
     if (priceItem && priceItem.price != null) {
       const numericString = String(priceItem.price)
         .replace(/[^\d,.-]/g, '')
         .replace(/\./g, '')
         .replace(',', '.')
       const parsed = parseFloat(numericString)
-      basePrice = !isNaN(parsed) ? parsed : 0
+      unitPrice = !isNaN(parsed) ? parsed : 0
 
       if (discountPercent > 0) {
-        basePrice = basePrice * (1 - discountPercent / 100)
+        unitPrice = unitPrice * (1 - discountPercent / 100)
       }
     }
+
+    const teethCount = orderData.teeth?.length || 0
+    const archesCount = orderData.arches?.length || 0
+    const quantity = Math.max(1, teethCount + archesCount)
+    const basePrice = unitPrice * quantity
 
     const { data, error } = await supabase
       .from('orders')
