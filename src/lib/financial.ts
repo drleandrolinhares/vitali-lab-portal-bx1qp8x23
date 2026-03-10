@@ -46,6 +46,8 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
     unitPrice = quantity > 0 && discount < 100 ? basePrice / (1 - discount / 100) / quantity : 0
   }
 
+  const effectiveUnitPrice = unitPrice * (1 - discount / 100)
+
   const completedCost = isFullyCompleted ? basePrice : 0
   const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0
 
@@ -56,6 +58,7 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
     ...order,
     basePrice,
     unitPrice,
+    effectiveUnitPrice,
     quantity,
     mappedStages: [],
     completedCost,

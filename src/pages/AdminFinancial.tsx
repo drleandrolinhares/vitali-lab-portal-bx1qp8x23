@@ -385,7 +385,7 @@ export default function AdminFinancial() {
                             {o.quantity}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {formatBRL(o.unitPrice || 0)}
+                            {formatBRL(o.effectiveUnitPrice || 0)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatBRL(o.outstandingCost)}
@@ -436,7 +436,7 @@ export default function AdminFinancial() {
                             {o.quantity}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {formatBRL(o.unitPrice || 0)}
+                            {formatBRL(o.effectiveUnitPrice || 0)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatBRL(o.pipelineCost)}

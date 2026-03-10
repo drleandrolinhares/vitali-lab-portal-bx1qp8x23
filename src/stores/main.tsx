@@ -338,9 +338,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         unitPrice = discount < 100 ? basePrice / (1 - discount / 100) / o.quantity : 0
       }
 
+      const effectiveUnitPrice = unitPrice * (1 - discount / 100)
+
       return {
         ...o,
         unitPrice,
+        effectiveUnitPrice,
         basePrice,
       }
     })
