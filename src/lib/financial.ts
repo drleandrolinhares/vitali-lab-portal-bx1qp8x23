@@ -17,9 +17,10 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
 
   const quantity = Math.max(1, (order.teeth?.length || 0) + (order.arches?.length || 0))
   let basePrice = order.basePrice || 0
+  let unitPrice = order.unitPrice || 0
 
-  // Fallback to priceList if basePrice is 0 (prevents 0-value revenue bugs for old orders)
-  if (basePrice === 0 && priceList && priceList.length > 0) {
+  // Dynamically calculate using Unit Price from Price List * Quantity (Elements count)
+  if (priceList && priceList.length > 0) {
     const priceItem =
       priceList.find(
         (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
@@ -31,12 +32,18 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
         .replace(/\./g, '')
         .replace(',', '.')
       const parsed = parseFloat(numericString)
-      const unitPrice = !isNaN(parsed) ? parsed : 0
-      basePrice = unitPrice * quantity
+      if (!isNaN(parsed) && parsed > 0) {
+        unitPrice = parsed
+        // Applies multiplication rule globally to ensure financial accuracy
+        basePrice = unitPrice * quantity
+      }
     }
   }
 
-  const unitPrice = quantity > 0 ? basePrice / quantity : 0
+  // Fallback
+  if (unitPrice === 0) {
+    unitPrice = quantity > 0 ? basePrice / quantity : 0
+  }
 
   const completedCost = isFullyCompleted ? basePrice : 0
   const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0

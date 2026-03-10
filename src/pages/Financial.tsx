@@ -26,6 +26,7 @@ import {
   FileDown,
   History,
   CalendarDays,
+  Loader2,
 } from 'lucide-react'
 import {
   getOrderFinancials,
@@ -37,7 +38,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 
 export default function FinancialPage() {
-  const { orders, kanbanStages, currentUser, priceList } = useAppStore()
+  const { orders, kanbanStages, currentUser, priceList, loading } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
 
@@ -62,11 +63,17 @@ export default function FinancialPage() {
 
       try {
         setFetchError(null)
-        const { data, error } = await supabase
+
+        let query = supabase
           .from('settlements')
           .select('*')
-          .eq('dentist_id', currentUser.id)
           .order('created_at', { ascending: false })
+
+        if (currentUser.role !== 'admin') {
+          query = query.eq('dentist_id', currentUser.id)
+        }
+
+        const { data, error } = await query
 
         if (!isMounted) return
 
@@ -91,9 +98,22 @@ export default function FinancialPage() {
     return () => {
       isMounted = false
     }
-  }, [currentUser?.id])
+  }, [currentUser?.id, currentUser?.role])
 
-  if (currentUser?.role !== 'dentist') return <div className="p-8">Acesso restrito</div>
+  if (loading || (safeOrders.length > 0 && safePriceList.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 animate-in fade-in duration-500">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-muted-foreground text-sm font-medium">
+          Calculando valores e atualizando sistema financeiro...
+        </p>
+      </div>
+    )
+  }
+
+  if (currentUser?.role !== 'dentist' && currentUser?.role !== 'admin') {
+    return <div className="p-8">Acesso restrito</div>
+  }
 
   // Calculate financials for the filtered orders. We do NOT filter out 0 costs here
   // to fix the "Nenhum pedido com saldo pendente" bug when data exists but price is unconfigured.

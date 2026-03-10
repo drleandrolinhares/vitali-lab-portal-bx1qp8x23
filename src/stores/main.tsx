@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useCallback,
   useRef,
+  useMemo,
 } from 'react'
 import { Order, OrderStatus, KanbanStage, User, UserRole, Stage, DRECategory } from '@/lib/types'
 import { toast } from '@/hooks/use-toast'
@@ -300,6 +301,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchPendingUsers,
     fetchDRECategories,
   ])
+
+  // Apply accurate financial total propagation dynamically over the context
+  const computedOrders = useMemo(() => {
+    if (!orders || orders.length === 0) return []
+
+    return orders.map((o) => {
+      let unitPrice = o.unitPrice || 0
+      let basePrice = o.basePrice || 0
+
+      if (priceList && priceList.length > 0) {
+        const priceItem =
+          priceList.find(
+            (p) => p.work_type === o.workType && (!p.sector || p.sector === o.sector),
+          ) || priceList.find((p) => p.work_type === o.workType)
+
+        if (priceItem && priceItem.price != null) {
+          const numericString = String(priceItem.price)
+            .replace(/[^\d,.-]/g, '')
+            .replace(/\./g, '')
+            .replace(',', '.')
+          const parsed = parseFloat(numericString)
+          if (!isNaN(parsed) && parsed > 0) {
+            unitPrice = parsed
+            basePrice = unitPrice * o.quantity
+          }
+        }
+      }
+
+      if (unitPrice === 0 && o.quantity > 0) {
+        unitPrice = basePrice / o.quantity
+      }
+
+      return {
+        ...o,
+        unitPrice,
+        basePrice,
+      }
+    })
+  }, [orders, priceList])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
@@ -654,7 +694,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         currentUser: currentUser as any,
-        orders,
+        orders: computedOrders,
         kanbanStages,
         appSettings,
         pendingUsers,
