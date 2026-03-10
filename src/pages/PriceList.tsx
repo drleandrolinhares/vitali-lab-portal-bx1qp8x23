@@ -40,6 +40,7 @@ import {
   PieChart,
   TrendingUp,
   TrendingDown,
+  AlertTriangle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
@@ -806,33 +807,41 @@ export default function PriceList() {
 
                 <div
                   className={cn(
-                    'mt-6 p-4 rounded-lg border flex items-center justify-between transition-colors',
-                    profitVal > 0
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-400'
-                      : profitVal < 0
-                        ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400'
-                        : 'bg-muted',
+                    'mt-6 p-4 rounded-lg border transition-colors',
+                    profitMargin < 20
+                      ? 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950'
+                      : 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950',
                   )}
                 >
-                  <div>
-                    <p className="text-[10px] uppercase font-bold tracking-wider opacity-80 mb-0.5">
-                      Lucro Líquido Estimado
-                    </p>
-                    <p className="text-2xl font-bold">{formatBRL(profitVal)}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
+                        Lucro Líquido Estimado
+                      </p>
+                      <p className="text-2xl font-bold">{formatBRL(profitVal)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
+                        Margem
+                      </p>
+                      <p className="text-xl font-bold flex items-center justify-end gap-1">
+                        {profitMargin >= 20 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : (
+                          <TrendingDown className="w-4 h-4" />
+                        )}
+                        {profitMargin.toFixed(1)}%
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase font-bold tracking-wider opacity-80 mb-0.5">
-                      Margem
-                    </p>
-                    <p className="text-xl font-bold flex items-center justify-end gap-1">
-                      {profitVal > 0 ? (
-                        <TrendingUp className="w-4 h-4" />
-                      ) : profitVal < 0 ? (
-                        <TrendingDown className="w-4 h-4" />
-                      ) : null}
-                      {profitMargin.toFixed(1)}%
-                    </p>
-                  </div>
+                  {profitMargin < 20 && (
+                    <div className="mt-3 pt-3 border-t border-white/20">
+                      <p className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 uppercase">
+                        <AlertTriangle className="w-4 h-4" />
+                        ALERTA: PERIGO DE LUCRATIVIDADE BAIXA
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
