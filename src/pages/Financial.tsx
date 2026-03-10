@@ -55,6 +55,51 @@ export default function FinancialPage() {
     [safeOrders, selectedMonth],
   )
 
+  // Calculate financials for the filtered orders.
+  const displayOrders = useMemo(
+    () => monthFilteredOrders.map((o) => getOrderFinancials(o, safePriceList, safeKanbanStages)),
+    [monthFilteredOrders, safePriceList, safeKanbanStages],
+  )
+
+  // Pre-render Verification Gate: strictly validate and correct mathematical integrity of totals
+  // explicitly comparing `(Unit * Qty) * (1 - Discount/100)` against existing database output.
+  const verifiedDisplayOrders = useMemo(() => {
+    return displayOrders.map((order) => {
+      const discount = order.dentistDiscount || 0
+      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
+
+      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
+
+      if (!isCorrect) {
+        console.warn(
+          `[QA Validation] Order ${order.friendlyId} base price mismatch. Expected ${expectedTotal}, got ${order.basePrice}. Recalculating for display integrity.`,
+        )
+      }
+
+      // Automatically correct legacy or out-of-sync totals ensuring exact discounted values display
+      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
+
+      const outstandingCost =
+        order.status === 'completed' || order.status === 'delivered'
+          ? Math.max(0, finalBasePrice - (order.clearedBalance || 0))
+          : 0
+
+      const pipelineCost =
+        order.status !== 'completed' && order.status !== 'delivered' && order.status !== 'cancelled'
+          ? finalBasePrice
+          : 0
+
+      return {
+        ...order,
+        basePrice: finalBasePrice,
+        outstandingCost,
+        pipelineCost,
+        pendingCost: pipelineCost,
+        totalCost: finalBasePrice,
+      }
+    })
+  }, [displayOrders])
+
   useEffect(() => {
     let isMounted = true
 
@@ -114,50 +159,6 @@ export default function FinancialPage() {
   if (currentUser?.role !== 'dentist' && currentUser?.role !== 'admin') {
     return <div className="p-8">Acesso restrito</div>
   }
-
-  // Calculate financials for the filtered orders.
-  const displayOrders = monthFilteredOrders.map((o) =>
-    getOrderFinancials(o, safePriceList, safeKanbanStages),
-  )
-
-  // Pre-render Verification Gate: strictly validate and correct mathematical integrity of totals
-  // explicitly comparing `(Unit * Qty) * (1 - Discount/100)` against existing database output.
-  const verifiedDisplayOrders = useMemo(() => {
-    return displayOrders.map((order) => {
-      const discount = order.dentistDiscount || 0
-      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
-
-      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
-
-      if (!isCorrect) {
-        console.warn(
-          `[QA Validation] Order ${order.friendlyId} base price mismatch. Expected ${expectedTotal}, got ${order.basePrice}. Recalculating for display integrity.`,
-        )
-      }
-
-      // Automatically correct legacy or out-of-sync totals ensuring exact discounted values display
-      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
-
-      const outstandingCost =
-        order.status === 'completed' || order.status === 'delivered'
-          ? Math.max(0, finalBasePrice - (order.clearedBalance || 0))
-          : 0
-
-      const pipelineCost =
-        order.status !== 'completed' && order.status !== 'delivered' && order.status !== 'cancelled'
-          ? finalBasePrice
-          : 0
-
-      return {
-        ...order,
-        basePrice: finalBasePrice,
-        outstandingCost,
-        pipelineCost,
-        pendingCost: pipelineCost,
-        totalCost: finalBasePrice,
-      }
-    })
-  }, [displayOrders])
 
   const totalAccumulated = verifiedDisplayOrders.reduce(
     (acc, o) => acc + (o?.outstandingCost || 0),
