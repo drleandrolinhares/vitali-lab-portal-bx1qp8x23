@@ -15,7 +15,12 @@ import { useAuth } from '@/hooks/use-auth'
 import { getOrderFinancials } from '@/lib/financial'
 
 interface AppState {
-  currentUser: User & { is_approved?: boolean; job_function?: string; is_active?: boolean }
+  currentUser: User & {
+    is_approved?: boolean
+    job_function?: string
+    is_active?: boolean
+    requires_password_change?: boolean
+  }
   orders: any[]
   kanbanStages: Stage[]
   appSettings: Record<string, string>
@@ -39,7 +44,7 @@ interface AppState {
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
   updateSetting: (key: string, value: string) => Promise<void>
   updateSettings: (updates: Record<string, string>) => Promise<void>
-  updateProfile: (updates: Partial<User>) => Promise<void>
+  updateProfile: (updates: Partial<User & { requires_password_change?: boolean }>) => Promise<void>
   refreshOrders: () => void
   logAudit: (action: string, entityType: string, entityId: string, details?: any) => Promise<void>
   approveUser: (userId: string) => Promise<void>
@@ -69,7 +74,13 @@ const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const [currentUser, setCurrentUser] = useState<
-    (User & { is_approved?: boolean; job_function?: string; is_active?: boolean }) | null
+    | (User & {
+        is_approved?: boolean
+        job_function?: string
+        is_active?: boolean
+        requires_password_change?: boolean
+      })
+    | null
   >(null)
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
@@ -122,6 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         permissions: data.permissions || [],
         is_approved: data.is_approved,
         is_active: data.is_active !== false,
+        requires_password_change: data.requires_password_change,
       })
     } else {
       setCurrentUser({
@@ -132,6 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         permissions: [],
         is_approved: false,
         is_active: true,
+        requires_password_change: false,
       })
     }
     setProfileLoading(false)
@@ -326,6 +339,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     ...prev,
                     is_approved: payload.new.is_approved,
                     is_active: payload.new.is_active,
+                    requires_password_change: payload.new.requires_password_change,
                   }
                 : prev,
             )
@@ -452,7 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user_id: currentUser.id,
       action,
       entity_type: entityType,
-      entity_id: entityId,
+      entityId,
       details,
     } as any)
   }
@@ -727,7 +741,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const updateProfile = async (updates: Partial<User & { requires_password_change?: boolean }>) => {
     if (!currentUser) return
     const { error } = await supabase.from('profiles').update(updates).eq('id', currentUser.id)
     if (!error) {

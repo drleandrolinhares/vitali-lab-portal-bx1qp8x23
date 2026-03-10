@@ -28,6 +28,7 @@ Deno.serve(async (req: Request) => {
       permissions,
       whatsapp_group_link,
       personal_phone,
+      requires_password_change,
     } = await req.json()
 
     // Generate dummy email if not provided
@@ -50,6 +51,8 @@ Deno.serve(async (req: Request) => {
     if (permissions && permissions.length > 0) updateData.permissions = permissions
     if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
     if (phoneToUse) updateData.personal_phone = phoneToUse
+    if (requires_password_change !== undefined)
+      updateData.requires_password_change = requires_password_change
 
     if (Object.keys(updateData).length > 0) {
       await supabase.from('profiles').update(updateData).eq('id', data.user.id)

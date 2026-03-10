@@ -4,5 +4,7 @@ export const createUser = async (payload: any) => {
   const { data, error } = await supabase.functions.invoke('create-user', {
     body: payload,
   })
-  return { data, error }
+  if (error) return { data: null, error }
+  if (data && data.error) return { data: null, error: new Error(data.error) }
+  return { data, error: null }
 }

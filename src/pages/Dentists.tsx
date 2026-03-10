@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Trash2,
   Tag,
+  Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,16 +21,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
+import { createUser } from '@/services/users'
 
 export default function DentistsPage() {
   const { currentUser } = useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingDentist, setEditingDentist] = useState<any>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createData, setCreateData] = useState({
+    name: '',
+    email: '',
+    clinic: '',
+    phone: '',
+    password: '',
+  })
   const [formData, setFormData] = useState({
     closing_date: '',
     payment_due_date: '',
@@ -94,6 +105,35 @@ export default function DentistsPage() {
     })
   }
 
+  const handleCreateDentist = async () => {
+    if (!createData.name || !createData.email || !createData.password) {
+      toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' })
+      return
+    }
+
+    setLoading(true)
+    const payload = {
+      name: createData.name,
+      email: createData.email,
+      password: createData.password,
+      clinic: createData.clinic,
+      phone: createData.phone,
+      role: 'dentist',
+      requires_password_change: true,
+    }
+
+    const { error } = await createUser(payload)
+    if (error) {
+      toast({ title: 'Erro ao criar dentista', description: error.message, variant: 'destructive' })
+      setLoading(false)
+    } else {
+      toast({ title: 'Dentista criado com sucesso!' })
+      setIsCreating(false)
+      setCreateData({ name: '', email: '', clinic: '', phone: '', password: '' })
+      fetchDentists()
+    }
+  }
+
   const handleDeleteDentist = async (id: string) => {
     if (
       !confirm(
@@ -151,7 +191,7 @@ export default function DentistsPage() {
         Acesso negado. Apenas recepção e administração.
       </div>
     )
-  if (loading)
+  if (loading && dentists.length === 0)
     return (
       <div className="p-8 text-center text-muted-foreground">
         Carregando diretório de dentistas...
@@ -160,11 +200,18 @@ export default function DentistsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Diretório de Dentistas</h2>
-        <p className="text-muted-foreground">
-          Gerencie seus clientes, clínicas parceiras e informações de contato.
-        </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Diretório de Dentistas</h2>
+          <p className="text-muted-foreground">
+            Gerencie seus clientes, clínicas parceiras e informações de contato.
+          </p>
+        </div>
+        {currentUser?.role === 'admin' && (
+          <Button onClick={() => setIsCreating(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Dentista
+          </Button>
+        )}
       </div>
 
       {dentists.length === 0 ? (
@@ -421,6 +468,72 @@ export default function DentistsPage() {
               Cancelar
             </Button>
             <Button onClick={handleSave}>Salvar Informações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreating} onOpenChange={setIsCreating}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Dentista</DialogTitle>
+            <DialogDescription>
+              Crie uma conta para um novo dentista. Uma senha temporária será definida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome Completo *</Label>
+              <Input
+                value={createData.name}
+                onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
+                placeholder="Nome do Dentista"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={createData.email}
+                onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Clínica</Label>
+              <Input
+                value={createData.clinic}
+                onChange={(e) => setCreateData({ ...createData, clinic: e.target.value })}
+                placeholder="Nome da Clínica"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input
+                value={createData.phone}
+                onChange={(e) => setCreateData({ ...createData, phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha Temporária *</Label>
+              <Input
+                type="text"
+                value={createData.password}
+                onChange={(e) => setCreateData({ ...createData, password: e.target.value })}
+                placeholder="Mínimo de 6 caracteres"
+              />
+              <p className="text-xs text-muted-foreground">
+                O dentista será obrigado a trocar esta senha no primeiro login.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreating(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateDentist} disabled={loading}>
+              Criar Conta
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -33,6 +33,7 @@ import DREPage from './pages/DRE'
 import DRECategories from './pages/DRECategories'
 import HourlyCost from './pages/HourlyCost'
 import MaterialsPage from './pages/Materials'
+import ForcePasswordChange from './components/ForcePasswordChange'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -63,6 +64,10 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     currentUser.role !== 'master'
   ) {
     return <PendingApproval />
+  }
+
+  if (currentUser && currentUser.requires_password_change) {
+    return <ForcePasswordChange />
   }
 
   return <>{children}</>
