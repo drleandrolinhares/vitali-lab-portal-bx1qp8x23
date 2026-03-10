@@ -62,6 +62,12 @@ export default function PriceList() {
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
   const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
 
+  // Validation States
+  const [formErrors, setFormErrors] = useState<Record<string, boolean>>({})
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
+  const [globalErrors, setGlobalErrors] = useState<Record<string, boolean>>({})
+  const [globalAttempted, setGlobalAttempted] = useState(false)
+
   // Local state purely for the dialog form fields
   const [configForm, setConfigForm] = useState({
     cardFee: '0',
@@ -200,6 +206,8 @@ export default function PriceList() {
   }
 
   const handleOpenGlobalConfig = () => {
+    setGlobalErrors({})
+    setGlobalAttempted(false)
     setConfigForm({
       cardFee: getSetting('global_card_fee') || '0',
       commission: getSetting('global_commission') || '0',
@@ -210,6 +218,20 @@ export default function PriceList() {
   }
 
   const handleSaveGlobalConfig = async () => {
+    setGlobalAttempted(true)
+    const newErrors: Record<string, boolean> = {}
+
+    if (!configForm.cardFee?.toString().trim()) newErrors.cardFee = true
+    if (!configForm.commission?.toString().trim()) newErrors.commission = true
+    if (!configForm.inadimplency?.toString().trim()) newErrors.inadimplency = true
+    if (!configForm.taxes?.toString().trim()) newErrors.taxes = true
+
+    setGlobalErrors(newErrors)
+
+    if (Object.keys(newErrors).length > 0) {
+      return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
+    }
+
     const updates = {
       global_card_fee: configForm.cardFee || '0',
       global_commission: configForm.commission || '0',
@@ -225,7 +247,20 @@ export default function PriceList() {
     setGlobalConfigOpen(false)
   }
 
+  const handleGlobalChange = (field: keyof typeof configForm, value: string) => {
+    setConfigForm((prev) => ({ ...prev, [field]: value }))
+    if (globalAttempted || globalErrors[field]) {
+      setGlobalErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+    }
+  }
+
+  const handleGlobalBlur = (field: keyof typeof configForm) => {
+    setGlobalErrors((prev) => ({ ...prev, [field]: !configForm[field]?.toString().trim() }))
+  }
+
   const handleNew = () => {
+    setFormErrors({})
+    setHasAttemptedSubmit(false)
     setFormData({
       id: '',
       work_type: '',
@@ -242,6 +277,8 @@ export default function PriceList() {
   }
 
   const handleEdit = (item: any) => {
+    setFormErrors({})
+    setHasAttemptedSubmit(false)
     setFormData({
       id: item.id,
       work_type: item.work_type,
@@ -261,8 +298,35 @@ export default function PriceList() {
     setModalOpen(true)
   }
 
+  const handleFormChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (hasAttemptedSubmit || formErrors[field]) {
+      setFormErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+    }
+  }
+
+  const handleFormBlur = (field: keyof typeof formData) => {
+    setFormErrors((prev) => ({
+      ...prev,
+      [field]: !formData[field]?.toString().trim(),
+    }))
+  }
+
   const handleSave = async () => {
-    if (!formData.work_type || !formData.price) {
+    setHasAttemptedSubmit(true)
+    const newErrors: Record<string, boolean> = {}
+
+    if (!formData.work_type?.trim()) newErrors.work_type = true
+    if (!formData.price?.toString().trim()) newErrors.price = true
+
+    formData.stages.forEach((stage, idx) => {
+      if (!stage.name?.trim()) newErrors[`stage_${idx}_name`] = true
+      if (!stage.price?.toString().trim()) newErrors[`stage_${idx}_price`] = true
+    })
+
+    setFormErrors(newErrors)
+
+    if (Object.keys(newErrors).length > 0) {
       return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
     }
 
@@ -321,6 +385,20 @@ export default function PriceList() {
     const newStages = [...formData.stages]
     newStages[index][key] = value
     setFormData({ ...formData, stages: newStages })
+
+    if (hasAttemptedSubmit || formErrors[`stage_${index}_${key}`]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [`stage_${index}_${key}`]: !value.trim(),
+      }))
+    }
+  }
+
+  const handleStageBlur = (index: number, key: keyof StageInput) => {
+    setFormErrors((prev) => ({
+      ...prev,
+      [`stage_${index}_${key}`]: !formData.stages[index][key]?.trim(),
+    }))
   }
 
   const handleModalCostsFetched = useCallback(
@@ -469,39 +547,64 @@ export default function PriceList() {
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Taxa de Cartão (%)</Label>
+                <Label>
+                  Taxa de Cartão (%) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={configForm.cardFee}
-                  onChange={(e) => setConfigForm({ ...configForm, cardFee: e.target.value })}
+                  onChange={(e) => handleGlobalChange('cardFee', e.target.value)}
+                  onBlur={() => handleGlobalBlur('cardFee')}
+                  className={cn(
+                    globalErrors.cardFee && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Comissões (%)</Label>
+                <Label>
+                  Comissões (%) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={configForm.commission}
-                  onChange={(e) => setConfigForm({ ...configForm, commission: e.target.value })}
+                  onChange={(e) => handleGlobalChange('commission', e.target.value)}
+                  onBlur={() => handleGlobalBlur('commission')}
+                  className={cn(
+                    globalErrors.commission && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Inadimplência (%)</Label>
+                <Label>
+                  Inadimplência (%) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={configForm.inadimplency}
-                  onChange={(e) => setConfigForm({ ...configForm, inadimplency: e.target.value })}
+                  onChange={(e) => handleGlobalChange('inadimplency', e.target.value)}
+                  onBlur={() => handleGlobalBlur('inadimplency')}
+                  className={cn(
+                    globalErrors.inadimplency &&
+                      'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Impostos (%)</Label>
+                <Label>
+                  Impostos (%) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={configForm.taxes}
-                  onChange={(e) => setConfigForm({ ...configForm, taxes: e.target.value })}
+                  onChange={(e) => handleGlobalChange('taxes', e.target.value)}
+                  onBlur={() => handleGlobalBlur('taxes')}
+                  className={cn(
+                    globalErrors.taxes && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
               </div>
             </div>
@@ -529,17 +632,25 @@ export default function PriceList() {
             <div className="lg:col-span-7 space-y-4 max-h-[55vh] overflow-y-auto px-1 pr-3 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label>Nome do Procedimento *</Label>
+                  <Label>
+                    Nome do Procedimento <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     value={formData.work_type}
-                    onChange={(e) => setFormData({ ...formData, work_type: e.target.value })}
+                    onChange={(e) => handleFormChange('work_type', e.target.value)}
+                    onBlur={() => handleFormBlur('work_type')}
+                    className={cn(
+                      formErrors.work_type && 'border-destructive focus-visible:ring-destructive',
+                    )}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Categoria *</Label>
+                  <Label>
+                    Categoria <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(v) => setFormData({ ...formData, category: v })}
+                    onValueChange={(v) => handleFormChange('category', v)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -554,7 +665,7 @@ export default function PriceList() {
                   <Label>Setor</Label>
                   <Select
                     value={formData.sector}
-                    onValueChange={(v) => setFormData({ ...formData, sector: v })}
+                    onValueChange={(v) => handleFormChange('sector', v)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -572,7 +683,7 @@ export default function PriceList() {
                     list="materials-list"
                     placeholder="Selecione ou digite um material..."
                     value={formData.material}
-                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                    onChange={(e) => handleFormChange('material', e.target.value)}
                   />
                   <datalist id="materials-list">
                     {availableMaterials.map((m) => (
@@ -582,14 +693,20 @@ export default function PriceList() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor de Venda Final (R$) *</Label>
+                  <Label>
+                    Valor de Venda Final (R$) <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="150.00"
                     value={formData.price}
-                    className="font-semibold"
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    className={cn(
+                      'font-semibold',
+                      formErrors.price && 'border-destructive focus-visible:ring-destructive',
+                    )}
+                    onChange={(e) => handleFormChange('price', e.target.value)}
+                    onBlur={() => handleFormBlur('price')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -598,7 +715,7 @@ export default function PriceList() {
                     type="number"
                     placeholder="Ex: 45"
                     value={formData.execution_time}
-                    onChange={(e) => setFormData({ ...formData, execution_time: e.target.value })}
+                    onChange={(e) => handleFormChange('execution_time', e.target.value)}
                   />
                 </div>
 
@@ -621,7 +738,7 @@ export default function PriceList() {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.cadista_cost}
-                    onChange={(e) => setFormData({ ...formData, cadista_cost: e.target.value })}
+                    onChange={(e) => handleFormChange('cadista_cost', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -631,7 +748,7 @@ export default function PriceList() {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.material_cost}
-                    onChange={(e) => setFormData({ ...formData, material_cost: e.target.value })}
+                    onChange={(e) => handleFormChange('material_cost', e.target.value)}
                   />
                 </div>
               </div>
@@ -669,19 +786,33 @@ export default function PriceList() {
                     className="flex gap-2 items-end bg-muted/40 p-3 rounded-md border border-border/50"
                   >
                     <div className="flex-1 space-y-1">
-                      <Label className="text-xs">Descrição</Label>
+                      <Label className="text-xs">
+                        Descrição <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         size="sm"
                         value={stage.name}
                         onChange={(e) => updateStage(idx, 'name', e.target.value)}
+                        onBlur={() => handleStageBlur(idx, 'name')}
+                        className={cn(
+                          formErrors[`stage_${idx}_name`] &&
+                            'border-destructive focus-visible:ring-destructive',
+                        )}
                       />
                     </div>
                     <div className="w-24 space-y-1">
-                      <Label className="text-xs">Valor (R$)</Label>
+                      <Label className="text-xs">
+                        Valor (R$) <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         size="sm"
                         value={stage.price}
                         onChange={(e) => updateStage(idx, 'price', e.target.value)}
+                        onBlur={() => handleStageBlur(idx, 'price')}
+                        className={cn(
+                          formErrors[`stage_${idx}_price`] &&
+                            'border-destructive focus-visible:ring-destructive',
+                        )}
                       />
                     </div>
                     <div className="w-48 space-y-1">
