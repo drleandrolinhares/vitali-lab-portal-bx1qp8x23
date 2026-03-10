@@ -44,8 +44,6 @@ export default function NewRequest() {
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [scaleOpen, setScaleOpen] = useState(false)
-  const [materialOpen, setMaterialOpen] = useState(false)
-  const [brandOpen, setBrandOpen] = useState(false)
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
@@ -70,22 +68,6 @@ export default function NewRequest() {
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
   const isAdminOrReception = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
-
-  const availableMaterials = useMemo(() => {
-    let list: string[] = []
-    try {
-      if (appSettings['materials_list']) {
-        list = JSON.parse(appSettings['materials_list'])
-      }
-    } catch (e) {
-      console.error('Failed to parse materials_list', e)
-    }
-
-    const fromPriceList = priceList.map((p) => p.material).filter(Boolean)
-    return Array.from(new Set([...list, ...fromPriceList])).sort((a, b) =>
-      a.localeCompare(b, 'pt-BR'),
-    )
-  }, [appSettings, priceList])
 
   const availableScales = useMemo(() => {
     if (appSettings['shade_scales']) {
@@ -172,6 +154,8 @@ export default function NewRequest() {
 
       if (priceItem && priceItem.material) {
         setFormData((prev) => ({ ...prev, material: priceItem.material }))
+      } else {
+        setFormData((prev) => ({ ...prev, material: '' }))
       }
     }
   }, [formData.workType, formData.sector, priceList])
@@ -211,7 +195,8 @@ export default function NewRequest() {
     if (!formData.material) {
       toast({
         title: 'Atenção',
-        description: 'Selecione um material para o pedido.',
+        description:
+          'O material não foi definido automaticamente. Verifique o tipo de trabalho selecionado.',
         variant: 'destructive',
       })
       return
@@ -400,88 +385,6 @@ export default function NewRequest() {
               </div>
             </div>
 
-            {isSobreImplante && (
-              <div className="grid gap-6 sm:grid-cols-2 bg-muted/10 p-5 rounded-xl border animate-fade-in-down">
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">Marca do Componente *</Label>
-                  {availableImplantBrands.length > 0 ? (
-                    <Popover open={brandOpen} onOpenChange={setBrandOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={brandOpen}
-                          className={cn(
-                            'w-full justify-between h-11 font-normal bg-background',
-                            !formData.implantBrand && 'text-muted-foreground',
-                          )}
-                        >
-                          {formData.implantBrand || 'Selecione a marca...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar marca..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhuma marca encontrada.</CommandEmpty>
-                            <CommandGroup>
-                              {availableImplantBrands.map((b) => (
-                                <CommandItem
-                                  key={b}
-                                  value={b}
-                                  onSelect={(currentValue) => {
-                                    const originalValue =
-                                      availableImplantBrands.find(
-                                        (m) => m.toLowerCase() === currentValue,
-                                      ) || currentValue
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      implantBrand:
-                                        originalValue === formData.implantBrand
-                                          ? ''
-                                          : originalValue,
-                                    }))
-                                    setBrandOpen(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      formData.implantBrand === b ? 'opacity-100' : 'opacity-0',
-                                    )}
-                                  />
-                                  {b}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Input
-                      placeholder="Ex: Neodent, Straumann..."
-                      value={formData.implantBrand}
-                      onChange={(e) => setFormData({ ...formData, implantBrand: e.target.value })}
-                      className="h-11"
-                      required
-                    />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">Tipo do Componente *</Label>
-                  <Input
-                    placeholder="Ex: Munhão Universal..."
-                    value={formData.implantType}
-                    onChange={(e) => setFormData({ ...formData, implantType: e.target.value })}
-                    className="h-11"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
               <Label className="uppercase font-semibold text-xs text-muted-foreground">
                 Seleção de Elementos (Odontograma)
@@ -494,159 +397,151 @@ export default function NewRequest() {
               />
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Estrutura de Fixação *</Label>
-                <Select
-                  value={formData.estruturaFixacao}
-                  onValueChange={(v) => setFormData({ ...formData, estruturaFixacao: v })}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
-                    <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Material *</Label>
-                {availableMaterials.length > 0 ? (
-                  <Popover open={materialOpen} onOpenChange={setMaterialOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={materialOpen}
-                        className={cn(
-                          'w-full justify-between h-11 font-normal bg-background',
-                          !formData.material && 'text-muted-foreground',
-                        )}
-                      >
-                        {formData.material || 'Selecione o material...'}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Buscar material..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhum material encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {availableMaterials.map((mat) => (
-                              <CommandItem
-                                key={mat}
-                                value={mat}
-                                onSelect={(currentValue) => {
-                                  const originalValue =
-                                    availableMaterials.find(
-                                      (m) => m.toLowerCase() === currentValue,
-                                    ) || currentValue
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    material:
-                                      originalValue === formData.material ? '' : originalValue,
-                                  }))
-                                  setMaterialOpen(false)
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    formData.material === mat ? 'opacity-100' : 'opacity-0',
-                                  )}
-                                />
-                                {mat}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <Input
-                    placeholder="Ex: Zircônia, Resina..."
-                    value={formData.material}
-                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                    className="h-11"
+            <div className="space-y-6 bg-muted/10 p-5 rounded-xl border">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">Estrutura de Fixação *</Label>
+                  <Select
+                    value={formData.estruturaFixacao}
+                    onValueChange={(v) => setFormData({ ...formData, estruturaFixacao: v })}
                     required
+                  >
+                    <SelectTrigger className="h-11 bg-background">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                      <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">Material *</Label>
+                  <Input
+                    value={formData.material}
+                    readOnly
+                    className="h-11 bg-muted cursor-not-allowed font-medium text-muted-foreground"
+                    placeholder="Auto-preenchido..."
                   />
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">COR BASE</Label>
+                  <Input
+                    placeholder="Ex: A2, BL1..."
+                    value={formData.shade}
+                    onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
+                    className="h-11 bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
+                  {availableScales.length > 0 ? (
+                    <Popover open={scaleOpen} onOpenChange={setScaleOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={scaleOpen}
+                          className="w-full justify-between h-11 font-normal bg-background"
+                        >
+                          {formData.shadeScale
+                            ? availableScales.find((s) => s === formData.shadeScale) ||
+                              formData.shadeScale
+                            : 'Selecione a escala...'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar escala..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma escala encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              {availableScales.map((scale) => (
+                                <CommandItem
+                                  key={scale}
+                                  value={scale}
+                                  onSelect={(currentValue) => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      shadeScale:
+                                        currentValue === formData.shadeScale ? '' : currentValue,
+                                    }))
+                                    setScaleOpen(false)
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      formData.shadeScale === scale ? 'opacity-100' : 'opacity-0',
+                                    )}
+                                  />
+                                  {scale}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Input
+                      placeholder="Ex: VITA..."
+                      value={formData.shadeScale}
+                      onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
+                      className="h-11 bg-background"
+                    />
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">COR BASE</Label>
-                <Input
-                  placeholder="Ex: A2, BL1..."
-                  value={formData.shade}
-                  onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
-                {availableScales.length > 0 ? (
-                  <Popover open={scaleOpen} onOpenChange={setScaleOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={scaleOpen}
-                        className="w-full justify-between h-11 font-normal bg-background"
-                      >
-                        {formData.shadeScale
-                          ? availableScales.find((s) => s === formData.shadeScale) ||
-                            formData.shadeScale
-                          : 'Selecione a escala...'}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Buscar escala..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhuma escala encontrada.</CommandEmpty>
-                          <CommandGroup>
-                            {availableScales.map((scale) => (
-                              <CommandItem
-                                key={scale}
-                                value={scale}
-                                onSelect={(currentValue) => {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    shadeScale:
-                                      currentValue === formData.shadeScale ? '' : currentValue,
-                                  }))
-                                  setScaleOpen(false)
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    formData.shadeScale === scale ? 'opacity-100' : 'opacity-0',
-                                  )}
-                                />
-                                {scale}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <Input
-                    placeholder="Ex: VITA..."
-                    value={formData.shadeScale}
-                    onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
-                    className="h-11"
-                  />
-                )}
-              </div>
+              {isSobreImplante && (
+                <div className="grid gap-6 sm:grid-cols-2 pt-4 border-t border-border/60 animate-fade-in-down">
+                  <div className="space-y-2">
+                    <Label className="uppercase font-semibold text-xs text-primary">
+                      Marca do Componente *
+                    </Label>
+                    <Select
+                      value={formData.implantBrand}
+                      onValueChange={(v) => setFormData({ ...formData, implantBrand: v })}
+                      required={isSobreImplante}
+                    >
+                      <SelectTrigger className="h-11 bg-background border-primary/30 focus:border-primary">
+                        <SelectValue
+                          placeholder={
+                            availableImplantBrands.length === 0
+                              ? 'Nenhuma marca cadastrada'
+                              : 'Selecione a marca...'
+                          }
+                        />
+                      </SelectTrigger>
+                      {availableImplantBrands.length > 0 && (
+                        <SelectContent>
+                          {availableImplantBrands.map((b) => (
+                            <SelectItem key={b} value={b}>
+                              {b}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      )}
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase font-semibold text-xs text-primary">
+                      Tipo do Componente *
+                    </Label>
+                    <Input
+                      placeholder="Ex: Munhão Universal, Ucla..."
+                      value={formData.implantType}
+                      onChange={(e) => setFormData({ ...formData, implantType: e.target.value })}
+                      className="h-11 bg-background border-primary/30 focus:border-primary"
+                      required={isSobreImplante}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 bg-muted/20 p-5 rounded-xl border">
@@ -739,7 +634,7 @@ export default function NewRequest() {
                       onChange={(e) =>
                         setFormData({ ...formData, stlDeliveryMethod: e.target.value })
                       }
-                      className="h-11"
+                      className="h-11 bg-background"
                     />
                   </div>
                 </div>
@@ -761,7 +656,7 @@ export default function NewRequest() {
               type="button"
               variant="outline"
               onClick={() => navigate(-1)}
-              className="h-11 px-6"
+              className="h-11 px-6 bg-background"
             >
               Cancelar
             </Button>
