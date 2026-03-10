@@ -534,6 +534,7 @@ export type Database = {
           email: string
           id: string
           is_approved: boolean
+          job_function: string | null
           name: string
           payment_due_date: number | null
           permissions: Json | null
@@ -553,6 +554,7 @@ export type Database = {
           email: string
           id: string
           is_approved?: boolean
+          job_function?: string | null
           name: string
           payment_due_date?: number | null
           permissions?: Json | null
@@ -572,6 +574,7 @@ export type Database = {
           email?: string
           id?: string
           is_approved?: boolean
+          job_function?: string | null
           name?: string
           payment_due_date?: number | null
           permissions?: Json | null
@@ -899,6 +902,7 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   is_approved: boolean (not null, default: false)
 //   commercial_agreement: numeric (not null, default: 0)
+//   job_function: text (nullable)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -953,87 +957,87 @@ export const Constants = {
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: app_settings
 //   Policy "Admin app_settings all" (ALL, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public app_settings view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: audit_logs
 //   Policy "Admin select audit logs" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Authenticated insert audit logs" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
 // Table: billing_controls
 //   Policy "Admin access billing_controls" (ALL, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Public read billing_controls" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: dre_categories
 //   Policy "Admin write dre_categories" (ALL, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public read dre_categories" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: expenses
 //   Policy "Admin/Reception delete expenses" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception insert expenses" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception update expenses" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception view expenses" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 // Table: inventory_items
 //   Policy "Admin delete inventory_items" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin/Reception insert inventory_items" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception update inventory_items" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception view inventory_items" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 // Table: inventory_transactions
 //   Policy "Admin/Reception insert inventory_transactions" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin/Reception view inventory_transactions" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 // Table: kanban_stages
 //   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public kanban_stages view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: order_history
 //   Policy "Dentists can view own order history, lab can view all" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
+//     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text, 'master'::text])))))))))
 //   Policy "Lab can insert order history, dentists can insert for own" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text])))))))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text, 'master'::text])))))))))
 // Table: orders
 //   Policy "Admin can delete orders" (DELETE, PERMISSIVE) roles={authenticated}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Dentists can insert own orders" (INSERT, PERMISSIVE) roles={authenticated}
-//     WITH CHECK: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text]))))))
+//     WITH CHECK: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))))))
 //   Policy "Dentists can view own orders, lab can view all" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))))))
 //   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['receptionist'::text, 'admin'::text]))))))
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))))))
 // Table: price_list
 //   Policy "Admin price_list delete" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin price_list insert" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin price_list update" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public price_list view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: price_stages
 //   Policy "Admin price_stages delete" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin price_stages insert" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin price_stages update" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public price_stages view" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: profiles
 //   Policy "Lab users can update profiles." (UPDATE, PERMISSIVE) roles={public}
-//     USING: (( SELECT profiles_1.role    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid())) = ANY (ARRAY['admin'::text, 'receptionist'::text]))
+//     USING: (( SELECT profiles_1.role    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid())) = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))
 //   Policy "Public profiles are viewable by authenticated users." (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "Users can insert own profile." (INSERT, PERMISSIVE) roles={authenticated}
@@ -1042,9 +1046,9 @@ export const Constants = {
 //     USING: (auth.uid() = id)
 // Table: settlements
 //   Policy "Admin insert settlements" (INSERT, PERMISSIVE) roles={authenticated}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Admin view all settlements, dentists view own" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text]))))))
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))))))
 
 // --- DATABASE FUNCTIONS ---
 // FUNCTION delete_user(uuid)
@@ -1056,7 +1060,7 @@ export const Constants = {
 //   BEGIN
 //     IF EXISTS (
 //       SELECT 1 FROM public.profiles
-//       WHERE id = auth.uid() AND role = 'admin'
+//       WHERE id = auth.uid() AND role IN ('admin', 'master')
 //     ) THEN
 //       DELETE FROM auth.users WHERE id = target_user_id;
 //     ELSE
@@ -1115,7 +1119,7 @@ export const Constants = {
 //       IF auth.uid() IS NOT NULL THEN
 //         IF NOT EXISTS (
 //           SELECT 1 FROM public.profiles
-//           WHERE id = auth.uid() AND role IN ('admin', 'receptionist')
+//           WHERE id = auth.uid() AND role IN ('admin', 'master', 'receptionist')
 //         ) THEN
 //           NEW.is_approved = OLD.is_approved;
 //         END IF;

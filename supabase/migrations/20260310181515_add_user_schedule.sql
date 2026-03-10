@@ -1,0 +1,5 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS work_start TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS lunch_start TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS lunch_end TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS work_end TEXT;

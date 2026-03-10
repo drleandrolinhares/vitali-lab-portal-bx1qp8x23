@@ -27,9 +27,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
 import { Plus, Edit2, Shield, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export const PERMISSION_OPTIONS = [
   { id: 'inbox', label: 'Caixa de Entrada' },
@@ -56,6 +58,7 @@ export function UsersManagement() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [saving, setSaving] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -65,6 +68,8 @@ export function UsersManagement() {
     job_function: '',
     clinic: '',
     whatsapp_group_link: '',
+    personal_phone: '',
+    is_active: true,
   })
   const [selectedPerms, setSelectedPerms] = useState<string[]>([])
 
@@ -84,12 +89,14 @@ export function UsersManagement() {
       setEditingUser(user)
       setFormData({
         name: user.name,
-        email: user.email,
+        email: user.email?.includes('@vitalilab.local') ? '' : user.email,
         password: '',
         role: user.role,
         job_function: user.job_function || '',
         clinic: user.clinic || '',
         whatsapp_group_link: user.whatsapp_group_link || '',
+        personal_phone: user.personal_phone || '',
+        is_active: user.is_active !== false,
       })
       setSelectedPerms(user.permissions || [])
     } else {
@@ -102,6 +109,8 @@ export function UsersManagement() {
         job_function: '',
         clinic: '',
         whatsapp_group_link: '',
+        personal_phone: '',
+        is_active: true,
       })
       setSelectedPerms([])
     }
@@ -109,8 +118,11 @@ export function UsersManagement() {
   }
 
   const handleSave = async () => {
-    if (!formData.name || (!editingUser && (!formData.email || !formData.password))) {
-      return toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' })
+    if (!formData.name) {
+      return toast({ title: 'O nome é obrigatório', variant: 'destructive' })
+    }
+    if (!editingUser && !formData.email && !formData.personal_phone) {
+      return toast({ title: 'Preencha o Email ou o Telefone', variant: 'destructive' })
     }
     setSaving(true)
 
@@ -133,6 +145,8 @@ export function UsersManagement() {
           role: formData.role,
           whatsapp_group_link: finalGroupLink,
           permissions: selectedPerms,
+          personal_phone: formData.personal_phone,
+          is_active: formData.is_active,
         })
         .eq('id', editingUser.id)
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
@@ -143,6 +157,7 @@ export function UsersManagement() {
         job_function: formData.job_function,
         whatsapp_group_link: finalGroupLink,
         permissions: selectedPerms,
+        phone: formData.personal_phone,
       })
       if (error)
         toast({
@@ -170,12 +185,23 @@ export function UsersManagement() {
     }
   }
 
+  const filteredUsers = users.filter((u) =>
+    statusFilter === 'active' ? u.is_active !== false : u.is_active === false,
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Gerencie o acesso e permissões de usuários do sistema.
-        </p>
+        <Tabs
+          value={statusFilter}
+          onValueChange={(v: any) => setStatusFilter(v)}
+          className="w-[250px]"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="active">Ativos</TabsTrigger>
+            <TabsTrigger value="inactive">Inativos</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Button onClick={() => openModal()} size="sm">
           <Plus className="w-4 h-4 mr-2" /> Novo Usuário
         </Button>
@@ -186,9 +212,8 @@ export function UsersManagement() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Função</TableHead>
-              <TableHead>Função na Empresa</TableHead>
+              <TableHead>Contato</TableHead>
+              <TableHead>Função / Perfil</TableHead>
               <TableHead className="text-center">Acesso Customizado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -196,18 +221,33 @@ export function UsersManagement() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                   Carregando usuários...
                 </TableCell>
               </TableRow>
+            ) : filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  Nenhum usuário encontrado.
+                </TableCell>
+              </TableRow>
             ) : (
-              users.map((user) => (
-                <TableRow key={user.id}>
+              filteredUsers.map((user) => (
+                <TableRow key={user.id} className={user.is_active === false ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell className="capitalize">{user.role}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.job_function}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {user.email?.includes('@vitalilab.local') ? 'Sem email' : user.email}
+                    </div>
+                    {user.personal_phone && (
+                      <div className="text-xs text-muted-foreground">{user.personal_phone}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="capitalize font-medium">{user.role}</div>
+                    <div className="text-xs text-muted-foreground">{user.job_function}</div>
+                  </TableCell>
                   <TableCell className="text-center">
                     {user.permissions && user.permissions.length > 0 ? (
                       <span className="inline-flex items-center text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200">
@@ -244,22 +284,25 @@ export function UsersManagement() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
+
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Clínica (Opcional)</Label>
+                <Label>Telefone / WhatsApp</Label>
                 <Input
-                  value={formData.clinic}
-                  onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
+                  value={formData.personal_phone}
+                  onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
+                  placeholder="Ex: (11) 99999-9999"
                 />
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Email de Acesso</Label>
+                <Label>Email de Acesso {editingUser ? '' : '(Opcional)'}</Label>
                 <Input
                   type="email"
                   value={formData.email}
                   disabled={!!editingUser}
                   className={editingUser ? 'bg-muted' : ''}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder={!editingUser ? 'Deixe em branco se não houver' : ''}
                 />
               </div>
 
@@ -270,6 +313,7 @@ export function UsersManagement() {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Opcional se sem email"
                   />
                 </div>
               )}
@@ -303,7 +347,15 @@ export function UsersManagement() {
                 />
               </div>
 
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Clínica (Opcional)</Label>
+                <Input
+                  value={formData.clinic}
+                  onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2 col-span-2 sm:col-span-1">
                 <Label>Link Grupo WhatsApp</Label>
                 <Input
                   value={formData.whatsapp_group_link}
@@ -313,6 +365,23 @@ export function UsersManagement() {
                   placeholder="Ex: https://chat.whatsapp.com/..."
                 />
               </div>
+
+              {editingUser && (
+                <div className="space-y-2 col-span-2 flex flex-col justify-center mt-2 border-t pt-4">
+                  <Label className="mb-2">Status da Conta</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, is_active: checked })
+                      }
+                    />
+                    <span className="text-sm font-medium">
+                      {formData.is_active ? 'Ativo' : 'Inativo (Bloqueado)'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 pt-4 border-t">

@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { getOrderFinancials } from '@/lib/financial'
 
 interface AppState {
-  currentUser: User & { is_approved?: boolean; job_function?: string }
+  currentUser: User & { is_approved?: boolean; job_function?: string; is_active?: boolean }
   orders: any[]
   kanbanStages: Stage[]
   appSettings: Record<string, string>
@@ -69,7 +69,7 @@ const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const [currentUser, setCurrentUser] = useState<
-    (User & { is_approved?: boolean; job_function?: string }) | null
+    (User & { is_approved?: boolean; job_function?: string; is_active?: boolean }) | null
   >(null)
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
@@ -121,6 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         avatar_url: data.avatar_url,
         permissions: data.permissions || [],
         is_approved: data.is_approved,
+        is_active: data.is_active !== false,
       })
     } else {
       setCurrentUser({
@@ -130,6 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clinic: session.user.user_metadata?.clinic,
         permissions: [],
         is_approved: false,
+        is_active: true,
       })
     }
     setProfileLoading(false)
@@ -300,7 +302,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             fetchPendingUsers()
           if (payload.new && payload.new.id === currentUser.id) {
             setCurrentUser((prev: any) =>
-              prev ? { ...prev, is_approved: payload.new.is_approved } : prev,
+              prev
+                ? {
+                    ...prev,
+                    is_approved: payload.new.is_approved,
+                    is_active: payload.new.is_active,
+                  }
+                : prev,
             )
           }
         })
@@ -425,9 +433,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user_id: currentUser.id,
       action,
       entity_type: entityType,
-      entity_id: entityId,
+      entityId,
       details,
-    })
+    } as any)
   }
 
   const switchRole = () => {}

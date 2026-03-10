@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Phone, User, Building, Camera, Loader2, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { UsersManagement, PERMISSION_OPTIONS } from '@/components/UsersManagement'
+import { WorkSchedule } from '@/components/WorkSchedule'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -278,23 +279,23 @@ export default function SettingsPage() {
   const isMaster = currentUser.role === ('master' as any)
 
   return (
-    <div className="max-w-4xl mx-auto py-6 space-y-6 animate-fade-in">
+    <div className="max-w-5xl mx-auto py-6 space-y-6 animate-fade-in">
       <div className="flex flex-col gap-1 mb-4">
         <h2 className="text-2xl font-bold tracking-tight text-primary">Configurações Gerais</h2>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="mb-6 flex flex-wrap w-full max-w-2xl bg-transparent gap-2 h-auto p-0">
+        <TabsList className="mb-6 flex w-full max-w-full overflow-x-auto bg-transparent gap-2 h-auto p-0 pb-2 justify-start scrollbar-hide">
           <TabsTrigger
             value="profile"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
           >
             Meu Perfil
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger
               value="system"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
               Sistema
             </TabsTrigger>
@@ -302,15 +303,23 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsTrigger
               value="users"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
               Usuários
             </TabsTrigger>
           )}
           {isAdmin && (
             <TabsTrigger
+              value="work-schedule"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+            >
+              Escala de Trabalho
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger
               value="scales"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
               Escalas de Cor
             </TabsTrigger>
@@ -318,7 +327,7 @@ export default function SettingsPage() {
           {isMaster && (
             <TabsTrigger
               value="role-permissions"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
               Permissões (Master)
             </TabsTrigger>
@@ -462,6 +471,10 @@ export default function SettingsPage() {
 
             <TabsContent value="users">
               <UsersManagement />
+            </TabsContent>
+
+            <TabsContent value="work-schedule">
+              <WorkSchedule />
             </TabsContent>
 
             <TabsContent value="scales" className="space-y-6">

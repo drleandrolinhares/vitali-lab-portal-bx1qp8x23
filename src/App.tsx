@@ -5,6 +5,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppProvider } from '@/stores/main'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import { useAppStore } from '@/stores/main'
+import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase/client'
 import LandingPage from './pages/LandingPage'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
@@ -41,6 +43,18 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
       <div className="min-h-screen flex items-center justify-center font-medium">Carregando...</div>
     )
   if (!session) return <AuthPage />
+
+  if (currentUser && currentUser.is_active === false) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center font-medium gap-4">
+        <p className="text-xl font-semibold text-destructive">Acesso Bloqueado</p>
+        <p className="text-muted-foreground">Sua conta foi desativada pelo administrador.</p>
+        <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+          Sair
+        </Button>
+      </div>
+    )
+  }
 
   if (
     currentUser &&
