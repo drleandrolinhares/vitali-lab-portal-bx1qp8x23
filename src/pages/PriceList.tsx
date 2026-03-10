@@ -117,7 +117,9 @@ export default function PriceList() {
       try {
         const items = JSON.parse(itemsStr)
         totalFixed = items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {}
+      } catch (e) {
+        // ignore parsing errors
+      }
     }
     if (hoursStr) hours = Number(hoursStr) || 176
     if (hours <= 0) return 0
