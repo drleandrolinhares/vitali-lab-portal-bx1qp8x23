@@ -44,7 +44,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
-import { calculateProcedureProfitability } from '@/lib/financial'
+import { calculateProcedureProfitability, computeHourlyCosts } from '@/lib/financial'
 
 interface StageInput {
   name: string
@@ -73,7 +73,6 @@ export default function PriceList() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
-  const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
 
   // Validation States
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({})
@@ -81,7 +80,15 @@ export default function PriceList() {
   const [globalErrors, setGlobalErrors] = useState<Record<string, boolean>>({})
   const [globalAttempted, setGlobalAttempted] = useState(false)
 
-  // Local state purely for the dialog form fields
+  const sharedCosts = useMemo(() => computeHourlyCosts(appSettings), [appSettings])
+
+  const getSetting = useCallback(
+    (key: string) => {
+      return appSettings[key] || ''
+    },
+    [appSettings],
+  )
+
   const [configForm, setConfigForm] = useState({
     cardFee: '0',
     commission: '0',
@@ -101,85 +108,6 @@ export default function PriceList() {
     material_cost: '',
     stages: [] as StageInput[],
   })
-
-  const computeCosts = (config: Record<string, string>) => {
-    const itemsStr = config['hourly_cost_fixed_items']
-    const hoursStr = config['hourly_cost_monthly_hours']
-
-    let totalCosts = 0
-    let hours = 176
-
-    if (itemsStr) {
-      try {
-        const items = JSON.parse(itemsStr)
-        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        console.error('Failed to parse hourly_cost_fixed_items', e)
-      }
-    }
-    if (hoursStr) {
-      hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
-    }
-
-    if (hours <= 0) return { totalFixedCosts: totalCosts, totalHourlyCost: 0, costPerMinute: 0 }
-
-    const hourlyCost = totalCosts / hours
-
-    return {
-      totalFixedCosts: totalCosts,
-      totalHourlyCost: hourlyCost,
-      costPerMinute: hourlyCost / 60,
-    }
-  }
-
-  const [tableCosts, setTableCosts] = useState({
-    totalFixedCosts: 0,
-    totalHourlyCost: 0,
-    costPerMinute: 0,
-  })
-
-  const [modalCosts, setModalCosts] = useState({
-    totalFixedCosts: 0,
-    totalHourlyCost: 0,
-    costPerMinute: 0,
-  })
-
-  useEffect(() => {
-    const computed = computeCosts(appSettings)
-    if (computed.totalFixedCosts > 0 || computed.totalHourlyCost > 0) {
-      setTableCosts(computed)
-    } else {
-      const fetchDb = async () => {
-        const { data } = await supabase
-          .from('app_settings')
-          .select('*')
-          .in('key', ['hourly_cost_fixed_items', 'hourly_cost_monthly_hours'])
-        if (data) {
-          const config = data.reduce(
-            (acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }),
-            {},
-          )
-          setLocalConfig((prev) => ({ ...prev, ...config }))
-          setTableCosts(computeCosts(config))
-        }
-      }
-      fetchDb()
-    }
-  }, [appSettings])
-
-  useEffect(() => {
-    const fetchDbSettings = async () => {
-      const { data } = await supabase.from('app_settings').select('*')
-      if (data) {
-        const mapped = data.reduce(
-          (acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }),
-          {},
-        )
-        setLocalConfig(mapped)
-      }
-    }
-    fetchDbSettings()
-  }, [])
 
   const fetchPrices = async () => {
     setLoading(true)
@@ -211,15 +139,6 @@ export default function PriceList() {
     const fromPriceList = prices.map((p) => p.material).filter(Boolean)
     return Array.from(new Set([...list, ...fromPriceList])).sort()
   }, [appSettings, prices])
-
-  const getSetting = useCallback(
-    (key: string) => {
-      const storeVal = appSettings[key]
-      if (storeVal !== undefined && storeVal !== null && storeVal !== '') return storeVal
-      return localConfig[key]
-    },
-    [appSettings, localConfig],
-  )
 
   const handleOpenGlobalConfig = () => {
     setGlobalErrors({})
@@ -256,8 +175,6 @@ export default function PriceList() {
     }
 
     await updateSettings(updates)
-
-    setLocalConfig((prev) => ({ ...prev, ...updates }))
 
     toast({ title: 'Taxas globais salvas com sucesso!' })
     setGlobalConfigOpen(false)
@@ -355,7 +272,7 @@ export default function PriceList() {
     }
 
     const execTimeForSave = parseLocalNum(formData.execution_time)
-    const calculatedFixedCost = execTimeForSave * modalCosts.costPerMinute
+    const calculatedFixedCost = execTimeForSave * sharedCosts.costPerMinute
 
     const payload = {
       work_type: formData.work_type,
@@ -433,13 +350,6 @@ export default function PriceList() {
     }
   }
 
-  const handleModalCostsFetched = useCallback(
-    (costs: { totalFixedCosts: number; totalHourlyCost: number; costPerMinute: number }) => {
-      setModalCosts(costs)
-    },
-    [],
-  )
-
   const getMargin = useCallback(
     (item: any) => {
       const pNum = parseLocalNum(item.price)
@@ -457,7 +367,7 @@ export default function PriceList() {
         executionTime: eTime,
         cadistaCost: cVal,
         materialCost: mVal,
-        costPerMinute: tableCosts.costPerMinute,
+        costPerMinute: sharedCosts.costPerMinute,
         globalCardFee,
         globalCommission,
         globalInadimplency,
@@ -466,7 +376,7 @@ export default function PriceList() {
 
       return profitMargin
     },
-    [getSetting, tableCosts.costPerMinute],
+    [getSetting, sharedCosts.costPerMinute],
   )
 
   const priceNum = parseLocalNum(formData.price)
@@ -493,7 +403,7 @@ export default function PriceList() {
     executionTime: execTime,
     cadistaCost: cadistaVal,
     materialCost: materialVal,
-    costPerMinute: modalCosts.costPerMinute,
+    costPerMinute: sharedCosts.costPerMinute,
     globalCardFee,
     globalCommission,
     globalInadimplency,
@@ -563,13 +473,13 @@ export default function PriceList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Procedimento</TableHead>
-                <TableHead>Setor</TableHead>
-                <TableHead className="text-right">Valor Venda Final</TableHead>
-                <TableHead className="text-right">Tempo Exec.</TableHead>
-                <TableHead className="text-right">Custo / Min</TableHead>
-                <TableHead className="text-right">Custo Fixo Est.</TableHead>
-                <TableHead className="text-right pr-6">Ações</TableHead>
+                <TableHead className="pl-6 h-10 py-2">Procedimento</TableHead>
+                <TableHead className="h-10 py-2">Setor</TableHead>
+                <TableHead className="text-right h-10 py-2">Valor Venda Final</TableHead>
+                <TableHead className="text-right h-10 py-2">Tempo Exec.</TableHead>
+                <TableHead className="text-right h-10 py-2">Custo / Min</TableHead>
+                <TableHead className="text-right h-10 py-2">Custo Fixo Est.</TableHead>
+                <TableHead className="text-right pr-6 h-10 py-2">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -589,8 +499,8 @@ export default function PriceList() {
                 filteredPrices.map((item) => {
                   const margin = getMargin(item)
                   let containerClass =
-                    'flex items-center justify-between gap-3 p-3 rounded-xl border shadow-sm transition-colors text-white '
-                  let badgeClass = 'px-2.5 py-1 rounded-md text-sm font-bold shadow-sm '
+                    'flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg border shadow-sm transition-colors text-white '
+                  let badgeClass = 'px-1.5 py-0.5 rounded text-[11px] font-bold shadow-sm '
 
                   if (margin > 20) {
                     containerClass +=
@@ -607,43 +517,53 @@ export default function PriceList() {
                   }
 
                   return (
-                    <TableRow key={item.id}>
-                      <TableCell className="pl-6 py-3 min-w-[320px]">
+                    <TableRow key={item.id} className="group hover:bg-muted/30">
+                      <TableCell className="pl-6 py-1.5 min-w-[320px]">
                         <div className={containerClass}>
                           <div className="flex flex-col">
-                            <span className="font-bold tracking-tight leading-tight">
+                            <span className="font-bold tracking-tight leading-tight text-[13px]">
                               {item.work_type}
                             </span>
-                            <span className="text-[11px] font-medium text-white/80 mt-0.5 uppercase tracking-wider">
+                            <span className="text-[10px] font-medium text-white/80 mt-0 uppercase tracking-wider">
                               {item.category}
                             </span>
                           </div>
                           <div className={badgeClass}>{margin.toFixed(1)}%</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-muted/50">
+                      <TableCell className="py-1.5">
+                        <Badge variant="outline" className="bg-muted/50 text-[10px] py-0 h-5">
                           {item.sector || 'Geral'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-semibold py-1.5 text-[13px]">
                         {formatBRL(parseLocalNum(item.price))}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
                         {item.execution_time ? `${item.execution_time} min` : '-'}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground font-medium">
-                        {formatBRL(tableCosts.costPerMinute)}
+                      <TableCell className="text-right text-muted-foreground font-medium py-1.5 text-xs">
+                        {formatBRL(sharedCosts.costPerMinute)}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatBRL((item.execution_time || 0) * tableCosts.costPerMinute)}
+                      <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
+                        {formatBRL((item.execution_time || 0) * sharedCosts.costPerMinute)}
                       </TableCell>
-                      <TableCell className="text-right pr-6 space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                          <Edit2 className="w-4 h-4 text-muted-foreground" />
+                      <TableCell className="text-right pr-6 py-1.5 space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500 hover:text-red-600" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-600" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -746,7 +666,7 @@ export default function PriceList() {
             <DialogTitle>{formData.id ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
           </DialogHeader>
 
-          {modalOpen && <HourlyCostDashboard onFetched={handleModalCostsFetched} />}
+          {modalOpen && <HourlyCostDashboard />}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-2">
             {/* Left Column: Form Fields */}

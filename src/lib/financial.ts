@@ -11,6 +11,38 @@ export type PriceItem = {
   price_stages?: PriceStage[]
 }
 
+export function computeHourlyCosts(settings: Record<string, string>) {
+  const itemsStr = settings['hourly_cost_fixed_items']
+  const hoursStr = settings['hourly_cost_monthly_hours']
+
+  let totalFixed = 33200
+  let hours = 176
+
+  if (itemsStr) {
+    try {
+      const parsed = JSON.parse(itemsStr)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        totalFixed = parsed.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
+      } else if (Array.isArray(parsed) && parsed.length === 0) {
+        totalFixed = 0
+      }
+    } catch (e) {
+      console.error('Failed to parse hourly_cost_fixed_items', e)
+    }
+  }
+  if (hoursStr) {
+    hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
+  }
+
+  const hourly = hours > 0 ? totalFixed / hours : 0
+  const perMin = hourly / 60
+  return {
+    totalFixedCosts: totalFixed,
+    totalHourlyCost: hourly,
+    costPerMinute: perMin,
+  }
+}
+
 export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanStages?: Stage[]) {
   const isFullyCompleted = order.status === 'completed' || order.status === 'delivered'
   const isCancelled = order.status === 'cancelled'
@@ -20,7 +52,6 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   let unitPrice = order.unitPrice || 0
   const discount = order.dentistDiscount || 0
 
-  // Dynamically calculate using Unit Price from Price List * Quantity (Elements count) * Discount
   if (priceList && priceList.length > 0) {
     const priceItem =
       priceList.find(
@@ -35,13 +66,11 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
       const parsed = parseFloat(numericString)
       if (!isNaN(parsed) && parsed > 0) {
         unitPrice = parsed
-        // Applies multiplication rule globally and dentist discount to ensure financial accuracy
         basePrice = unitPrice * quantity * (1 - discount / 100)
       }
     }
   }
 
-  // Fallback
   if (unitPrice === 0) {
     unitPrice = quantity > 0 && discount < 100 ? basePrice / (1 - discount / 100) / quantity : 0
   }

@@ -1,108 +1,12 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { useAppStore } from '@/stores/main'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { DollarSign, Clock, Calculator } from 'lucide-react'
+import { computeHourlyCosts } from '@/lib/financial'
 
-export interface HourlyCosts {
-  totalFixedCosts: number
-  totalHourlyCost: number
-  costPerMinute: number
-}
-
-interface Props {
-  onFetched?: (costs: HourlyCosts) => void
-}
-
-const INITIAL_COSTS_SUM = 33200 // Fallback sum if DB is completely empty
-
-export function HourlyCostDashboard({ onFetched }: Props) {
-  const [costs, setCosts] = useState<HourlyCosts | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let isMounted = true
-    const fetchCosts = async () => {
-      setLoading(true)
-      try {
-        const { data } = await supabase
-          .from('app_settings')
-          .select('*')
-          .in('key', ['hourly_cost_fixed_items', 'hourly_cost_monthly_hours'])
-
-        let totalFixed = INITIAL_COSTS_SUM
-        let hours = 176
-
-        if (data && data.length > 0) {
-          const items = data.find((d) => d.key === 'hourly_cost_fixed_items')
-          const hoursData = data.find((d) => d.key === 'hourly_cost_monthly_hours')
-
-          if (items?.value) {
-            try {
-              const parsed = JSON.parse(items.value)
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                totalFixed = parsed.reduce(
-                  (acc: number, curr: any) => acc + (Number(curr.value) || 0),
-                  0,
-                )
-              }
-            } catch (e) {
-              console.error('Failed to parse hourly_cost_fixed_items', e)
-            }
-          }
-          if (hoursData?.value) {
-            hours = parseFloat(String(hoursData.value).replace(',', '.')) || 176
-          }
-        }
-
-        const hourly = hours > 0 ? totalFixed / hours : 0
-        const perMin = hourly / 60
-        const computed = {
-          totalFixedCosts: totalFixed,
-          totalHourlyCost: hourly,
-          costPerMinute: perMin,
-        }
-
-        if (isMounted) {
-          setCosts(computed)
-          setLoading(false)
-          if (onFetched) onFetched(computed)
-        }
-      } catch (err) {
-        console.error('Error fetching hourly costs:', err)
-        if (isMounted) setLoading(false)
-      }
-    }
-
-    fetchCosts()
-
-    return () => {
-      isMounted = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  if (loading || !costs) {
-    return (
-      <div className="grid gap-3 md:grid-cols-3 mb-4 px-1 animate-pulse">
-        {[1, 2, 3].map((i) => (
-          <Card
-            key={i}
-            className="shadow-sm border-l-4 border-l-slate-200 bg-slate-50/50 dark:bg-slate-900/50 dark:border-l-slate-800"
-          >
-            <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-              <Skeleton className="h-3 w-24 bg-slate-200 dark:bg-slate-800" />
-              <Skeleton className="h-4 w-4 rounded-full bg-slate-200 dark:bg-slate-800" />
-            </CardHeader>
-            <CardContent className="p-3 pt-2">
-              <Skeleton className="h-6 w-28 bg-slate-200 dark:bg-slate-800" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
+export function HourlyCostDashboard() {
+  const { appSettings } = useAppStore()
+  const costs = computeHourlyCosts(appSettings)
 
   return (
     <div className="grid gap-3 md:grid-cols-3 mb-4 px-1">
