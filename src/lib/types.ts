@@ -67,4 +67,5 @@ export interface Order {
   fileUrls?: string[]
   implantBrand?: string
   implantType?: string
+  estruturaFixacao?: string
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN estrutura_fixacao TEXT NOT NULL DEFAULT 'SOBRE DENTE';

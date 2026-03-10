@@ -8,7 +8,6 @@ export type PriceItem = {
   work_type: string
   sector?: string
   price?: string | number
-  estrutura_fixacao?: string
   price_stages?: PriceStage[]
 }
 

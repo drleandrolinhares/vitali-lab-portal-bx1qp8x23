@@ -64,6 +64,7 @@ export default function NewRequest() {
     observations: '',
     implantBrand: '',
     implantType: '',
+    estruturaFixacao: 'SOBRE DENTE',
   })
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
@@ -175,15 +176,7 @@ export default function NewRequest() {
     }
   }, [formData.workType, formData.sector, priceList])
 
-  const isSobreImplante = useMemo(() => {
-    if (formData.workType && formData.sector) {
-      const priceItem =
-        priceList.find((p) => p.work_type === formData.workType && p.sector === formData.sector) ||
-        priceList.find((p) => p.work_type === formData.workType)
-      return priceItem?.estrutura_fixacao === 'SOBRE IMPLANTE'
-    }
-    return false
-  }, [formData.workType, formData.sector, priceList])
+  const isSobreImplante = formData.estruturaFixacao === 'SOBRE IMPLANTE'
 
   useEffect(() => {
     if (!isSobreImplante) {
@@ -501,7 +494,24 @@ export default function NewRequest() {
               />
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs">Estrutura de Fixação *</Label>
+                <Select
+                  value={formData.estruturaFixacao}
+                  onValueChange={(v) => setFormData({ ...formData, estruturaFixacao: v })}
+                  required
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                    <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">Material *</Label>
                 {availableMaterials.length > 0 ? (
@@ -566,10 +576,8 @@ export default function NewRequest() {
                     required
                   />
                 )}
-                <p className="text-[10px] text-muted-foreground ml-1">
-                  Preenchido automaticamente pelo tipo de trabalho, mas pode ser alterado.
-                </p>
               </div>
+
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs">COR BASE</Label>
                 <Input

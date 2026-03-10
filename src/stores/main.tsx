@@ -181,7 +181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchPriceList = useCallback(async () => {
     const { data } = await supabase
       .from('price_list')
-      .select('id, work_type, sector, price, material, estrutura_fixacao, price_stages(*)')
+      .select('id, work_type, sector, price, material, price_stages(*)')
       .order('work_type', { ascending: true })
     if (data) {
       const sorted = data.sort((a, b) =>
@@ -258,6 +258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             fileUrls: o.file_urls || [],
             implantBrand: o.implant_brand,
             implantType: o.implant_type,
+            estruturaFixacao: o.estrutura_fixacao || 'SOBRE DENTE',
             history: (o.order_history || [])
               .sort(
                 (a: any, b: any) =>
@@ -502,7 +503,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         file_urls: orderData.fileUrls || [],
         implant_brand: orderData.implantBrand || null,
         implant_type: orderData.implantType || null,
-      })
+        estrutura_fixacao: orderData.estruturaFixacao || 'SOBRE DENTE',
+      } as any)
       .select()
       .single()
 

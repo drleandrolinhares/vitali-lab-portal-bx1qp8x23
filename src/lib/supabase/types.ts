@@ -359,6 +359,8 @@ export type Database = {
           file_urls: Json | null
           friendly_id: string
           id: string
+          implant_brand: string | null
+          implant_type: string | null
           is_acknowledged: boolean
           kanban_stage: string
           material: string
@@ -384,6 +386,8 @@ export type Database = {
           file_urls?: Json | null
           friendly_id?: string
           id?: string
+          implant_brand?: string | null
+          implant_type?: string | null
           is_acknowledged?: boolean
           kanban_stage?: string
           material: string
@@ -409,6 +413,8 @@ export type Database = {
           file_urls?: Json | null
           friendly_id?: string
           id?: string
+          implant_brand?: string | null
+          implant_type?: string | null
           is_acknowledged?: boolean
           kanban_stage?: string
           material?: string
@@ -446,6 +452,7 @@ export type Database = {
           cadista_cost: number | null
           category: string
           created_at: string
+          estrutura_fixacao: string
           execution_time: number | null
           fixed_cost: number | null
           id: string
@@ -460,6 +467,7 @@ export type Database = {
           cadista_cost?: number | null
           category: string
           created_at?: string
+          estrutura_fixacao?: string
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
@@ -474,6 +482,7 @@ export type Database = {
           cadista_cost?: number | null
           category?: string
           created_at?: string
+          estrutura_fixacao?: string
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
@@ -879,6 +888,8 @@ export const Constants = {
 //   is_acknowledged: boolean (not null, default: false)
 //   base_price: numeric (not null, default: 0)
 //   file_urls: jsonb (nullable, default: '[]'::jsonb)
+//   implant_brand: text (nullable)
+//   implant_type: text (nullable)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -892,6 +903,7 @@ export const Constants = {
 //   cadista_cost: numeric (nullable, default: 0)
 //   material_cost: numeric (nullable, default: 0)
 //   fixed_cost: numeric (nullable, default: 0)
+//   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)
