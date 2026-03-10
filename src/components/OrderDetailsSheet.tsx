@@ -169,6 +169,12 @@ export function OrderDetailsSheet({
                   <span className="text-muted-foreground">Quantidade (Elementos)</span>
                   <span className="font-medium">{order.quantity || 1}</span>
                 </div>
+                {(order.dentistDiscount || 0) > 0 && (
+                  <div className="flex justify-between items-center text-sm text-emerald-600">
+                    <span>Desconto Acordo Comercial</span>
+                    <span className="font-medium">-{order.dentistDiscount}%</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 border-t font-semibold">
                   <span>Total do Pedido</span>
                   <span className="text-primary">{formatBRL(order.basePrice)}</span>

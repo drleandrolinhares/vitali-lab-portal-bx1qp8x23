@@ -18,8 +18,9 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   const quantity = Math.max(1, (order.teeth?.length || 0) + (order.arches?.length || 0))
   let basePrice = order.basePrice || 0
   let unitPrice = order.unitPrice || 0
+  const discount = order.dentistDiscount || 0
 
-  // Dynamically calculate using Unit Price from Price List * Quantity (Elements count)
+  // Dynamically calculate using Unit Price from Price List * Quantity (Elements count) * Discount
   if (priceList && priceList.length > 0) {
     const priceItem =
       priceList.find(
@@ -34,15 +35,15 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
       const parsed = parseFloat(numericString)
       if (!isNaN(parsed) && parsed > 0) {
         unitPrice = parsed
-        // Applies multiplication rule globally to ensure financial accuracy
-        basePrice = unitPrice * quantity
+        // Applies multiplication rule globally and dentist discount to ensure financial accuracy
+        basePrice = unitPrice * quantity * (1 - discount / 100)
       }
     }
   }
 
   // Fallback
   if (unitPrice === 0) {
-    unitPrice = quantity > 0 ? basePrice / quantity : 0
+    unitPrice = quantity > 0 && discount < 100 ? basePrice / (1 - discount / 100) / quantity : 0
   }
 
   const completedCost = isFullyCompleted ? basePrice : 0

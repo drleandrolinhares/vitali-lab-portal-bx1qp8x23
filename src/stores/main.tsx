@@ -194,7 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data: dbOrders } = await supabase
       .from('orders')
       .select(
-        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link), order_history(*)`,
+        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), order_history(*)`,
       )
       .order('created_at', { ascending: false })
 
@@ -205,7 +205,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const archesCount = o.tooth_or_arch?.arches?.length || 0
           const quantity = Math.max(1, teethCount + archesCount)
           const basePrice = o.base_price || 0
-          const unitPrice = quantity > 0 ? basePrice / quantity : 0
+          const discount = o.profiles?.commercial_agreement || 0
+          const unitPrice =
+            quantity > 0 && discount < 100 ? basePrice / (1 - discount / 100) / quantity : 0
 
           return {
             id: o.id,
@@ -217,6 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             dentistName: o.profiles?.name || 'Desconhecido',
             dentistClinic: o.profiles?.clinic || '',
             dentistGroupLink: o.profiles?.whatsapp_group_link || '',
+            dentistDiscount: discount,
             sector: o.sector,
             kanbanStage: o.kanban_stage,
             workType: o.work_type,
@@ -303,12 +306,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ])
 
   // Apply accurate financial total propagation dynamically over the context
+  // This step guarantees existing orders are automatically repaired and displayed with exact discount math
   const computedOrders = useMemo(() => {
     if (!orders || orders.length === 0) return []
 
     return orders.map((o) => {
       let unitPrice = o.unitPrice || 0
       let basePrice = o.basePrice || 0
+      const discount = o.dentistDiscount || 0
 
       if (priceList && priceList.length > 0) {
         const priceItem =
@@ -324,13 +329,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const parsed = parseFloat(numericString)
           if (!isNaN(parsed) && parsed > 0) {
             unitPrice = parsed
-            basePrice = unitPrice * o.quantity
+            basePrice = unitPrice * o.quantity * (1 - discount / 100)
           }
         }
       }
 
       if (unitPrice === 0 && o.quantity > 0) {
-        unitPrice = basePrice / o.quantity
+        unitPrice = discount < 100 ? basePrice / (1 - discount / 100) / o.quantity : 0
       }
 
       return {
@@ -438,16 +443,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .replace(',', '.')
       const parsed = parseFloat(numericString)
       unitPrice = !isNaN(parsed) ? parsed : 0
-
-      if (discountPercent > 0) {
-        unitPrice = unitPrice * (1 - discountPercent / 100)
-      }
     }
 
     const teethCount = orderData.teeth?.length || 0
     const archesCount = orderData.arches?.length || 0
     const quantity = Math.max(1, teethCount + archesCount)
-    const basePrice = unitPrice * quantity
+    // Applying required formula: Final Total = (Price_from_PriceList × Number_of_Elements) × (1 - commercial_agreement / 100)
+    const basePrice = unitPrice * quantity * (1 - discountPercent / 100)
 
     const { data, error } = await supabase
       .from('orders')

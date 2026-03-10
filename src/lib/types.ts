@@ -38,6 +38,7 @@ export interface Order {
   dentistId: string
   dentistName: string
   dentistGroupLink: string
+  dentistDiscount?: number
   sector: string
   kanbanStage: KanbanStage
   workType: string

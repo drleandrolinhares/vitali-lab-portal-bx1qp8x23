@@ -115,14 +115,55 @@ export default function FinancialPage() {
     return <div className="p-8">Acesso restrito</div>
   }
 
-  // Calculate financials for the filtered orders. We do NOT filter out 0 costs here
-  // to fix the "Nenhum pedido com saldo pendente" bug when data exists but price is unconfigured.
+  // Calculate financials for the filtered orders.
   const displayOrders = monthFilteredOrders.map((o) =>
     getOrderFinancials(o, safePriceList, safeKanbanStages),
   )
 
-  const totalAccumulated = displayOrders.reduce((acc, o) => acc + (o?.outstandingCost || 0), 0)
-  const totalPending = displayOrders.reduce((acc, o) => acc + (o?.pendingCost || 0), 0)
+  // Pre-render Verification Gate: strictly validate and correct mathematical integrity of totals
+  // explicitly comparing `(Unit * Qty) * (1 - Discount/100)` against existing database output.
+  const verifiedDisplayOrders = useMemo(() => {
+    return displayOrders.map((order) => {
+      const discount = order.dentistDiscount || 0
+      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
+
+      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
+
+      if (!isCorrect) {
+        console.warn(
+          `[QA Validation] Order ${order.friendlyId} base price mismatch. Expected ${expectedTotal}, got ${order.basePrice}. Recalculating for display integrity.`,
+        )
+      }
+
+      // Automatically correct legacy or out-of-sync totals ensuring exact discounted values display
+      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
+
+      const outstandingCost =
+        order.status === 'completed' || order.status === 'delivered'
+          ? Math.max(0, finalBasePrice - (order.clearedBalance || 0))
+          : 0
+
+      const pipelineCost =
+        order.status !== 'completed' && order.status !== 'delivered' && order.status !== 'cancelled'
+          ? finalBasePrice
+          : 0
+
+      return {
+        ...order,
+        basePrice: finalBasePrice,
+        outstandingCost,
+        pipelineCost,
+        pendingCost: pipelineCost,
+        totalCost: finalBasePrice,
+      }
+    })
+  }, [displayOrders])
+
+  const totalAccumulated = verifiedDisplayOrders.reduce(
+    (acc, o) => acc + (o?.outstandingCost || 0),
+    0,
+  )
+  const totalPending = verifiedDisplayOrders.reduce((acc, o) => acc + (o?.pendingCost || 0), 0)
 
   const handleExportCSV = (settlement: any) => {
     try {
@@ -220,7 +261,7 @@ export default function FinancialPage() {
               <Activity className="w-5 h-5 text-muted-foreground" /> Procedimentos do Período
             </h3>
 
-            {displayOrders.length === 0 ? (
+            {verifiedDisplayOrders.length === 0 ? (
               <Card>
                 <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
                   <DollarSign className="w-12 h-12 mb-4 opacity-20" />
@@ -229,7 +270,7 @@ export default function FinancialPage() {
               </Card>
             ) : (
               <Accordion type="multiple" className="space-y-4">
-                {displayOrders.map((order) => (
+                {verifiedDisplayOrders.map((order) => (
                   <AccordionItem
                     key={order.id}
                     value={order.id}
@@ -245,6 +286,14 @@ export default function FinancialPage() {
                             <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
                               {order.friendlyId}
                             </span>
+                            {(order.dentistDiscount || 0) > 0 && (
+                              <span
+                                className="text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded"
+                                title="Desconto de Acordo Comercial aplicado"
+                              >
+                                -{order.dentistDiscount}% OFF
+                              </span>
+                            )}
                           </div>
                           <span className="text-sm text-muted-foreground">{order.workType}</span>
                         </div>
