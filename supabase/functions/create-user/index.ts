@@ -36,12 +36,29 @@ Deno.serve(async (req: Request) => {
     const finalPassword = password || `vitali${Math.floor(Math.random() * 1000000)}`
     const phoneToUse = phone || personal_phone || null
 
-    const { data, error } = await supabase.auth.admin.createUser({
+    const payload: any = {
       email: finalEmail,
       password: finalPassword,
       email_confirm: true,
       user_metadata: { name, role, clinic, phone: phoneToUse, whatsapp_group_link },
-    })
+    }
+
+    const cleanPhone = phoneToUse ? phoneToUse.replace(/\D/g, '') : null
+    if (cleanPhone) {
+      payload.phone = cleanPhone
+      payload.phone_confirm = true
+    }
+
+    let { data, error } = await supabase.auth.admin.createUser(payload)
+
+    // If it fails because phone is already in use, try without phone
+    if (error && error.message.toLowerCase().includes('phone')) {
+      delete payload.phone
+      delete payload.phone_confirm
+      const fallback = await supabase.auth.admin.createUser(payload)
+      data = fallback.data
+      error = fallback.error
+    }
 
     if (error) throw error
 

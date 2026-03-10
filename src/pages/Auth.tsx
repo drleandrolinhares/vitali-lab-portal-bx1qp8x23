@@ -52,6 +52,8 @@ export default function AuthPage() {
   const isAdminView = location.pathname === '/dashboard'
 
   const [view, setView] = useState<AuthView>('login')
+  const [loginId, setLoginId] = useState('')
+  const [forgotId, setForgotId] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -139,23 +141,24 @@ export default function AuthPage() {
         <CardContent className="pt-6 bg-card rounded-b-lg border-t border-border">
           {view === 'forgot_password' ? (
             <form
-              onSubmit={(e) => handleAction(e, () => resetPassword(email))}
+              onSubmit={(e) => handleAction(e, () => resetPassword(forgotId))}
               className="space-y-4 animate-fade-in"
             >
               <div className="space-y-2">
-                <Label htmlFor="reset-email">Email</Label>
+                <Label htmlFor="reset-id">Email ou Telefone</Label>
                 <Input
-                  id="reset-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="reset-id"
+                  type="text"
+                  placeholder="Ex: joao@email.com ou (11) 99999-9999"
+                  value={forgotId}
+                  onChange={(e) => setForgotId(e.target.value)}
                   required
                 />
               </div>
               {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
               {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
               <Button type="submit" disabled={loading} className="w-full">
-                Enviar Email
+                Enviar Recuperação
               </Button>
               <Button
                 type="button"
@@ -184,15 +187,16 @@ export default function AuthPage() {
               )}
               <TabsContent value="login" className="animate-fade-in">
                 <form
-                  onSubmit={(e) => handleAction(e, () => signIn(email, password, rememberMe))}
+                  onSubmit={(e) => handleAction(e, () => signIn(loginId, password, rememberMe))}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label>Email</Label>
+                    <Label>Email ou Telefone</Label>
                     <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      type="text"
+                      placeholder="Ex: joao@email.com ou (11) 99999-9999"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
                       required
                     />
                   </div>

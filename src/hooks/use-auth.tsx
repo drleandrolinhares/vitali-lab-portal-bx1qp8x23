@@ -6,9 +6,9 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   signUp: (email: string, password: string, metadata: any) => Promise<{ error: any }>
-  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: any }>
+  signIn: (identifier: string, password: string, rememberMe?: boolean) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
-  resetPassword: (email: string) => Promise<{ error: any }>
+  resetPassword: (identifier: string) => Promise<{ error: any }>
   loading: boolean
 }
 
@@ -109,9 +109,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error }
   }
 
-  const signIn = async (email: string, password: string, rememberMe: boolean = true) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error) {
+  const signIn = async (identifier: string, password: string, rememberMe: boolean = true) => {
+    let authData, authError
+    const isEmail = identifier.includes('@')
+
+    if (!isEmail) {
+      const phoneDigits = identifier.replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        return { error: new Error('Telefone inválido. Verifique o número digitado.') }
+      }
+
+      // Try direct phone auth
+      let res = await supabase.auth.signInWithPassword({ phone: phoneDigits, password })
+
+      if (res.error && res.error.message.includes('Invalid login credentials')) {
+        // Fallback to searching profiles
+        const { data: emailData } = await supabase.rpc('get_email_by_phone', {
+          p_phone: phoneDigits,
+        })
+        if (emailData) {
+          res = await supabase.auth.signInWithPassword({ email: emailData as string, password })
+        }
+      }
+
+      authData = res.data
+      authError = res.error
+    } else {
+      const res = await supabase.auth.signInWithPassword({ email: identifier, password })
+      authData = res.data
+      authError = res.error
+    }
+
+    if (!authError) {
       if (!rememberMe) {
         localStorage.setItem('vitali_remember_me', 'false')
       } else {
@@ -119,11 +148,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       sessionStorage.setItem('vitali_session', 'true')
 
-      if (data?.user) {
-        await reconcileProfile(data.user)
+      if (authData?.user) {
+        await reconcileProfile(authData.user)
       }
     }
-    return { error }
+    return { error: authError }
   }
 
   const signOut = async () => {
@@ -134,8 +163,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error }
   }
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const resetPassword = async (identifier: string) => {
+    let resetEmail = identifier
+
+    if (!identifier.includes('@')) {
+      const phoneDigits = identifier.replace(/\D/g, '')
+      const { data: emailData } = await supabase.rpc('get_email_by_phone', { p_phone: phoneDigits })
+      if (emailData) {
+        resetEmail = emailData as string
+      } else {
+        return { error: new Error('Usuário não encontrado com este número de telefone.') }
+      }
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
       redirectTo: `${window.location.origin}/app`,
     })
     return { error }
