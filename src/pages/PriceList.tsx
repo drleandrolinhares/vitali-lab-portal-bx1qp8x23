@@ -29,6 +29,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { toast } from '@/hooks/use-toast'
 import {
   DollarSign,
@@ -41,6 +42,7 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
+  Filter,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
@@ -73,6 +75,7 @@ export default function PriceList() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
+  const [profitFilter, setProfitFilter] = useState<string[]>([])
 
   // Validation States
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({})
@@ -123,9 +126,53 @@ export default function PriceList() {
     fetchPrices()
   }, [])
 
+  const getMargin = useCallback(
+    (item: any) => {
+      const pNum = parseLocalNum(item.price)
+      const eTime = parseLocalNum(item.execution_time)
+      const cVal = parseLocalNum(item.cadista_cost)
+      const mVal = parseLocalNum(item.material_cost)
+
+      const globalCardFee = parseLocalNum(getSetting('global_card_fee'))
+      const globalCommission = parseLocalNum(getSetting('global_commission'))
+      const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
+      const globalTaxes = parseLocalNum(getSetting('global_taxes'))
+
+      const { profitMargin } = calculateProcedureProfitability({
+        price: pNum,
+        executionTime: eTime,
+        cadistaCost: cVal,
+        materialCost: mVal,
+        costPerMinute: sharedCosts.costPerMinute,
+        globalCardFee,
+        globalCommission,
+        globalInadimplency,
+        globalTaxes,
+      })
+
+      return profitMargin
+    },
+    [getSetting, sharedCosts.costPerMinute],
+  )
+
   const filteredPrices = useMemo(() => {
-    return prices.filter((p) => selectedLab === 'Todos' || p.sector === selectedLab)
-  }, [prices, selectedLab])
+    return prices.filter((p) => {
+      // Filtragem por setor
+      if (selectedLab !== 'Todos' && p.sector !== selectedLab) return false
+
+      // Filtragem por status de rentabilidade
+      if (profitFilter.length > 0) {
+        const margin = getMargin(p)
+        let category = 'low'
+        if (margin > 20) category = 'high'
+        else if (margin >= 10) category = 'medium'
+
+        if (!profitFilter.includes(category)) return false
+      }
+
+      return true
+    })
+  }, [prices, selectedLab, profitFilter, getMargin])
 
   const availableMaterials = useMemo(() => {
     let list: string[] = []
@@ -350,35 +397,6 @@ export default function PriceList() {
     }
   }
 
-  const getMargin = useCallback(
-    (item: any) => {
-      const pNum = parseLocalNum(item.price)
-      const eTime = parseLocalNum(item.execution_time)
-      const cVal = parseLocalNum(item.cadista_cost)
-      const mVal = parseLocalNum(item.material_cost)
-
-      const globalCardFee = parseLocalNum(getSetting('global_card_fee'))
-      const globalCommission = parseLocalNum(getSetting('global_commission'))
-      const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
-      const globalTaxes = parseLocalNum(getSetting('global_taxes'))
-
-      const { profitMargin } = calculateProcedureProfitability({
-        price: pNum,
-        executionTime: eTime,
-        cadistaCost: cVal,
-        materialCost: mVal,
-        costPerMinute: sharedCosts.costPerMinute,
-        globalCardFee,
-        globalCommission,
-        globalInadimplency,
-        globalTaxes,
-      })
-
-      return profitMargin
-    },
-    [getSetting, sharedCosts.costPerMinute],
-  )
-
   const priceNum = parseLocalNum(formData.price)
   const execTime = parseLocalNum(formData.execution_time)
   const cadistaVal = parseLocalNum(formData.cadista_cost)
@@ -448,24 +466,44 @@ export default function PriceList() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 bg-muted/30 p-3 rounded-lg border">
-        <div className="text-sm font-medium text-foreground flex items-center gap-2">
-          <PieChart className="w-4 h-4 text-muted-foreground" />
-          Indicadores de Rentabilidade:
+        <div className="text-sm font-medium text-foreground flex items-center gap-2 shrink-0">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          Filtrar por Margem:
         </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded bg-emerald-500 shadow-sm" />
-            <span>Alta Margem (&gt; 20%)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded bg-amber-500 shadow-sm" />
-            <span>Margem Média (10% a 20%)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded bg-red-500 shadow-sm" />
-            <span>Baixa Margem (&lt; 10%)</span>
-          </div>
-        </div>
+        <ToggleGroup
+          type="multiple"
+          value={profitFilter}
+          onValueChange={setProfitFilter}
+          className="justify-start flex-wrap gap-2"
+        >
+          <ToggleGroupItem
+            value="high"
+            aria-label="Alta Margem"
+            variant="outline"
+            className="h-8 px-3 text-xs data-[state=on]:bg-emerald-100 data-[state=on]:border-emerald-300 data-[state=on]:text-emerald-900 dark:data-[state=on]:bg-emerald-900/40 dark:data-[state=on]:border-emerald-800 dark:data-[state=on]:text-emerald-300 transition-colors"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 shadow-sm" />
+            Alta (&gt; 20%)
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="medium"
+            aria-label="Margem Média"
+            variant="outline"
+            className="h-8 px-3 text-xs data-[state=on]:bg-amber-100 data-[state=on]:border-amber-300 data-[state=on]:text-amber-900 dark:data-[state=on]:bg-amber-900/40 dark:data-[state=on]:border-amber-800 dark:data-[state=on]:text-amber-300 transition-colors"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shadow-sm" />
+            Média (10% a 20%)
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="low"
+            aria-label="Baixa Margem"
+            variant="outline"
+            className="h-8 px-3 text-xs data-[state=on]:bg-red-100 data-[state=on]:border-red-300 data-[state=on]:text-red-900 dark:data-[state=on]:bg-red-900/40 dark:data-[state=on]:border-red-800 dark:data-[state=on]:text-red-300 transition-colors"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 shadow-sm" />
+            Baixa (&lt; 10%)
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <Card className="shadow-subtle">
@@ -492,7 +530,9 @@ export default function PriceList() {
               ) : filteredPrices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    Nenhum procedimento encontrado.
+                    {prices.length > 0 && profitFilter.length > 0
+                      ? 'Nenhum procedimento encontrado para o filtro de rentabilidade selecionado.'
+                      : 'Nenhum procedimento encontrado.'}
                   </TableCell>
                 </TableRow>
               ) : (
