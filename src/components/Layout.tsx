@@ -30,6 +30,7 @@ import {
   PieChart,
   UserPlus,
   Tags,
+  Calculator,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -80,6 +81,7 @@ const ADMIN_MENUS = [
       { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
       { id: 'pending-users', title: 'Cadastros Pendentes', icon: UserPlus, path: '/pending-users' },
+      { id: 'hourly-cost', title: 'Precificação', icon: Calculator, path: '/hourly-cost' },
     ],
   },
   {
