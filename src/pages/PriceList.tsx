@@ -29,7 +29,8 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { DollarSign, Plus, Trash2, Edit2, ListTree } from 'lucide-react'
+import { DollarSign, Plus, Trash2, Edit2, ListTree, Calculator } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 interface StageInput {
   name: string
@@ -168,7 +169,7 @@ export default function PriceList() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-emerald-100 rounded-xl dark:bg-emerald-900/30">
             <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -180,9 +181,16 @@ export default function PriceList() {
             </p>
           </div>
         </div>
-        <Button onClick={handleNew}>
-          <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" asChild className="hidden sm:flex">
+            <Link to="/hourly-cost">
+              <Calculator className="w-4 h-4 mr-2" /> Precificação (Custo Hora)
+            </Link>
+          </Button>
+          <Button onClick={handleNew}>
+            <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-subtle">

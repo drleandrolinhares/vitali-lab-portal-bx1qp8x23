@@ -150,7 +150,7 @@ export default function HourlyCost() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild className="-ml-2">
-            <Link to="/admin-financial">
+            <Link to="/prices">
               <ArrowLeft className="w-5 h-5" />
             </Link>
           </Button>
