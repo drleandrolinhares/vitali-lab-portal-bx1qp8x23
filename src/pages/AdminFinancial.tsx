@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import {
   TrendingUp,
   Wallet,
@@ -42,6 +43,8 @@ import {
   List,
   Activity,
   CalendarDays,
+  Search,
+  Send,
 } from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -51,8 +54,10 @@ export default function AdminFinancial() {
     useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
+  const [billingControls, setBillingControls] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const monthOptions = useMemo(() => generateMonthOptions(), [])
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
@@ -73,6 +78,16 @@ export default function AdminFinancial() {
       })
   }, [])
 
+  useEffect(() => {
+    supabase
+      .from('billing_controls' as any)
+      .select('*')
+      .eq('month', selectedMonth)
+      .then(({ data }) => {
+        if (data) setBillingControls(data)
+      })
+  }, [selectedMonth])
+
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       if (selectedLab === 'Todos') return true
@@ -80,7 +95,6 @@ export default function AdminFinancial() {
     })
   }, [orders, selectedLab])
 
-  // Filter orders and expenses by the selected month
   const monthFilteredOrders = useMemo(
     () => filterOrdersForFinancials(filteredOrders, selectedMonth),
     [filteredOrders, selectedMonth],
@@ -116,7 +130,6 @@ export default function AdminFinancial() {
     () =>
       filteredExpenses
         .filter((e) => {
-          // Avoid double counting auto-generated revenue records as expenses
           const isRevenue =
             revenueCategories.includes(e.dre_category) ||
             e.dre_category === 'Receita' ||
@@ -135,14 +148,53 @@ export default function AdminFinancial() {
       const dentistOrders = financials.filter((o) => o.dentistId === d.id)
       const outstandingBalance = dentistOrders.reduce((acc, o) => acc + o.outstandingCost, 0)
       const pipelineBalance = dentistOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
-      return { ...d, outstandingBalance, pipelineBalance, dentistOrders }
+      const invoiceSent = billingControls.some((b) => b.dentist_id === d.id)
+      return { ...d, outstandingBalance, pipelineBalance, dentistOrders, invoiceSent }
     })
     .filter((d) => d.outstandingBalance > 0 || d.pipelineBalance > 0)
+    .sort((a, b) => {
+      const aDue = a.payment_due_date || 999
+      const bDue = b.payment_due_date || 999
+      if (aDue !== bDue) return aDue - bDue
+      return a.name.localeCompare(b.name)
+    })
 
-  const dentistsWithOutstanding = dentistStats.filter((d) => d.outstandingBalance > 0)
+  const displayedDentists = dentistStats.filter((d) => {
+    const searchLower = searchQuery.toLowerCase()
+    const matchesSearch =
+      d.name.toLowerCase().includes(searchLower) ||
+      (d.clinic && d.clinic.toLowerCase().includes(searchLower))
+
+    if (searchQuery.trim() !== '') {
+      return matchesSearch
+    }
+    return !d.invoiceSent
+  })
 
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
     return <Navigate to="/" replace />
+
+  const handleInvoiceSent = async (dentistId: string) => {
+    const { error } = await supabase.from('billing_controls' as any).insert({
+      dentist_id: dentistId,
+      month: selectedMonth,
+      status: 'sent',
+    })
+
+    if (error && error.code !== '23505') {
+      return toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar o envio da fatura.',
+        variant: 'destructive',
+      })
+    }
+
+    toast({ title: 'Fatura marcada como enviada com sucesso!' })
+    setBillingControls((prev) => [
+      ...prev,
+      { dentist_id: dentistId, month: selectedMonth, status: 'sent' },
+    ])
+  }
 
   const handleSettle = async () => {
     if (!settleDialog) return
@@ -272,42 +324,57 @@ export default function AdminFinancial() {
       </div>
 
       <Card className="shadow-subtle mt-8">
-        <CardHeader>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
             {selectedMonthLabel})
-            {dentistStats.length > 0 && (
+            {displayedDentists.length > 0 && (
               <div className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-bold ml-2">
-                {dentistsWithOutstanding.length}
+                {displayedDentists.length} pendentes
               </div>
             )}
           </CardTitle>
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar dentista (exibe faturas enviadas)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Dentista / Clínica</TableHead>
+                <TableHead className="text-center">Vencimento</TableHead>
                 <TableHead className="text-right">Pipeline no Mês</TableHead>
                 <TableHead className="text-right">Saldo Devedor (Faturado)</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dentistStats.length === 0 && (
+              {displayedDentists.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    Nenhum pedido registrado ou pendente para este mês.
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    {searchQuery
+                      ? 'Nenhum dentista encontrado para a busca.'
+                      : 'Nenhum faturamento pendente para este mês.'}
                   </TableCell>
                 </TableRow>
               )}
-              {dentistStats.map((d) => (
+              {displayedDentists.map((d) => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">
                     {d.name}
                     <div className="text-xs text-muted-foreground font-normal">
                       {d.clinic || 'Clínica não informada'}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-center text-muted-foreground">
+                    {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
                   </TableCell>
                   <TableCell className="text-right font-medium text-amber-600">
                     {formatBRL(d.pipelineBalance)}
@@ -316,9 +383,23 @@ export default function AdminFinancial() {
                     {formatBRL(d.outstandingBalance)}
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
                       <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
                         <List className="w-4 h-4 mr-1.5" /> Detalhes
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                        disabled={d.invoiceSent}
+                        onClick={() => handleInvoiceSent(d.id)}
+                      >
+                        {d.invoiceSent ? (
+                          <CheckCircle className="w-4 h-4 mr-1.5" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-1.5" />
+                        )}
+                        {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA AO DENTISTA'}
                       </Button>
                       <Button
                         size="sm"
