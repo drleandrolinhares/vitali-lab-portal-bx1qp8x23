@@ -1,7 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
-import { getOrderFinancials, PriceItem, formatBRL } from '@/lib/financial'
+import {
+  getOrderFinancials,
+  PriceItem,
+  formatBRL,
+  generateMonthOptions,
+  getOrderCompletionDate,
+} from '@/lib/financial'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import {
@@ -11,13 +17,24 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
-import { PieChart, TrendingUp, TrendingDown, Wallet, DollarSign } from 'lucide-react'
+import { PieChart, TrendingUp, TrendingDown, Wallet, DollarSign, CalendarDays } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Navigate } from 'react-router-dom'
+import { format } from 'date-fns'
 
 export default function ComparativeDashboard() {
-  const { currentUser, orders, kanbanStages } = useAppStore()
+  const { currentUser, orders, kanbanStages, dreCategories } = useAppStore()
   const [priceList, setPriceList] = useState<PriceItem[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
+
+  const monthOptions = useMemo(() => generateMonthOptions(), [])
+  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
 
   useEffect(() => {
     supabase
@@ -34,30 +51,39 @@ export default function ComparativeDashboard() {
       })
   }, [])
 
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
+  const revenueCategories = useMemo(() => {
+    return dreCategories.filter((c) => c.category_type === 'revenue').map((c) => c.name)
+  }, [dreCategories])
 
   const getSectorStats = (sectorName: string) => {
-    const sectorOrders = orders.filter((o) => o.sector === sectorName)
-    const sectorExpenses = expenses.filter((e) => e.sector === sectorName)
+    const sectorOrders = orders.filter(
+      (o) => (o.sector || '').toUpperCase() === sectorName.toUpperCase(),
+    )
+    const sectorExpenses = expenses.filter(
+      (e) => (e.sector || '').toUpperCase() === sectorName.toUpperCase(),
+    )
 
     const revenue = sectorOrders.reduce((acc, o) => {
-      const isCompletedThisMonth = o.history.some(
-        (h: any) =>
-          (h.status === 'completed' || h.status === 'delivered') &&
-          new Date(h.date).getMonth() === currentMonth &&
-          new Date(h.date).getFullYear() === currentYear,
-      )
-      if (isCompletedThisMonth) {
-        return acc + getOrderFinancials(o, priceList, kanbanStages).totalCost
+      const isFullyCompleted = o.status === 'completed' || o.status === 'delivered'
+      if (!isFullyCompleted) return acc
+
+      const compDate = getOrderCompletionDate(o)
+      if (compDate && format(compDate, 'yyyy-MM') === selectedMonth) {
+        return acc + getOrderFinancials(o, priceList, kanbanStages).completedCost
       }
       return acc
     }, 0)
 
     const expensesTotal = sectorExpenses.reduce((acc, e) => {
-      const date = new Date(e.due_date + 'T00:00:00')
-      if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-        return acc + Number(e.amount)
+      if (e.due_date && e.due_date.startsWith(selectedMonth)) {
+        const isRevenue =
+          revenueCategories.includes(e.dre_category) ||
+          e.dre_category === 'Receita' ||
+          e.category === 'Serviços Realizados'
+
+        if (!isRevenue) {
+          return acc + Number(e.amount)
+        }
       }
       return acc
     }, 0)
@@ -70,11 +96,11 @@ export default function ComparativeDashboard() {
 
   const statsSC = useMemo(
     () => getSectorStats('Soluções Cerâmicas'),
-    [orders, expenses, priceList, kanbanStages, currentMonth, currentYear],
+    [orders, expenses, priceList, kanbanStages, selectedMonth, revenueCategories],
   )
   const statsSA = useMemo(
     () => getSectorStats('Studio Acrílico'),
-    [orders, expenses, priceList, kanbanStages, currentMonth, currentYear],
+    [orders, expenses, priceList, kanbanStages, selectedMonth, revenueCategories],
   )
 
   const chartData = [
@@ -89,6 +115,8 @@ export default function ComparativeDashboard() {
 
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
     return <Navigate to="/" replace />
+
+  const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
 
   const renderKPIs = (title: string, stats: any) => (
     <div className="space-y-4">
@@ -140,15 +168,33 @@ export default function ComparativeDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2.5 bg-primary/10 rounded-xl">
-          <PieChart className="w-6 h-6 text-primary" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <PieChart className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Dash Comparativo</h2>
+            <p className="text-muted-foreground text-sm">
+              Desempenho financeiro por laboratório no período selecionado.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Dash Comparativo</h2>
-          <p className="text-muted-foreground text-sm">
-            Desempenho financeiro por laboratório (Mês Atual).
-          </p>
+
+        <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm w-full sm:w-auto">
+          <CalendarDays className="w-4 h-4 text-muted-foreground ml-2" />
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-full sm:w-[200px] border-0 bg-transparent shadow-none focus:ring-0">
+              <SelectValue placeholder="Selecione o Mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -163,7 +209,7 @@ export default function ComparativeDashboard() {
 
       <Card className="shadow-subtle">
         <CardHeader>
-          <CardTitle>Comparativo de Receitas vs Despesas</CardTitle>
+          <CardTitle>Comparativo de Receitas vs Despesas ({selectedMonthLabel})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] w-full mt-4">

@@ -45,6 +45,8 @@ import {
   CalendarDays,
   Search,
   Send,
+  Download,
+  FileText,
 } from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -236,6 +238,174 @@ export default function AdminFinancial() {
 
   const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
 
+  const handleExportExcel = () => {
+    if (!detailsDialog) return
+    const orders = detailsDialog.dentistOrders.filter(
+      (o: any) => o.outstandingCost > 0 || o.pipelineCost > 0,
+    )
+
+    const headers = [
+      'Pedido',
+      'Paciente',
+      'Trabalho',
+      'Status',
+      'Qtd',
+      'Valor Unitário',
+      'Saldo Devedor',
+      'Estimativa Pipeline',
+    ]
+    const rows = orders.map((o: any) => [
+      o.friendlyId,
+      o.patientName,
+      o.workType,
+      o.status,
+      o.quantity,
+      o.effectiveUnitPrice,
+      o.outstandingCost,
+      o.pipelineCost,
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((r) => r.map((c) => `"${c}"`).join(',')),
+    ].join('\n')
+
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf])
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `Fechamento_${detailsDialog.name}_${selectedMonth}.csv`
+    link.click()
+  }
+
+  const handleExportPDF = () => {
+    if (!detailsDialog) return
+    const orders = detailsDialog.dentistOrders.filter(
+      (o: any) => o.outstandingCost > 0 || o.pipelineCost > 0,
+    )
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const html = `
+      <html>
+        <head>
+          <title>Fechamento - ${detailsDialog.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            h2, h3 { margin: 0 0 10px 0; color: #111; }
+            p { margin: 0 0 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; font-size: 13px; }
+            th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .total-row { font-weight: bold; background-color: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <div style="margin-bottom: 30px;">
+            <h2>Fechamento Financeiro</h2>
+            <p><strong>Dentista / Clínica:</strong> ${detailsDialog.name} ${
+              detailsDialog.clinic ? `(${detailsDialog.clinic})` : ''
+            }</p>
+            <p><strong>Mês de Referência:</strong> ${selectedMonthLabel}</p>
+          </div>
+          
+          <h3>Trabalhos Finalizados (Saldo Devedor)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Paciente</th>
+                <th>Trabalho</th>
+                <th class="text-center">Qtd.</th>
+                <th class="text-right">Unitário</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                orders.filter((o: any) => o.outstandingCost > 0).length === 0
+                  ? `<tr><td colspan="6" class="text-center">Nenhum pedido finalizado</td></tr>`
+                  : orders
+                      .filter((o: any) => o.outstandingCost > 0)
+                      .map(
+                        (o: any) => `
+                <tr>
+                  <td>${o.friendlyId}</td>
+                  <td>${o.patientName}</td>
+                  <td>${o.workType}</td>
+                  <td class="text-center">${o.quantity}</td>
+                  <td class="text-right">${formatBRL(o.effectiveUnitPrice || 0)}</td>
+                  <td class="text-right">${formatBRL(o.outstandingCost)}</td>
+                </tr>
+              `,
+                      )
+                      .join('')
+              }
+              <tr class="total-row">
+                <td colspan="5" class="text-right">Total Faturado:</td>
+                <td class="text-right">${formatBRL(detailsDialog.outstandingBalance)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Pipeline (Em Produção neste Mês)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Paciente</th>
+                <th>Trabalho</th>
+                <th class="text-center">Qtd.</th>
+                <th class="text-right">Unitário</th>
+                <th class="text-right">Estimativa</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                orders.filter((o: any) => o.pipelineCost > 0).length === 0
+                  ? `<tr><td colspan="6" class="text-center">Nenhum pedido em produção</td></tr>`
+                  : orders
+                      .filter((o: any) => o.pipelineCost > 0)
+                      .map(
+                        (o: any) => `
+                <tr>
+                  <td>${o.friendlyId}</td>
+                  <td>${o.patientName}</td>
+                  <td>${o.workType}</td>
+                  <td class="text-center">${o.quantity}</td>
+                  <td class="text-right">${formatBRL(o.effectiveUnitPrice || 0)}</td>
+                  <td class="text-right">${formatBRL(o.pipelineCost)}</td>
+                </tr>
+              `,
+                      )
+                      .join('')
+              }
+              <tr class="total-row">
+                <td colspan="5" class="text-right">Total Estimado:</td>
+                <td class="text-right">${formatBRL(detailsDialog.pipelineBalance)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 40px; font-size: 12px; color: #6b7280; text-align: center;">
+            <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+          </div>
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 250)
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between">
@@ -348,11 +518,11 @@ export default function AdminFinancial() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Dentista / Clínica</TableHead>
-                <TableHead className="text-center">Vencimento</TableHead>
-                <TableHead className="text-right">Pipeline no Mês</TableHead>
-                <TableHead className="text-right">Saldo Devedor (Faturado)</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+                <TableHead className="h-10 py-2">Dentista / Clínica</TableHead>
+                <TableHead className="h-10 py-2 text-center">Vencimento</TableHead>
+                <TableHead className="h-10 py-2 text-right">Pipeline no Mês</TableHead>
+                <TableHead className="h-10 py-2 text-right">Saldo Devedor (Faturado)</TableHead>
+                <TableHead className="h-10 py-2 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -367,22 +537,22 @@ export default function AdminFinancial() {
               )}
               {displayedDentists.map((d) => (
                 <TableRow key={d.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="py-2.5 font-medium">
                     {d.name}
-                    <div className="text-xs text-muted-foreground font-normal">
+                    <div className="text-xs text-muted-foreground font-normal mt-0.5">
                       {d.clinic || 'Clínica não informada'}
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-muted-foreground">
+                  <TableCell className="py-2.5 text-center text-muted-foreground">
                     {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
                   </TableCell>
-                  <TableCell className="text-right font-medium text-amber-600">
+                  <TableCell className="py-2.5 text-right font-medium text-amber-600">
                     {formatBRL(d.pipelineBalance)}
                   </TableCell>
-                  <TableCell className="text-right font-bold text-red-600">
+                  <TableCell className="py-2.5 text-right font-bold text-red-600">
                     {formatBRL(d.outstandingBalance)}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="py-2.5 text-center">
                     <div className="flex items-center justify-center gap-2 flex-wrap">
                       <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
                         <List className="w-4 h-4 mr-1.5" /> Detalhes
@@ -399,7 +569,7 @@ export default function AdminFinancial() {
                         ) : (
                           <Send className="w-4 h-4 mr-1.5" />
                         )}
-                        {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA AO DENTISTA'}
+                        {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
                       </Button>
                       <Button
                         size="sm"
@@ -420,11 +590,29 @@ export default function AdminFinancial() {
       </Card>
 
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-6">
             <DialogTitle>
               Detalhes Financeiros - {detailsDialog?.name} ({selectedMonthLabel})
             </DialogTitle>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportExcel}
+                className="flex-1 sm:flex-initial"
+              >
+                <Download className="w-4 h-4 mr-2" /> Excel
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportPDF}
+                className="flex-1 sm:flex-initial"
+              >
+                <FileText className="w-4 h-4 mr-2" /> PDF
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4">
             <div>
@@ -435,11 +623,11 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Pedido</TableHead>
-                      <TableHead>Trabalho</TableHead>
-                      <TableHead className="text-center">Qtd.</TableHead>
-                      <TableHead className="text-right">Unitário</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="h-10 py-2">Pedido</TableHead>
+                      <TableHead className="h-10 py-2">Trabalho</TableHead>
+                      <TableHead className="h-10 py-2 text-center">Qtd.</TableHead>
+                      <TableHead className="h-10 py-2 text-right">Unitário</TableHead>
+                      <TableHead className="h-10 py-2 text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -455,20 +643,22 @@ export default function AdminFinancial() {
                       .filter((o: any) => o.outstandingCost > 0)
                       .map((o: any) => (
                         <TableRow key={o.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="py-2.5 font-medium">
                             {o.friendlyId}
                             <div className="text-xs text-muted-foreground font-normal">
                               {o.patientName}
                             </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{o.workType}</TableCell>
-                          <TableCell className="text-center text-muted-foreground">
+                          <TableCell className="py-2.5 text-muted-foreground">
+                            {o.workType}
+                          </TableCell>
+                          <TableCell className="py-2.5 text-center text-muted-foreground">
                             {o.quantity}
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
+                          <TableCell className="py-2.5 text-right text-muted-foreground">
                             {formatBRL(o.effectiveUnitPrice || 0)}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="py-2.5 text-right font-medium">
                             {formatBRL(o.outstandingCost)}
                           </TableCell>
                         </TableRow>
@@ -486,11 +676,11 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Pedido</TableHead>
-                      <TableHead>Trabalho</TableHead>
-                      <TableHead className="text-center">Qtd.</TableHead>
-                      <TableHead className="text-right">Unitário</TableHead>
-                      <TableHead className="text-right">Estimativa</TableHead>
+                      <TableHead className="h-10 py-2">Pedido</TableHead>
+                      <TableHead className="h-10 py-2">Trabalho</TableHead>
+                      <TableHead className="h-10 py-2 text-center">Qtd.</TableHead>
+                      <TableHead className="h-10 py-2 text-right">Unitário</TableHead>
+                      <TableHead className="h-10 py-2 text-right">Estimativa</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -506,20 +696,22 @@ export default function AdminFinancial() {
                       .filter((o: any) => o.pipelineCost > 0)
                       .map((o: any) => (
                         <TableRow key={o.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="py-2.5 font-medium">
                             {o.friendlyId}
                             <div className="text-xs text-muted-foreground font-normal">
                               {o.patientName}
                             </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{o.workType}</TableCell>
-                          <TableCell className="text-center text-muted-foreground">
+                          <TableCell className="py-2.5 text-muted-foreground">
+                            {o.workType}
+                          </TableCell>
+                          <TableCell className="py-2.5 text-center text-muted-foreground">
                             {o.quantity}
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
+                          <TableCell className="py-2.5 text-right text-muted-foreground">
                             {formatBRL(o.effectiveUnitPrice || 0)}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="py-2.5 text-right font-medium">
                             {formatBRL(o.pipelineCost)}
                           </TableCell>
                         </TableRow>
