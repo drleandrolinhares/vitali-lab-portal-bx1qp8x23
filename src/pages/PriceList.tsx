@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
 import { cn } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,6 +40,7 @@ import {
   PieChart,
   TrendingUp,
   TrendingDown,
+  Clock,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -81,7 +82,7 @@ export default function PriceList() {
     stages: [] as StageInput[],
   })
 
-  const computeCostPerMinute = (config: Record<string, string>) => {
+  const computeCosts = (config: Record<string, string>) => {
     const itemsStr = config['hourly_cost_fixed_items']
     const hoursStr = config['hourly_cost_monthly_hours']
 
@@ -100,16 +101,23 @@ export default function PriceList() {
       hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
     }
 
-    if (hours <= 0) return 0
-    return totalCosts / (hours * 60)
+    if (hours <= 0) return { totalFixedCosts: totalCosts, totalHourlyCost: 0, costPerMinute: 0 }
+
+    const hourlyCost = totalCosts / hours
+
+    return {
+      totalFixedCosts: totalCosts,
+      totalHourlyCost: hourlyCost,
+      costPerMinute: hourlyCost / 60,
+    }
   }
 
-  const [realCostPerMinute, setRealCostPerMinute] = useState(0)
+  const [costs, setCosts] = useState({ totalFixedCosts: 0, totalHourlyCost: 0, costPerMinute: 0 })
 
   useEffect(() => {
-    const costStore = computeCostPerMinute(appSettings)
-    if (costStore > 0) {
-      setRealCostPerMinute(costStore)
+    const computed = computeCosts(appSettings)
+    if (computed.totalFixedCosts > 0 || computed.totalHourlyCost > 0) {
+      setCosts(computed)
     } else {
       const fetchDb = async () => {
         const { data } = await supabase
@@ -122,7 +130,7 @@ export default function PriceList() {
             {},
           )
           setLocalConfig((prev) => ({ ...prev, ...config }))
-          setRealCostPerMinute(computeCostPerMinute(config))
+          setCosts(computeCosts(config))
         }
       }
       fetchDb()
@@ -235,7 +243,7 @@ export default function PriceList() {
     }
 
     const execTimeForSave = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
-    const calculatedFixedCost = execTimeForSave * realCostPerMinute
+    const calculatedFixedCost = execTimeForSave * costs.costPerMinute
 
     const payload = {
       work_type: formData.work_type,
@@ -304,7 +312,7 @@ export default function PriceList() {
     parseFloat(String(getSetting('global_inadimplency') || '0').replace(',', '.')) || 0
   const globalTaxes = parseFloat(String(getSetting('global_taxes') || '0').replace(',', '.')) || 0
 
-  const fixedCost = execTime * realCostPerMinute
+  const fixedCost = execTime * costs.costPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
@@ -345,6 +353,48 @@ export default function PriceList() {
             <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
           </Button>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <Card className="shadow-subtle border-l-4 border-l-slate-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Total de Custos Fixos
+            </CardTitle>
+            <DollarSign className="w-4 h-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-700">
+              {formatBRL(costs.totalFixedCosts)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Total Custo Hora
+            </CardTitle>
+            <Clock className="w-4 h-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatBRL(costs.totalHourlyCost)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle border-l-4 border-l-emerald-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              Total Custo por Minuto
+            </CardTitle>
+            <Calculator className="w-4 h-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">
+              {formatBRL(costs.costPerMinute)}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="shadow-subtle">
@@ -538,7 +588,7 @@ export default function PriceList() {
                     TOTAL CUSTO POR MINUTO
                   </Label>
                   <Input
-                    value={formatBRL(realCostPerMinute)}
+                    value={formatBRL(costs.costPerMinute)}
                     readOnly
                     disabled
                     className="bg-muted text-muted-foreground font-medium cursor-not-allowed"
