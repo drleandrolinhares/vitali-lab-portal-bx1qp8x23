@@ -436,6 +436,32 @@ export default function PriceList() {
     [],
   )
 
+  const getMargin = useCallback(
+    (item: any) => {
+      const pNum = parseLocalNum(item.price)
+      const eTime = parseLocalNum(item.execution_time)
+      const cVal = parseLocalNum(item.cadista_cost)
+      const mVal = parseLocalNum(item.material_cost)
+
+      const gCardFee = parseLocalNum(getSetting('global_card_fee'))
+      const gCommission = parseLocalNum(getSetting('global_commission'))
+      const gInadimplency = parseLocalNum(getSetting('global_inadimplency'))
+      const gTaxes = parseLocalNum(getSetting('global_taxes'))
+
+      const fCost = eTime * tableCosts.costPerMinute
+
+      const cFeeVal = pNum * (gCardFee / 100)
+      const commVal = pNum * (gCommission / 100)
+      const inadVal = pNum * (gInadimplency / 100)
+      const taxVal = pNum * (gTaxes / 100)
+
+      const tCosts = fCost + cFeeVal + commVal + inadVal + taxVal + cVal + mVal
+      const pVal = pNum - tCosts
+      return pNum > 0 ? (pVal / pNum) * 100 : 0
+    },
+    [getSetting, tableCosts.costPerMinute],
+  )
+
   const priceNum = parseLocalNum(formData.price)
   const execTime = parseLocalNum(formData.execution_time)
   const cadistaVal = parseLocalNum(formData.cadista_cost)
@@ -494,6 +520,27 @@ export default function PriceList() {
         </div>
       </div>
 
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 bg-muted/30 p-3 rounded-lg border">
+        <div className="text-sm font-medium text-foreground flex items-center gap-2">
+          <PieChart className="w-4 h-4 text-muted-foreground" />
+          Indicadores de Rentabilidade:
+        </div>
+        <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+            <span>Alta Margem (&gt; 20%)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-amber-500 ring-2 ring-amber-500/20" />
+            <span>Margem Média (10% a 20%)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-500/20" />
+            <span>Baixa Margem (&lt; 10%)</span>
+          </div>
+        </div>
+      </div>
+
       <Card className="shadow-subtle">
         <CardContent className="p-0">
           <Table>
@@ -522,39 +569,56 @@ export default function PriceList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPrices.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="pl-6">
-                      <div className="font-medium">{item.work_type}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{item.category}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-muted/50">
-                        {item.sector || 'Geral'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatBRL(parseLocalNum(item.price))}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {item.execution_time ? `${item.execution_time} min` : '-'}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground font-medium">
-                      {formatBRL(tableCosts.costPerMinute)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {formatBRL((item.execution_time || 0) * tableCosts.costPerMinute)}
-                    </TableCell>
-                    <TableCell className="text-right pr-6 space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                        <Edit2 className="w-4 h-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="w-4 h-4 text-red-500 hover:text-red-600" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredPrices.map((item) => {
+                  const margin = getMargin(item)
+                  let indicatorClass = 'border rounded-lg p-2.5 transition-colors '
+                  if (margin > 20) {
+                    indicatorClass +=
+                      'border-emerald-500/50 bg-emerald-500/5 dark:border-emerald-500/30'
+                  } else if (margin >= 10) {
+                    indicatorClass += 'border-amber-500/50 bg-amber-500/5 dark:border-amber-500/30'
+                  } else {
+                    indicatorClass += 'border-red-500/50 bg-red-500/5 dark:border-red-500/30'
+                  }
+
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="pl-6 py-3 min-w-[280px]">
+                        <div className={indicatorClass}>
+                          <div className="font-semibold text-foreground">{item.work_type}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {item.category}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-muted/50">
+                          {item.sector || 'Geral'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatBRL(parseLocalNum(item.price))}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {item.execution_time ? `${item.execution_time} min` : '-'}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground font-medium">
+                        {formatBRL(tableCosts.costPerMinute)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatBRL((item.execution_time || 0) * tableCosts.costPerMinute)}
+                      </TableCell>
+                      <TableCell className="text-right pr-6 space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                          <Edit2 className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                          <Trash2 className="w-4 h-4 text-red-500 hover:text-red-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
