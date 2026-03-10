@@ -42,7 +42,12 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     )
   if (!session) return <AuthPage />
 
-  if (currentUser && currentUser.is_approved === false && currentUser.role !== 'admin') {
+  if (
+    currentUser &&
+    currentUser.is_approved === false &&
+    currentUser.role !== 'admin' &&
+    currentUser.role !== 'master'
+  ) {
     return <PendingApproval />
   }
 

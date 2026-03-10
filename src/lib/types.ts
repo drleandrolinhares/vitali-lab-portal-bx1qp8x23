@@ -1,30 +1,34 @@
-export type UserRole = 'admin' | 'receptionist' | 'dentist'
+export type UserRole = 'dentist' | 'admin' | 'master' | 'receptionist'
+export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
+export type KanbanStage = string // Dynamic now
 
 export interface User {
   id: string
   name: string
   role: UserRole
-  clinic?: string | null
-  whatsapp_group_link?: string | null
-  avatar_url?: string | null
-  permissions?: string[] | null
-  commercial_agreement?: number
+  clinic?: string
+  job_function?: string
+  whatsapp_group_link?: string
+  avatar_url?: string
+  permissions?: string[] // if empty, applies defaults
 }
-
-export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered' | 'cancelled'
-
-export type KanbanStage = string
 
 export interface Stage {
   id: string
-  name: string
+  name: KanbanStage
   orderIndex: number
-  description?: string | null
+  description?: string
+}
+
+export interface DRECategory {
+  name: string
+  category_type: 'revenue' | 'variable' | 'fixed'
+  created_at: string
 }
 
 export interface OrderHistory {
   id: string
-  status: OrderStatus
+  status: OrderStatus | 'pending'
   date: string
   note?: string
 }
@@ -36,14 +40,15 @@ export interface Order {
   patientCpf?: string
   patientBirthDate?: string
   dentistId: string
-  dentistName: string
-  dentistGroupLink: string
+  dentistName?: string
+  dentistClinic?: string
+  dentistGroupLink?: string
   dentistDiscount?: number
   sector: string
   kanbanStage: KanbanStage
   workType: string
   material: string
-  teeth: string[]
+  teeth: number[]
   arches: string[]
   shade?: string
   shadeScale?: string
@@ -51,30 +56,13 @@ export interface Order {
   stlDeliveryMethod?: string
   observations?: string
   status: OrderStatus
-  isAcknowledged: boolean
+  isAcknowledged?: boolean
   createdAt: string
+  history: OrderHistory[]
   clearedBalance: number
   basePrice: number
   unitPrice?: number
-  quantity?: number
-  history: OrderHistory[]
+  quantity: number
+  dre_category?: string
   fileUrls?: string[]
-}
-
-export interface AuditLog {
-  id: string
-  user_id: string
-  action: string
-  entity_type: string
-  entity_id: string
-  details: Record<string, any>
-  created_at: string
-  profiles?: {
-    name: string
-  }
-}
-
-export interface DRECategory {
-  name: string
-  category_type: 'revenue' | 'variable' | 'fixed'
 }

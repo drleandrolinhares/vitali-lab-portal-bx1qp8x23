@@ -29,8 +29,9 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from '@/hooks/use-toast'
 import { Plus, Edit2, Shield, Loader2 } from 'lucide-react'
+import { useAppStore } from '@/stores/main'
 
-const PERMISSION_OPTIONS = [
+export const PERMISSION_OPTIONS = [
   { id: 'inbox', label: 'Caixa de Entrada' },
   { id: 'new-request', label: 'Novo Pedido' },
   { id: 'kanban', label: 'Evolução dos Trabalhos' },
@@ -49,6 +50,7 @@ const PERMISSION_OPTIONS = [
 ]
 
 export function UsersManagement() {
+  const { currentUser } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -60,6 +62,7 @@ export function UsersManagement() {
     email: '',
     password: '',
     role: 'dentist',
+    job_function: '',
     clinic: '',
     whatsapp_group_link: '',
   })
@@ -84,6 +87,7 @@ export function UsersManagement() {
         email: user.email,
         password: '',
         role: user.role,
+        job_function: user.job_function || '',
         clinic: user.clinic || '',
         whatsapp_group_link: user.whatsapp_group_link || '',
       })
@@ -95,6 +99,7 @@ export function UsersManagement() {
         email: '',
         password: '',
         role: 'dentist',
+        job_function: '',
         clinic: '',
         whatsapp_group_link: '',
       })
@@ -124,6 +129,7 @@ export function UsersManagement() {
         .update({
           name: formData.name,
           clinic: formData.clinic,
+          job_function: formData.job_function,
           role: formData.role,
           whatsapp_group_link: finalGroupLink,
           permissions: selectedPerms,
@@ -134,6 +140,7 @@ export function UsersManagement() {
     } else {
       const { error } = await createUser({
         ...formData,
+        job_function: formData.job_function,
         whatsapp_group_link: finalGroupLink,
         permissions: selectedPerms,
       })
@@ -155,6 +162,14 @@ export function UsersManagement() {
     setSelectedPerms((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
 
+  const toggleAllPerms = () => {
+    if (selectedPerms.length === PERMISSION_OPTIONS.length) {
+      setSelectedPerms([])
+    } else {
+      setSelectedPerms(PERMISSION_OPTIONS.map((p) => p.id))
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -173,6 +188,7 @@ export function UsersManagement() {
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Função</TableHead>
+              <TableHead>Função na Empresa</TableHead>
               <TableHead className="text-center">Acesso Customizado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -180,7 +196,7 @@ export function UsersManagement() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                   Carregando usuários...
                 </TableCell>
@@ -191,6 +207,7 @@ export function UsersManagement() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell className="capitalize">{user.role}</TableCell>
+                  <TableCell className="text-muted-foreground">{user.job_function}</TableCell>
                   <TableCell className="text-center">
                     {user.permissions && user.permissions.length > 0 ? (
                       <span className="inline-flex items-center text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200">
@@ -267,14 +284,26 @@ export function UsersManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dentist">Dentista</SelectItem>
-                    <SelectItem value="receptionist">Recepção / Produção</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="dentist">Dentista</SelectItem>
+                    {currentUser?.role === ('master' as any) && (
+                      <SelectItem value="master">Master</SelectItem>
+                    )}
+                    <SelectItem value="receptionist">Recepção / Produção</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Função na Empresa</Label>
+                <Input
+                  value={formData.job_function}
+                  onChange={(e) => setFormData({ ...formData, job_function: e.target.value })}
+                  placeholder="Ex: Ceramista, Recepção"
+                />
+              </div>
+
+              <div className="space-y-2 col-span-2">
                 <Label>Link Grupo WhatsApp</Label>
                 <Input
                   value={formData.whatsapp_group_link}
@@ -287,7 +316,14 @@ export function UsersManagement() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base">Permissões de Acesso (Menu Lateral)</Label>
+              <div className="flex justify-between items-center mb-2">
+                <Label className="text-base">Permissões de Acesso (Menu Lateral)</Label>
+                <Button variant="outline" size="sm" type="button" onClick={toggleAllPerms}>
+                  {selectedPerms.length === PERMISSION_OPTIONS.length
+                    ? 'Desmarcar Tudo'
+                    : 'Marcar Tudo'}
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground mb-4">
                 Selecione os módulos que este usuário poderá visualizar. Se nenhum for selecionado,
                 as permissões padrões da função serão aplicadas.

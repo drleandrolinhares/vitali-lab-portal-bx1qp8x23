@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { getOrderFinancials } from '@/lib/financial'
 
 interface AppState {
-  currentUser: User & { is_approved?: boolean }
+  currentUser: User & { is_approved?: boolean; job_function?: string }
   orders: any[]
   kanbanStages: Stage[]
   appSettings: Record<string, string>
@@ -68,7 +68,9 @@ const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
-  const [currentUser, setCurrentUser] = useState<(User & { is_approved?: boolean }) | null>(null)
+  const [currentUser, setCurrentUser] = useState<
+    (User & { is_approved?: boolean; job_function?: string }) | null
+  >(null)
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
   const [appSettings, setAppSettings] = useState<Record<string, string>>({})
@@ -113,6 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: data.id,
         name: data.name,
         role: data.role as UserRole,
+        job_function: data.job_function,
         clinic: data.clinic,
         whatsapp_group_link: data.whatsapp_group_link,
         avatar_url: data.avatar_url,
@@ -164,7 +167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const fetchPendingUsers = useCallback(async () => {
-    if (!currentUser || currentUser.role !== 'admin') return
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -272,7 +275,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchSettings()
       fetchPriceList()
       fetchDRECategories()
-      if (currentUser.role === 'admin') fetchPendingUsers()
+      if (currentUser.role === 'admin' || currentUser.role === ('master' as any))
+        fetchPendingUsers()
 
       const channel = supabase
         .channel('app-updates')
@@ -292,7 +296,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           fetchDRECategories(),
         )
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-          if (currentUser.role === 'admin') fetchPendingUsers()
+          if (currentUser.role === 'admin' || currentUser.role === ('master' as any))
+            fetchPendingUsers()
           if (payload.new && payload.new.id === currentUser.id) {
             setCurrentUser((prev: any) =>
               prev ? { ...prev, is_approved: payload.new.is_approved } : prev,
@@ -316,8 +321,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchDRECategories,
   ])
 
-  // Apply accurate financial total propagation dynamically over the context
-  // This step guarantees existing orders are automatically repaired and displayed with exact discount math
   const computedOrders = useMemo(() => {
     if (!orders || orders.length === 0) return []
 
@@ -432,7 +435,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addOrder = async (orderData: any): Promise<boolean> => {
     if (!currentUser) return false
     const targetDentistId =
-      (currentUser.role === 'admin' || currentUser.role === 'receptionist') && orderData.dentistId
+      (currentUser.role === 'admin' ||
+        currentUser.role === ('master' as any) ||
+        currentUser.role === 'receptionist') &&
+      orderData.dentistId
         ? orderData.dentistId
         : currentUser.id
 
@@ -462,7 +468,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const teethCount = orderData.teeth?.length || 0
     const archesCount = orderData.arches?.length || 0
     const quantity = Math.max(1, teethCount + archesCount)
-    // Applying required formula: Final Total = (Price_from_PriceList × Number_of_Elements) × (1 - commercial_agreement / 100)
     const basePrice = unitPrice * quantity * (1 - discountPercent / 100)
 
     const { data, error } = await supabase
@@ -509,11 +514,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const deleteOrder = async (dbId: string, reason: string) => {
-    if (currentUser?.role !== 'admin') return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
 
     const orderToDelete = orders.find((o) => o.id === dbId)
 
-    // Cascading deletion for financial records
     await supabase.from('expenses').delete().eq('order_id', dbId)
 
     const { error } = await supabase.from('orders').delete().eq('id', dbId)
@@ -642,7 +646,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
-    if (currentUser?.role !== 'admin') return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
     await supabase.from('kanban_stages').update({ name: newName.trim().toUpperCase() }).eq('id', id)
   }
 
@@ -660,7 +664,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const reorderKanbanStages = async (reorderedStages: Stage[]) => {
-    if (currentUser?.role !== 'admin') return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
     setKanbanStages(reorderedStages)
     const updates = reorderedStages.map((stage, index) =>
       supabase

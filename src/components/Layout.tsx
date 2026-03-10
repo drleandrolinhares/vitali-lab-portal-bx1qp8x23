@@ -118,7 +118,7 @@ function useAdminBadges(currentUser: any) {
   const [overduePayables, setOverduePayables] = useState(0)
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'admin') return
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
 
     const fetchBadges = async () => {
       try {
@@ -180,25 +180,53 @@ function AppSidebar() {
 
   const { lowStock, overduePayables } = useAdminBadges(currentUser)
 
+  const defaultRolePerms = useMemo(() => {
+    try {
+      if (appSettings?.role_permissions) {
+        return JSON.parse(appSettings.role_permissions)
+      }
+    } catch (e) {}
+    return {}
+  }, [appSettings])
+
   if (!currentUser) return null
 
-  const permissions = currentUser.permissions || []
-  const hasPerm = (id: string) =>
-    currentUser.role === 'admin' && permissions.length === 0 ? true : permissions.includes(id)
+  const isMaster = currentUser.role === ('master' as any)
+  const roleStr = currentUser.role as string
+  const customPermissions = currentUser.permissions || []
+
+  // Base permission evaluation logic
+  const hasPerm = (id: string) => {
+    if (isMaster) return true // Master has unlimited access
+    if (customPermissions.length > 0) return customPermissions.includes(id) // User specific override
+
+    // Otherwise, check the default permissions for their role
+    const roleDefaults = defaultRolePerms[roleStr]
+    if (Array.isArray(roleDefaults)) {
+      return roleDefaults.includes(id)
+    }
+
+    // Fallback logic for existing 'admin' who have empty permissions before master logic configured it
+    if (roleStr === 'admin') return true
+
+    return false
+  }
 
   const dentistNavItems = [
-    { title: 'Meu Painel', icon: LayoutDashboard, path: '/app' },
-    { title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
-    { title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
-    { title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
-    { title: 'Histórico', icon: History, path: '/history' },
+    { id: 'inbox', title: 'Meu Painel', icon: LayoutDashboard, path: '/app' },
+    { id: 'new-request', title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
+    { id: 'kanban', title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
+    { id: 'finances', title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
+    { id: 'history', title: 'Histórico', icon: History, path: '/history' },
   ]
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
 
   if (
-    (currentUser.role === 'admin' || currentUser.role === 'receptionist') &&
+    (currentUser.role === 'admin' ||
+      currentUser.role === 'receptionist' ||
+      currentUser.role === ('master' as any)) &&
     location.pathname.startsWith('/order/')
   ) {
     const orderId = location.pathname.split('/').pop()
@@ -244,25 +272,33 @@ function AppSidebar() {
       <SidebarContent className="px-2">
         {currentUser.role === 'dentist' ? (
           <SidebarMenu>
-            {dentistNavItems.map((item) => (
-              <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location.pathname === item.path}
-                  tooltip={item.title}
-                >
-                  <Link to={item.path}>
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {dentistNavItems.map((item) => {
+              if (!hasPerm(item.id)) return null
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.path}
+                    tooltip={item.title}
+                  >
+                    <Link to={item.path}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
         ) : (
           ADMIN_MENUS.map((group) => {
             const visibleItems = group.items.filter((i) => {
-              if (i.id === 'pending-users' && currentUser.role !== 'admin') return false
+              if (
+                i.id === 'pending-users' &&
+                currentUser.role !== 'admin' &&
+                currentUser.role !== ('master' as any)
+              )
+                return false
               return hasPerm(i.id)
             })
             if (visibleItems.length === 0) return null
@@ -356,9 +392,11 @@ function AppSidebar() {
                 <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
                   {currentUser.role === 'dentist'
                     ? 'Dentista'
-                    : currentUser.role === 'admin'
-                      ? 'Administrador'
-                      : 'Recepção / Lab'}
+                    : currentUser.role === ('master' as any)
+                      ? 'Master'
+                      : currentUser.role === 'admin'
+                        ? 'Administrador'
+                        : 'Recepção / Lab'}
                 </span>
               </div>
             </Button>
@@ -390,13 +428,18 @@ function MainHeader() {
     '/prices',
   ].includes(location.pathname)
   const showLabSelector =
-    (currentUser.role === 'admin' || currentUser.role === 'receptionist') && isFinancialRoute
+    (currentUser.role === 'admin' ||
+      currentUser.role === ('master' as any) ||
+      currentUser.role === 'receptionist') &&
+    isFinancialRoute
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
 
   if (
-    (currentUser.role === 'admin' || currentUser.role === 'receptionist') &&
+    (currentUser.role === 'admin' ||
+      currentUser.role === ('master' as any) ||
+      currentUser.role === 'receptionist') &&
     location.pathname.startsWith('/order/')
   ) {
     const orderId = location.pathname.split('/').pop()

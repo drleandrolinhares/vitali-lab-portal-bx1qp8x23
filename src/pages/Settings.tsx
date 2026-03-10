@@ -16,7 +16,135 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Phone, User, Building, Camera, Loader2, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
-import { UsersManagement } from '@/components/UsersManagement'
+import { UsersManagement, PERMISSION_OPTIONS } from '@/components/UsersManagement'
+import { Switch } from '@/components/ui/switch'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
+function RolePermissionsPanel() {
+  const { appSettings, updateSetting } = useAppStore()
+  const [perms, setPerms] = useState<any>({ admin: [], receptionist: [], dentist: [] })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (appSettings?.role_permissions) {
+      try {
+        setPerms(JSON.parse(appSettings.role_permissions))
+      } catch (e) {}
+    }
+  }, [appSettings])
+
+  const handleToggle = (role: string, id: string) => {
+    setPerms((prev: any) => {
+      const rolePerms = prev[role] || []
+      const has = rolePerms.includes(id)
+      return {
+        ...prev,
+        [role]: has ? rolePerms.filter((p: string) => p !== id) : [...rolePerms, id],
+      }
+    })
+  }
+
+  const handleSelectAll = (role: string) => {
+    setPerms((prev: any) => {
+      const allIds = PERMISSION_OPTIONS.map((p) => p.id)
+      const isAll = prev[role]?.length === allIds.length
+      return {
+        ...prev,
+        [role]: isAll ? [] : allIds,
+      }
+    })
+  }
+
+  const save = async () => {
+    setSaving(true)
+    await updateSetting('role_permissions', JSON.stringify(perms))
+    setSaving(false)
+    toast({ title: 'Permissões salvas com sucesso' })
+  }
+
+  return (
+    <Card className="shadow-subtle">
+      <CardHeader>
+        <CardTitle>Hierarquia de Permissões</CardTitle>
+        <CardDescription>Defina o acesso padrão para cada perfil do sistema.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Módulo</TableHead>
+              <TableHead className="text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <span>Admin</span>
+                  <Button variant="outline" size="sm" onClick={() => handleSelectAll('admin')}>
+                    Tudo
+                  </Button>
+                </div>
+              </TableHead>
+              <TableHead className="text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <span>Recepção / Produção</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectAll('receptionist')}
+                  >
+                    Tudo
+                  </Button>
+                </div>
+              </TableHead>
+              <TableHead className="text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <span>Dentista</span>
+                  <Button variant="outline" size="sm" onClick={() => handleSelectAll('dentist')}>
+                    Tudo
+                  </Button>
+                </div>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {PERMISSION_OPTIONS.map((opt) => (
+              <TableRow key={opt.id}>
+                <TableCell className="font-medium text-sm">{opt.label}</TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={perms.admin?.includes(opt.id)}
+                    onCheckedChange={() => handleToggle('admin', opt.id)}
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={perms.receptionist?.includes(opt.id)}
+                    onCheckedChange={() => handleToggle('receptionist', opt.id)}
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={perms.dentist?.includes(opt.id)}
+                    onCheckedChange={() => handleToggle('dentist', opt.id)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg">
+        <Button onClick={save} disabled={saving} className="min-w-[150px]">
+          {saving ? 'Salvando...' : 'Salvar Permissões'}
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
 
 export default function SettingsPage() {
   const { currentUser, appSettings, updateSetting, updateProfile } = useAppStore()
@@ -26,6 +154,7 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('')
   const [clinic, setClinic] = useState('')
+  const [jobFunction, setJobFunction] = useState('')
   const [whatsappGroupLink, setWhatsappGroupLink] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
@@ -49,6 +178,7 @@ export default function SettingsPage() {
     if (currentUser) {
       setName(currentUser.name || '')
       setClinic(currentUser.clinic || '')
+      setJobFunction(currentUser.job_function || '')
       setWhatsappGroupLink((currentUser as any).whatsapp_group_link || '')
       setAvatarUrl(currentUser.avatar_url || '')
     }
@@ -80,6 +210,7 @@ export default function SettingsPage() {
     await updateProfile({
       name,
       clinic,
+      job_function: jobFunction,
       avatar_url: avatarUrl,
       whatsapp_group_link: finalGroupLink,
     } as any)
@@ -141,7 +272,8 @@ export default function SettingsPage() {
     )
   }
 
-  const isAdmin = currentUser.role === 'admin'
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === ('master' as any)
+  const isMaster = currentUser.role === ('master' as any)
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6 animate-fade-in">
@@ -179,6 +311,14 @@ export default function SettingsPage() {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
             >
               Escalas de Cor
+            </TabsTrigger>
+          )}
+          {isMaster && (
+            <TabsTrigger
+              value="role-permissions"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50"
+            >
+              Permissões (Master)
             </TabsTrigger>
           )}
         </TabsList>
@@ -239,6 +379,17 @@ export default function SettingsPage() {
                         value={clinic}
                         onChange={(e) => setClinic(e.target.value)}
                         placeholder="Nome da sua clínica"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-primary/70" />
+                        Função na Empresa
+                      </Label>
+                      <Input
+                        value={jobFunction}
+                        onChange={(e) => setJobFunction(e.target.value)}
+                        placeholder="Ex: Ceramista, Recepção"
                       />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
@@ -366,6 +517,12 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
           </>
+        )}
+
+        {isMaster && (
+          <TabsContent value="role-permissions" className="space-y-6">
+            <RolePermissionsPanel />
+          </TabsContent>
         )}
       </Tabs>
     </div>
