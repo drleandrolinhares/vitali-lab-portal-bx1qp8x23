@@ -356,6 +356,7 @@ export type Database = {
           created_at: string
           dentist_id: string
           dre_category: string
+          estrutura_fixacao: string
           file_urls: Json | null
           friendly_id: string
           id: string
@@ -383,6 +384,7 @@ export type Database = {
           created_at?: string
           dentist_id: string
           dre_category?: string
+          estrutura_fixacao?: string
           file_urls?: Json | null
           friendly_id?: string
           id?: string
@@ -410,6 +412,7 @@ export type Database = {
           created_at?: string
           dentist_id?: string
           dre_category?: string
+          estrutura_fixacao?: string
           file_urls?: Json | null
           friendly_id?: string
           id?: string
@@ -890,6 +893,7 @@ export const Constants = {
 //   file_urls: jsonb (nullable, default: '[]'::jsonb)
 //   implant_brand: text (nullable)
 //   implant_type: text (nullable)
+//   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
