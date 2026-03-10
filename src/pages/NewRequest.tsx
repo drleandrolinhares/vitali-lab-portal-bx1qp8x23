@@ -91,7 +91,9 @@ export default function NewRequest() {
       try {
         const parsed = JSON.parse(appSettings['shade_scales'])
         return parsed.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR'))
-      } catch {}
+      } catch (e) {
+        console.error('Failed to parse shade_scales', e)
+      }
     }
     return []
   }, [appSettings])
@@ -101,7 +103,9 @@ export default function NewRequest() {
       try {
         const parsed = JSON.parse(appSettings['implant_brands'])
         return parsed.sort((a: string, b: string) => a.localeCompare(b, 'pt-BR'))
-      } catch {}
+      } catch (e) {
+        console.error('Failed to parse implant_brands', e)
+      }
     }
     return []
   }, [appSettings])
