@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { createUser } from '@/services/users'
+import { createUser, updateUser } from '@/services/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,7 +52,7 @@ export const PERMISSION_OPTIONS = [
 ]
 
 export function UsersManagement() {
-  const { currentUser } = useAppStore()
+  const { currentUser, logAudit } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -121,9 +121,16 @@ export function UsersManagement() {
     if (!formData.name) {
       return toast({ title: 'O nome é obrigatório', variant: 'destructive' })
     }
-    if (!editingUser && !formData.email && !formData.personal_phone) {
-      return toast({ title: 'Preencha o Email ou o Telefone', variant: 'destructive' })
+    if (!formData.email || !formData.email.includes('@')) {
+      return toast({ title: 'Formato de email inválido', variant: 'destructive' })
     }
+    if (!editingUser && (!formData.password || formData.password.length < 6)) {
+      return toast({
+        title: 'A senha inicial deve ter no mínimo 6 caracteres',
+        variant: 'destructive',
+      })
+    }
+
     setSaving(true)
 
     let finalGroupLink = formData.whatsapp_group_link.trim()
@@ -136,21 +143,31 @@ export function UsersManagement() {
     }
 
     if (editingUser) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          clinic: formData.clinic,
-          job_function: formData.job_function,
-          role: formData.role,
-          whatsapp_group_link: finalGroupLink,
-          permissions: selectedPerms,
-          personal_phone: formData.personal_phone,
-          is_active: formData.is_active,
-        })
-        .eq('id', editingUser.id)
-      if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-      else toast({ title: 'Usuário atualizado com sucesso' })
+      const { error } = await updateUser({
+        userId: editingUser.id,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password || undefined,
+        clinic: formData.clinic,
+        job_function: formData.job_function,
+        role: formData.role,
+        whatsapp_group_link: finalGroupLink,
+        permissions: selectedPerms,
+        personal_phone: formData.personal_phone,
+        is_active: formData.is_active,
+      })
+
+      if (error) {
+        toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+      } else {
+        toast({ title: 'Usuário atualizado com sucesso' })
+        if (editingUser.email !== formData.email) {
+          await logAudit('UPDATE_EMAIL', 'profile', editingUser.id, {
+            oldEmail: editingUser.email,
+            newEmail: formData.email,
+          })
+        }
+      }
     } else {
       const { error } = await createUser({
         ...formData,
@@ -295,28 +312,26 @@ export function UsersManagement() {
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Email de Acesso {editingUser ? '' : '(Opcional)'}</Label>
+                <Label>Email de Acesso</Label>
                 <Input
                   type="email"
                   value={formData.email}
-                  disabled={!!editingUser}
-                  className={editingUser ? 'bg-muted' : ''}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder={!editingUser ? 'Deixe em branco se não houver' : ''}
+                  placeholder="Ex: exemplo@email.com"
+                  required
                 />
               </div>
 
-              {!editingUser && (
-                <div className="space-y-2 col-span-2 sm:col-span-1">
-                  <Label>Senha Inicial</Label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Opcional se sem email"
-                  />
-                </div>
-              )}
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label>Senha {editingUser ? '(Opcional)' : 'Inicial'}</Label>
+                <Input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder={editingUser ? 'Preencha para alterar' : 'Mín. 6 caracteres'}
+                  required={!editingUser}
+                />
+              </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
                 <Label>Função do Usuário</Label>

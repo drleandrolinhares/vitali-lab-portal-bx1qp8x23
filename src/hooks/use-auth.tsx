@@ -110,35 +110,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signIn = async (identifier: string, password: string, rememberMe: boolean = true) => {
-    let authData, authError
-    const isEmail = identifier.includes('@')
-
-    if (!isEmail) {
-      const phoneDigits = identifier.replace(/\D/g, '')
-      if (phoneDigits.length < 10) {
-        return { error: new Error('Telefone inválido. Verifique o número digitado.') }
+    if (!identifier.includes('@')) {
+      return {
+        error: new Error(
+          'Formato de email inválido. Utilize um endereço de email válido para entrar.',
+        ),
       }
-
-      // Try direct phone auth
-      let res = await supabase.auth.signInWithPassword({ phone: phoneDigits, password })
-
-      if (res.error && res.error.message.includes('Invalid login credentials')) {
-        // Fallback to searching profiles
-        const { data: emailData } = await supabase.rpc('get_email_by_phone', {
-          p_phone: phoneDigits,
-        })
-        if (emailData) {
-          res = await supabase.auth.signInWithPassword({ email: emailData as string, password })
-        }
-      }
-
-      authData = res.data
-      authError = res.error
-    } else {
-      const res = await supabase.auth.signInWithPassword({ email: identifier, password })
-      authData = res.data
-      authError = res.error
     }
+
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: identifier,
+      password,
+    })
 
     if (!authError) {
       if (!rememberMe) {
@@ -164,19 +147,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const resetPassword = async (identifier: string) => {
-    let resetEmail = identifier
-
     if (!identifier.includes('@')) {
-      const phoneDigits = identifier.replace(/\D/g, '')
-      const { data: emailData } = await supabase.rpc('get_email_by_phone', { p_phone: phoneDigits })
-      if (emailData) {
-        resetEmail = emailData as string
-      } else {
-        return { error: new Error('Usuário não encontrado com este número de telefone.') }
-      }
+      return { error: new Error('Formato de email inválido.') }
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+    const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
       redirectTo: `${window.location.origin}/app`,
     })
     return { error }

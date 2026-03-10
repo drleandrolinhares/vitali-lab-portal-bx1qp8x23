@@ -141,15 +141,22 @@ export default function AuthPage() {
         <CardContent className="pt-6 bg-card rounded-b-lg border-t border-border">
           {view === 'forgot_password' ? (
             <form
-              onSubmit={(e) => handleAction(e, () => resetPassword(forgotId))}
+              onSubmit={(e) =>
+                handleAction(e, () => {
+                  if (!forgotId.includes('@')) {
+                    return Promise.resolve({ error: new Error('Formato de email inválido.') })
+                  }
+                  return resetPassword(forgotId)
+                })
+              }
               className="space-y-4 animate-fade-in"
             >
               <div className="space-y-2">
-                <Label htmlFor="reset-id">Email ou Telefone</Label>
+                <Label htmlFor="reset-id">Email</Label>
                 <Input
                   id="reset-id"
-                  type="text"
-                  placeholder="Ex: joao@email.com ou (11) 99999-9999"
+                  type="email"
+                  placeholder="Ex: joao@email.com"
                   value={forgotId}
                   onChange={(e) => setForgotId(e.target.value)}
                   required
@@ -187,14 +194,21 @@ export default function AuthPage() {
               )}
               <TabsContent value="login" className="animate-fade-in">
                 <form
-                  onSubmit={(e) => handleAction(e, () => signIn(loginId, password, rememberMe))}
+                  onSubmit={(e) =>
+                    handleAction(e, () => {
+                      if (!loginId.includes('@')) {
+                        return Promise.resolve({ error: new Error('Formato de email inválido.') })
+                      }
+                      return signIn(loginId, password, rememberMe)
+                    })
+                  }
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label>Email ou Telefone</Label>
+                    <Label>Email</Label>
                     <Input
-                      type="text"
-                      placeholder="Ex: joao@email.com ou (11) 99999-9999"
+                      type="email"
+                      placeholder="Ex: joao@email.com"
                       value={loginId}
                       onChange={(e) => setLoginId(e.target.value)}
                       required

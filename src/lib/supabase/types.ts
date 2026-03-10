@@ -662,6 +662,7 @@ export type Database = {
     }
     Functions: {
       delete_user: { Args: { target_user_id: string }; Returns: undefined }
+      get_email_by_phone: { Args: { p_phone: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -1121,6 +1122,33 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION get_email_by_phone(text)
+//   CREATE OR REPLACE FUNCTION public.get_email_by_phone(p_phone text)
+//    RETURNS text
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//    SET search_path TO 'public'
+//   AS $function$
+//   DECLARE
+//     v_email TEXT;
+//     v_digits TEXT;
+//   BEGIN
+//     v_digits := regexp_replace(p_phone, '\D', '', 'g');
+//
+//     IF v_digits = '' THEN
+//       RETURN NULL;
+//     END IF;
+//
+//     SELECT email INTO v_email
+//     FROM public.profiles
+//     WHERE regexp_replace(personal_phone, '\D', '', 'g') = v_digits
+//        OR personal_phone = p_phone
+//     LIMIT 1;
+//
+//     RETURN v_email;
+//   END;
+//   $function$
+//
 // FUNCTION handle_new_order()
 //   CREATE OR REPLACE FUNCTION public.handle_new_order()
 //    RETURNS trigger
@@ -1181,6 +1209,41 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION sync_profile_phone_to_auth()
+//   CREATE OR REPLACE FUNCTION public.sync_profile_phone_to_auth()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//    SET search_path TO 'public', 'auth'
+//   AS $function$
+//   DECLARE
+//     v_clean_phone TEXT;
+//   BEGIN
+//     IF NEW.personal_phone IS DISTINCT FROM OLD.personal_phone THEN
+//       v_clean_phone := NULLIF(regexp_replace(NEW.personal_phone, '\D', '', 'g'), '');
+//
+//       IF v_clean_phone IS NOT NULL THEN
+//         -- Avoid recursion and only update if different
+//         IF (SELECT phone FROM auth.users WHERE id = NEW.id) IS DISTINCT FROM v_clean_phone THEN
+//           BEGIN
+//             UPDATE auth.users
+//             SET phone = v_clean_phone
+//             WHERE id = NEW.id;
+//           EXCEPTION WHEN unique_violation THEN
+//             -- Ignore unique violation, another user already has this phone
+//           END;
+//         END IF;
+//       ELSE
+//         -- If cleared out
+//         IF (SELECT phone FROM auth.users WHERE id = NEW.id) IS NOT NULL THEN
+//           UPDATE auth.users SET phone = NULL WHERE id = NEW.id;
+//         END IF;
+//       END IF;
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION update_inventory_quantity()
 //   CREATE OR REPLACE FUNCTION public.update_inventory_quantity()
 //    RETURNS trigger
@@ -1203,6 +1266,7 @@ export const Constants = {
 // Table: orders
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
 // Table: profiles
+//   on_profile_phone_update: CREATE TRIGGER on_profile_phone_update AFTER UPDATE OF personal_phone ON public.profiles FOR EACH ROW EXECUTE FUNCTION sync_profile_phone_to_auth()
 //   protect_is_approved_trigger: CREATE TRIGGER protect_is_approved_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_is_approved()
 
 // --- INDEXES ---
