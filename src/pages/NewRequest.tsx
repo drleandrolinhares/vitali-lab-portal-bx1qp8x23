@@ -544,6 +544,16 @@ export default function NewRequest() {
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label className="uppercase font-semibold text-xs">Observações Adicionais</Label>
+              <Textarea
+                placeholder="Instruções sobre textura, formato..."
+                className="min-h-[100px]"
+                value={formData.observations}
+                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+              />
+            </div>
+
             <div className="space-y-4 bg-muted/20 p-5 rounded-xl border">
               <Label className="text-base font-semibold">
                 Método de Envio do Molde/Escaneamento
@@ -639,16 +649,6 @@ export default function NewRequest() {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="uppercase font-semibold text-xs">Observações Adicionais</Label>
-              <Textarea
-                placeholder="Instruções sobre textura, formato..."
-                className="min-h-[100px]"
-                value={formData.observations}
-                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-              />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/20 border-t px-6 py-5 flex justify-end gap-3 rounded-b-lg">
