@@ -37,6 +37,7 @@ interface AppState {
   deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
   reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
   updateSetting: (key: string, value: string) => Promise<void>
+  updateSettings: (updates: Record<string, string>) => Promise<void>
   updateProfile: (updates: Partial<User>) => Promise<void>
   refreshOrders: () => void
   logAudit: (action: string, entityType: string, entityId: string, details?: any) => Promise<void>
@@ -599,7 +600,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateSetting = async (key: string, value: string) => {
-    await supabase.from('app_settings').upsert({ key, value, updated_at: new Date().toISOString() })
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() })
+    if (!error) {
+      setAppSettings((prev) => ({ ...prev, [key]: value }))
+    }
+  }
+
+  const updateSettings = async (updates: Record<string, string>) => {
+    const rows = Object.entries(updates).map(([key, value]) => ({
+      key,
+      value,
+      updated_at: new Date().toISOString(),
+    }))
+    const { error } = await supabase.from('app_settings').upsert(rows)
+    if (!error) {
+      setAppSettings((prev) => ({ ...prev, ...updates }))
+    }
   }
 
   const updateProfile = async (updates: Partial<User>) => {
@@ -642,6 +660,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteKanbanStage,
         reorderKanbanStages,
         updateSetting,
+        updateSettings,
         updateProfile,
         refreshOrders: fetchOrders,
         logAudit,

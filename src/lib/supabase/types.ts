@@ -411,30 +411,39 @@ export type Database = {
       }
       price_list: {
         Row: {
+          cadista_cost: number | null
           category: string
           created_at: string
+          execution_time: number | null
           id: string
           material: string
+          material_cost: number | null
           notes: string | null
           price: string
           sector: string
           work_type: string
         }
         Insert: {
+          cadista_cost?: number | null
           category: string
           created_at?: string
+          execution_time?: number | null
           id?: string
           material?: string
+          material_cost?: number | null
           notes?: string | null
           price: string
           sector?: string
           work_type: string
         }
         Update: {
+          cadista_cost?: number | null
           category?: string
           created_at?: string
+          execution_time?: number | null
           id?: string
           material?: string
+          material_cost?: number | null
           notes?: string | null
           price?: string
           sector?: string
@@ -820,6 +829,9 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   sector: text (not null, default: 'Soluções Cerâmicas'::text)
 //   material: text (not null, default: ''::text)
+//   execution_time: numeric (nullable, default: 0)
+//   cadista_cost: numeric (nullable, default: 0)
+//   material_cost: numeric (nullable, default: 0)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)

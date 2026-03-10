@@ -58,7 +58,7 @@ const INITIAL_COSTS = [
 }))
 
 export default function HourlyCost() {
-  const { currentUser } = useAppStore()
+  const { currentUser, updateSettings } = useAppStore()
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
   const [monthlyHours, setMonthlyHours] = useState<number>(176)
   const [loading, setLoading] = useState(true)
@@ -107,26 +107,17 @@ export default function HourlyCost() {
 
   const handleSave = async () => {
     setSaving(true)
-    const updates = [
-      {
-        key: 'hourly_cost_fixed_items',
-        value: JSON.stringify(fixedCosts),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        key: 'hourly_cost_monthly_hours',
-        value: monthlyHours.toString(),
-        updated_at: new Date().toISOString(),
-      },
-    ]
-
-    const { error } = await supabase.from('app_settings').upsert(updates)
-    if (error) {
-      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
-    } else {
+    try {
+      await updateSettings({
+        hourly_cost_fixed_items: JSON.stringify(fixedCosts),
+        hourly_cost_monthly_hours: monthlyHours.toString(),
+      })
       toast({ title: 'Configurações salvas com sucesso!' })
+    } catch (error: any) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const updateCost = (id: string, field: keyof FixedCost, value: string | number) => {

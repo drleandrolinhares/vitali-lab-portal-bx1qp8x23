@@ -35,7 +35,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  ListTree,
   Calculator,
   Settings,
   PieChart,
@@ -54,13 +53,14 @@ const formatBRL = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
 export default function PriceList() {
-  const { selectedLab, kanbanStages, appSettings, updateSetting } = useAppStore()
+  const { selectedLab, kanbanStages, appSettings, updateSettings } = useAppStore()
   const [prices, setPrices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
 
-  const [globalConfig, setGlobalConfig] = useState({
+  // Local state purely for the dialog form fields
+  const [configForm, setConfigForm] = useState({
     cardFee: '0',
     commission: '0',
     inadimplency: '0',
@@ -94,20 +94,11 @@ export default function PriceList() {
     fetchPrices()
   }, [])
 
-  useEffect(() => {
-    setGlobalConfig({
-      cardFee: appSettings['global_card_fee'] || '0',
-      commission: appSettings['global_commission'] || '0',
-      inadimplency: appSettings['global_inadimplency'] || '0',
-      taxes: appSettings['global_taxes'] || '0',
-    })
-  }, [appSettings])
-
   const filteredPrices = useMemo(() => {
     return prices.filter((p) => selectedLab === 'Todos' || p.sector === selectedLab)
   }, [prices, selectedLab])
 
-  // Calculate Cost Per Minute from Settings
+  // Calculate Cost Per Minute from Settings dynamically
   const costPerMinute = useMemo(() => {
     const itemsStr = appSettings['hourly_cost_fixed_items']
     const hoursStr = appSettings['hourly_cost_monthly_hours']
@@ -126,16 +117,26 @@ export default function PriceList() {
     return totalFixed / hours / 60
   }, [appSettings])
 
-  // Auto-calculate total price when stages change
-  useEffect(() => {
-    if (formData.stages.length > 0) {
-      const total = formData.stages.reduce((sum, stage) => {
-        const val = parseFloat(String(stage.price).replace(',', '.')) || 0
-        return sum + val
-      }, 0)
-      setFormData((prev) => ({ ...prev, price: total.toFixed(2) }))
-    }
-  }, [formData.stages])
+  const handleOpenGlobalConfig = () => {
+    setConfigForm({
+      cardFee: appSettings['global_card_fee'] || '0',
+      commission: appSettings['global_commission'] || '0',
+      inadimplency: appSettings['global_inadimplency'] || '0',
+      taxes: appSettings['global_taxes'] || '0',
+    })
+    setGlobalConfigOpen(true)
+  }
+
+  const handleSaveGlobalConfig = async () => {
+    await updateSettings({
+      global_card_fee: configForm.cardFee,
+      global_commission: configForm.commission,
+      global_inadimplency: configForm.inadimplency,
+      global_taxes: configForm.taxes,
+    })
+    toast({ title: 'Taxas globais salvas com sucesso!' })
+    setGlobalConfigOpen(false)
+  }
 
   const handleNew = () => {
     setFormData({
@@ -216,15 +217,6 @@ export default function PriceList() {
     fetchPrices()
   }
 
-  const handleSaveGlobalConfig = async () => {
-    await updateSetting('global_card_fee', globalConfig.cardFee)
-    await updateSetting('global_commission', globalConfig.commission)
-    await updateSetting('global_inadimplency', globalConfig.inadimplency)
-    await updateSetting('global_taxes', globalConfig.taxes)
-    toast({ title: 'Taxas globais salvas com sucesso!' })
-    setGlobalConfigOpen(false)
-  }
-
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja excluir este procedimento?')) return
     const { error } = await supabase.from('price_list').delete().eq('id', id)
@@ -240,16 +232,16 @@ export default function PriceList() {
     setFormData({ ...formData, stages: newStages })
   }
 
-  // Profitability Calculations
+  // Profitability Calculations using direct appSettings logic
   const priceNum = parseFloat(String(formData.price).replace(',', '.')) || 0
   const execTime = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
   const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
   const materialVal = parseFloat(String(formData.material_cost).replace(',', '.')) || 0
 
-  const globalCardFee = parseFloat(globalConfig.cardFee) || 0
-  const globalCommission = parseFloat(globalConfig.commission) || 0
-  const globalInadimplency = parseFloat(globalConfig.inadimplency) || 0
-  const globalTaxes = parseFloat(globalConfig.taxes) || 0
+  const globalCardFee = parseFloat(appSettings['global_card_fee']) || 0
+  const globalCommission = parseFloat(appSettings['global_commission']) || 0
+  const globalInadimplency = parseFloat(appSettings['global_inadimplency']) || 0
+  const globalTaxes = parseFloat(appSettings['global_taxes']) || 0
 
   const fixedCost = execTime * costPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
@@ -280,7 +272,7 @@ export default function PriceList() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <Button variant="outline" onClick={() => setGlobalConfigOpen(true)}>
+          <Button variant="outline" onClick={handleOpenGlobalConfig}>
             <Settings className="w-4 h-4 mr-2" /> Taxas Globais
           </Button>
           <Button variant="outline" asChild className="hidden sm:flex">
@@ -301,7 +293,7 @@ export default function PriceList() {
               <TableRow>
                 <TableHead className="pl-6">Procedimento</TableHead>
                 <TableHead>Setor</TableHead>
-                <TableHead className="text-right">Valor Base</TableHead>
+                <TableHead className="text-right">Valor Venda Final</TableHead>
                 <TableHead className="text-right">Tempo Exec.</TableHead>
                 <TableHead className="text-right pr-6">Ações</TableHead>
               </TableRow>
@@ -354,7 +346,7 @@ export default function PriceList() {
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
               Estas taxas em % serão aplicadas automaticamente na análise de rentabilidade de todos
-              os procedimentos.
+              os procedimentos sobre o Valor de Venda Final.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -362,8 +354,8 @@ export default function PriceList() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={globalConfig.cardFee}
-                  onChange={(e) => setGlobalConfig({ ...globalConfig, cardFee: e.target.value })}
+                  value={configForm.cardFee}
+                  onChange={(e) => setConfigForm({ ...configForm, cardFee: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -371,8 +363,8 @@ export default function PriceList() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={globalConfig.commission}
-                  onChange={(e) => setGlobalConfig({ ...globalConfig, commission: e.target.value })}
+                  value={configForm.commission}
+                  onChange={(e) => setConfigForm({ ...configForm, commission: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -380,10 +372,8 @@ export default function PriceList() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={globalConfig.inadimplency}
-                  onChange={(e) =>
-                    setGlobalConfig({ ...globalConfig, inadimplency: e.target.value })
-                  }
+                  value={configForm.inadimplency}
+                  onChange={(e) => setConfigForm({ ...configForm, inadimplency: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -391,8 +381,8 @@ export default function PriceList() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={globalConfig.taxes}
-                  onChange={(e) => setGlobalConfig({ ...globalConfig, taxes: e.target.value })}
+                  value={configForm.taxes}
+                  onChange={(e) => setConfigForm({ ...configForm, taxes: e.target.value })}
                 />
               </div>
             </div>
@@ -456,16 +446,13 @@ export default function PriceList() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor de Venda (R$) *</Label>
+                  <Label>Valor de Venda Final (R$) *</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="150.00"
                     value={formData.price}
-                    readOnly={formData.stages.length > 0}
-                    className={
-                      formData.stages.length > 0 ? 'bg-muted cursor-not-allowed font-semibold' : ''
-                    }
+                    className="font-semibold"
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   />
                 </div>
@@ -508,7 +495,7 @@ export default function PriceList() {
                       Etapas de Faturamento (Opcional)
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Divida o valor total por etapas do Kanban.
+                      Divida o valor por etapas do Kanban (não interfere no cálculo de lucro).
                     </p>
                   </div>
                   <Button
@@ -591,7 +578,7 @@ export default function PriceList() {
 
                 <div className="space-y-3 flex-1 text-sm">
                   <div className="flex justify-between font-medium">
-                    <span>Preço de Venda</span>
+                    <span>Preço de Venda Final</span>
                     <span className="text-lg">{formatBRL(priceNum)}</span>
                   </div>
 
