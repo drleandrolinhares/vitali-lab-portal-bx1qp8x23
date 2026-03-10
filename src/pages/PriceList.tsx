@@ -355,48 +355,6 @@ export default function PriceList() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="shadow-subtle border-l-4 border-l-slate-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Total de Custos Fixos
-            </CardTitle>
-            <DollarSign className="w-4 h-4 text-slate-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-700">
-              {formatBRL(costs.totalFixedCosts)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Total Custo Hora
-            </CardTitle>
-            <Clock className="w-4 h-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatBRL(costs.totalHourlyCost)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Total Custo por Minuto
-            </CardTitle>
-            <Calculator className="w-4 h-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              {formatBRL(costs.costPerMinute)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="shadow-subtle">
         <CardContent className="p-0">
           <Table>
@@ -406,19 +364,21 @@ export default function PriceList() {
                 <TableHead>Setor</TableHead>
                 <TableHead className="text-right">Valor Venda Final</TableHead>
                 <TableHead className="text-right">Tempo Exec.</TableHead>
+                <TableHead className="text-right">Custo / Min</TableHead>
+                <TableHead className="text-right">Custo Fixo Est.</TableHead>
                 <TableHead className="text-right pr-6">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     Carregando procedimentos...
                   </TableCell>
                 </TableRow>
               ) : filteredPrices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     Nenhum procedimento encontrado.
                   </TableCell>
                 </TableRow>
@@ -437,6 +397,12 @@ export default function PriceList() {
                     <TableCell className="text-right font-semibold">R$ {item.price}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {item.execution_time ? `${item.execution_time} min` : '-'}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground font-medium">
+                      {formatBRL(costs.costPerMinute)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatBRL((item.execution_time || 0) * costs.costPerMinute)}
                     </TableCell>
                     <TableCell className="text-right pr-6 space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
@@ -520,9 +486,52 @@ export default function PriceList() {
             <DialogTitle>{formData.id ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
           </DialogHeader>
 
+          {/* Mirrored Custo Hora Clínica Dashboard */}
+          <div className="grid gap-3 md:grid-cols-3 mb-2 px-1">
+            <Card className="shadow-sm border-l-4 border-l-slate-500 bg-slate-50/50 dark:bg-slate-900/50">
+              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Total de Custos Fixos
+                </CardTitle>
+                <DollarSign className="w-4 h-4 text-slate-500" />
+              </CardHeader>
+              <CardContent className="p-3 pt-2">
+                <div className="text-lg font-bold text-slate-700">
+                  {formatBRL(costs.totalFixedCosts)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20">
+              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Total Custo Hora
+                </CardTitle>
+                <Clock className="w-4 h-4 text-blue-500" />
+              </CardHeader>
+              <CardContent className="p-3 pt-2">
+                <div className="text-lg font-bold text-blue-600">
+                  {formatBRL(costs.totalHourlyCost)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm border-l-4 border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Total Custo por Minuto
+                </CardTitle>
+                <Calculator className="w-4 h-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent className="p-3 pt-2">
+                <div className="text-lg font-bold text-emerald-600">
+                  {formatBRL(costs.costPerMinute)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-2">
             {/* Left Column: Form Fields */}
-            <div className="lg:col-span-7 space-y-4 max-h-[65vh] overflow-y-auto px-1 pr-3">
+            <div className="lg:col-span-7 space-y-4 max-h-[55vh] overflow-y-auto px-1 pr-3 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Nome do Procedimento *</Label>
@@ -583,20 +592,9 @@ export default function PriceList() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2">
                   <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
-                    TOTAL CUSTO POR MINUTO
-                  </Label>
-                  <Input
-                    value={formatBRL(costs.costPerMinute)}
-                    readOnly
-                    disabled
-                    className="bg-muted text-muted-foreground font-medium cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
-                    CUSTO FIXO
+                    CUSTO FIXO ESPECÍFICO DESTE PROCEDIMENTO (Tempo × Custo/Min)
                   </Label>
                   <Input
                     value={formatBRL(fixedCost)}
