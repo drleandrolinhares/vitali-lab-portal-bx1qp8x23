@@ -113,3 +113,47 @@ export function filterOrdersForFinancials(orders: any[], selectedMonth: string) 
     }
   })
 }
+
+export function calculateProcedureProfitability({
+  price,
+  executionTime,
+  cadistaCost,
+  materialCost,
+  costPerMinute,
+  globalCardFee,
+  globalCommission,
+  globalInadimplency,
+  globalTaxes,
+}: {
+  price: number
+  executionTime: number
+  cadistaCost: number
+  materialCost: number
+  costPerMinute: number
+  globalCardFee: number
+  globalCommission: number
+  globalInadimplency: number
+  globalTaxes: number
+}) {
+  const fixedCost = executionTime * costPerMinute
+  const cardFeeVal = price * (globalCardFee / 100)
+  const commissionVal = price * (globalCommission / 100)
+  const inadimplencyVal = price * (globalInadimplency / 100)
+  const taxesVal = price * (globalTaxes / 100)
+
+  const totalCosts =
+    fixedCost + cardFeeVal + commissionVal + inadimplencyVal + taxesVal + cadistaCost + materialCost
+  const profitVal = price - totalCosts
+  const profitMargin = price > 0 ? (profitVal / price) * 100 : 0
+
+  return {
+    fixedCost,
+    cardFeeVal,
+    commissionVal,
+    inadimplencyVal,
+    taxesVal,
+    totalCosts,
+    profitVal,
+    profitMargin,
+  }
+}

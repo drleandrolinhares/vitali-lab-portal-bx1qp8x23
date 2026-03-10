@@ -65,6 +65,38 @@ export type Database = {
           },
         ]
       }
+      billing_controls: {
+        Row: {
+          created_at: string
+          dentist_id: string
+          id: string
+          month: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          dentist_id: string
+          id?: string
+          month: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          dentist_id?: string
+          id?: string
+          month?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'billing_controls_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       dre_categories: {
         Row: {
           category_type: string
@@ -740,6 +772,12 @@ export const Constants = {
 //   entity_id: text (nullable)
 //   details: jsonb (nullable, default: '{}'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: billing_controls
+//   id: uuid (not null, default: gen_random_uuid())
+//   dentist_id: uuid (not null)
+//   month: text (not null)
+//   status: text (not null, default: 'sent'::text)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: dre_categories
 //   name: text (not null)
 //   category_type: text (not null, default: 'fixed'::text)
@@ -874,6 +912,10 @@ export const Constants = {
 // Table: audit_logs
 //   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
+// Table: billing_controls
+//   FOREIGN KEY billing_controls_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   UNIQUE billing_controls_dentist_id_month_key: UNIQUE (dentist_id, month)
+//   PRIMARY KEY billing_controls_pkey: PRIMARY KEY (id)
 // Table: dre_categories
 //   PRIMARY KEY dre_categories_pkey: PRIMARY KEY (name)
 // Table: expenses
@@ -919,6 +961,11 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
 //   Policy "Authenticated insert audit logs" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
+// Table: billing_controls
+//   Policy "Admin access billing_controls" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'receptionist'::text])))))
+//   Policy "Public read billing_controls" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: dre_categories
 //   Policy "Admin write dre_categories" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
@@ -1106,5 +1153,7 @@ export const Constants = {
 // Table: audit_logs
 //   CREATE INDEX idx_audit_logs_created_at ON public.audit_logs USING btree (created_at DESC)
 //   CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id)
+// Table: billing_controls
+//   CREATE UNIQUE INDEX billing_controls_dentist_id_month_key ON public.billing_controls USING btree (dentist_id, month)
 // Table: kanban_stages
 //   CREATE UNIQUE INDEX kanban_stages_name_key ON public.kanban_stages USING btree (name)

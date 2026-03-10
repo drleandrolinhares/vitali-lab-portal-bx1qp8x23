@@ -44,6 +44,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
+import { calculateProcedureProfitability } from '@/lib/financial'
 
 interface StageInput {
   name: string
@@ -211,11 +212,14 @@ export default function PriceList() {
     return Array.from(new Set([...list, ...fromPriceList])).sort()
   }, [appSettings, prices])
 
-  const getSetting = (key: string) => {
-    const storeVal = appSettings[key]
-    if (storeVal !== undefined && storeVal !== null && storeVal !== '') return storeVal
-    return localConfig[key]
-  }
+  const getSetting = useCallback(
+    (key: string) => {
+      const storeVal = appSettings[key]
+      if (storeVal !== undefined && storeVal !== null && storeVal !== '') return storeVal
+      return localConfig[key]
+    },
+    [appSettings, localConfig],
+  )
 
   const handleOpenGlobalConfig = () => {
     setGlobalErrors({})
@@ -443,21 +447,24 @@ export default function PriceList() {
       const cVal = parseLocalNum(item.cadista_cost)
       const mVal = parseLocalNum(item.material_cost)
 
-      const gCardFee = parseLocalNum(getSetting('global_card_fee'))
-      const gCommission = parseLocalNum(getSetting('global_commission'))
-      const gInadimplency = parseLocalNum(getSetting('global_inadimplency'))
-      const gTaxes = parseLocalNum(getSetting('global_taxes'))
+      const globalCardFee = parseLocalNum(getSetting('global_card_fee'))
+      const globalCommission = parseLocalNum(getSetting('global_commission'))
+      const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
+      const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
-      const fCost = eTime * tableCosts.costPerMinute
+      const { profitMargin } = calculateProcedureProfitability({
+        price: pNum,
+        executionTime: eTime,
+        cadistaCost: cVal,
+        materialCost: mVal,
+        costPerMinute: tableCosts.costPerMinute,
+        globalCardFee,
+        globalCommission,
+        globalInadimplency,
+        globalTaxes,
+      })
 
-      const cFeeVal = pNum * (gCardFee / 100)
-      const commVal = pNum * (gCommission / 100)
-      const inadVal = pNum * (gInadimplency / 100)
-      const taxVal = pNum * (gTaxes / 100)
-
-      const tCosts = fCost + cFeeVal + commVal + inadVal + taxVal + cVal + mVal
-      const pVal = pNum - tCosts
-      return pNum > 0 ? (pVal / pNum) * 100 : 0
+      return profitMargin
     },
     [getSetting, tableCosts.costPerMinute],
   )
@@ -472,19 +479,29 @@ export default function PriceList() {
   const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
   const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
-  const fixedCost = execTime * modalCosts.costPerMinute
+  const {
+    fixedCost,
+    cardFeeVal,
+    commissionVal,
+    inadimplencyVal,
+    taxesVal,
+    totalCosts,
+    profitVal,
+    profitMargin,
+  } = calculateProcedureProfitability({
+    price: priceNum,
+    executionTime: execTime,
+    cadistaCost: cadistaVal,
+    materialCost: materialVal,
+    costPerMinute: modalCosts.costPerMinute,
+    globalCardFee,
+    globalCommission,
+    globalInadimplency,
+    globalTaxes,
+  })
+
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
-
-  const cardFeeVal = priceNum * (globalCardFee / 100)
-  const commissionVal = priceNum * (globalCommission / 100)
-  const inadimplencyVal = priceNum * (globalInadimplency / 100)
-  const taxesVal = priceNum * (globalTaxes / 100)
-
-  const totalCosts =
-    fixedCost + cardFeeVal + commissionVal + inadimplencyVal + taxesVal + cadistaVal + materialVal
-  const profitVal = priceNum - totalCosts
-  const profitMargin = priceNum > 0 ? (profitVal / priceNum) * 100 : 0
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
