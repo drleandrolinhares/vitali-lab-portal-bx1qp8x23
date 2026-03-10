@@ -40,7 +40,6 @@ import {
   PieChart,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -82,7 +81,54 @@ export default function PriceList() {
     stages: [] as StageInput[],
   })
 
-  // Fallback fetch to ensure settings are always available even if global state is lagging
+  const computeCostPerMinute = (config: Record<string, string>) => {
+    const itemsStr = config['hourly_cost_fixed_items']
+    const hoursStr = config['hourly_cost_monthly_hours']
+
+    let totalCosts = 0
+    let hours = 176
+
+    if (itemsStr) {
+      try {
+        const items = JSON.parse(itemsStr)
+        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
+      } catch (e) {
+        console.error('Failed to parse hourly_cost_fixed_items', e)
+      }
+    }
+    if (hoursStr) {
+      hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
+    }
+
+    if (hours <= 0) return 0
+    return totalCosts / (hours * 60)
+  }
+
+  const [realCostPerMinute, setRealCostPerMinute] = useState(0)
+
+  useEffect(() => {
+    const costStore = computeCostPerMinute(appSettings)
+    if (costStore > 0) {
+      setRealCostPerMinute(costStore)
+    } else {
+      const fetchDb = async () => {
+        const { data } = await supabase
+          .from('app_settings')
+          .select('*')
+          .in('key', ['hourly_cost_fixed_items', 'hourly_cost_monthly_hours'])
+        if (data) {
+          const config = data.reduce(
+            (acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }),
+            {},
+          )
+          setLocalConfig((prev) => ({ ...prev, ...config }))
+          setRealCostPerMinute(computeCostPerMinute(config))
+        }
+      }
+      fetchDb()
+    }
+  }, [appSettings])
+
   useEffect(() => {
     const fetchDbSettings = async () => {
       const { data } = await supabase.from('app_settings').select('*')
@@ -121,50 +167,6 @@ export default function PriceList() {
     return localConfig[key]
   }
 
-  // Calculate Cost Per Minute from Settings dynamically or fetch explicitly
-  const finalCostPerMinute = useMemo(() => {
-    // Priority: Fetch direct calculated value stored in settings (e.g. from HourlyCost page)
-    const directValue =
-      getSetting('cost_per_minute') ||
-      getSetting('total_cost_per_minute') ||
-      getSetting('hourly_cost_per_minute')
-
-    if (directValue !== undefined && directValue !== null && directValue !== '') {
-      return parseFloat(String(directValue).replace(',', '.')) || 0
-    }
-
-    // Fallback logic: Try calculating from standard keys if direct value not found
-    const itemsStr = getSetting('hourly_cost_fixed_items')
-    const laborStr = getSetting('hourly_cost_labor_items')
-    const hoursStr = getSetting('hourly_cost_monthly_hours')
-
-    let totalCosts = 0
-    let hours = 176
-
-    if (itemsStr) {
-      try {
-        const items = JSON.parse(itemsStr)
-        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        console.error('Failed to parse hourly_cost_fixed_items', e)
-      }
-    }
-    if (laborStr) {
-      try {
-        const items = JSON.parse(laborStr)
-        totalCosts += items.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0)
-      } catch (e) {
-        console.error('Failed to parse hourly_cost_labor_items', e)
-      }
-    }
-    if (hoursStr) {
-      hours = parseFloat(String(hoursStr).replace(',', '.')) || 176
-    }
-
-    if (hours <= 0) return 0
-    return totalCosts / (hours * 60)
-  }, [appSettings, localConfig])
-
   const handleOpenGlobalConfig = () => {
     setConfigForm({
       cardFee: getSetting('global_card_fee') || '0',
@@ -185,7 +187,6 @@ export default function PriceList() {
 
     await updateSettings(updates)
 
-    // Optimistic fallback update to prevent any lag
     setLocalConfig((prev) => ({ ...prev, ...updates }))
 
     toast({ title: 'Taxas globais salvas com sucesso!' })
@@ -234,7 +235,7 @@ export default function PriceList() {
     }
 
     const execTimeForSave = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
-    const calculatedFixedCost = execTimeForSave * finalCostPerMinute
+    const calculatedFixedCost = execTimeForSave * realCostPerMinute
 
     const payload = {
       work_type: formData.work_type,
@@ -290,7 +291,6 @@ export default function PriceList() {
     setFormData({ ...formData, stages: newStages })
   }
 
-  // Profitability Calculations using direct appSettings / local fallback
   const priceNum = parseFloat(String(formData.price).replace(',', '.')) || 0
   const execTime = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
   const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
@@ -304,9 +304,7 @@ export default function PriceList() {
     parseFloat(String(getSetting('global_inadimplency') || '0').replace(',', '.')) || 0
   const globalTaxes = parseFloat(String(getSetting('global_taxes') || '0').replace(',', '.')) || 0
 
-  // The Fixed Cost accurately multiplies the exact duration set in the UI
-  // by the dynamically fetched "Total Custo Por Minuto" without interference from stages.
-  const fixedCost = execTime * finalCostPerMinute
+  const fixedCost = execTime * realCostPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
@@ -335,21 +333,6 @@ export default function PriceList() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <div className="hidden sm:flex items-center gap-2 text-sm bg-muted/40 px-3 py-2 rounded-md border border-border/50">
-            <span className="text-muted-foreground font-medium">Custo/Min:</span>
-            {finalCostPerMinute > 0 ? (
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
-                {formatBRL(finalCostPerMinute)}
-              </span>
-            ) : (
-              <span
-                className="font-semibold text-amber-500 flex items-center gap-1.5"
-                title="Configure o Custo por Minuto no sistema."
-              >
-                <AlertCircle className="w-4 h-4" /> 0,00
-              </span>
-            )}
-          </div>
           <Button variant="outline" onClick={handleOpenGlobalConfig}>
             <Settings className="w-4 h-4 mr-2" /> Taxas Globais
           </Button>
@@ -555,9 +538,10 @@ export default function PriceList() {
                     TOTAL CUSTO POR MINUTO
                   </Label>
                   <Input
-                    value={formatBRL(finalCostPerMinute)}
+                    value={formatBRL(realCostPerMinute)}
+                    readOnly
                     disabled
-                    className="bg-muted text-muted-foreground font-medium"
+                    className="bg-muted text-muted-foreground font-medium cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
@@ -566,8 +550,9 @@ export default function PriceList() {
                   </Label>
                   <Input
                     value={formatBRL(fixedCost)}
+                    readOnly
                     disabled
-                    className="bg-muted font-semibold text-primary"
+                    className="bg-muted font-semibold text-primary cursor-not-allowed"
                   />
                 </div>
 
