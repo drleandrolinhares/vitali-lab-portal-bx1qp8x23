@@ -17,19 +17,20 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
 
   let basePrice = order.basePrice || 0
 
-  // Fallback to priceList if basePrice is 0 (prevents 0-value revenue bugs)
+  // Fallback to priceList if basePrice is 0 (prevents 0-value revenue bugs for old orders)
   if (basePrice === 0 && priceList && priceList.length > 0) {
     const priceItem =
       priceList.find(
         (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
       ) || priceList.find((p) => p.work_type === order.workType)
 
-    if (priceItem && priceItem.price) {
+    if (priceItem && priceItem.price != null) {
       const numericString = String(priceItem.price)
         .replace(/[^\d,.-]/g, '')
         .replace(/\./g, '')
         .replace(',', '.')
-      basePrice = parseFloat(numericString) || 0
+      const parsed = parseFloat(numericString)
+      basePrice = !isNaN(parsed) ? parsed : 0
     }
   }
 

@@ -381,12 +381,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ) || priceList.find((p) => p.work_type === orderData.workType)
 
     let basePrice = 0
-    if (priceItem && priceItem.price) {
+    if (priceItem && priceItem.price != null) {
       const numericString = String(priceItem.price)
         .replace(/[^\d,.-]/g, '')
         .replace(/\./g, '')
         .replace(',', '.')
-      basePrice = parseFloat(numericString) || 0
+      const parsed = parseFloat(numericString)
+      basePrice = !isNaN(parsed) ? parsed : 0
 
       if (discountPercent > 0) {
         basePrice = basePrice * (1 - discountPercent / 100)

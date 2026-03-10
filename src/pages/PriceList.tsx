@@ -54,6 +54,18 @@ interface StageInput {
 const formatBRL = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
+const parseLocalNum = (val: string | number | null | undefined) => {
+  const parsed = parseFloat(String(val ?? '').replace(',', '.'))
+  return !isNaN(parsed) ? parsed : 0
+}
+
+const isInvalidNumber = (val: string | number | null | undefined) => {
+  const str = String(val ?? '').trim()
+  if (str === '') return true
+  const parsed = parseFloat(str.replace(',', '.'))
+  return isNaN(parsed) || parsed < 0
+}
+
 export default function PriceList() {
   const { selectedLab, kanbanStages, appSettings, updateSettings } = useAppStore()
   const [prices, setPrices] = useState<any[]>([])
@@ -221,10 +233,10 @@ export default function PriceList() {
     setGlobalAttempted(true)
     const newErrors: Record<string, boolean> = {}
 
-    if (!configForm.cardFee?.toString().trim()) newErrors.cardFee = true
-    if (!configForm.commission?.toString().trim()) newErrors.commission = true
-    if (!configForm.inadimplency?.toString().trim()) newErrors.inadimplency = true
-    if (!configForm.taxes?.toString().trim()) newErrors.taxes = true
+    if (isInvalidNumber(configForm.cardFee)) newErrors.cardFee = true
+    if (isInvalidNumber(configForm.commission)) newErrors.commission = true
+    if (isInvalidNumber(configForm.inadimplency)) newErrors.inadimplency = true
+    if (isInvalidNumber(configForm.taxes)) newErrors.taxes = true
 
     setGlobalErrors(newErrors)
 
@@ -250,12 +262,12 @@ export default function PriceList() {
   const handleGlobalChange = (field: keyof typeof configForm, value: string) => {
     setConfigForm((prev) => ({ ...prev, [field]: value }))
     if (globalAttempted || globalErrors[field]) {
-      setGlobalErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+      setGlobalErrors((prev) => ({ ...prev, [field]: isInvalidNumber(value) }))
     }
   }
 
   const handleGlobalBlur = (field: keyof typeof configForm) => {
-    setGlobalErrors((prev) => ({ ...prev, [field]: !configForm[field]?.toString().trim() }))
+    setGlobalErrors((prev) => ({ ...prev, [field]: isInvalidNumber(configForm[field]) }))
   }
 
   const handleNew = () => {
@@ -301,15 +313,23 @@ export default function PriceList() {
   const handleFormChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (hasAttemptedSubmit || formErrors[field]) {
-      setFormErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+      if (field === 'price') {
+        setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(value) }))
+      } else {
+        setFormErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+      }
     }
   }
 
   const handleFormBlur = (field: keyof typeof formData) => {
-    setFormErrors((prev) => ({
-      ...prev,
-      [field]: !formData[field]?.toString().trim(),
-    }))
+    if (field === 'price') {
+      setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(formData[field]) }))
+    } else {
+      setFormErrors((prev) => ({
+        ...prev,
+        [field]: !formData[field]?.toString().trim(),
+      }))
+    }
   }
 
   const handleSave = async () => {
@@ -317,11 +337,11 @@ export default function PriceList() {
     const newErrors: Record<string, boolean> = {}
 
     if (!formData.work_type?.trim()) newErrors.work_type = true
-    if (!formData.price?.toString().trim()) newErrors.price = true
+    if (isInvalidNumber(formData.price)) newErrors.price = true
 
     formData.stages.forEach((stage, idx) => {
       if (!stage.name?.trim()) newErrors[`stage_${idx}_name`] = true
-      if (!stage.price?.toString().trim()) newErrors[`stage_${idx}_price`] = true
+      if (isInvalidNumber(stage.price)) newErrors[`stage_${idx}_price`] = true
     })
 
     setFormErrors(newErrors)
@@ -330,7 +350,7 @@ export default function PriceList() {
       return toast({ title: 'Preencha os campos obrigatórios.', variant: 'destructive' })
     }
 
-    const execTimeForSave = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
+    const execTimeForSave = parseLocalNum(formData.execution_time)
     const calculatedFixedCost = execTimeForSave * modalCosts.costPerMinute
 
     const payload = {
@@ -340,8 +360,8 @@ export default function PriceList() {
       price: formData.price,
       sector: formData.sector,
       execution_time: execTimeForSave,
-      cadista_cost: parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0,
-      material_cost: parseFloat(String(formData.material_cost).replace(',', '.')) || 0,
+      cadista_cost: parseLocalNum(formData.cadista_cost),
+      material_cost: parseLocalNum(formData.material_cost),
       fixed_cost: calculatedFixedCost,
     }
 
@@ -361,7 +381,7 @@ export default function PriceList() {
       const stagesToInsert = formData.stages.map((s) => ({
         price_list_id: priceListId,
         name: s.name,
-        price: parseFloat(String(s.price).replace(',', '.')) || 0,
+        price: parseLocalNum(s.price),
         kanban_stage: s.kanban_stage || kanbanStages[0]?.name || 'TRIAGEM',
       }))
       await supabase.from('price_stages').insert(stagesToInsert)
@@ -387,18 +407,26 @@ export default function PriceList() {
     setFormData({ ...formData, stages: newStages })
 
     if (hasAttemptedSubmit || formErrors[`stage_${index}_${key}`]) {
-      setFormErrors((prev) => ({
-        ...prev,
-        [`stage_${index}_${key}`]: !value.trim(),
-      }))
+      if (key === 'price') {
+        setFormErrors((prev) => ({ ...prev, [`stage_${index}_${key}`]: isInvalidNumber(value) }))
+      } else {
+        setFormErrors((prev) => ({ ...prev, [`stage_${index}_${key}`]: !value.trim() }))
+      }
     }
   }
 
   const handleStageBlur = (index: number, key: keyof StageInput) => {
-    setFormErrors((prev) => ({
-      ...prev,
-      [`stage_${index}_${key}`]: !formData.stages[index][key]?.trim(),
-    }))
+    if (key === 'price') {
+      setFormErrors((prev) => ({
+        ...prev,
+        [`stage_${index}_${key}`]: isInvalidNumber(formData.stages[index][key]),
+      }))
+    } else {
+      setFormErrors((prev) => ({
+        ...prev,
+        [`stage_${index}_${key}`]: !formData.stages[index][key]?.trim(),
+      }))
+    }
   }
 
   const handleModalCostsFetched = useCallback(
@@ -408,18 +436,15 @@ export default function PriceList() {
     [],
   )
 
-  const priceNum = parseFloat(String(formData.price).replace(',', '.')) || 0
-  const execTime = parseFloat(String(formData.execution_time).replace(',', '.')) || 0
-  const cadistaVal = parseFloat(String(formData.cadista_cost).replace(',', '.')) || 0
-  const materialVal = parseFloat(String(formData.material_cost).replace(',', '.')) || 0
+  const priceNum = parseLocalNum(formData.price)
+  const execTime = parseLocalNum(formData.execution_time)
+  const cadistaVal = parseLocalNum(formData.cadista_cost)
+  const materialVal = parseLocalNum(formData.material_cost)
 
-  const globalCardFee =
-    parseFloat(String(getSetting('global_card_fee') || '0').replace(',', '.')) || 0
-  const globalCommission =
-    parseFloat(String(getSetting('global_commission') || '0').replace(',', '.')) || 0
-  const globalInadimplency =
-    parseFloat(String(getSetting('global_inadimplency') || '0').replace(',', '.')) || 0
-  const globalTaxes = parseFloat(String(getSetting('global_taxes') || '0').replace(',', '.')) || 0
+  const globalCardFee = parseLocalNum(getSetting('global_card_fee'))
+  const globalCommission = parseLocalNum(getSetting('global_commission'))
+  const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
+  const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
   const fixedCost = execTime * modalCosts.costPerMinute
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
@@ -508,7 +533,9 @@ export default function PriceList() {
                         {item.sector || 'Geral'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">R$ {item.price}</TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatBRL(parseLocalNum(item.price))}
+                    </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {item.execution_time ? `${item.execution_time} min` : '-'}
                     </TableCell>
@@ -551,8 +578,8 @@ export default function PriceList() {
                   Taxa de Cartão (%) <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={configForm.cardFee}
                   onChange={(e) => handleGlobalChange('cardFee', e.target.value)}
                   onBlur={() => handleGlobalBlur('cardFee')}
@@ -566,8 +593,8 @@ export default function PriceList() {
                   Comissões (%) <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={configForm.commission}
                   onChange={(e) => handleGlobalChange('commission', e.target.value)}
                   onBlur={() => handleGlobalBlur('commission')}
@@ -581,8 +608,8 @@ export default function PriceList() {
                   Inadimplência (%) <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={configForm.inadimplency}
                   onChange={(e) => handleGlobalChange('inadimplency', e.target.value)}
                   onBlur={() => handleGlobalBlur('inadimplency')}
@@ -597,8 +624,8 @@ export default function PriceList() {
                   Impostos (%) <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={configForm.taxes}
                   onChange={(e) => handleGlobalChange('taxes', e.target.value)}
                   onBlur={() => handleGlobalBlur('taxes')}
@@ -697,9 +724,9 @@ export default function PriceList() {
                     Valor de Venda Final (R$) <span className="text-destructive">*</span>
                   </Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="150.00"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="150,00"
                     value={formData.price}
                     className={cn(
                       'font-semibold',
@@ -712,7 +739,8 @@ export default function PriceList() {
                 <div className="space-y-2">
                   <Label>Tempo de Execução (minutos)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Ex: 45"
                     value={formData.execution_time}
                     onChange={(e) => handleFormChange('execution_time', e.target.value)}
@@ -734,9 +762,9 @@ export default function PriceList() {
                 <div className="space-y-2">
                   <Label>Custo Cadista / Terceiro (R$)</Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
                     value={formData.cadista_cost}
                     onChange={(e) => handleFormChange('cadista_cost', e.target.value)}
                   />
@@ -744,9 +772,9 @@ export default function PriceList() {
                 <div className="space-y-2">
                   <Label>Custo de Material (R$)</Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
                     value={formData.material_cost}
                     onChange={(e) => handleFormChange('material_cost', e.target.value)}
                   />
@@ -806,6 +834,8 @@ export default function PriceList() {
                       </Label>
                       <Input
                         size="sm"
+                        type="text"
+                        inputMode="decimal"
                         value={stage.price}
                         onChange={(e) => updateStage(idx, 'price', e.target.value)}
                         onBlur={() => handleStageBlur(idx, 'price')}
