@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient } from 'npm:@supabase/supabase-js'
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +13,29 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing authorization header')
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
+
+    const {
+      data: { user: callerUser },
+      error: callerError,
+    } = await supabaseAdmin.auth.getUser(token)
+    if (callerError || !callerUser) throw new Error('Invalid or expired token')
+
+    const { data: callerProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role, permissions')
+      .eq('id', callerUser.id)
+      .single()
+
+    if (profileError || !callerProfile) throw new Error('Caller profile not found')
+
+    const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
+    const canAddDentist = (callerProfile.permissions || []).includes('add-dentist')
 
     const {
       userId,
@@ -32,34 +54,54 @@ Deno.serve(async (req: Request) => {
 
     if (!userId) throw new Error('UserId is required')
 
+    const isUpdatingDentist = canAddDentist && (role === 'dentist' || role === undefined)
+
+    if (!isAdmin && callerUser.id !== userId && !isUpdatingDentist) {
+      throw new Error('Unauthorized: You can only update your own profile')
+    }
+
+    if (!isAdmin && role !== undefined && role !== 'dentist') {
+      throw new Error('Unauthorized: Only admins can change roles to non-dentist')
+    }
+
     const phoneToUse = phone || personal_phone || null
 
     const authPayload: any = {
       email_confirm: true,
-      user_metadata: { name, role, clinic, phone: phoneToUse, whatsapp_group_link },
+      user_metadata: { name, clinic, phone: phoneToUse, whatsapp_group_link },
     }
+
+    if (role !== undefined) {
+      authPayload.user_metadata.role = role
+    }
+
     if (email) authPayload.email = email
     if (password) authPayload.password = password
 
-    const { data: authData, error: authError } = await supabase.auth.admin.updateUserById(
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       authPayload,
     )
     if (authError) throw authError
 
-    const updateData: any = { name, role, is_active }
+    const updateData: any = { name }
     if (clinic !== undefined) updateData.clinic = clinic
     if (email) updateData.email = email
-    if (permissions !== undefined) updateData.permissions = permissions
     if (whatsapp_group_link !== undefined) updateData.whatsapp_group_link = whatsapp_group_link
     if (phoneToUse !== undefined) updateData.personal_phone = phoneToUse
     if (job_function !== undefined) updateData.job_function = job_function
 
-    const { error: profileError } = await supabase
+    if (isAdmin || isUpdatingDentist) {
+      if (role !== undefined) updateData.role = role
+      if (is_active !== undefined) updateData.is_active = is_active
+      if (permissions !== undefined) updateData.permissions = permissions
+    }
+
+    const { error: dbProfileError } = await supabaseAdmin
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
-    if (profileError) throw profileError
+    if (dbProfileError) throw dbProfileError
 
     return new Response(JSON.stringify({ data: authData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

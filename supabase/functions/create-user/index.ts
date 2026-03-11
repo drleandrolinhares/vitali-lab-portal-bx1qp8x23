@@ -16,22 +16,18 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing authorization header')
 
-    const supabaseUserClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    const token = authHeader.replace('Bearer ', '')
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
     const {
       data: { user: callerUser },
       error: callerError,
-    } = await supabaseUserClient.auth.getUser()
+    } = await supabaseAdmin.auth.getUser(token)
     if (callerError || !callerUser) throw new Error('Invalid or expired token')
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
     const { data: callerProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
