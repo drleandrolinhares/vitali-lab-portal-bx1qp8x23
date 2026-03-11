@@ -32,7 +32,6 @@ import {
   Tags,
   Phone,
   Wallet,
-  ChevronRight,
   User,
 } from 'lucide-react'
 import {
@@ -49,11 +48,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenuBadge,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,7 +70,6 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const ADMIN_MENUS = [
   {
     group: 'OPERACIONAL',
-    isCollapsibleGroup: false,
     items: [
       { id: 'inbox', title: 'CAIXA DE ENTRADA', icon: FileText, path: '/app' },
       { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
@@ -85,42 +79,15 @@ const ADMIN_MENUS = [
   },
   {
     group: 'ADMINISTRATIVO',
-    isCollapsibleGroup: false,
     items: [
       { id: 'dentists', title: 'DENTISTAS', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
-      {
-        id: 'settings',
-        title: 'USUÁRIOS',
-        icon: UserPlus,
-        isCollapsible: true,
-        subItems: [
-          {
-            id: 'users-colab',
-            title: 'USUÁRIOS/COLABORADORES',
-            path: '/settings?tab=users',
-            reqAdmin: true,
-          },
-          {
-            id: 'work-schedule',
-            title: 'ESCALA DE TRABALHO',
-            path: '/settings?tab=work-schedule',
-            reqAdmin: true,
-          },
-          { id: 'my-profile', title: 'MEU PERFIL', path: '/settings?tab=profile', reqAdmin: false },
-        ],
-      },
-      {
-        id: 'pending-users',
-        title: 'CADASTROS PENDENTES',
-        icon: UserPlus,
-        path: '/pending-users',
-      },
+      { id: 'settings', title: 'USUÁRIOS', icon: UserPlus, path: '/settings?tab=users' },
+      { id: 'pending-users', title: 'CADASTROS PENDENTES', icon: UserPlus, path: '/pending-users' },
     ],
   },
   {
     group: 'FINANCEIRO',
-    isCollapsibleGroup: false,
     items: [
       { id: 'dashboard', title: 'DASHBOARD GERENCIAL', icon: BarChart3, path: '/dashboard' },
       { id: 'finances', title: 'DASHBOARD FINANCEIRO', icon: TrendingUp, path: '/dre' },
@@ -143,18 +110,15 @@ const ADMIN_MENUS = [
   },
   {
     group: 'CONFIGURAÇÕES',
-    isCollapsibleGroup: true,
     items: [
-      { id: 'settings', title: 'WHATSAPP', icon: Phone, path: '/settings?tab=system' },
       {
         id: 'settings',
-        title: 'MARCAS DE IMPLANTES',
+        title: 'CONFIGURAÇÕES GERAIS',
         icon: Settings,
-        path: '/settings?tab=brands',
+        path: '/settings?tab=system',
       },
-      { id: 'settings', title: 'ESCALAS DE COR', icon: Settings, path: '/settings?tab=scales' },
       { id: 'dre-categories', title: 'CATEGORIAS DE DRE', icon: Tags, path: '/dre-categories' },
-      { id: 'audit', title: 'LOG DE DRE', icon: ShieldAlert, path: '/audit-logs' },
+      { id: 'audit', title: 'LOG DE AUDITORIA', icon: ShieldAlert, path: '/audit-logs' },
     ],
   },
 ]
@@ -348,21 +312,6 @@ function AppSidebar() {
           ADMIN_MENUS.map((group) => {
             const visibleItems = group.items
               .map((item) => {
-                if (item.isCollapsible) {
-                  const visibleSubItems = item.subItems?.filter((sub: any) => {
-                    if (
-                      sub.reqAdmin &&
-                      currentUser.role !== 'admin' &&
-                      currentUser.role !== ('master' as any)
-                    )
-                      return false
-                    return true
-                  })
-                  if (!visibleSubItems || visibleSubItems.length === 0) return null
-                  if (!hasPerm(item.id) && visibleSubItems.every((s) => s.id !== 'my-profile'))
-                    return null
-                  return { ...item, subItems: visibleSubItems }
-                }
                 if (
                   item.id === 'pending-users' &&
                   currentUser.role !== 'admin' &&
@@ -376,21 +325,6 @@ function AppSidebar() {
 
             if (visibleItems.length === 0) return null
 
-            const isGroupActive = visibleItems.some((item) => {
-              if (
-                item.path &&
-                (location.pathname === item.path ||
-                  location.pathname + location.search === item.path)
-              )
-                return true
-              if (item.subItems) {
-                return item.subItems.some(
-                  (sub: any) => location.pathname + location.search === sub.path,
-                )
-              }
-              return false
-            })
-
             const renderItems = () => (
               <SidebarMenu>
                 {visibleItems.map((item) => {
@@ -400,45 +334,6 @@ function AppSidebar() {
                   if (item.id === 'accounts-payable') badgeCount = overduePayables
                   if (item.id === 'inbox')
                     badgeCount = orders.filter((o: any) => !o.isAcknowledged).length
-
-                  if (item.isCollapsible) {
-                    const isSubActive = item.subItems?.some(
-                      (s: any) => location.pathname + location.search === s.path,
-                    )
-                    return (
-                      <Collapsible
-                        key={item.id}
-                        defaultOpen={isSubActive}
-                        className="group/collapsible"
-                      >
-                        <SidebarMenuItem>
-                          <CollapsibleTrigger asChild>
-                            <SidebarMenuButton tooltip={item.title}>
-                              <item.icon />
-                              <span>{item.title}</span>
-                              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                            </SidebarMenuButton>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <SidebarMenuSub>
-                              {item.subItems?.map((sub: any) => (
-                                <SidebarMenuSubItem key={sub.path}>
-                                  <SidebarMenuSubButton
-                                    asChild
-                                    isActive={location.pathname + location.search === sub.path}
-                                  >
-                                    <Link to={sub.path}>
-                                      <span>{sub.title}</span>
-                                    </Link>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              ))}
-                            </SidebarMenuSub>
-                          </CollapsibleContent>
-                        </SidebarMenuItem>
-                      </Collapsible>
-                    )
-                  }
 
                   return (
                     <SidebarMenuItem key={item.path}>
@@ -465,31 +360,6 @@ function AppSidebar() {
                 })}
               </SidebarMenu>
             )
-
-            if (group.isCollapsibleGroup) {
-              return (
-                <Collapsible
-                  key={group.group}
-                  defaultOpen={isGroupActive}
-                  className="group/collapsible-group"
-                >
-                  <SidebarGroup className="px-0 py-0 mb-4">
-                    <SidebarGroupLabel
-                      asChild
-                      className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-2 hover:text-sidebar-foreground cursor-pointer transition-colors"
-                    >
-                      <CollapsibleTrigger className="flex items-center justify-between w-full">
-                        <span>{group.group}</span>
-                        <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collapsible-group:rotate-90" />
-                      </CollapsibleTrigger>
-                    </SidebarGroupLabel>
-                    <CollapsibleContent>
-                      <SidebarGroupContent>{renderItems()}</SidebarGroupContent>
-                    </CollapsibleContent>
-                  </SidebarGroup>
-                </Collapsible>
-              )
-            }
 
             return (
               <SidebarGroup key={group.group} className="px-0 py-0 mb-4">
