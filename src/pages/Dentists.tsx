@@ -52,7 +52,16 @@ export default function DentistsPage() {
     commercial_agreement: '',
   })
 
-  const hasAccess = currentUser?.role === 'receptionist' || currentUser?.role === 'admin'
+  const hasAccess =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === ('master' as any) ||
+    currentUser?.role === 'receptionist' ||
+    (currentUser?.permissions || []).includes('dentists')
+
+  const canAddDentist =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === ('master' as any) ||
+    (currentUser?.permissions || []).includes('add-dentist')
 
   const fetchDentists = async () => {
     setLoading(true)
@@ -127,7 +136,11 @@ export default function DentistsPage() {
 
     const { error } = await createUser(payload)
     if (error) {
-      toast({ title: 'ERRO AO CRIAR DENTISTA', description: error.message, variant: 'destructive' })
+      toast({
+        title: 'ERRO AO CRIAR DENTISTA',
+        description: error.message,
+        variant: 'destructive',
+      })
       setLoading(false)
     } else {
       toast({ title: 'DENTISTA CRIADO COM SUCESSO!' })
@@ -210,7 +223,7 @@ export default function DentistsPage() {
             GERENCIE SEUS CLIENTES, CLÍNICAS PARCEIRAS E INFORMAÇÕES DE CONTATO.
           </p>
         </div>
-        {currentUser?.role === 'admin' && (
+        {canAddDentist && (
           <Button onClick={() => setIsCreating(true)} className="gap-2 uppercase text-xs font-bold">
             <Plus className="w-4 h-4" /> NOVO DENTISTA
           </Button>

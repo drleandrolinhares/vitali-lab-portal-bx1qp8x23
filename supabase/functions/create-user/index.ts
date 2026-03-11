@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient } from 'npm:@supabase/supabase-js'
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,30 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing authorization header')
+
+    const supabaseUserClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+
+    const {
+      data: { user: callerUser },
+      error: callerError,
+    } = await supabaseUserClient.auth.getUser()
+    if (callerError || !callerUser) throw new Error('Invalid or expired token')
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
+
+    const { data: callerProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role, permissions')
+      .eq('id', callerUser.id)
+      .single()
+
+    if (profileError || !callerProfile) throw new Error('Caller profile not found')
 
     const {
       email,
@@ -31,6 +54,18 @@ Deno.serve(async (req: Request) => {
       requires_password_change,
     } = await req.json()
 
+    const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
+    const canAddDentist = (callerProfile.permissions || []).includes('add-dentist')
+
+    if (!isAdmin) {
+      if (role !== 'dentist') {
+        throw new Error('Unauthorized: Apenas administradores podem criar este tipo de usuário.')
+      }
+      if (!canAddDentist) {
+        throw new Error('Unauthorized: Você não tem permissão para adicionar novos dentistas.')
+      }
+    }
+
     if (!email) throw new Error('Email is required')
     if (!password) throw new Error('Password is required')
 
@@ -43,7 +78,7 @@ Deno.serve(async (req: Request) => {
       user_metadata: { name, role, clinic, phone: phoneToUse, whatsapp_group_link },
     }
 
-    const { data, error } = await supabase.auth.admin.createUser(payload)
+    const { data, error } = await supabaseAdmin.auth.admin.createUser(payload)
 
     if (error) throw error
 
@@ -57,7 +92,7 @@ Deno.serve(async (req: Request) => {
       updateData.requires_password_change = requires_password_change
 
     if (Object.keys(updateData).length > 0) {
-      await supabase.from('profiles').update(updateData).eq('id', data.user.id)
+      await supabaseAdmin.from('profiles').update(updateData).eq('id', data.user.id)
     }
 
     return new Response(JSON.stringify({ data }), {

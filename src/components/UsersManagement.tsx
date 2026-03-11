@@ -50,6 +50,7 @@ export const PERMISSION_OPTIONS = [
   { id: 'settings', label: 'CONFIGURAÇÕES GERAIS' },
   { id: 'dre-categories', label: 'CATEGORIAS DRE' },
   { id: 'audit', label: 'LOGS DE AUDITORIA' },
+  { id: 'add-dentist', label: 'CRIAR NOVOS DENTISTAS' },
 ]
 
 export function UsersManagement() {

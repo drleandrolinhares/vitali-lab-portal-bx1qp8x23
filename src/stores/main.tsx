@@ -340,6 +340,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     is_approved: payload.new.is_approved,
                     is_active: payload.new.is_active,
                     requires_password_change: payload.new.requires_password_change,
+                    permissions: payload.new.permissions || [],
+                    role: payload.new.role,
                   }
                 : prev,
             )
