@@ -58,6 +58,7 @@ export default function KanbanPage() {
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const canDragCards = isAdmin || currentUser?.can_move_kanban_cards !== false
+  const showDentistFilter = currentUser?.role !== 'dentist'
 
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
@@ -102,17 +103,25 @@ export default function KanbanPage() {
   const savingRef = useRef(false)
 
   useEffect(() => {
-    if (isAdmin) {
-      supabase
-        .from('profiles')
-        .select('id, name')
-        .eq('role', 'dentist')
-        .order('name')
-        .then(({ data }) => {
-          if (data) setDentistsList(data)
-        })
+    if (showDentistFilter && currentUser) {
+      const fetchDentists = async () => {
+        let query = supabase.from('profiles').select('id, name').eq('role', 'dentist').order('name')
+
+        if (!isAdmin) {
+          if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
+            setDentistsList([])
+            return
+          }
+          query = query.in('id', currentUser.assigned_dentists)
+        }
+
+        const { data } = await query
+        if (data) setDentistsList(data)
+      }
+
+      fetchDentists()
     }
-  }, [isAdmin])
+  }, [showDentistFilter, isAdmin, currentUser])
 
   useEffect(() => {
     if (selectedOrder) setObsText(selectedOrder.observations || '')
@@ -221,7 +230,7 @@ export default function KanbanPage() {
             Acompanhe o progresso do fluxo de produção.
           </p>
         </div>
-        {isAdmin && (
+        {showDentistFilter && (
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" />
             <Select

@@ -223,22 +223,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!session?.user || !currentUser) return
     if (!hasFetchedOrders.current) setLoading(true)
 
-    const { data: dbOrders, error } = await supabase
+    const isLimitedStaff =
+      currentUser.role !== 'admin' &&
+      currentUser.role !== ('master' as any) &&
+      currentUser.role !== 'dentist'
+
+    if (
+      isLimitedStaff &&
+      (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0)
+    ) {
+      setOrders([])
+      hasFetchedOrders.current = true
+      setLoading(false)
+      return
+    }
+
+    let query = supabase
       .from('orders')
       .select(
         `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), creator:profiles!orders_created_by_fkey(name, role), order_history(*)`,
       )
       .order('created_at', { ascending: false })
 
+    if (isLimitedStaff) {
+      query = query.in('dentist_id', currentUser.assigned_dentists!)
+    }
+
+    const { data: dbOrders, error } = await query
+
     let finalOrders = dbOrders
     if (error) {
       console.warn('Orders fetch error (might be missing creator relation), falling back:', error)
-      const { data: fallbackOrders } = await supabase
+      let fallbackQuery = supabase
         .from('orders')
         .select(
           `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), order_history(*)`,
         )
         .order('created_at', { ascending: false })
+
+      if (isLimitedStaff) {
+        fallbackQuery = fallbackQuery.in('dentist_id', currentUser.assigned_dentists!)
+      }
+
+      const { data: fallbackOrders } = await fallbackQuery
       finalOrders = fallbackOrders
     }
 
@@ -373,12 +400,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let baseOrders = orders
 
-    if (
+    const isLimitedStaff =
       currentUser &&
-      currentUser.assigned_dentists !== null &&
-      currentUser.assigned_dentists !== undefined
-    ) {
-      baseOrders = baseOrders.filter((o) => currentUser.assigned_dentists!.includes(o.dentistId))
+      currentUser.role !== 'admin' &&
+      currentUser.role !== ('master' as any) &&
+      currentUser.role !== 'dentist'
+
+    if (isLimitedStaff) {
+      if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
+        return [] // Em caso de falta de permissão, não mostramos nenhum pedido.
+      } else {
+        baseOrders = baseOrders.filter((o) => currentUser.assigned_dentists!.includes(o.dentistId))
+      }
     }
 
     return baseOrders.map((o) => {
@@ -418,7 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         basePrice,
       }
     })
-  }, [orders, priceList, currentUser?.assigned_dentists])
+  }, [orders, priceList, currentUser])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
