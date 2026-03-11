@@ -237,8 +237,9 @@ function AppSidebar() {
       return roleDefaults.includes(id)
     }
 
-    // Fallback logic for existing 'admin' who have empty permissions before master logic configured it
+    // Fallback logic for roles that have empty permissions
     if (roleStr === 'admin') return true
+    if (roleStr === 'dentist') return true // Dentists should always see their default menu
 
     return false
   }
@@ -247,7 +248,7 @@ function AppSidebar() {
     { id: 'inbox', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
     { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
-    { id: 'finances', title: 'GESTÃO FINANCEIRA', icon: DollarSign, path: '/financial' },
+    { id: 'finances', title: 'FINANÇAS', icon: DollarSign, path: '/financial' },
     { id: 'history', title: 'HISTÓRICO', icon: History, path: '/history' },
     { id: 'profile', title: 'MEU PERFIL', icon: User, path: '/settings' },
   ]

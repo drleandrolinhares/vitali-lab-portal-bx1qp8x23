@@ -36,6 +36,7 @@ import {
 } from '@/lib/financial'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { Navigate } from 'react-router-dom'
 
 export default function FinancialPage() {
   const { orders, kanbanStages, currentUser, priceList, loading } = useAppStore()
@@ -48,6 +49,16 @@ export default function FinancialPage() {
   const safeOrders = Array.isArray(orders) ? orders : []
   const safePriceList = Array.isArray(priceList) ? priceList : []
   const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
+
+  // Security & Data Isolation: Automatically redirect non-dentists to prevent unauthorized access
+  // or confusion, as this page's design is strictly catered towards the dentist's point of view.
+  // Admins have their own comprehensive financial module under /admin-financial.
+  if (currentUser && currentUser.role !== 'dentist') {
+    if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
+      return <Navigate to="/admin-financial" replace />
+    }
+    return <Navigate to="/app" replace />
+  }
 
   // Filter orders by selected month to provide accurate historical view
   const monthFilteredOrders = useMemo(
@@ -109,16 +120,12 @@ export default function FinancialPage() {
       try {
         setFetchError(null)
 
-        let query = supabase
+        // RLS natively guarantees that the user only sees their own settlements.
+        // We omit the manual `.eq('dentist_id', ...)` to strictly comply with backend isolation rules.
+        const { data, error } = await supabase
           .from('settlements')
           .select('*')
           .order('created_at', { ascending: false })
-
-        if (currentUser.role !== 'admin') {
-          query = query.eq('dentist_id', currentUser.id)
-        }
-
-        const { data, error } = await query
 
         if (!isMounted) return
 
@@ -143,21 +150,17 @@ export default function FinancialPage() {
     return () => {
       isMounted = false
     }
-  }, [currentUser?.id, currentUser?.role])
+  }, [currentUser?.id])
 
-  if (loading || (safeOrders.length > 0 && safePriceList.length === 0)) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 animate-in fade-in duration-500">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <p className="text-muted-foreground text-sm font-medium">
-          Calculando valores e atualizando sistema financeiro...
+          Sincronizando seus dados financeiros...
         </p>
       </div>
     )
-  }
-
-  if (currentUser?.role !== 'dentist' && currentUser?.role !== 'admin') {
-    return <div className="p-8">Acesso restrito</div>
   }
 
   const totalAccumulated = verifiedDisplayOrders.reduce(
@@ -201,9 +204,9 @@ export default function FinancialPage() {
             <DollarSign className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">Gestão Financeira</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Minhas Finanças</h2>
             <p className="text-muted-foreground text-sm">
-              Acompanhe os custos pendentes e seu histórico de pagamentos.
+              Acompanhe seus custos pendentes, pipeline de produção e histórico de pagamentos.
             </p>
           </div>
         </div>
@@ -227,7 +230,7 @@ export default function FinancialPage() {
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6 print:hidden">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="overview">Visão Geral do Mês</TabsTrigger>
           <TabsTrigger value="history">Histórico de Pagamentos</TabsTrigger>
         </TabsList>
 
@@ -259,14 +262,18 @@ export default function FinancialPage() {
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-muted-foreground" /> Procedimentos do Período
+              <Activity className="w-5 h-5 text-muted-foreground" /> Seus Procedimentos do Período
             </h3>
 
             {verifiedDisplayOrders.length === 0 ? (
-              <Card>
+              <Card className="border-dashed bg-muted/20">
                 <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
                   <DollarSign className="w-12 h-12 mb-4 opacity-20" />
-                  Nenhum pedido registrado ou pendente neste mês.
+                  <p className="font-medium text-lg">Nenhum pedido encontrado</p>
+                  <p className="text-sm mt-1 text-center">
+                    Não existem trabalhos registrados, pendentes ou finalizados para o mês
+                    selecionado.
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -421,10 +428,13 @@ export default function FinancialPage() {
           )}
 
           {!fetchError && settlements.length === 0 ? (
-            <Card className="print:hidden">
+            <Card className="print:hidden border-dashed bg-muted/20">
               <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
                 <History className="w-12 h-12 mb-4 opacity-20" />
-                Nenhum pagamento liquidado no histórico.
+                <p className="font-medium text-lg">Nenhuma liquidação no histórico</p>
+                <p className="text-sm mt-1 text-center">
+                  Os pagamentos concluídos junto ao laboratório aparecerão arquivados nesta seção.
+                </p>
               </CardContent>
             </Card>
           ) : (
