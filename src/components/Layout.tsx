@@ -82,7 +82,7 @@ const ADMIN_MENUS = [
     items: [
       { id: 'dentists', title: 'DENTISTAS', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
-      { id: 'settings', title: 'USUÁRIOS', icon: UserPlus, path: '/settings?tab=users' },
+      { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
       { id: 'pending-users', title: 'CADASTROS PENDENTES', icon: UserPlus, path: '/pending-users' },
     ],
   },
@@ -115,7 +115,7 @@ const ADMIN_MENUS = [
         id: 'settings',
         title: 'CONFIGURAÇÕES GERAIS',
         icon: Settings,
-        path: '/settings?tab=system',
+        path: '/settings',
       },
       { id: 'dre-categories', title: 'CATEGORIAS DE DRE', icon: Tags, path: '/dre-categories' },
       { id: 'audit', title: 'LOG DE AUDITORIA', icon: ShieldAlert, path: '/audit-logs' },
@@ -212,11 +212,23 @@ function AppSidebar() {
   const hasPerm = (id: string) => {
     if (isMaster) return true // Master has unlimited access
     if (id === 'profile' || id === 'my-profile') return true // Ensure profile is allowed
-    if (customPermissions.length > 0) return customPermissions.includes(id) // User specific override
+
+    const hasCustom = customPermissions.length > 0
+    if (hasCustom) {
+      if (
+        id === 'users' &&
+        !customPermissions.includes('users') &&
+        customPermissions.includes('settings')
+      )
+        return true
+      return customPermissions.includes(id)
+    }
 
     // Otherwise, check the default permissions for their role
     const roleDefaults = defaultRolePerms[roleStr]
     if (Array.isArray(roleDefaults)) {
+      if (id === 'users' && !roleDefaults.includes('users') && roleDefaults.includes('settings'))
+        return true
       return roleDefaults.includes(id)
     }
 
@@ -232,7 +244,7 @@ function AppSidebar() {
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
     { id: 'finances', title: 'GESTÃO FINANCEIRA', icon: DollarSign, path: '/financial' },
     { id: 'history', title: 'HISTÓRICO', icon: History, path: '/history' },
-    { id: 'profile', title: 'MEU PERFIL', icon: User, path: '/settings?tab=profile' },
+    { id: 'profile', title: 'MEU PERFIL', icon: User, path: '/settings' },
   ]
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link

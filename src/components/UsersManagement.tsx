@@ -46,7 +46,8 @@ export const PERMISSION_OPTIONS = [
   { id: 'dentists', label: 'DENTISTAS' },
   { id: 'patients', label: 'PACIENTES' },
   { id: 'prices', label: 'TABELA DE PREÇOS' },
-  { id: 'settings', label: 'CONFIGURAÇÕES E USUÁRIOS' },
+  { id: 'users', label: 'USUÁRIOS' },
+  { id: 'settings', label: 'CONFIGURAÇÕES GERAIS' },
   { id: 'dre-categories', label: 'CATEGORIAS DRE' },
   { id: 'audit', label: 'LOGS DE AUDITORIA' },
 ]
