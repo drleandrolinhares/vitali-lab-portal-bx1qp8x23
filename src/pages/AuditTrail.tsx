@@ -87,8 +87,8 @@ export default function AuditTrail() {
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6" /> Logs de Auditoria
+          <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2 uppercase">
+            <ShieldCheck className="w-6 h-6" /> Log de DRE
           </h2>
           <p className="text-muted-foreground mt-1">
             Registro de segurança com histórico de ações sistêmicas.

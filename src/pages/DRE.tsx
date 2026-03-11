@@ -266,7 +266,9 @@ export default function DREPage() {
             <BarChart3 className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">DRE</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
+              Dashboard Financeiro
+            </h2>
             <p className="text-muted-foreground text-sm">
               Demonstrativo de Resultados do Exercício.
             </p>

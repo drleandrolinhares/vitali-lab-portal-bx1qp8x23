@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -27,6 +28,72 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+
+function ResetPasswordTab() {
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'As senhas não coincidem', variant: 'destructive' })
+      return
+    }
+    if (newPassword.length < 6) {
+      toast({ title: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' })
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      toast({
+        title: 'Erro ao atualizar senha',
+        description: error.message,
+        variant: 'destructive',
+      })
+    } else {
+      toast({ title: 'Senha atualizada com sucesso!' })
+      setNewPassword('')
+      setConfirmPassword('')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <Card className="shadow-subtle max-w-md">
+      <CardHeader>
+        <CardTitle>REDEFINIR SENHA</CardTitle>
+        <CardDescription>Atualize sua senha de acesso ao sistema.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>NOVA SENHA</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>CONFIRMAR NOVA SENHA</Label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? 'ATUALIZANDO...' : 'ATUALIZAR SENHA'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
 
 function RolePermissionsPanel() {
   const { appSettings, updateSetting } = useAppStore()
@@ -151,6 +218,8 @@ function RolePermissionsPanel() {
 
 export default function SettingsPage() {
   const { currentUser, appSettings, updateSetting, updateProfile } = useAppStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'profile'
 
   const [labLink, setLabLink] = useState('')
   const [savingSystem, setSavingSystem] = useState(false)
@@ -308,23 +377,31 @@ export default function SettingsPage() {
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-6 animate-fade-in">
       <div className="flex flex-col gap-1 mb-4">
-        <h2 className="text-2xl font-bold tracking-tight text-primary">Configurações Gerais</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
+          Configurações Gerais
+        </h2>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full">
         <TabsList className="mb-6 flex w-full max-w-full overflow-x-auto bg-transparent gap-2 h-auto p-0 pb-2 justify-start scrollbar-hide">
           <TabsTrigger
             value="profile"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
           >
-            Meu Perfil
+            MEU PERFIL
+          </TabsTrigger>
+          <TabsTrigger
+            value="reset-password"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+          >
+            REDEFINIR SENHA
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger
               value="system"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Sistema
+              WHATSAPP
             </TabsTrigger>
           )}
           {isAdmin && (
@@ -332,7 +409,7 @@ export default function SettingsPage() {
               value="users"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Usuários
+              USUÁRIOS / COLABORADORES
             </TabsTrigger>
           )}
           {isAdmin && (
@@ -340,7 +417,7 @@ export default function SettingsPage() {
               value="work-schedule"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Escala de Trabalho
+              ESCALA DE TRABALHO
             </TabsTrigger>
           )}
           {isAdmin && (
@@ -348,7 +425,7 @@ export default function SettingsPage() {
               value="scales"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Escalas de Cor
+              ESCALAS DE COR
             </TabsTrigger>
           )}
           {isAdmin && (
@@ -356,7 +433,7 @@ export default function SettingsPage() {
               value="brands"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Marcas de Implantes
+              MARCAS DE IMPLANTES
             </TabsTrigger>
           )}
           {isMaster && (
@@ -364,7 +441,7 @@ export default function SettingsPage() {
               value="role-permissions"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
             >
-              Permissões (Master)
+              PERMISSÕES (MASTER)
             </TabsTrigger>
           )}
         </TabsList>
@@ -408,7 +485,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
                         <User className="w-4 h-4 text-primary/70" />
-                        Nome Completo
+                        NOME COMPLETO
                       </Label>
                       <Input
                         value={name}
@@ -419,7 +496,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
                         <Building className="w-4 h-4 text-primary/70" />
-                        Clínica (Opcional)
+                        CLÍNICA (OPCIONAL)
                       </Label>
                       <Input
                         value={clinic}
@@ -430,7 +507,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
                         <User className="w-4 h-4 text-primary/70" />
-                        Função na Empresa
+                        FUNÇÃO NA EMPRESA
                       </Label>
                       <Input
                         value={jobFunction}
@@ -441,7 +518,7 @@ export default function SettingsPage() {
                     <div className="space-y-2 sm:col-span-2">
                       <Label className="flex items-center gap-2">
                         <LinkIcon className="w-4 h-4 text-primary/70" />
-                        Link do Grupo da Clínica (WhatsApp)
+                        LINK DO GRUPO DA CLÍNICA (WHATSAPP)
                       </Label>
                       <Input
                         value={whatsappGroupLink}
@@ -459,10 +536,14 @@ export default function SettingsPage() {
                 disabled={savingProfile || uploadingAvatar}
                 className="w-full sm:w-auto min-w-[150px]"
               >
-                {savingProfile ? 'Salvando...' : 'Salvar Perfil'}
+                {savingProfile ? 'SALVANDO...' : 'SALVAR PERFIL'}
               </Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="reset-password" className="space-y-6">
+          <ResetPasswordTab />
         </TabsContent>
 
         {isAdmin && (
@@ -477,7 +558,7 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-semibold">
+                    <Label className="flex items-center gap-2 font-semibold uppercase">
                       <Phone className="w-4 h-4 text-emerald-500" />
                       WhatsApp Vitali Lab (Contato Laboratório)
                     </Label>
@@ -498,7 +579,7 @@ export default function SettingsPage() {
                     disabled={savingSystem}
                     className="w-full sm:w-auto min-w-[150px]"
                   >
-                    {savingSystem ? 'Salvando...' : 'Salvar Configurações'}
+                    {savingSystem ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÕES'}
                   </Button>
                 </CardFooter>
               </Card>
@@ -524,19 +605,19 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
                     <Input
-                      placeholder="Nova escala (ex: VITA Clássica, BL, 3D Master)"
+                      placeholder="NOVA ESCALA (EX: VITA CLÁSSICA, BL, 3D MASTER)"
                       value={newScale}
                       onChange={(e) => setNewScale(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAddScale()
                       }}
-                      className="max-w-xs"
+                      className="max-w-xs uppercase"
                     />
-                    <Button onClick={handleAddScale}>Adicionar</Button>
+                    <Button onClick={handleAddScale}>ADICIONAR</Button>
                   </div>
                   <div className="space-y-2 mt-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                      Escalas Cadastradas
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase">
+                      ESCALAS CADASTRADAS
                     </h3>
                     {scales.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
@@ -549,7 +630,7 @@ export default function SettingsPage() {
                             key={i}
                             className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
                           >
-                            <span className="font-semibold text-sm">{s}</span>
+                            <span className="font-semibold text-sm uppercase">{s}</span>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -579,19 +660,19 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
                     <Input
-                      placeholder="Nova marca (ex: Neodent, Straumann)"
+                      placeholder="NOVA MARCA (EX: NEODENT, STRAUMANN)"
                       value={newBrand}
                       onChange={(e) => setNewBrand(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAddBrand()
                       }}
-                      className="max-w-xs"
+                      className="max-w-xs uppercase"
                     />
-                    <Button onClick={handleAddBrand}>Adicionar</Button>
+                    <Button onClick={handleAddBrand}>ADICIONAR</Button>
                   </div>
                   <div className="space-y-2 mt-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                      Marcas Cadastradas
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase">
+                      MARCAS CADASTRADAS
                     </h3>
                     {implantBrands.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
@@ -604,7 +685,7 @@ export default function SettingsPage() {
                             key={i}
                             className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
                           >
-                            <span className="font-semibold text-sm">{b}</span>
+                            <span className="font-semibold text-sm uppercase">{b}</span>
                             <Button
                               variant="ghost"
                               size="icon"

@@ -414,9 +414,11 @@ export default function AdminFinancial() {
             <TrendingUp className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">Painel Financeiro</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
+              Contas a Receber
+            </h2>
             <p className="text-muted-foreground text-sm">
-              Resultados operacionais, lucros e contas a receber.
+              Gerenciamento de faturamento e recebimentos do laboratório.
             </p>
           </div>
         </div>

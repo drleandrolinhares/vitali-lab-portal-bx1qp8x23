@@ -1,10 +1,31 @@
-/* Input Component - A component that displays an input - from shadcn/ui (exposes Input) */
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (type !== 'password' && type !== 'email' && type !== 'url') {
+        const start = e.target.selectionStart
+        const end = e.target.selectionEnd
+        const val = e.target.value
+        const upper = val.toUpperCase()
+        if (val !== upper) {
+          e.target.value = upper
+          if (
+            start !== null &&
+            end !== null &&
+            (type === 'text' || type === undefined || type === 'search' || type === 'tel')
+          ) {
+            try {
+              e.target.setSelectionRange(start, end)
+            } catch (err) {}
+          }
+        }
+      }
+      if (onChange) onChange(e)
+    }
+
     return (
       <input
         type={type}
@@ -13,6 +34,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
           className,
         )}
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
     )

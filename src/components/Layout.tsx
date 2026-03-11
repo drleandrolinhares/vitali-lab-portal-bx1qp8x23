@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { Logo } from '@/components/Logo'
@@ -30,6 +30,10 @@ import {
   PieChart,
   UserPlus,
   Tags,
+  Phone,
+  Wallet,
+  ChevronRight,
+  User,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -45,7 +49,11 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenuBadge,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,47 +76,81 @@ const ADMIN_MENUS = [
   {
     group: 'OPERACIONAL',
     items: [
-      { id: 'inbox', title: 'Caixa de Entrada', icon: FileText, path: '/app' },
-      { id: 'new-request', title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
-      { id: 'kanban', title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
-      { id: 'history', title: 'Histórico Global', icon: History, path: '/history' },
+      { id: 'inbox', title: 'CAIXA DE ENTRADA', icon: FileText, path: '/app' },
+      { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
+      { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
+      { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
     ],
   },
   {
     group: 'ADMINISTRATIVO',
     items: [
-      { id: 'dentists', title: 'Dentistas', icon: Users, path: '/dentists' },
-      { id: 'patients', title: 'Pacientes', icon: Contact, path: '/patients' },
-      { id: 'pending-users', title: 'Cadastros Pendentes', icon: UserPlus, path: '/pending-users' },
+      { id: 'dentists', title: 'DENTISTAS', icon: Users, path: '/dentists' },
+      { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
+      {
+        id: 'settings',
+        title: 'USUÁRIOS',
+        icon: UserPlus,
+        isCollapsible: true,
+        subItems: [
+          {
+            id: 'users-colab',
+            title: 'USUÁRIOS/COLABORADORES',
+            path: '/settings?tab=users',
+            reqAdmin: true,
+          },
+          {
+            id: 'work-schedule',
+            title: 'ESCALA DE TRABALHO',
+            path: '/settings?tab=work-schedule',
+            reqAdmin: true,
+          },
+          { id: 'my-profile', title: 'MEU PERFIL', path: '/settings?tab=profile', reqAdmin: false },
+        ],
+      },
+      {
+        id: 'pending-users',
+        title: 'CADASTROS PENDENTES',
+        icon: UserPlus,
+        path: '/pending-users',
+      },
     ],
   },
   {
     group: 'FINANCEIRO',
     items: [
-      { id: 'dashboard', title: 'DASHBOARD', icon: BarChart3, path: '/dashboard' },
+      { id: 'dashboard', title: 'DASHBOARD GERENCIAL', icon: BarChart3, path: '/dashboard' },
+      { id: 'finances', title: 'DASHBOARD FINANCEIRO', icon: TrendingUp, path: '/dre' },
       {
         id: 'comparative-dashboard',
-        title: 'DASH COMPARATIVO',
+        title: 'DASHBOARD COMPARATIVO INTERNO',
         icon: PieChart,
         path: '/comparative-dashboard',
       },
-      { id: 'finances', title: 'DASH FINANCEIRO', icon: TrendingUp, path: '/admin-financial' },
       {
         id: 'accounts-payable',
-        title: 'Contas a Pagar',
+        title: 'CONTAS A PAGAR',
         icon: DollarSign,
         path: '/accounts-payable',
       },
-      { id: 'inventory', title: 'Estoque', icon: Package, path: '/inventory' },
-      { id: 'prices', title: 'Tabela de Preços', icon: DollarSign, path: '/prices' },
+      { id: 'finances', title: 'CONTAS A RECEBER', icon: Wallet, path: '/admin-financial' },
+      { id: 'prices', title: 'TABELA DE PREÇOS', icon: DollarSign, path: '/prices' },
+      { id: 'inventory', title: 'ESTOQUE', icon: Package, path: '/inventory' },
     ],
   },
   {
     group: 'CONFIGURAÇÕES',
     items: [
-      { id: 'settings', title: 'Configurações e Usuários', icon: Settings, path: '/settings' },
-      { id: 'dre-categories', title: 'Categorias DRE', icon: Tags, path: '/dre-categories' },
-      { id: 'audit', title: 'Logs de Auditoria', icon: ShieldAlert, path: '/audit-logs' },
+      { id: 'settings', title: 'WHATSAPP', icon: Phone, path: '/settings?tab=system' },
+      {
+        id: 'settings',
+        title: 'MARCAS DE IMPLANTES',
+        icon: Settings,
+        path: '/settings?tab=brands',
+      },
+      { id: 'settings', title: 'ESCALAS DE COR', icon: Settings, path: '/settings?tab=scales' },
+      { id: 'dre-categories', title: 'CATEGORIAS DE DRE', icon: Tags, path: '/dre-categories' },
+      { id: 'audit', title: 'LOG DE DRE', icon: ShieldAlert, path: '/audit-logs' },
     ],
   },
 ]
@@ -177,6 +219,7 @@ function AppSidebar() {
   const { currentUser, appSettings, orders, pendingUsers } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const { lowStock, overduePayables } = useAdminBadges(currentUser)
 
@@ -200,6 +243,7 @@ function AppSidebar() {
   // Base permission evaluation logic
   const hasPerm = (id: string) => {
     if (isMaster) return true // Master has unlimited access
+    if (id === 'profile' || id === 'my-profile') return true // Ensure profile is allowed
     if (customPermissions.length > 0) return customPermissions.includes(id) // User specific override
 
     // Otherwise, check the default permissions for their role
@@ -215,11 +259,12 @@ function AppSidebar() {
   }
 
   const dentistNavItems = [
-    { id: 'inbox', title: 'Meu Painel', icon: LayoutDashboard, path: '/app' },
-    { id: 'new-request', title: 'Novo Pedido', icon: PlusCircle, path: '/new-request' },
-    { id: 'kanban', title: 'Evolução dos Trabalhos', icon: KanbanSquare, path: '/kanban' },
-    { id: 'finances', title: 'Gestão Financeira', icon: DollarSign, path: '/financial' },
-    { id: 'history', title: 'Histórico', icon: History, path: '/history' },
+    { id: 'inbox', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
+    { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
+    { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
+    { id: 'finances', title: 'GESTÃO FINANCEIRA', icon: DollarSign, path: '/financial' },
+    { id: 'history', title: 'HISTÓRICO', icon: History, path: '/history' },
+    { id: 'profile', title: 'MEU PERFIL', icon: User, path: '/settings?tab=profile' },
   ]
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
@@ -240,7 +285,7 @@ function AppSidebar() {
   }
 
   const clinicName = currentUser.clinic?.trim()
-  const groupTitle = clinicName ? `Grupo ${clinicName}/Vitali Lab` : 'Grupo da Clínica'
+  const groupTitle = clinicName ? `GRUPO ${clinicName.toUpperCase()}` : 'GRUPO DA CLÍNICA'
 
   const commLinks =
     currentUser.role === 'dentist'
@@ -250,11 +295,11 @@ function AppSidebar() {
             icon: WhatsAppIcon,
             url: (currentUser as any).whatsapp_group_link,
           },
-          { title: 'Vitali Lab Recepção', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
+          { title: 'VITALI LAB RECEPÇÃO', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
         ]
       : [
           {
-            title: viewingClient ? 'WhatsApp Cliente (Grupo)' : 'Vitali Lab Recepção',
+            title: viewingClient ? 'WHATSAPP CLIENTE (GRUPO)' : 'VITALI LAB RECEPÇÃO',
             icon: WhatsAppIcon,
             url: viewingClient ? adminDynamicLink : appSettings?.whatsapp_lab_link,
           },
@@ -280,7 +325,10 @@ function AppSidebar() {
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     asChild
-                    isActive={location.pathname === item.path}
+                    isActive={
+                      location.pathname === item.path ||
+                      location.pathname + location.search === item.path
+                    }
                     tooltip={item.title}
                   >
                     <Link to={item.path}>
@@ -294,16 +342,36 @@ function AppSidebar() {
           </SidebarMenu>
         ) : (
           ADMIN_MENUS.map((group) => {
-            const visibleItems = group.items.filter((i) => {
-              if (
-                i.id === 'pending-users' &&
-                currentUser.role !== 'admin' &&
-                currentUser.role !== ('master' as any)
-              )
-                return false
-              return hasPerm(i.id)
-            })
+            const visibleItems = group.items
+              .map((item) => {
+                if (item.isCollapsible) {
+                  const visibleSubItems = item.subItems?.filter((sub: any) => {
+                    if (
+                      sub.reqAdmin &&
+                      currentUser.role !== 'admin' &&
+                      currentUser.role !== ('master' as any)
+                    )
+                      return false
+                    return true
+                  })
+                  if (!visibleSubItems || visibleSubItems.length === 0) return null
+                  if (!hasPerm(item.id) && visibleSubItems.every((s) => s.id !== 'my-profile'))
+                    return null
+                  return { ...item, subItems: visibleSubItems }
+                }
+                if (
+                  item.id === 'pending-users' &&
+                  currentUser.role !== 'admin' &&
+                  currentUser.role !== ('master' as any)
+                )
+                  return null
+                if (!hasPerm(item.id)) return null
+                return item
+              })
+              .filter(Boolean) as typeof group.items
+
             if (visibleItems.length === 0) return null
+
             return (
               <SidebarGroup key={group.group} className="px-0 py-0 mb-4">
                 <SidebarGroupLabel className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-2">
@@ -319,14 +387,56 @@ function AppSidebar() {
                       if (item.id === 'inbox')
                         badgeCount = orders.filter((o: any) => !o.isAcknowledged).length
 
+                      if (item.isCollapsible) {
+                        const isSubActive = item.subItems?.some(
+                          (s: any) => location.pathname + location.search === s.path,
+                        )
+                        return (
+                          <Collapsible
+                            key={item.id}
+                            defaultOpen={isSubActive}
+                            className="group/collapsible"
+                          >
+                            <SidebarMenuItem>
+                              <CollapsibleTrigger asChild>
+                                <SidebarMenuButton tooltip={item.title}>
+                                  <item.icon />
+                                  <span>{item.title}</span>
+                                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                                </SidebarMenuButton>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <SidebarMenuSub>
+                                  {item.subItems?.map((sub: any) => (
+                                    <SidebarMenuSubItem key={sub.path}>
+                                      <SidebarMenuSubButton
+                                        asChild
+                                        isActive={location.pathname + location.search === sub.path}
+                                      >
+                                        <Link to={sub.path}>
+                                          <span>{sub.title}</span>
+                                        </Link>
+                                      </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                  ))}
+                                </SidebarMenuSub>
+                              </CollapsibleContent>
+                            </SidebarMenuItem>
+                          </Collapsible>
+                        )
+                      }
+
                       return (
                         <SidebarMenuItem key={item.path}>
                           <SidebarMenuButton
                             asChild
-                            isActive={location.pathname === item.path}
+                            isActive={
+                              location.pathname === item.path ||
+                              location.pathname + location.search === item.path
+                            }
                             tooltip={item.title}
                           >
-                            <Link to={item.path}>
+                            <Link to={item.path!}>
                               <item.icon />
                               <span>{item.title}</span>
                             </Link>
@@ -349,7 +459,7 @@ function AppSidebar() {
         <SidebarMenu className="mt-4">
           <SidebarMenuItem className="mb-1 px-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Comunicação
+              COMUNICAÇÃO
             </span>
           </SidebarMenuItem>
           {commLinks.map((item) => {
@@ -393,21 +503,27 @@ function AppSidebar() {
                 <span className="font-medium truncate">{currentUser.name}</span>
                 <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
                   {currentUser.role === 'dentist'
-                    ? 'Dentista'
+                    ? 'DENTISTA'
                     : currentUser.role === ('master' as any)
-                      ? 'Master'
+                      ? 'MASTER'
                       : currentUser.role === 'admin'
-                        ? 'Administrador'
-                        : 'Recepção / Lab'}
+                        ? 'ADMINISTRADOR'
+                        : 'RECEPÇÃO / LAB'}
                 </span>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuLabel>MINHA CONTA</DropdownMenuLabel>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => navigate('/settings?tab=profile')}
+            >
+              <User className="mr-2 h-4 w-4" /> MEU PERFIL
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={() => signOut()}>
-              <LogOut className="mr-2 h-4 w-4" /> Sair
+              <LogOut className="mr-2 h-4 w-4" /> SAIR
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -469,8 +585,8 @@ function MainHeader() {
       <SidebarTrigger />
       <div className="flex flex-1 items-center justify-between">
         <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
-          Portal Digital •{' '}
-          <span className="text-foreground">{currentUser.clinic || 'Gestão Lab'}</span>
+          PORTAL DIGITAL •{' '}
+          <span className="text-foreground">{currentUser.clinic || 'GESTÃO LAB'}</span>
         </h1>
         <div className="flex items-center gap-3 ml-auto">
           <div className="flex items-center gap-2">
@@ -483,7 +599,7 @@ function MainHeader() {
               >
                 <a href={clinicLink} target="_blank" rel="noopener noreferrer">
                   <WhatsAppIcon className="w-4 h-4 mr-2" />
-                  {viewingClient ? 'Grupo do Cliente' : 'Grupo da Clínica'}
+                  {viewingClient ? 'GRUPO DO CLIENTE' : 'GRUPO DA CLÍNICA'}
                 </a>
               </Button>
             ) : (
@@ -493,7 +609,7 @@ function MainHeader() {
                 className="hidden lg:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
               >
                 <WhatsAppIcon className="w-4 h-4 mr-2 opacity-50" />
-                {viewingClient ? 'Grupo do Cliente' : 'Grupo da Clínica'}
+                {viewingClient ? 'GRUPO DO CLIENTE' : 'GRUPO DA CLÍNICA'}
               </Button>
             )}
 
@@ -506,7 +622,7 @@ function MainHeader() {
               >
                 <a href={labLink} target="_blank" rel="noopener noreferrer">
                   <WhatsAppIcon className="w-4 h-4 mr-2" />
-                  Contato do Laboratório
+                  CONTATO DO LABORATÓRIO
                 </a>
               </Button>
             ) : (
@@ -516,7 +632,7 @@ function MainHeader() {
                 className="hidden lg:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
               >
                 <WhatsAppIcon className="w-4 h-4 mr-2 opacity-50" />
-                Contato do Laboratório
+                CONTATO DO LABORATÓRIO
               </Button>
             )}
           </div>
@@ -524,12 +640,12 @@ function MainHeader() {
           {showLabSelector && (
             <Select value={selectedLab} onValueChange={setSelectedLab}>
               <SelectTrigger className="w-[190px] h-8 text-xs font-medium bg-muted/50 border-dashed focus:ring-0">
-                <SelectValue placeholder="Selecione o Laboratório" />
+                <SelectValue placeholder="SELECIONE O LABORATÓRIO" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Todos">Visão Consolidada</SelectItem>
-                <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
-                <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+                <SelectItem value="Todos">VISÃO CONSOLIDADA</SelectItem>
+                <SelectItem value="Soluções Cerâmicas">SOLUÇÕES CERÂMICAS</SelectItem>
+                <SelectItem value="Studio Acrílico">STUDIO ACRÍLICO</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -538,7 +654,7 @@ function MainHeader() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            Laboratório Online
+            LABORATÓRIO ONLINE
           </div>
         </div>
       </div>

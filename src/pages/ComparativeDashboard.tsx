@@ -174,7 +174,9 @@ export default function ComparativeDashboard() {
             <PieChart className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">Dash Comparativo</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
+              Dashboard Comparativo Interno
+            </h2>
             <p className="text-muted-foreground text-sm">
               Desempenho financeiro por laboratório no período selecionado.
             </p>

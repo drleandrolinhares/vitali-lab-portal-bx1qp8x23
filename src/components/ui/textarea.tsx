@@ -1,10 +1,25 @@
-/* Textarea Component - A component that displays a textarea - from shadcn/ui (exposes Textarea) */
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
-  ({ className, ...props }, ref) => {
+  ({ className, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const start = e.target.selectionStart
+      const end = e.target.selectionEnd
+      const val = e.target.value
+      const upper = val.toUpperCase()
+      if (val !== upper) {
+        e.target.value = upper
+        if (start !== null && end !== null) {
+          try {
+            e.target.setSelectionRange(start, end)
+          } catch (err) {}
+        }
+      }
+      if (onChange) onChange(e)
+    }
+
     return (
       <textarea
         className={cn(
@@ -12,6 +27,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'tex
           className,
         )}
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
     )

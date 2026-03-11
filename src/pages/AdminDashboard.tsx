@@ -205,7 +205,7 @@ export default function AdminDashboard() {
             <BarChart3 className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground uppercase">
               Dashboard Gerencial
             </h2>
             <p className="text-muted-foreground">
