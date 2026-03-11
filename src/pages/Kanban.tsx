@@ -16,7 +16,6 @@ import {
   Trash2,
   Edit2,
   GripHorizontal,
-  X,
   Info,
   CheckCircle2,
   Paperclip,
@@ -74,6 +73,7 @@ export default function KanbanPage() {
   }
 
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
+  const [isLoadingDentists, setIsLoadingDentists] = useState(false)
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = useMemo(
@@ -106,23 +106,23 @@ export default function KanbanPage() {
   useEffect(() => {
     if (showDentistFilter && currentUser) {
       const fetchDentists = async () => {
-        let query = supabase.from('profiles').select('id, name').eq('role', 'dentist').order('name')
+        setIsLoadingDentists(true)
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('role', 'dentist')
+          .eq('is_approved', true)
+          .order('name')
 
-        if (!isAdmin) {
-          if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
-            setDentistsList([])
-            return
-          }
-          query = query.in('id', currentUser.assigned_dentists)
+        if (data && !error) {
+          setDentistsList(data)
         }
-
-        const { data } = await query
-        if (data) setDentistsList(data)
+        setIsLoadingDentists(false)
       }
 
       fetchDentists()
     }
-  }, [showDentistFilter, isAdmin, currentUser])
+  }, [showDentistFilter, currentUser])
 
   useEffect(() => {
     if (selectedOrder) setObsText(selectedOrder.observations || '')
@@ -232,37 +232,40 @@ export default function KanbanPage() {
           </p>
         </div>
         {showDentistFilter && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block" />
-            <Select
-              value={selectedDentistId === 'all' ? undefined : selectedDentistId}
-              onValueChange={setSelectedDentistId}
-            >
-              <SelectTrigger className="w-full sm:w-64 bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9">
-                <SelectValue placeholder="SELECIONE O DENTISTA" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="uppercase text-xs font-bold">
-                  TODOS OS DENTISTAS
-                </SelectItem>
-                {dentistsList.map((d) => (
-                  <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedDentistId !== 'all' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedDentistId('all')}
-                className="text-muted-foreground shrink-0"
-                title="Limpar seleção"
+          <div className="flex flex-col gap-2 w-full sm:w-[280px]">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
+              <Select
+                value={selectedDentistId === 'all' ? undefined : selectedDentistId}
+                onValueChange={(val) => setSelectedDentistId(val || 'all')}
+                disabled={isLoadingDentists}
               >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+                <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
+                  <SelectValue
+                    placeholder={isLoadingDentists ? 'CARREGANDO...' : 'SELECIONE O DENTISTA'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {dentistsList.map((d) => (
+                    <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="secondary"
+              className={cn(
+                'w-full sm:ml-6 sm:w-[calc(100%-24px)] text-xs font-bold uppercase h-8 transition-colors',
+                selectedDentistId === 'all'
+                  ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
+                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
+              )}
+              onClick={() => setSelectedDentistId('all')}
+            >
+              TODOS OS DENTISTAS
+            </Button>
           </div>
         )}
       </div>
