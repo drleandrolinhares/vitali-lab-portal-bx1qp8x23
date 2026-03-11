@@ -50,16 +50,6 @@ export default function FinancialPage() {
   const safePriceList = Array.isArray(priceList) ? priceList : []
   const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-  // Security & Data Isolation: Automatically redirect non-dentists to prevent unauthorized access
-  // or confusion, as this page's design is strictly catered towards the dentist's point of view.
-  // Admins have their own comprehensive financial module under /admin-financial.
-  if (currentUser && currentUser.role !== 'dentist') {
-    if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
-      return <Navigate to="/admin-financial" replace />
-    }
-    return <Navigate to="/app" replace />
-  }
-
   // Filter orders by selected month to provide accurate historical view
   const monthFilteredOrders = useMemo(
     () => filterOrdersForFinancials(safeOrders, selectedMonth),
@@ -151,6 +141,16 @@ export default function FinancialPage() {
       isMounted = false
     }
   }, [currentUser?.id])
+
+  // Security & Data Isolation: Automatically redirect non-dentists to prevent unauthorized access
+  // or confusion, as this page's design is strictly catered towards the dentist's point of view.
+  // Admins have their own comprehensive financial module under /admin-financial.
+  if (currentUser && currentUser.role !== 'dentist') {
+    if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
+      return <Navigate to="/admin-financial" replace />
+    }
+    return <Navigate to="/app" replace />
+  }
 
   if (loading) {
     return (
