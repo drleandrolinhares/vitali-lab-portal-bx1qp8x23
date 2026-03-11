@@ -10,8 +10,11 @@ import { useState } from 'react'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 
 export default function Index() {
-  const { currentUser, orders, acknowledgeOrder, updateOrderObservations } = useAppStore()
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
+  const { currentUser, orders, acknowledgeOrder, updateOrderObservations, checkPermission } =
+    useAppStore()
+
+  const showGlobalInbox = checkPermission('inbox', 'view_all')
+  const canCreateOrder = checkPermission('inbox', 'create_order')
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -23,7 +26,7 @@ export default function Index() {
     }
   }
 
-  if (!isAdmin) {
+  if (!showGlobalInbox) {
     const myOrders = orders.filter((o) => o.dentistId === currentUser?.id)
     const recentOrders = myOrders.slice(0, 5)
     return (
@@ -67,12 +70,16 @@ export default function Index() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link to="/new-request">Novo Pedido</Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link to="/kanban">Evolução dos Trabalhos</Link>
-              </Button>
+              {canCreateOrder && (
+                <Button asChild className="w-full justify-start" variant="outline">
+                  <Link to="/new-request">Novo Pedido</Link>
+                </Button>
+              )}
+              {checkPermission('kanban') && (
+                <Button asChild className="w-full justify-start" variant="outline">
+                  <Link to="/kanban">Evolução dos Trabalhos</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -85,13 +92,20 @@ export default function Index() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
-          <Inbox className="w-6 h-6" /> Caixa de Entrada
-        </h2>
-        <p className="text-slate-500 dark:text-muted-foreground">
-          Gerencie os novos pedidos recebidos no laboratório.
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
+            <Inbox className="w-6 h-6" /> Caixa de Entrada
+          </h2>
+          <p className="text-slate-500 dark:text-muted-foreground">
+            Gerencie os novos pedidos recebidos no laboratório.
+          </p>
+        </div>
+        {canCreateOrder && (
+          <Button asChild>
+            <Link to="/new-request">Novo Pedido</Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4">

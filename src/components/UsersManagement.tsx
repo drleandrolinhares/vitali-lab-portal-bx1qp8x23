@@ -1,17 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { createUser, updateUser } from '@/services/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -19,76 +11,113 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
-import { Plus, Edit2, Shield, Loader2 } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  MoreVertical,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  Briefcase,
+  MapPin,
+  Calendar,
+  CreditCard,
+  Building,
+} from 'lucide-react'
 import { useAppStore } from '@/stores/main'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Card, CardContent } from '@/components/ui/card'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { MODULES } from './RolePermissionsPanel'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 
-export const PERMISSION_OPTIONS = [
-  { id: 'inbox', label: 'CAIXA DE ENTRADA' },
-  { id: 'new-request', label: 'NOVO PEDIDO' },
-  { id: 'kanban', label: 'EVOLUÇÃO DOS TRABALHOS' },
-  { id: 'history', label: 'HISTÓRICO GLOBAL' },
-  { id: 'dashboard', label: 'DASHBOARD' },
-  { id: 'comparative-dashboard', label: 'DASH COMPARATIVO' },
-  { id: 'finances', label: 'FINANÇAS' },
-  { id: 'accounts-payable', label: 'CONTAS A PAGAR' },
-  { id: 'inventory', label: 'ESTOQUE' },
-  { id: 'dentists', label: 'DENTISTAS' },
-  { id: 'patients', label: 'PACIENTES' },
-  { id: 'prices', label: 'TABELA DE PREÇOS' },
-  { id: 'users', label: 'USUÁRIOS' },
-  { id: 'settings', label: 'CONFIGURAÇÕES GERAIS' },
-  { id: 'dre-categories', label: 'CATEGORIAS DRE' },
-  { id: 'audit', label: 'LOGS DE AUDITORIA' },
-  { id: 'add-dentist', label: 'CRIAR NOVOS DENTISTAS' },
+const ROLES_INFO = [
+  {
+    id: 'admin',
+    title: 'Administrador',
+    desc: 'Este perfil é responsável por coordenar as operações, organizando a equipe e configurando o sistema. Possui acesso total e irrestrito.',
+    icon: Building,
+  },
+  {
+    id: 'technical_assistant',
+    title: 'Auxiliar Técnico',
+    desc: 'Este perfil é voltado para apoiar os profissionais durante os atendimentos, organizar materiais e gerenciar o estoque.',
+    icon: Briefcase,
+  },
+  {
+    id: 'financial',
+    title: 'Financeiro',
+    desc: 'Este perfil é responsável por controlar as receitas, despesas e o faturamento do laboratório. Foco nas operações financeiras.',
+    icon: CreditCard,
+  },
+  {
+    id: 'relationship_manager',
+    title: 'Gestor de Relacionamento',
+    desc: 'Este perfil é responsável por monitorar a experiência dos dentistas, promovendo ações de engajamento e fidelização.',
+    icon: User,
+  },
+  {
+    id: 'dentist',
+    title: 'Profissional (Dentista)',
+    desc: 'Este perfil é voltado para os dentistas responsáveis pelos casos. Possui acesso estritamente aos seus próprios pedidos e pacientes.',
+    icon: User,
+  },
+  {
+    id: 'receptionist',
+    title: 'Recepcionista / Produção',
+    desc: 'Este perfil é responsável por recepcionar pedidos e organizar o andamento do laboratório. Acesso operacional e de triagem.',
+    icon: Mail,
+  },
 ]
 
 export function UsersManagement() {
   const { currentUser, logAudit } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
-  const [dentistsList, setDentistsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [search, setSearch] = useState('')
+  const [activeOnly, setActiveOnly] = useState(true)
+
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [saving, setSaving] = useState(false)
 
-  const [mainTab, setMainTab] = useState<'usuarios' | 'colaboradores'>('usuarios')
-  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active')
-  const [subRoleFilter, setSubRoleFilter] = useState<string>('all')
+  const [activeTab, setActiveTab] = useState<'pessoais' | 'perfil' | 'permissoes'>('pessoais')
 
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
-    role: 'dentist',
-    job_function: '',
-    clinic: '',
-    whatsapp_group_link: '',
     personal_phone: '',
+    birth_date: '',
+    rg: '',
+    cpf: '',
+    cep: '',
+    address: '',
+    address_number: '',
+    address_complement: '',
+    city: '',
+    state: '',
+    has_access_schedule: false,
+    role: 'dentist',
     is_active: true,
   })
-  const [selectedPerms, setSelectedPerms] = useState<string[]>([])
 
-  const [isDentistRestricted, setIsDentistRestricted] = useState(false)
-  const [assignedDentists, setAssignedDentists] = useState<string[]>([])
-  const [canMoveKanbanCards, setCanMoveKanbanCards] = useState(true)
+  const [selectedPerms, setSelectedPerms] = useState<Record<string, any>>({})
 
   const fetchUsers = async () => {
     setLoading(true)
     const { data } = await supabase.from('profiles').select('*').order('name', { ascending: true })
     if (data) {
       setUsers(data)
-      setDentistsList(data.filter((u) => u.role === 'dentist'))
     }
     setLoading(false)
   }
@@ -97,120 +126,110 @@ export function UsersManagement() {
     fetchUsers()
   }, [])
 
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const matchSearch =
+        u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase())
+      const matchActive = activeOnly ? u.is_active !== false : true
+      return matchSearch && matchActive
+    })
+  }, [users, search, activeOnly])
+
   const openModal = (user?: any) => {
+    setActiveTab('pessoais')
     if (user) {
       setEditingUser(user)
       setFormData({
-        name: user.name,
-        email: user.email?.includes('@vitalilab.local') ? '' : user.email,
+        name: user.name || '',
+        username: user.username || '',
+        email: user.email || '',
         password: '',
-        role: user.role,
-        job_function: user.job_function || '',
-        clinic: user.clinic || '',
-        whatsapp_group_link: user.whatsapp_group_link || '',
         personal_phone: user.personal_phone || '',
+        birth_date: user.birth_date || '',
+        rg: user.rg || '',
+        cpf: user.cpf || '',
+        cep: user.cep || '',
+        address: user.address || '',
+        address_number: user.address_number || '',
+        address_complement: user.address_complement || '',
+        city: user.city || '',
+        state: user.state || '',
+        has_access_schedule: user.has_access_schedule || false,
+        role: user.role || 'dentist',
         is_active: user.is_active !== false,
       })
-      setSelectedPerms(user.permissions || [])
-      setIsDentistRestricted(
-        user.assigned_dentists !== null && user.assigned_dentists !== undefined,
-      )
-      setAssignedDentists(user.assigned_dentists || [])
-      setCanMoveKanbanCards(user.can_move_kanban_cards ?? true)
+      setSelectedPerms(user.permissions || {})
     } else {
       setEditingUser(null)
       setFormData({
         name: '',
+        username: '',
         email: '',
         password: '',
-        role: mainTab === 'usuarios' ? 'dentist' : 'receptionist',
-        job_function: '',
-        clinic: '',
-        whatsapp_group_link: '',
         personal_phone: '',
+        birth_date: '',
+        rg: '',
+        cpf: '',
+        cep: '',
+        address: '',
+        address_number: '',
+        address_complement: '',
+        city: '',
+        state: '',
+        has_access_schedule: false,
+        role: 'dentist',
         is_active: true,
       })
-      setSelectedPerms([])
-      setIsDentistRestricted(false)
-      setAssignedDentists([])
-      setCanMoveKanbanCards(true)
+      setSelectedPerms({})
     }
     setModalOpen(true)
   }
 
   const handleSave = async () => {
-    if (!formData.name) {
-      return toast({ title: 'O NOME É OBRIGATÓRIO', variant: 'destructive' })
-    }
-    if (!formData.email || !formData.email.includes('@')) {
-      return toast({ title: 'FORMATO DE EMAIL INVÁLIDO', variant: 'destructive' })
-    }
-    if (!editingUser && (!formData.password || formData.password.length < 6)) {
-      return toast({
-        title: 'A SENHA INICIAL DEVE TER NO MÍNIMO 6 CARACTERES',
-        variant: 'destructive',
-      })
-    }
+    if (!formData.name) return toast({ title: 'O Nome é obrigatório', variant: 'destructive' })
+    if (!formData.email || !formData.email.includes('@'))
+      return toast({ title: 'Email inválido', variant: 'destructive' })
+    if (!editingUser && (!formData.password || formData.password.length < 6))
+      return toast({ title: 'Senha deve ter no mínimo 6 caracteres', variant: 'destructive' })
 
     setSaving(true)
 
-    let finalGroupLink = formData.whatsapp_group_link.trim()
-    if (
-      finalGroupLink &&
-      !finalGroupLink.startsWith('http://') &&
-      !finalGroupLink.startsWith('https://')
-    ) {
-      finalGroupLink = `https://${finalGroupLink}`
+    const payload = {
+      name: formData.name,
+      email: formData.email.toLowerCase(),
+      role: formData.role,
+      personal_phone: formData.personal_phone,
+      username: formData.username,
+      rg: formData.rg,
+      cpf: formData.cpf,
+      birth_date: formData.birth_date || null,
+      cep: formData.cep,
+      address: formData.address,
+      address_number: formData.address_number,
+      address_complement: formData.address_complement,
+      city: formData.city,
+      state: formData.state,
+      has_access_schedule: formData.has_access_schedule,
+      is_active: formData.is_active,
+      permissions: selectedPerms,
     }
-
-    const assignedDentistsPayload = isDentistRestricted ? assignedDentists : null
 
     if (editingUser) {
       const { error } = await updateUser({
         userId: editingUser.id,
-        name: formData.name,
-        email: formData.email.toLowerCase(),
+        ...payload,
         password: formData.password || undefined,
-        clinic: formData.clinic,
-        job_function: formData.job_function,
-        role: formData.role,
-        whatsapp_group_link: finalGroupLink,
-        permissions: selectedPerms,
-        personal_phone: formData.personal_phone,
-        is_active: formData.is_active,
-        assigned_dentists: assignedDentistsPayload,
-        can_move_kanban_cards: canMoveKanbanCards,
       })
-
-      if (error) {
-        toast({ title: 'ERRO', description: error.message, variant: 'destructive' })
-      } else {
-        toast({ title: 'USUÁRIO ATUALIZADO COM SUCESSO' })
-        if (editingUser.email !== formData.email.toLowerCase()) {
-          await logAudit('UPDATE_EMAIL', 'profile', editingUser.id, {
-            oldEmail: editingUser.email,
-            newEmail: formData.email.toLowerCase(),
-          })
-        }
-      }
+      if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+      else toast({ title: 'Usuário atualizado!' })
     } else {
       const { error } = await createUser({
-        ...formData,
-        email: formData.email.toLowerCase(),
-        job_function: formData.job_function,
-        whatsapp_group_link: finalGroupLink,
-        permissions: selectedPerms,
-        phone: formData.personal_phone,
-        assigned_dentists: assignedDentistsPayload,
-        can_move_kanban_cards: canMoveKanbanCards,
+        ...payload,
+        password: formData.password,
       })
-      if (error)
-        toast({
-          title: 'ERRO',
-          description: error.message || 'ERRO AO CRIAR',
-          variant: 'destructive',
-        })
-      else toast({ title: 'USUÁRIO CRIADO COM SUCESSO' })
+      if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+      else toast({ title: 'Usuário criado!' })
     }
 
     setSaving(false)
@@ -218,419 +237,466 @@ export function UsersManagement() {
     fetchUsers()
   }
 
-  const togglePerm = (id: string) => {
-    setSelectedPerms((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
+  const updateAccess = (moduleId: string, checked: boolean) => {
+    setSelectedPerms((prev) => {
+      const newPerms = { ...prev }
+      if (!newPerms[moduleId]) newPerms[moduleId] = { access: false, actions: {} }
+      newPerms[moduleId].access = checked
+      return newPerms
+    })
   }
 
-  const toggleAllPerms = () => {
-    if (selectedPerms.length === PERMISSION_OPTIONS.length) {
-      setSelectedPerms([])
-    } else {
-      setSelectedPerms(PERMISSION_OPTIONS.map((p) => p.id))
-    }
+  const updateAction = (moduleId: string, actionId: string, checked: boolean) => {
+    setSelectedPerms((prev) => {
+      const newPerms = { ...prev }
+      if (!newPerms[moduleId]) newPerms[moduleId] = { access: true, actions: {} }
+      newPerms[moduleId].actions = { ...newPerms[moduleId].actions, [actionId]: checked }
+      return newPerms
+    })
   }
-
-  const filteredUsers = users.filter((u) => {
-    const isDentist = u.role === 'dentist'
-    const isTabMatch = mainTab === 'usuarios' ? isDentist : !isDentist
-    const isActiveMatch = statusFilter === 'active' ? u.is_active !== false : u.is_active === false
-    const isSubRoleMatch = subRoleFilter === 'all' || u.role === subRoleFilter
-
-    return isTabMatch && isActiveMatch && isSubRoleMatch
-  })
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <Tabs
-          value={mainTab}
-          onValueChange={(v: any) => {
-            setMainTab(v)
-            setSubRoleFilter('all')
-          }}
-          className="w-full sm:w-[400px]"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="usuarios" className="uppercase text-xs font-bold">
-              USUÁRIOS (DENTISTAS)
-            </TabsTrigger>
-            <TabsTrigger value="colaboradores" className="uppercase text-xs font-bold">
-              COLABORADORES
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <Select value={subRoleFilter} onValueChange={setSubRoleFilter}>
-            <SelectTrigger className="w-[170px] uppercase text-xs font-bold">
-              <SelectValue placeholder="FILTRAR FUNÇÃO" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="uppercase text-xs font-bold">
-                TODAS FUNÇÕES
-              </SelectItem>
-              {mainTab === 'usuarios' ? (
-                <SelectItem value="dentist" className="uppercase text-xs font-bold">
-                  DENTISTA
-                </SelectItem>
-              ) : (
-                <>
-                  <SelectItem value="admin" className="uppercase text-xs font-bold">
-                    ADMINISTRADOR
-                  </SelectItem>
-                  <SelectItem value="receptionist" className="uppercase text-xs font-bold">
-                    RECEPÇÃO / PRODUÇÃO
-                  </SelectItem>
-                  {currentUser?.role === ('master' as any) && (
-                    <SelectItem value="master" className="uppercase text-xs font-bold">
-                      MASTER
-                    </SelectItem>
-                  )}
-                </>
-              )}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-            <SelectTrigger className="w-[130px] uppercase text-xs font-bold">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active" className="uppercase text-xs font-bold">
-                ATIVOS
-              </SelectItem>
-              <SelectItem value="inactive" className="uppercase text-xs font-bold">
-                INATIVOS
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            onClick={() => openModal()}
-            size="sm"
-            className="uppercase text-xs font-bold whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4 mr-2" /> NOVO
-          </Button>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+          <div className="relative flex-1 sm:max-w-md">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar Usuário"
+              className="pl-9 h-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center space-x-2 shrink-0">
+            <Checkbox
+              id="active-only"
+              checked={activeOnly}
+              onCheckedChange={(c) => setActiveOnly(!!c)}
+            />
+            <Label htmlFor="active-only" className="text-sm cursor-pointer">
+              Mostrar apenas usuários ativos
+            </Label>
+          </div>
         </div>
+        <Button onClick={() => openModal()} className="bg-[#e76f51] hover:bg-[#d95f43] text-white">
+          <Plus className="w-4 h-4 mr-2" /> Novo Usuário
+        </Button>
       </div>
 
-      <div className="border rounded-xl bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="uppercase text-xs font-bold">NOME</TableHead>
-              <TableHead className="uppercase text-xs font-bold">CONTATO</TableHead>
-              <TableHead className="uppercase text-xs font-bold">FUNÇÃO / PERFIL</TableHead>
-              <TableHead className="text-center uppercase text-xs font-bold">
-                ACESSO CUSTOMIZADO
-              </TableHead>
-              <TableHead className="text-right uppercase text-xs font-bold">AÇÕES</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
-                >
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                  CARREGANDO...
-                </TableCell>
-              </TableRow>
-            ) : filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
-                >
-                  NENHUM REGISTRO ENCONTRADO.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id} className={user.is_active === false ? 'opacity-60' : ''}>
-                  <TableCell className="font-medium uppercase text-sm">{user.name}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {user.email?.includes('@vitalilab.local') ? 'SEM EMAIL' : user.email}
-                    </div>
-                    {user.personal_phone && (
-                      <div className="text-xs text-muted-foreground uppercase font-semibold">
-                        {user.personal_phone}
-                      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {filteredUsers.map((user) => {
+          const roleObj = ROLES_INFO.find((r) => r.id === user.role)
+          return (
+            <Card
+              key={user.id}
+              className={cn(
+                'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow',
+                user.is_active === false && 'opacity-60 grayscale-[0.5]',
+              )}
+              onClick={() => openModal(user)}
+            >
+              <CardContent className="p-0">
+                <div className="flex items-start justify-between p-4 pb-0">
+                  <div
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+                      user.is_active !== false
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30',
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium uppercase text-sm">{user.role}</div>
-                    <div className="text-xs text-muted-foreground uppercase font-semibold">
-                      {user.job_function}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {user.permissions && user.permissions.length > 0 ? (
-                      <span className="inline-flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200 uppercase">
-                        <Shield className="w-3 h-3 mr-1" />
-                        {user.permissions.length} MÓDULOS
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground uppercase font-semibold">
-                        PADRÃO
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openModal(user)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  >
+                    {user.is_active !== false ? 'Ativo' : 'Inativo'}
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2">
+                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-col items-center p-4 pt-2">
+                  <Avatar className="w-16 h-16 border-2 border-muted/50 mb-3">
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
+                      {user.name?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="font-bold text-base text-center line-clamp-1">{user.name}</h3>
+                </div>
+
+                <div className="bg-muted/30 p-4 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{roleObj?.title || user.role}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{user.email || 'Não encontrado'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{user.personal_phone || 'Não encontrado'}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 border-t text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 bg-muted/10">
+                  <Clock className="w-3.5 h-3.5" />
+                  {user.last_access_at
+                    ? `Último acesso em: ${format(new Date(user.last_access_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`
+                    : 'Último acesso em: não registrado'}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="uppercase">
-              {editingUser ? 'EDITAR USUÁRIO' : 'NOVO USUÁRIO'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">NOME COMPLETO</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+        <DialogContent className="max-w-4xl p-0 overflow-hidden flex flex-col h-[90vh]">
+          <div className="flex items-center justify-between p-4 border-b shrink-0 bg-muted/10">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-12 h-12">
+                <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                  {formData.name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-lg font-bold">{formData.name || 'Novo Usuário'}</h2>
+                <p className="text-sm text-muted-foreground">{formData.email}</p>
               </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">TELEFONE / WHATSAPP</Label>
-                <Input
-                  value={formData.personal_phone}
-                  onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
-                  placeholder="EX: (11) 99999-9999"
-                />
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">EMAIL DE ACESSO</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="EX: EXEMPLO@EMAIL.COM"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">
-                  SENHA {editingUser ? '(OPCIONAL)' : 'INICIAL'}
-                </Label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder={editingUser ? 'PREENCHA PARA ALTERAR' : 'MÍN. 6 CARACTERES'}
-                  required={!editingUser}
-                />
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">FUNÇÃO DO USUÁRIO</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(v) => setFormData({ ...formData, role: v })}
-                >
-                  <SelectTrigger className="uppercase text-xs font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin" className="uppercase text-xs font-bold">
-                      ADMINISTRADOR
-                    </SelectItem>
-                    <SelectItem value="dentist" className="uppercase text-xs font-bold">
-                      DENTISTA
-                    </SelectItem>
-                    {currentUser?.role === ('master' as any) && (
-                      <SelectItem value="master" className="uppercase text-xs font-bold">
-                        MASTER
-                      </SelectItem>
-                    )}
-                    <SelectItem value="receptionist" className="uppercase text-xs font-bold">
-                      RECEPÇÃO / PRODUÇÃO
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">FUNÇÃO NA EMPRESA</Label>
-                <Input
-                  value={formData.job_function}
-                  onChange={(e) => setFormData({ ...formData, job_function: e.target.value })}
-                  placeholder="EX: CERAMISTA, RECEPÇÃO"
-                />
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">CLÍNICA (OPCIONAL)</Label>
-                <Input
-                  value={formData.clinic}
-                  onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label className="uppercase text-xs font-bold">LINK GRUPO WHATSAPP</Label>
-                <Input
-                  value={formData.whatsapp_group_link}
-                  onChange={(e) =>
-                    setFormData({ ...formData, whatsapp_group_link: e.target.value })
-                  }
-                  placeholder="EX: HTTPS://CHAT.WHATSAPP.COM/..."
-                />
-              </div>
-
-              {editingUser && (
-                <div className="space-y-2 col-span-2 flex flex-col justify-center mt-2 border-t pt-4">
-                  <Label className="mb-2 uppercase text-xs font-bold">STATUS DA CONTA</Label>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, is_active: checked })
-                      }
-                    />
-                    <span className="text-sm font-medium uppercase">
-                      {formData.is_active ? 'ATIVO' : 'INATIVO (BLOQUEADO)'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {formData.role !== 'dentist' && (
-                <div className="space-y-4 pt-4 border-t col-span-2">
-                  <h4 className="text-sm font-bold uppercase text-primary">
-                    Configurações de Acesso
-                  </h4>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch checked={canMoveKanbanCards} onCheckedChange={setCanMoveKanbanCards} />
-                    <Label
-                      className="uppercase text-xs font-bold cursor-pointer"
-                      onClick={() => setCanMoveKanbanCards(!canMoveKanbanCards)}
-                    >
-                      Permitir movimentar cards no Kanban
-                    </Label>
-                  </div>
-
-                  <div className="space-y-2 mt-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={isDentistRestricted}
-                        onCheckedChange={setIsDentistRestricted}
-                      />
-                      <Label
-                        className="uppercase text-xs font-bold cursor-pointer"
-                        onClick={() => setIsDentistRestricted(!isDentistRestricted)}
-                      >
-                        Restringir acesso por Dentistas específicos
-                      </Label>
-                    </div>
-
-                    {isDentistRestricted && (
-                      <div className="mt-2 p-3 border rounded-md bg-muted/20 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {dentistsList.length === 0 ? (
-                          <span className="text-xs text-muted-foreground uppercase col-span-2">
-                            Nenhum dentista encontrado.
-                          </span>
-                        ) : (
-                          dentistsList.map((d) => (
-                            <div key={d.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`dentist-${d.id}`}
-                                checked={assignedDentists.includes(d.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) setAssignedDentists([...assignedDentists, d.id])
-                                  else
-                                    setAssignedDentists(
-                                      assignedDentists.filter((id) => id !== d.id),
-                                    )
-                                }}
-                              />
-                              <Label
-                                htmlFor={`dentist-${d.id}`}
-                                className="text-xs uppercase font-bold cursor-pointer truncate"
-                              >
-                                {d.name}
-                              </Label>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-
-            <div className="space-y-3 pt-4 border-t">
-              <div className="flex justify-between items-center mb-2">
-                <Label className="text-sm uppercase font-bold">
-                  PERMISSÕES DE ACESSO (MENU LATERAL)
-                </Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={toggleAllPerms}
-                  className="uppercase text-[10px] font-bold"
-                >
-                  {selectedPerms.length === PERMISSION_OPTIONS.length
-                    ? 'DESMARCAR TUDO'
-                    : 'MARCAR TUDO'}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4 uppercase font-semibold">
-                SELECIONE OS MÓDULOS QUE ESTE USUÁRIO PODERÁ VISUALIZAR. SE NENHUM FOR SELECIONADO,
-                AS PERMISSÕES PADRÕES DA FUNÇÃO SERÃO APLICADAS.
-              </p>
-              <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto p-3 border rounded-md bg-muted/20">
-                {PERMISSION_OPTIONS.map((opt) => (
-                  <div key={opt.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`perm-${opt.id}`}
-                      checked={selectedPerms.includes(opt.id)}
-                      onCheckedChange={() => togglePerm(opt.id)}
-                    />
-                    <Label
-                      htmlFor={`perm-${opt.id}`}
-                      className="font-bold cursor-pointer text-xs uppercase"
-                    >
-                      {opt.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium mr-2">Status da Conta:</span>
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(c) => setFormData({ ...formData, is_active: c })}
+              />
+              <span className="text-sm font-semibold uppercase w-16">
+                {formData.is_active ? 'Ativo' : 'Inativo'}
+              </span>
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setModalOpen(false)}
-              className="uppercase text-xs font-bold"
+
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v: any) => setActiveTab(v)}
+              className="flex flex-col h-full"
             >
-              CANCELAR
+              <div className="px-6 pt-2 border-b shrink-0">
+                <TabsList className="bg-transparent h-auto p-0 flex gap-6">
+                  <TabsTrigger
+                    value="pessoais"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                  >
+                    Dados Pessoais
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="perfil"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                  >
+                    Perfil de Usuário
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="permissoes"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                  >
+                    Configurações de permissão
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <ScrollArea className="flex-1 p-6 bg-muted/5">
+                <TabsContent value="pessoais" className="mt-0 space-y-8">
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                      <User className="w-4 h-4 text-[#e76f51]" /> Informações Básicas
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-xl bg-background">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Nome Completo *</Label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Usuário *</Label>
+                        <Input
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Email *</Label>
+                        <Input
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Telefone *</Label>
+                        <Input
+                          value={formData.personal_phone}
+                          onChange={(e) =>
+                            setFormData({ ...formData, personal_phone: e.target.value })
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-4 max-w-sm">
+                        <Label className="text-xs text-muted-foreground">Senha de Acesso</Label>
+                        <Input
+                          type="password"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          placeholder={
+                            editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                      <Briefcase className="w-4 h-4 text-[#e76f51]" /> Informações Pessoais
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Data de Nascimento</Label>
+                        <Input
+                          type="date"
+                          value={formData.birth_date}
+                          onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">RG</Label>
+                        <Input
+                          value={formData.rg}
+                          onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">CPF</Label>
+                        <Input
+                          value={formData.cpf}
+                          onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                      <MapPin className="w-4 h-4 text-[#e76f51]" /> Endereço
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-xl bg-background">
+                      <div className="space-y-1 md:col-span-2">
+                        <Label className="text-xs text-muted-foreground">CEP</Label>
+                        <Input
+                          value={formData.cep}
+                          onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-3">
+                        <Label className="text-xs text-muted-foreground">Endereço</Label>
+                        <Input
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-1">
+                        <Label className="text-xs text-muted-foreground">Número</Label>
+                        <Input
+                          value={formData.address_number}
+                          onChange={(e) =>
+                            setFormData({ ...formData, address_number: e.target.value })
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Complemento</Label>
+                        <Input
+                          value={formData.address_complement}
+                          onChange={(e) =>
+                            setFormData({ ...formData, address_complement: e.target.value })
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-3">
+                        <Label className="text-xs text-muted-foreground">Cidade</Label>
+                        <Input
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1 md:col-span-1">
+                        <Label className="text-xs text-muted-foreground">Estado</Label>
+                        <Input
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                      <Calendar className="w-4 h-4 text-[#e76f51]" /> Controle de Horário de Acesso
+                      no Sistema
+                    </h3>
+                    <div className="p-4 border rounded-xl bg-background flex items-center gap-3">
+                      <Switch
+                        checked={formData.has_access_schedule}
+                        onCheckedChange={(c) =>
+                          setFormData({ ...formData, has_access_schedule: c })
+                        }
+                      />
+                      <Label className="text-sm cursor-pointer">
+                        Definir horário de acesso ao sistema
+                      </Label>
+                    </div>
+                  </section>
+                </TabsContent>
+
+                <TabsContent value="perfil" className="mt-0">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold">Perfil de Usuário</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione o perfil que melhor se enquadra às responsabilidades para este novo
+                      usuário:
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {ROLES_INFO.map((role) => {
+                      const Icon = role.icon
+                      const isSelected = formData.role === role.id
+                      return (
+                        <div
+                          key={role.id}
+                          className={cn(
+                            'p-5 border rounded-xl cursor-pointer transition-all flex gap-4',
+                            isSelected
+                              ? 'border-[#e76f51] bg-[#e76f51]/5 ring-1 ring-[#e76f51]/20'
+                              : 'hover:border-primary/40 bg-background',
+                          )}
+                          onClick={() => setFormData({ ...formData, role: role.id })}
+                        >
+                          <div className="mt-1">
+                            <div
+                              className={cn(
+                                'w-10 h-10 rounded-full flex items-center justify-center',
+                                isSelected
+                                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                                  : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              <Icon className="w-5 h-5" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-base mb-1">{role.title}</h4>
+                            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+                              {role.desc}
+                            </p>
+                            <span className="text-[11px] font-bold text-[#e76f51] flex items-center gap-1">
+                              Permissões padrão do sistema
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-center pt-2 px-2">
+                            <div
+                              className={cn(
+                                'w-5 h-5 rounded border flex items-center justify-center',
+                                isSelected
+                                  ? 'bg-[#e76f51] border-[#e76f51]'
+                                  : 'border-muted-foreground/30',
+                              )}
+                            >
+                              {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="permissoes" className="mt-0">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold">Configurações Específicas de Permissão</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Personalize os acessos deste usuário. Estas configurações sobrepõem as
+                      permissões padrão do Perfil.
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    {MODULES.map((mod) => {
+                      const hasAccess = selectedPerms[mod.id]?.access || false
+                      return (
+                        <Card key={mod.id} className="shadow-none">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-sm uppercase">{mod.label}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  Permitir Acesso
+                                </span>
+                                <Switch
+                                  checked={hasAccess}
+                                  onCheckedChange={(c) => updateAccess(mod.id, c)}
+                                />
+                              </div>
+                            </div>
+                            {mod.actions.length > 0 && hasAccess && (
+                              <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-[#e76f51]/30 ml-1">
+                                {mod.actions.map((act) => (
+                                  <div
+                                    key={act.id}
+                                    className="flex justify-between items-center text-sm"
+                                  >
+                                    <span>{act.label}</span>
+                                    <Switch
+                                      checked={selectedPerms[mod.id]?.actions?.[act.id] || false}
+                                      onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </TabsContent>
+              </ScrollArea>
+            </Tabs>
+          </div>
+
+          <DialogFooter className="p-4 border-t shrink-0 bg-background">
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="uppercase text-xs font-bold">
-              {saving ? 'SALVANDO...' : 'SALVAR'}
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#e76f51] hover:bg-[#d95f43] text-white min-w-[120px]"
+            >
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>

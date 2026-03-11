@@ -1,4 +1,3 @@
-/* Scroll Area Component primitives - A component that displays a scroll area - from shadcn/ui (exposes ScrollArea, ScrollBar) */
 import * as React from 'react'
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
 

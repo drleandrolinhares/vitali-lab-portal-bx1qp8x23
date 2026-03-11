@@ -53,12 +53,15 @@ export default function KanbanPage() {
     updateKanbanStageDescription,
     deleteKanbanStage,
     reorderKanbanStages,
+    checkPermission,
   } = useAppStore()
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const isDentist = currentUser?.role === 'dentist'
-  const canDragCards = !isDentist && (isAdmin || currentUser?.can_move_kanban_cards !== false)
-  const showDentistFilter = currentUser?.role !== 'dentist'
+
+  const canDragCards = checkPermission('kanban', 'move_cards')
+  const canFilterDentist = checkPermission('kanban', 'filter_dentist')
+  const showDentistFilter = currentUser?.role !== 'dentist' && canFilterDentist
 
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
@@ -130,9 +133,10 @@ export default function KanbanPage() {
 
   const visibleOrders = useMemo(() => {
     if (currentUser?.role === 'dentist') return orders
-    if (selectedDentistId !== 'all') return orders.filter((o) => o.dentistId === selectedDentistId)
+    if (canFilterDentist && selectedDentistId !== 'all')
+      return orders.filter((o) => o.dentistId === selectedDentistId)
     return orders
-  }, [orders, currentUser?.role, selectedDentistId])
+  }, [orders, currentUser?.role, selectedDentistId, canFilterDentist])
 
   const hasOrders = useMemo(
     () => (deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false),

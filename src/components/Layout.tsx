@@ -103,7 +103,7 @@ const ADMIN_MENUS = [
         icon: DollarSign,
         path: '/accounts-payable',
       },
-      { id: 'finances', title: 'CONTAS A RECEBER', icon: Wallet, path: '/admin-financial' },
+      { id: 'admin-financial', title: 'CONTAS A RECEBER', icon: Wallet, path: '/admin-financial' },
       { id: 'prices', title: 'TABELA DE PREÇOS', icon: DollarSign, path: '/prices' },
       { id: 'inventory', title: 'ESTOQUE', icon: Package, path: '/inventory' },
     ],
@@ -189,58 +189,49 @@ function useAdminBadges(currentUser: any) {
 }
 
 function AppSidebar() {
-  const { currentUser, appSettings, orders, pendingUsers } = useAppStore()
+  const { currentUser, appSettings, orders, pendingUsers, checkPermission } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
   const { lowStock, pendingPayables } = useAdminBadges(currentUser)
 
-  const defaultRolePerms = useMemo(() => {
-    try {
-      if (appSettings?.role_permissions) {
-        return JSON.parse(appSettings.role_permissions)
-      }
-    } catch (e) {
-      console.error('Failed to parse role_permissions', e)
-    }
-    return {}
-  }, [appSettings])
-
   if (!currentUser) return null
 
   const isMaster = currentUser.role === ('master' as any)
-  const roleStr = currentUser.role as string
-  const customPermissions = currentUser.permissions || []
 
-  // Base permission evaluation logic
   const hasPerm = (id: string) => {
-    if (isMaster) return true // Master has unlimited access
-    if (roleStr === 'dentist') return true // Dentists should always see their default menu
-    if (id === 'profile' || id === 'my-profile') return true // Ensure profile is allowed
+    if (isMaster) return true
+    if (id === 'profile' || id === 'my-profile') return true
 
-    const hasCustom = customPermissions.length > 0
-    if (hasCustom) {
-      if (
-        id === 'users' &&
-        !customPermissions.includes('users') &&
-        customPermissions.includes('settings')
-      )
-        return true
-      return customPermissions.includes(id)
+    const map: Record<string, string> = {
+      inbox: 'inbox',
+      kanban: 'kanban',
+      history: 'history',
+      dashboard: 'finances',
+      finances: 'finances',
+      'comparative-dashboard': 'finances',
+      'accounts-payable': 'finances',
+      'admin-financial': 'finances',
+      prices: 'finances',
+      inventory: 'inventory',
+      settings: 'settings',
+      'dre-categories': 'settings',
+      audit: 'settings',
+      users: 'settings',
+      'pending-users': 'settings',
+      dentists: 'settings',
+      patients: 'settings',
     }
 
-    // Otherwise, check the default permissions for their role
-    const roleDefaults = defaultRolePerms[roleStr]
-    if (Array.isArray(roleDefaults)) {
-      if (id === 'users' && !roleDefaults.includes('users') && roleDefaults.includes('settings'))
-        return true
-      return roleDefaults.includes(id)
+    if (id === 'new-request') {
+      return checkPermission('inbox', 'create_order')
     }
 
-    // Fallback logic for roles that have empty permissions
-    if (roleStr === 'admin') return true
-
+    const moduleName = map[id]
+    if (moduleName) {
+      return checkPermission(moduleName)
+    }
     return false
   }
 
@@ -250,7 +241,7 @@ function AppSidebar() {
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
     { id: 'finances', title: 'FINANÇAS', icon: DollarSign, path: '/financial' },
     { id: 'history', title: 'HISTÓRICO', icon: History, path: '/history' },
-    { id: 'profile', title: 'MEU PERFIL', icon: User, path: '/settings' },
+    { id: 'settings', title: 'MEU PERFIL', icon: User, path: '/settings' },
   ]
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link

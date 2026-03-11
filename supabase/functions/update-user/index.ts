@@ -52,6 +52,17 @@ Deno.serve(async (req: Request) => {
       job_function,
       assigned_dentists,
       can_move_kanban_cards,
+      username,
+      rg,
+      cpf,
+      birth_date,
+      cep,
+      address,
+      address_number,
+      address_complement,
+      city,
+      state,
+      has_access_schedule,
     } = await req.json()
 
     if (!userId) throw new Error('UserId is required')
@@ -92,6 +103,18 @@ Deno.serve(async (req: Request) => {
     if (whatsapp_group_link !== undefined) updateData.whatsapp_group_link = whatsapp_group_link
     if (phoneToUse !== undefined) updateData.personal_phone = phoneToUse
     if (job_function !== undefined) updateData.job_function = job_function
+
+    if (username !== undefined) updateData.username = username
+    if (rg !== undefined) updateData.rg = rg
+    if (cpf !== undefined) updateData.cpf = cpf
+    if (birth_date !== undefined) updateData.birth_date = birth_date
+    if (cep !== undefined) updateData.cep = cep
+    if (address !== undefined) updateData.address = address
+    if (address_number !== undefined) updateData.address_number = address_number
+    if (address_complement !== undefined) updateData.address_complement = address_complement
+    if (city !== undefined) updateData.city = city
+    if (state !== undefined) updateData.state = state
+    if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
 
     if (isAdmin || isUpdatingDentist) {
       if (role !== undefined) updateData.role = role

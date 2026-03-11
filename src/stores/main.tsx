@@ -55,6 +55,7 @@ interface AppState {
     newName: string,
     type: 'revenue' | 'variable' | 'fixed',
   ) => Promise<boolean>
+  checkPermission: (module: string, action?: string) => boolean
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
@@ -130,20 +131,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clinic: data.clinic,
         whatsapp_group_link: data.whatsapp_group_link,
         avatar_url: data.avatar_url,
-        permissions: data.permissions || [],
+        permissions: data.permissions || {},
         is_approved: data.is_approved,
         is_active: data.is_active !== false,
         requires_password_change: data.requires_password_change,
         assigned_dentists: data.assigned_dentists,
         can_move_kanban_cards: data.can_move_kanban_cards,
       })
+
+      const now = new Date()
+      const lastAccess = data.last_access_at ? new Date(data.last_access_at) : null
+      if (!lastAccess || now.getTime() - lastAccess.getTime() > 1000 * 60 * 60) {
+        supabase
+          .from('profiles')
+          .update({ last_access_at: now.toISOString() })
+          .eq('id', session.user.id)
+          .then()
+      }
     } else {
       setCurrentUser({
         id: session.user.id,
         name: session.user.user_metadata?.name || 'Usuário',
         role: session.user.user_metadata?.role || 'dentist',
         clinic: session.user.user_metadata?.clinic,
-        permissions: [],
+        permissions: {},
         is_approved: false,
         is_active: true,
         requires_password_change: false,
@@ -155,6 +166,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchProfile()
   }, [session?.user?.id])
+
+  const checkPermission = useCallback(
+    (module: string, action?: string) => {
+      if (!currentUser) return false
+      if (currentUser.role === ('master' as any) || currentUser.role === 'admin') return true
+
+      let perms = currentUser.permissions
+
+      if (!perms || Array.isArray(perms) || Object.keys(perms).length === 0) {
+        try {
+          const defaults = JSON.parse(appSettings['role_permissions_v2'] || '{}')
+          perms = defaults[currentUser.role] || {}
+        } catch (e) {
+          perms = {}
+        }
+      }
+
+      const modPerms = perms[module]
+      if (!modPerms) return false
+
+      if (action) {
+        return modPerms.actions?.[action] === true
+      }
+      return modPerms.access === true
+    },
+    [currentUser, appSettings],
+  )
 
   const fetchStages = useCallback(async () => {
     const { data } = await supabase
@@ -223,20 +261,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!session?.user || !currentUser) return
     if (!hasFetchedOrders.current) setLoading(true)
 
-    const isLimitedStaff =
-      currentUser.role !== 'admin' &&
-      currentUser.role !== ('master' as any) &&
-      currentUser.role !== 'dentist'
-
-    if (
-      isLimitedStaff &&
-      (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0)
-    ) {
-      setOrders([])
-      hasFetchedOrders.current = true
-      setLoading(false)
-      return
-    }
+    const canViewAll =
+      currentUser.role === 'admin' ||
+      currentUser.role === ('master' as any) ||
+      checkPermission('inbox', 'view_all') ||
+      checkPermission('kanban', 'view_all') ||
+      ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
+        currentUser.role,
+      )
 
     let query = supabase
       .from('orders')
@@ -245,8 +277,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
       .order('created_at', { ascending: false })
 
-    if (isLimitedStaff) {
-      query = query.in('dentist_id', currentUser.assigned_dentists!)
+    if (!canViewAll) {
+      if (currentUser.role === 'dentist') {
+        query = query.eq('dentist_id', currentUser.id)
+      } else if (currentUser.assigned_dentists && currentUser.assigned_dentists.length > 0) {
+        query = query.in('dentist_id', currentUser.assigned_dentists)
+      } else {
+        setOrders([])
+        hasFetchedOrders.current = true
+        setLoading(false)
+        return
+      }
     }
 
     const { data: dbOrders, error } = await query
@@ -261,8 +302,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
         .order('created_at', { ascending: false })
 
-      if (isLimitedStaff) {
-        fallbackQuery = fallbackQuery.in('dentist_id', currentUser.assigned_dentists!)
+      if (!canViewAll) {
+        if (currentUser.role === 'dentist') {
+          fallbackQuery = fallbackQuery.eq('dentist_id', currentUser.id)
+        } else if (currentUser.assigned_dentists && currentUser.assigned_dentists.length > 0) {
+          fallbackQuery = fallbackQuery.in('dentist_id', currentUser.assigned_dentists)
+        }
       }
 
       const { data: fallbackOrders } = await fallbackQuery
@@ -329,7 +374,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     hasFetchedOrders.current = true
     setLoading(false)
-  }, [session?.user, currentUser])
+  }, [session?.user, currentUser, checkPermission])
 
   useEffect(() => {
     if (currentUser) {
@@ -369,7 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     is_approved: payload.new.is_approved,
                     is_active: payload.new.is_active,
                     requires_password_change: payload.new.requires_password_change,
-                    permissions: payload.new.permissions || [],
+                    permissions: payload.new.permissions || {},
                     role: payload.new.role,
                     assigned_dentists: payload.new.assigned_dentists,
                     can_move_kanban_cards: payload.new.can_move_kanban_cards,
@@ -400,17 +445,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let baseOrders = orders
 
-    const isLimitedStaff =
+    const canViewAll =
       currentUser &&
-      currentUser.role !== 'admin' &&
-      currentUser.role !== ('master' as any) &&
-      currentUser.role !== 'dentist'
+      (currentUser.role === 'admin' ||
+        currentUser.role === ('master' as any) ||
+        checkPermission('inbox', 'view_all') ||
+        checkPermission('kanban', 'view_all') ||
+        ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
+          currentUser.role,
+        ))
 
-    if (isLimitedStaff) {
-      if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
-        return [] // Em caso de falta de permissão, não mostramos nenhum pedido.
-      } else {
-        baseOrders = baseOrders.filter((o) => currentUser.assigned_dentists!.includes(o.dentistId))
+    if (!canViewAll && currentUser) {
+      if (currentUser.role !== 'dentist') {
+        if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
+          return []
+        } else {
+          baseOrders = baseOrders.filter((o) =>
+            currentUser.assigned_dentists!.includes(o.dentistId),
+          )
+        }
       }
     }
 
@@ -451,7 +504,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         basePrice,
       }
     })
-  }, [orders, priceList, currentUser])
+  }, [orders, priceList, currentUser, checkPermission])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
@@ -527,7 +580,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const targetDentistId =
       (currentUser.role === 'admin' ||
         currentUser.role === ('master' as any) ||
-        currentUser.role === 'receptionist') &&
+        ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
+          currentUser.role,
+        )) &&
       orderData.dentistId
         ? orderData.dentistId
         : currentUser.id
@@ -838,6 +893,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rejectUser,
         addDRECategory,
         updateDRECategory,
+        checkPermission,
       }}
     >
       {children}

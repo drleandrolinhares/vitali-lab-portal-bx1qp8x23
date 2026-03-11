@@ -50,6 +50,17 @@ Deno.serve(async (req: Request) => {
       requires_password_change,
       assigned_dentists,
       can_move_kanban_cards,
+      username,
+      rg,
+      cpf,
+      birth_date,
+      cep,
+      address,
+      address_number,
+      address_complement,
+      city,
+      state,
+      has_access_schedule,
     } = await req.json()
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
@@ -83,7 +94,7 @@ Deno.serve(async (req: Request) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     const updateData: any = { is_approved: true, is_active: true }
-    if (permissions && permissions.length > 0) updateData.permissions = permissions
+    if (permissions && Object.keys(permissions).length > 0) updateData.permissions = permissions
     if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
     if (phoneToUse) updateData.personal_phone = phoneToUse
     if (requires_password_change !== undefined)
@@ -91,6 +102,18 @@ Deno.serve(async (req: Request) => {
     if (assigned_dentists !== undefined) updateData.assigned_dentists = assigned_dentists
     if (can_move_kanban_cards !== undefined)
       updateData.can_move_kanban_cards = can_move_kanban_cards
+
+    if (username !== undefined) updateData.username = username
+    if (rg !== undefined) updateData.rg = rg
+    if (cpf !== undefined) updateData.cpf = cpf
+    if (birth_date !== undefined) updateData.birth_date = birth_date
+    if (cep !== undefined) updateData.cep = cep
+    if (address !== undefined) updateData.address = address
+    if (address_number !== undefined) updateData.address_number = address_number
+    if (address_complement !== undefined) updateData.address_complement = address_complement
+    if (city !== undefined) updateData.city = city
+    if (state !== undefined) updateData.state = state
+    if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
 
     if (Object.keys(updateData).length > 0) {
       await supabaseAdmin.from('profiles').update(updateData).eq('id', data.user.id)

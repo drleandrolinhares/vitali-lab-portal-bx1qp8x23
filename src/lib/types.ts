@@ -10,7 +10,7 @@ export interface User {
   job_function?: string
   whatsapp_group_link?: string
   avatar_url?: string
-  permissions?: string[] // if empty, applies defaults
+  permissions?: any // Updated to support new JSONB format
   assigned_dentists?: string[] | null
   can_move_kanban_cards?: boolean
 }

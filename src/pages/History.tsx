@@ -26,10 +26,23 @@ import {
 } from '@/components/ui/select'
 
 export default function HistoryPage() {
-  const { orders, currentUser } = useAppStore()
+  const { orders, currentUser, checkPermission } = useAppStore()
   const [search, setSearch] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const [dentistFilter, setDentistFilter] = useState<string>('all')
+
+  const isCollaboratorOrAdmin = [
+    'admin',
+    'master',
+    'receptionist',
+    'technical_assistant',
+    'financial',
+    'relationship_manager',
+  ].includes(currentUser?.role || '')
+
+  const canSelectDentist = checkPermission('history', 'select_dentist') || isCollaboratorOrAdmin
+  const canShowCompleted = checkPermission('history', 'show_completed') || isCollaboratorOrAdmin
+  const canSearch = checkPermission('history', 'search') || isCollaboratorOrAdmin
 
   const availableDentists = useMemo(() => {
     const map = new Map<string, string>()
@@ -52,18 +65,19 @@ export default function HistoryPage() {
   }
 
   const filtered = orders.filter((o) => {
-    const matchesSearch =
-      o.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      o.friendlyId.toLowerCase().includes(search.toLowerCase())
+    if (canSearch && search.trim()) {
+      const matchesSearch =
+        o.patientName.toLowerCase().includes(search.toLowerCase()) ||
+        o.friendlyId.toLowerCase().includes(search.toLowerCase())
+      if (!matchesSearch) return false
+    }
 
-    if (!matchesSearch) return false
-
-    if (dentistFilter !== 'all' && o.dentistId !== dentistFilter) return false
+    if (canSelectDentist && dentistFilter !== 'all' && o.dentistId !== dentistFilter) return false
 
     const isFinished =
       o.status === 'completed' || o.status === 'delivered' || o.status === 'cancelled'
 
-    if (isFinished && !showCompleted && !search.trim()) {
+    if (isFinished && !showCompleted && (!canSearch || !search.trim())) {
       return false
     }
 
@@ -76,17 +90,19 @@ export default function HistoryPage() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Histórico de Pedidos</h2>
-          <p className="text-muted-foreground">Consulte todos os casos registrados.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
+            {isCollaboratorOrAdmin ? 'Histórico Global' : 'Histórico de Pedidos'}
+          </h2>
+          <p className="text-muted-foreground">Consulte todos os casos registrados e arquivados.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          {showDentistCol && (
+          {canSelectDentist && showDentistCol && (
             <Select value={dentistFilter} onValueChange={setDentistFilter}>
               <SelectTrigger className="w-full sm:w-[220px] h-10 bg-background shadow-sm border-border">
-                <SelectValue placeholder="Filtrar por Dentista" />
+                <SelectValue placeholder="SELECIONAR DENTISTA" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Dentistas</SelectItem>
+                <SelectItem value="all">TODOS OS DENTISTAS</SelectItem>
                 {availableDentists.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
                     {d.name}
@@ -96,28 +112,33 @@ export default function HistoryPage() {
             </Select>
           )}
 
-          <div className="flex items-center space-x-2 bg-background border px-3 py-2 rounded-md h-10 w-full sm:w-auto shadow-sm">
-            <Switch
-              id="show-completed"
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-            />
-            <Label
-              htmlFor="show-completed"
-              className="text-sm font-medium cursor-pointer whitespace-nowrap"
-            >
-              Mostrar Concluídos
-            </Label>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por paciente ou ID..."
-              className="pl-9 h-10 shadow-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          {canShowCompleted && (
+            <div className="flex items-center space-x-2 bg-background border px-3 py-2 rounded-md h-10 w-full sm:w-auto shadow-sm">
+              <Switch
+                id="show-completed"
+                checked={showCompleted}
+                onCheckedChange={setShowCompleted}
+              />
+              <Label
+                htmlFor="show-completed"
+                className="text-sm font-medium cursor-pointer whitespace-nowrap uppercase tracking-wider text-[10px]"
+              >
+                MOSTRAR CONCLUÍDOS
+              </Label>
+            </div>
+          )}
+
+          {canSearch && (
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="BUSCA POR PACIENTE/ID..."
+                className="pl-9 h-10 shadow-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       </div>
 
