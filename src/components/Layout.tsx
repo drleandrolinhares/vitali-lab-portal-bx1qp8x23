@@ -125,7 +125,8 @@ const ADMIN_MENUS = [
 
 function useAdminBadges(currentUser: any) {
   const [lowStock, setLowStock] = useState(0)
-  const [overduePayables, setOverduePayables] = useState(0)
+  const [pendingPayables, setPendingPayables] = useState(0)
+  const { selectedLab } = useAppStore()
 
   useEffect(() => {
     if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
@@ -142,16 +143,20 @@ function useAdminBadges(currentUser: any) {
           )
         }
 
-        const today = new Date().toLocaleDateString('en-CA')
-
-        const { count: expCount, error: expError } = await supabase
+        let expQuery = supabase
           .from('expenses')
           .select('id', { count: 'exact' })
           .eq('status', 'pending')
-          .lt('due_date', today)
+          .is('order_id', null)
+
+        if (selectedLab && selectedLab !== 'Todos') {
+          expQuery = expQuery.eq('sector', selectedLab)
+        }
+
+        const { count: expCount, error: expError } = await expQuery
 
         if (expCount !== null && !expError) {
-          setOverduePayables(expCount)
+          setPendingPayables(expCount)
         }
       } catch (err) {
         console.error('Error fetching admin badges:', err)
@@ -178,9 +183,9 @@ function useAdminBadges(currentUser: any) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [currentUser])
+  }, [currentUser, selectedLab])
 
-  return { lowStock, overduePayables }
+  return { lowStock, pendingPayables }
 }
 
 function AppSidebar() {
@@ -189,7 +194,7 @@ function AppSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const { lowStock, overduePayables } = useAdminBadges(currentUser)
+  const { lowStock, pendingPayables } = useAdminBadges(currentUser)
 
   const defaultRolePerms = useMemo(() => {
     try {
@@ -341,11 +346,24 @@ function AppSidebar() {
               <SidebarMenu>
                 {visibleItems.map((item) => {
                   let badgeCount = 0
-                  if (item.id === 'pending-users') badgeCount = pendingUsers?.length || 0
-                  if (item.id === 'inventory') badgeCount = lowStock
-                  if (item.id === 'accounts-payable') badgeCount = overduePayables
-                  if (item.id === 'inbox')
+                  let badgeColor = 'bg-primary'
+
+                  if (item.id === 'pending-users') {
+                    badgeCount = pendingUsers?.length || 0
+                    badgeColor = 'bg-amber-500'
+                  }
+                  if (item.id === 'inventory') {
+                    badgeCount = lowStock
+                    badgeColor = 'bg-red-500'
+                  }
+                  if (item.id === 'accounts-payable') {
+                    badgeCount = pendingPayables
+                    badgeColor = 'bg-slate-500 dark:bg-slate-600'
+                  }
+                  if (item.id === 'inbox') {
                     badgeCount = orders.filter((o: any) => !o.isAcknowledged).length
+                    badgeColor = 'bg-emerald-500'
+                  }
 
                   return (
                     <SidebarMenuItem key={item.path}>
@@ -363,7 +381,12 @@ function AppSidebar() {
                         </Link>
                       </SidebarMenuButton>
                       {badgeCount > 0 && (
-                        <SidebarMenuBadge className="bg-red-500 text-white rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                        <SidebarMenuBadge
+                          className={cn(
+                            'text-white rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center text-[10px] font-bold shadow-sm',
+                            badgeColor,
+                          )}
+                        >
                           {badgeCount}
                         </SidebarMenuBadge>
                       )}
