@@ -57,7 +57,8 @@ export default function KanbanPage() {
   } = useAppStore()
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
-  const canDragCards = isAdmin || currentUser?.can_move_kanban_cards !== false
+  const isDentist = currentUser?.role === 'dentist'
+  const canDragCards = !isDentist && (isAdmin || currentUser?.can_move_kanban_cards !== false)
   const showDentistFilter = currentUser?.role !== 'dentist'
 
   const [searchParams, setSearchParams] = useSearchParams()
