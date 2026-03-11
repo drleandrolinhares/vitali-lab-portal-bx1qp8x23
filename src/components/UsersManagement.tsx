@@ -34,21 +34,21 @@ import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export const PERMISSION_OPTIONS = [
-  { id: 'inbox', label: 'Caixa de Entrada' },
-  { id: 'new-request', label: 'Novo Pedido' },
-  { id: 'kanban', label: 'Evolução dos Trabalhos' },
-  { id: 'history', label: 'Histórico Global' },
+  { id: 'inbox', label: 'CAIXA DE ENTRADA' },
+  { id: 'new-request', label: 'NOVO PEDIDO' },
+  { id: 'kanban', label: 'EVOLUÇÃO DOS TRABALHOS' },
+  { id: 'history', label: 'HISTÓRICO GLOBAL' },
   { id: 'dashboard', label: 'DASHBOARD' },
   { id: 'comparative-dashboard', label: 'DASH COMPARATIVO' },
-  { id: 'finances', label: 'Finanças' },
-  { id: 'accounts-payable', label: 'Contas a Pagar' },
-  { id: 'inventory', label: 'Estoque' },
-  { id: 'dentists', label: 'Dentistas' },
-  { id: 'patients', label: 'Pacientes' },
-  { id: 'prices', label: 'Tabela de Preços' },
-  { id: 'settings', label: 'Configurações e Usuários' },
-  { id: 'dre-categories', label: 'Categorias DRE' },
-  { id: 'audit', label: 'Logs de Auditoria' },
+  { id: 'finances', label: 'FINANÇAS' },
+  { id: 'accounts-payable', label: 'CONTAS A PAGAR' },
+  { id: 'inventory', label: 'ESTOQUE' },
+  { id: 'dentists', label: 'DENTISTAS' },
+  { id: 'patients', label: 'PACIENTES' },
+  { id: 'prices', label: 'TABELA DE PREÇOS' },
+  { id: 'settings', label: 'CONFIGURAÇÕES E USUÁRIOS' },
+  { id: 'dre-categories', label: 'CATEGORIAS DRE' },
+  { id: 'audit', label: 'LOGS DE AUDITORIA' },
 ]
 
 export function UsersManagement() {
@@ -58,7 +58,10 @@ export function UsersManagement() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [saving, setSaving] = useState(false)
+
+  const [mainTab, setMainTab] = useState<'usuarios' | 'colaboradores'>('usuarios')
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active')
+  const [subRoleFilter, setSubRoleFilter] = useState<string>('all')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -105,7 +108,7 @@ export function UsersManagement() {
         name: '',
         email: '',
         password: '',
-        role: 'dentist',
+        role: mainTab === 'usuarios' ? 'dentist' : 'receptionist',
         job_function: '',
         clinic: '',
         whatsapp_group_link: '',
@@ -119,14 +122,14 @@ export function UsersManagement() {
 
   const handleSave = async () => {
     if (!formData.name) {
-      return toast({ title: 'O nome é obrigatório', variant: 'destructive' })
+      return toast({ title: 'O NOME É OBRIGATÓRIO', variant: 'destructive' })
     }
     if (!formData.email || !formData.email.includes('@')) {
-      return toast({ title: 'Formato de email inválido', variant: 'destructive' })
+      return toast({ title: 'FORMATO DE EMAIL INVÁLIDO', variant: 'destructive' })
     }
     if (!editingUser && (!formData.password || formData.password.length < 6)) {
       return toast({
-        title: 'A senha inicial deve ter no mínimo 6 caracteres',
+        title: 'A SENHA INICIAL DEVE TER NO MÍNIMO 6 CARACTERES',
         variant: 'destructive',
       })
     }
@@ -146,7 +149,7 @@ export function UsersManagement() {
       const { error } = await updateUser({
         userId: editingUser.id,
         name: formData.name,
-        email: formData.email,
+        email: formData.email.toLowerCase(),
         password: formData.password || undefined,
         clinic: formData.clinic,
         job_function: formData.job_function,
@@ -158,19 +161,20 @@ export function UsersManagement() {
       })
 
       if (error) {
-        toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+        toast({ title: 'ERRO', description: error.message, variant: 'destructive' })
       } else {
-        toast({ title: 'Usuário atualizado com sucesso' })
-        if (editingUser.email !== formData.email) {
+        toast({ title: 'USUÁRIO ATUALIZADO COM SUCESSO' })
+        if (editingUser.email !== formData.email.toLowerCase()) {
           await logAudit('UPDATE_EMAIL', 'profile', editingUser.id, {
             oldEmail: editingUser.email,
-            newEmail: formData.email,
+            newEmail: formData.email.toLowerCase(),
           })
         }
       }
     } else {
       const { error } = await createUser({
         ...formData,
+        email: formData.email.toLowerCase(),
         job_function: formData.job_function,
         whatsapp_group_link: finalGroupLink,
         permissions: selectedPerms,
@@ -178,11 +182,11 @@ export function UsersManagement() {
       })
       if (error)
         toast({
-          title: 'Erro',
-          description: error.message || 'Erro ao criar',
+          title: 'ERRO',
+          description: error.message || 'ERRO AO CRIAR',
           variant: 'destructive',
         })
-      else toast({ title: 'Usuário criado com sucesso' })
+      else toast({ title: 'USUÁRIO CRIADO COM SUCESSO' })
     }
 
     setSaving(false)
@@ -202,77 +206,154 @@ export function UsersManagement() {
     }
   }
 
-  const filteredUsers = users.filter((u) =>
-    statusFilter === 'active' ? u.is_active !== false : u.is_active === false,
-  )
+  const filteredUsers = users.filter((u) => {
+    const isDentist = u.role === 'dentist'
+    const isTabMatch = mainTab === 'usuarios' ? isDentist : !isDentist
+    const isActiveMatch = statusFilter === 'active' ? u.is_active !== false : u.is_active === false
+    const isSubRoleMatch = subRoleFilter === 'all' || u.role === subRoleFilter
+
+    return isTabMatch && isActiveMatch && isSubRoleMatch
+  })
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <Tabs
-          value={statusFilter}
-          onValueChange={(v: any) => setStatusFilter(v)}
-          className="w-[250px]"
+          value={mainTab}
+          onValueChange={(v: any) => {
+            setMainTab(v)
+            setSubRoleFilter('all')
+          }}
+          className="w-full sm:w-[400px]"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="active">Ativos</TabsTrigger>
-            <TabsTrigger value="inactive">Inativos</TabsTrigger>
+            <TabsTrigger value="usuarios" className="uppercase text-xs font-bold">
+              USUÁRIOS (DENTISTAS)
+            </TabsTrigger>
+            <TabsTrigger value="colaboradores" className="uppercase text-xs font-bold">
+              COLABORADORES
+            </TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button onClick={() => openModal()} size="sm">
-          <Plus className="w-4 h-4 mr-2" /> Novo Usuário
-        </Button>
+
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Select value={subRoleFilter} onValueChange={setSubRoleFilter}>
+            <SelectTrigger className="w-[170px] uppercase text-xs font-bold">
+              <SelectValue placeholder="FILTRAR FUNÇÃO" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="uppercase text-xs font-bold">
+                TODAS FUNÇÕES
+              </SelectItem>
+              {mainTab === 'usuarios' ? (
+                <SelectItem value="dentist" className="uppercase text-xs font-bold">
+                  DENTISTA
+                </SelectItem>
+              ) : (
+                <>
+                  <SelectItem value="admin" className="uppercase text-xs font-bold">
+                    ADMINISTRADOR
+                  </SelectItem>
+                  <SelectItem value="receptionist" className="uppercase text-xs font-bold">
+                    RECEPÇÃO / PRODUÇÃO
+                  </SelectItem>
+                  {currentUser?.role === ('master' as any) && (
+                    <SelectItem value="master" className="uppercase text-xs font-bold">
+                      MASTER
+                    </SelectItem>
+                  )}
+                </>
+              )}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <SelectTrigger className="w-[130px] uppercase text-xs font-bold">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active" className="uppercase text-xs font-bold">
+                ATIVOS
+              </SelectItem>
+              <SelectItem value="inactive" className="uppercase text-xs font-bold">
+                INATIVOS
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={() => openModal()}
+            size="sm"
+            className="uppercase text-xs font-bold whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4 mr-2" /> NOVO
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-xl bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Contato</TableHead>
-              <TableHead>Função / Perfil</TableHead>
-              <TableHead className="text-center">Acesso Customizado</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className="uppercase text-xs font-bold">NOME</TableHead>
+              <TableHead className="uppercase text-xs font-bold">CONTATO</TableHead>
+              <TableHead className="uppercase text-xs font-bold">FUNÇÃO / PERFIL</TableHead>
+              <TableHead className="text-center uppercase text-xs font-bold">
+                ACESSO CUSTOMIZADO
+              </TableHead>
+              <TableHead className="text-right uppercase text-xs font-bold">AÇÕES</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
+                >
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                  Carregando usuários...
+                  CARREGANDO...
                 </TableCell>
               </TableRow>
             ) : filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                  Nenhum usuário encontrado.
+                <TableCell
+                  colSpan={5}
+                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
+                >
+                  NENHUM REGISTRO ENCONTRADO.
                 </TableCell>
               </TableRow>
             ) : (
               filteredUsers.map((user) => (
                 <TableRow key={user.id} className={user.is_active === false ? 'opacity-60' : ''}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="font-medium uppercase text-sm">{user.name}</TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {user.email?.includes('@vitalilab.local') ? 'Sem email' : user.email}
+                      {user.email?.includes('@vitalilab.local') ? 'SEM EMAIL' : user.email}
                     </div>
                     {user.personal_phone && (
-                      <div className="text-xs text-muted-foreground">{user.personal_phone}</div>
+                      <div className="text-xs text-muted-foreground uppercase font-semibold">
+                        {user.personal_phone}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="capitalize font-medium">{user.role}</div>
-                    <div className="text-xs text-muted-foreground">{user.job_function}</div>
+                    <div className="font-medium uppercase text-sm">{user.role}</div>
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">
+                      {user.job_function}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     {user.permissions && user.permissions.length > 0 ? (
-                      <span className="inline-flex items-center text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200">
+                      <span className="inline-flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200 uppercase">
                         <Shield className="w-3 h-3 mr-1" />
-                        {user.permissions.length} módulos
+                        {user.permissions.length} MÓDULOS
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Padrão</span>
+                      <span className="text-xs text-muted-foreground uppercase font-semibold">
+                        PADRÃO
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -290,12 +371,14 @@ export function UsersManagement() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
+            <DialogTitle className="uppercase">
+              {editingUser ? 'EDITAR USUÁRIO' : 'NOVO USUÁRIO'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Nome Completo</Label>
+                <Label className="uppercase text-xs font-bold">NOME COMPLETO</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -303,67 +386,77 @@ export function UsersManagement() {
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Telefone / WhatsApp</Label>
+                <Label className="uppercase text-xs font-bold">TELEFONE / WHATSAPP</Label>
                 <Input
                   value={formData.personal_phone}
                   onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
-                  placeholder="Ex: (11) 99999-9999"
+                  placeholder="EX: (11) 99999-9999"
                 />
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Email de Acesso</Label>
+                <Label className="uppercase text-xs font-bold">EMAIL DE ACESSO</Label>
                 <Input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Ex: exemplo@email.com"
+                  placeholder="EX: EXEMPLO@EMAIL.COM"
                   required
                 />
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Senha {editingUser ? '(Opcional)' : 'Inicial'}</Label>
+                <Label className="uppercase text-xs font-bold">
+                  SENHA {editingUser ? '(OPCIONAL)' : 'INICIAL'}
+                </Label>
                 <Input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder={editingUser ? 'Preencha para alterar' : 'Mín. 6 caracteres'}
+                  placeholder={editingUser ? 'PREENCHA PARA ALTERAR' : 'MÍN. 6 CARACTERES'}
                   required={!editingUser}
                 />
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Função do Usuário</Label>
+                <Label className="uppercase text-xs font-bold">FUNÇÃO DO USUÁRIO</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(v) => setFormData({ ...formData, role: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="uppercase text-xs font-bold">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="dentist">Dentista</SelectItem>
+                    <SelectItem value="admin" className="uppercase text-xs font-bold">
+                      ADMINISTRADOR
+                    </SelectItem>
+                    <SelectItem value="dentist" className="uppercase text-xs font-bold">
+                      DENTISTA
+                    </SelectItem>
                     {currentUser?.role === ('master' as any) && (
-                      <SelectItem value="master">Master</SelectItem>
+                      <SelectItem value="master" className="uppercase text-xs font-bold">
+                        MASTER
+                      </SelectItem>
                     )}
-                    <SelectItem value="receptionist">Recepção / Produção</SelectItem>
+                    <SelectItem value="receptionist" className="uppercase text-xs font-bold">
+                      RECEPÇÃO / PRODUÇÃO
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Função na Empresa</Label>
+                <Label className="uppercase text-xs font-bold">FUNÇÃO NA EMPRESA</Label>
                 <Input
                   value={formData.job_function}
                   onChange={(e) => setFormData({ ...formData, job_function: e.target.value })}
-                  placeholder="Ex: Ceramista, Recepção"
+                  placeholder="EX: CERAMISTA, RECEPÇÃO"
                 />
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Clínica (Opcional)</Label>
+                <Label className="uppercase text-xs font-bold">CLÍNICA (OPCIONAL)</Label>
                 <Input
                   value={formData.clinic}
                   onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
@@ -371,19 +464,19 @@ export function UsersManagement() {
               </div>
 
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label>Link Grupo WhatsApp</Label>
+                <Label className="uppercase text-xs font-bold">LINK GRUPO WHATSAPP</Label>
                 <Input
                   value={formData.whatsapp_group_link}
                   onChange={(e) =>
                     setFormData({ ...formData, whatsapp_group_link: e.target.value })
                   }
-                  placeholder="Ex: https://chat.whatsapp.com/..."
+                  placeholder="EX: HTTPS://CHAT.WHATSAPP.COM/..."
                 />
               </div>
 
               {editingUser && (
                 <div className="space-y-2 col-span-2 flex flex-col justify-center mt-2 border-t pt-4">
-                  <Label className="mb-2">Status da Conta</Label>
+                  <Label className="mb-2 uppercase text-xs font-bold">STATUS DA CONTA</Label>
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={formData.is_active}
@@ -391,8 +484,8 @@ export function UsersManagement() {
                         setFormData({ ...formData, is_active: checked })
                       }
                     />
-                    <span className="text-sm font-medium">
-                      {formData.is_active ? 'Ativo' : 'Inativo (Bloqueado)'}
+                    <span className="text-sm font-medium uppercase">
+                      {formData.is_active ? 'ATIVO' : 'INATIVO (BLOQUEADO)'}
                     </span>
                   </div>
                 </div>
@@ -401,16 +494,24 @@ export function UsersManagement() {
 
             <div className="space-y-3 pt-4 border-t">
               <div className="flex justify-between items-center mb-2">
-                <Label className="text-base">Permissões de Acesso (Menu Lateral)</Label>
-                <Button variant="outline" size="sm" type="button" onClick={toggleAllPerms}>
+                <Label className="text-sm uppercase font-bold">
+                  PERMISSÕES DE ACESSO (MENU LATERAL)
+                </Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={toggleAllPerms}
+                  className="uppercase text-[10px] font-bold"
+                >
                   {selectedPerms.length === PERMISSION_OPTIONS.length
-                    ? 'Desmarcar Tudo'
-                    : 'Marcar Tudo'}
+                    ? 'DESMARCAR TUDO'
+                    : 'MARCAR TUDO'}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Selecione os módulos que este usuário poderá visualizar. Se nenhum for selecionado,
-                as permissões padrões da função serão aplicadas.
+              <p className="text-xs text-muted-foreground mb-4 uppercase font-semibold">
+                SELECIONE OS MÓDULOS QUE ESTE USUÁRIO PODERÁ VISUALIZAR. SE NENHUM FOR SELECIONADO,
+                AS PERMISSÕES PADRÕES DA FUNÇÃO SERÃO APLICADAS.
               </p>
               <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto p-3 border rounded-md bg-muted/20">
                 {PERMISSION_OPTIONS.map((opt) => (
@@ -422,7 +523,7 @@ export function UsersManagement() {
                     />
                     <Label
                       htmlFor={`perm-${opt.id}`}
-                      className="font-normal cursor-pointer text-sm"
+                      className="font-bold cursor-pointer text-xs uppercase"
                     >
                       {opt.label}
                     </Label>
@@ -432,11 +533,15 @@ export function UsersManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>
-              Cancelar
+            <Button
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              className="uppercase text-xs font-bold"
+            >
+              CANCELAR
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+            <Button onClick={handleSave} disabled={saving} className="uppercase text-xs font-bold">
+              {saving ? 'SALVANDO...' : 'SALVAR'}
             </Button>
           </DialogFooter>
         </DialogContent>

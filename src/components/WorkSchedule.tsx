@@ -51,9 +51,9 @@ export function WorkSchedule() {
       .eq('id', user.id)
 
     if (error) {
-      toast({ title: 'Erro ao salvar escala', variant: 'destructive' })
+      toast({ title: 'ERRO AO SALVAR ESCALA', variant: 'destructive' })
     } else {
-      toast({ title: 'Escala salva com sucesso' })
+      toast({ title: 'ESCALA SALVA COM SUCESSO' })
     }
     setSaving(null)
   }
@@ -73,15 +73,15 @@ export function WorkSchedule() {
     if (total <= 0 || isNaN(total)) return '--'
     const h = Math.floor(total / 60)
     const m = total % 60
-    return `${h}h ${m.toString().padStart(2, '0')}m`
+    return `${h}H ${m.toString().padStart(2, '0')}M`
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Gerencie a jornada de trabalho da equipe do laboratório (exclui dentistas e usuários
-          inativos).
+        <p className="text-xs text-muted-foreground uppercase font-semibold">
+          GERENCIE A JORNADA DE TRABALHO DA EQUIPE DO LABORATÓRIO (EXCLUI DENTISTAS E USUÁRIOS
+          INATIVOS).
         </p>
       </div>
 
@@ -89,40 +89,50 @@ export function WorkSchedule() {
         <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Colaborador</TableHead>
-              <TableHead>Entrada</TableHead>
-              <TableHead>Ida Almoço</TableHead>
-              <TableHead>Volta Almoço</TableHead>
-              <TableHead>Saída</TableHead>
-              <TableHead className="text-center">Total Diário</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className="uppercase text-xs font-bold">COLABORADOR</TableHead>
+              <TableHead className="uppercase text-xs font-bold">ENTRADA</TableHead>
+              <TableHead className="uppercase text-xs font-bold">IDA ALMOÇO</TableHead>
+              <TableHead className="uppercase text-xs font-bold">VOLTA ALMOÇO</TableHead>
+              <TableHead className="uppercase text-xs font-bold">SAÍDA</TableHead>
+              <TableHead className="text-center uppercase text-xs font-bold">
+                TOTAL DIÁRIO
+              </TableHead>
+              <TableHead className="text-right uppercase text-xs font-bold">AÇÕES</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
+                >
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                  Carregando equipe...
+                  CARREGANDO EQUIPE...
                 </TableCell>
               </TableRow>
             ) : staff.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                  Nenhum colaborador encontrado.
+                <TableCell
+                  colSpan={7}
+                  className="h-32 text-center text-muted-foreground uppercase text-xs font-bold"
+                >
+                  NENHUM COLABORADOR ENCONTRADO.
                 </TableCell>
               </TableRow>
             ) : (
               staff.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
-                    <div className="font-medium whitespace-nowrap">{user.name}</div>
-                    <div className="text-xs text-muted-foreground capitalize">
+                    <div className="font-medium whitespace-nowrap uppercase text-sm">
+                      {user.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">
                       {user.job_function || user.role}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">
                       {user.personal_phone ||
-                        (user.email?.includes('@vitalilab.local') ? 'Sem email' : user.email)}
+                        (user.email?.includes('@vitalilab.local') ? 'SEM EMAIL' : user.email)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -157,7 +167,7 @@ export function WorkSchedule() {
                       className="w-[110px]"
                     />
                   </TableCell>
-                  <TableCell className="text-center font-semibold text-primary whitespace-nowrap">
+                  <TableCell className="text-center font-semibold text-primary whitespace-nowrap uppercase text-sm">
                     {calculateHours(user)}
                   </TableCell>
                   <TableCell className="text-right">

@@ -17,17 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Phone, User, Building, Camera, Loader2, Link as LinkIcon, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
-import { UsersManagement, PERMISSION_OPTIONS } from '@/components/UsersManagement'
 import { WorkSchedule } from '@/components/WorkSchedule'
-import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
 function ResetPasswordTab() {
   const [newPassword, setNewPassword] = useState('')
@@ -37,23 +27,23 @@ function ResetPasswordTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newPassword !== confirmPassword) {
-      toast({ title: 'As senhas não coincidem', variant: 'destructive' })
+      toast({ title: 'AS SENHAS NÃO COINCIDEM', variant: 'destructive' })
       return
     }
     if (newPassword.length < 6) {
-      toast({ title: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' })
+      toast({ title: 'A SENHA DEVE TER PELO MENOS 6 CARACTERES', variant: 'destructive' })
       return
     }
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     if (error) {
       toast({
-        title: 'Erro ao atualizar senha',
+        title: 'ERRO AO ATUALIZAR SENHA',
         description: error.message,
         variant: 'destructive',
       })
     } else {
-      toast({ title: 'Senha atualizada com sucesso!' })
+      toast({ title: 'SENHA ATUALIZADA COM SUCESSO!' })
       setNewPassword('')
       setConfirmPassword('')
     }
@@ -63,13 +53,15 @@ function ResetPasswordTab() {
   return (
     <Card className="shadow-subtle max-w-md">
       <CardHeader>
-        <CardTitle>REDEFINIR SENHA</CardTitle>
-        <CardDescription>Atualize sua senha de acesso ao sistema.</CardDescription>
+        <CardTitle className="uppercase">REDEFINIR SENHA</CardTitle>
+        <CardDescription className="uppercase text-xs font-semibold">
+          ATUALIZE SUA SENHA DE ACESSO AO SISTEMA.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>NOVA SENHA</Label>
+            <Label className="uppercase text-xs font-bold">NOVA SENHA</Label>
             <Input
               type="password"
               value={newPassword}
@@ -78,7 +70,7 @@ function ResetPasswordTab() {
             />
           </div>
           <div className="space-y-2">
-            <Label>CONFIRMAR NOVA SENHA</Label>
+            <Label className="uppercase text-xs font-bold">CONFIRMAR NOVA SENHA</Label>
             <Input
               type="password"
               value={confirmPassword}
@@ -86,132 +78,11 @@ function ResetPasswordTab() {
               required
             />
           </div>
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full uppercase text-xs font-bold">
             {loading ? 'ATUALIZANDO...' : 'ATUALIZAR SENHA'}
           </Button>
         </form>
       </CardContent>
-    </Card>
-  )
-}
-
-function RolePermissionsPanel() {
-  const { appSettings, updateSetting } = useAppStore()
-  const [perms, setPerms] = useState<any>({ admin: [], receptionist: [], dentist: [] })
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (appSettings?.role_permissions) {
-      try {
-        setPerms(JSON.parse(appSettings.role_permissions))
-      } catch (e) {
-        console.error('Failed to parse role_permissions', e)
-      }
-    }
-  }, [appSettings])
-
-  const handleToggle = (role: string, id: string) => {
-    setPerms((prev: any) => {
-      const rolePerms = prev[role] || []
-      const has = rolePerms.includes(id)
-      return {
-        ...prev,
-        [role]: has ? rolePerms.filter((p: string) => p !== id) : [...rolePerms, id],
-      }
-    })
-  }
-
-  const handleSelectAll = (role: string) => {
-    setPerms((prev: any) => {
-      const allIds = PERMISSION_OPTIONS.map((p) => p.id)
-      const isAll = prev[role]?.length === allIds.length
-      return {
-        ...prev,
-        [role]: isAll ? [] : allIds,
-      }
-    })
-  }
-
-  const save = async () => {
-    setSaving(true)
-    await updateSetting('role_permissions', JSON.stringify(perms))
-    setSaving(false)
-    toast({ title: 'Permissões salvas com sucesso' })
-  }
-
-  return (
-    <Card className="shadow-subtle">
-      <CardHeader>
-        <CardTitle>Hierarquia de Permissões</CardTitle>
-        <CardDescription>Defina o acesso padrão para cada perfil do sistema.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Módulo</TableHead>
-              <TableHead className="text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <span>Admin</span>
-                  <Button variant="outline" size="sm" onClick={() => handleSelectAll('admin')}>
-                    Tudo
-                  </Button>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <span>Recepção / Produção</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSelectAll('receptionist')}
-                  >
-                    Tudo
-                  </Button>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <span>Dentista</span>
-                  <Button variant="outline" size="sm" onClick={() => handleSelectAll('dentist')}>
-                    Tudo
-                  </Button>
-                </div>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {PERMISSION_OPTIONS.map((opt) => (
-              <TableRow key={opt.id}>
-                <TableCell className="font-medium text-sm">{opt.label}</TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={perms.admin?.includes(opt.id)}
-                    onCheckedChange={() => handleToggle('admin', opt.id)}
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={perms.receptionist?.includes(opt.id)}
-                    onCheckedChange={() => handleToggle('receptionist', opt.id)}
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={perms.dentist?.includes(opt.id)}
-                    onCheckedChange={() => handleToggle('dentist', opt.id)}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-      <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg">
-        <Button onClick={save} disabled={saving} className="min-w-[150px]">
-          {saving ? 'Salvando...' : 'Salvar Permissões'}
-        </Button>
-      </CardFooter>
     </Card>
   )
 }
@@ -279,7 +150,7 @@ export default function SettingsPage() {
     await updateSetting('whatsapp_lab_link', finalLink)
     setLabLink(finalLink)
     setSavingSystem(false)
-    toast({ title: 'Configurações salvas' })
+    toast({ title: 'CONFIGURAÇÕES SALVAS COM SUCESSO' })
   }
 
   const handleSaveProfile = async () => {
@@ -328,8 +199,8 @@ export default function SettingsPage() {
       await updateProfile({ avatar_url: data.publicUrl })
     } catch (error) {
       toast({
-        title: 'Erro no upload',
-        description: 'Não foi possível fazer upload da imagem.',
+        title: 'ERRO NO UPLOAD',
+        description: 'NÃO FOI POSSÍVEL FAZER UPLOAD DA IMAGEM.',
         variant: 'destructive',
       })
     } finally {
@@ -372,13 +243,12 @@ export default function SettingsPage() {
   }
 
   const isAdmin = currentUser.role === 'admin' || currentUser.role === ('master' as any)
-  const isMaster = currentUser.role === ('master' as any)
 
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-6 animate-fade-in">
       <div className="flex flex-col gap-1 mb-4">
         <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
-          Configurações Gerais
+          CONFIGURAÇÕES GERAIS
         </h2>
       </div>
 
@@ -386,36 +256,28 @@ export default function SettingsPage() {
         <TabsList className="mb-6 flex w-full max-w-full overflow-x-auto bg-transparent gap-2 h-auto p-0 pb-2 justify-start scrollbar-hide">
           <TabsTrigger
             value="profile"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
           >
             MEU PERFIL
           </TabsTrigger>
           <TabsTrigger
             value="reset-password"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
           >
             REDEFINIR SENHA
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger
               value="system"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
               WHATSAPP
             </TabsTrigger>
           )}
           {isAdmin && (
             <TabsTrigger
-              value="users"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
-            >
-              USUÁRIOS / COLABORADORES
-            </TabsTrigger>
-          )}
-          {isAdmin && (
-            <TabsTrigger
               value="work-schedule"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
               ESCALA DE TRABALHO
             </TabsTrigger>
@@ -423,7 +285,7 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsTrigger
               value="scales"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
               ESCALAS DE COR
             </TabsTrigger>
@@ -431,17 +293,9 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsTrigger
               value="brands"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
               MARCAS DE IMPLANTES
-            </TabsTrigger>
-          )}
-          {isMaster && (
-            <TabsTrigger
-              value="role-permissions"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap"
-            >
-              PERMISSÕES (MASTER)
             </TabsTrigger>
           )}
         </TabsList>
@@ -449,15 +303,17 @@ export default function SettingsPage() {
         <TabsContent value="profile" className="space-y-6">
           <Card className="shadow-subtle">
             <CardHeader>
-              <CardTitle>Dados Pessoais</CardTitle>
-              <CardDescription>Atualize suas informações e foto de perfil.</CardDescription>
+              <CardTitle className="uppercase">DADOS PESSOAIS</CardTitle>
+              <CardDescription className="uppercase text-xs font-semibold">
+                ATUALIZE SUAS INFORMAÇÕES E FOTO DE PERFIL.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
                 <div className="relative group">
                   <Avatar className="w-24 h-24 border-2 border-border/50">
                     <AvatarImage src={avatarUrl} className="object-cover" />
-                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary uppercase">
                       {name.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -483,47 +339,47 @@ export default function SettingsPage() {
                 <div className="flex-1 space-y-4 w-full">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 uppercase text-xs font-bold">
                         <User className="w-4 h-4 text-primary/70" />
                         NOME COMPLETO
                       </Label>
                       <Input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Seu nome"
+                        placeholder="SEU NOME"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 uppercase text-xs font-bold">
                         <Building className="w-4 h-4 text-primary/70" />
                         CLÍNICA (OPCIONAL)
                       </Label>
                       <Input
                         value={clinic}
                         onChange={(e) => setClinic(e.target.value)}
-                        placeholder="Nome da sua clínica"
+                        placeholder="NOME DA SUA CLÍNICA"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 uppercase text-xs font-bold">
                         <User className="w-4 h-4 text-primary/70" />
                         FUNÇÃO NA EMPRESA
                       </Label>
                       <Input
                         value={jobFunction}
                         onChange={(e) => setJobFunction(e.target.value)}
-                        placeholder="Ex: Ceramista, Recepção"
+                        placeholder="EX: CERAMISTA, RECEPÇÃO"
                       />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 uppercase text-xs font-bold">
                         <LinkIcon className="w-4 h-4 text-primary/70" />
                         LINK DO GRUPO DA CLÍNICA (WHATSAPP)
                       </Label>
                       <Input
                         value={whatsappGroupLink}
                         onChange={(e) => setWhatsappGroupLink(e.target.value)}
-                        placeholder="Ex: https://chat.whatsapp.com/..."
+                        placeholder="EX: HTTPS://CHAT.WHATSAPP.COM/..."
                       />
                     </div>
                   </div>
@@ -534,7 +390,7 @@ export default function SettingsPage() {
               <Button
                 onClick={handleSaveProfile}
                 disabled={savingProfile || uploadingAvatar}
-                className="w-full sm:w-auto min-w-[150px]"
+                className="w-full sm:w-auto min-w-[150px] uppercase text-xs font-bold"
               >
                 {savingProfile ? 'SALVANDO...' : 'SALVAR PERFIL'}
               </Button>
@@ -551,25 +407,25 @@ export default function SettingsPage() {
             <TabsContent value="system" className="space-y-6">
               <Card className="shadow-subtle">
                 <CardHeader>
-                  <CardTitle>Canais de Comunicação</CardTitle>
-                  <CardDescription>
-                    Defina os links do WhatsApp para acesso rápido pelo menu lateral.
+                  <CardTitle className="uppercase">CANAIS DE COMUNICAÇÃO</CardTitle>
+                  <CardDescription className="uppercase text-xs font-semibold">
+                    DEFINA OS LINKS DO WHATSAPP PARA ACESSO RÁPIDO PELO MENU LATERAL.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-semibold uppercase">
+                    <Label className="flex items-center gap-2 font-bold uppercase text-xs">
                       <Phone className="w-4 h-4 text-emerald-500" />
-                      WhatsApp Vitali Lab (Contato Laboratório)
+                      WHATSAPP VITALI LAB (CONTATO LABORATÓRIO)
                     </Label>
                     <Input
                       value={labLink}
                       onChange={(e) => setLabLink(e.target.value)}
-                      placeholder="Ex: https://wa.me/5511999999999"
+                      placeholder="EX: HTTPS://WA.ME/5511999999999"
                       className="font-mono text-sm"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Link global de contato direto para o número do laboratório.
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">
+                      LINK GLOBAL DE CONTATO DIRETO PARA O NÚMERO DO LABORATÓRIO.
                     </p>
                   </div>
                 </CardContent>
@@ -577,16 +433,12 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleSaveSystem}
                     disabled={savingSystem}
-                    className="w-full sm:w-auto min-w-[150px]"
+                    className="w-full sm:w-auto min-w-[150px] uppercase text-xs font-bold"
                   >
                     {savingSystem ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÕES'}
                   </Button>
                 </CardFooter>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="users">
-              <UsersManagement />
             </TabsContent>
 
             <TabsContent value="work-schedule">
@@ -596,10 +448,10 @@ export default function SettingsPage() {
             <TabsContent value="scales" className="space-y-6">
               <Card className="shadow-subtle">
                 <CardHeader>
-                  <CardTitle>Escalas de Cor</CardTitle>
-                  <CardDescription>
-                    Gerencie as opções de escalas de cor disponíveis para os dentistas ao criar
-                    novos pedidos.
+                  <CardTitle className="uppercase">ESCALAS DE COR</CardTitle>
+                  <CardDescription className="uppercase text-xs font-semibold">
+                    GERENCIE AS OPÇÕES DE ESCALAS DE COR DISPONÍVEIS PARA OS DENTISTAS AO CRIAR
+                    NOVOS PEDIDOS.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -613,15 +465,17 @@ export default function SettingsPage() {
                       }}
                       className="max-w-xs uppercase"
                     />
-                    <Button onClick={handleAddScale}>ADICIONAR</Button>
+                    <Button onClick={handleAddScale} className="uppercase text-xs font-bold">
+                      ADICIONAR
+                    </Button>
                   </div>
                   <div className="space-y-2 mt-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase">
+                    <h3 className="text-xs font-bold text-muted-foreground mb-3 uppercase">
                       ESCALAS CADASTRADAS
                     </h3>
                     {scales.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
-                        Nenhuma escala cadastrada.
+                      <p className="text-xs text-muted-foreground uppercase font-semibold p-4 bg-muted/20 rounded border border-dashed text-center">
+                        NENHUMA ESCALA CADASTRADA.
                       </p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -630,7 +484,7 @@ export default function SettingsPage() {
                             key={i}
                             className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
                           >
-                            <span className="font-semibold text-sm uppercase">{s}</span>
+                            <span className="font-bold text-sm uppercase">{s}</span>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -651,10 +505,10 @@ export default function SettingsPage() {
             <TabsContent value="brands" className="space-y-6">
               <Card className="shadow-subtle">
                 <CardHeader>
-                  <CardTitle>Marcas de Componentes (Implantes)</CardTitle>
-                  <CardDescription>
-                    Gerencie as opções de marcas disponíveis para seleção em trabalhos sobre
-                    implante.
+                  <CardTitle className="uppercase">MARCAS DE COMPONENTES (IMPLANTES)</CardTitle>
+                  <CardDescription className="uppercase text-xs font-semibold">
+                    GERENCIE AS OPÇÕES DE MARCAS DISPONÍVEIS PARA SELEÇÃO EM TRABALHOS SOBRE
+                    IMPLANTE.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -668,15 +522,17 @@ export default function SettingsPage() {
                       }}
                       className="max-w-xs uppercase"
                     />
-                    <Button onClick={handleAddBrand}>ADICIONAR</Button>
+                    <Button onClick={handleAddBrand} className="uppercase text-xs font-bold">
+                      ADICIONAR
+                    </Button>
                   </div>
                   <div className="space-y-2 mt-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase">
+                    <h3 className="text-xs font-bold text-muted-foreground mb-3 uppercase">
                       MARCAS CADASTRADAS
                     </h3>
                     {implantBrands.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic p-4 bg-muted/20 rounded border border-dashed text-center">
-                        Nenhuma marca cadastrada.
+                      <p className="text-xs text-muted-foreground uppercase font-semibold p-4 bg-muted/20 rounded border border-dashed text-center">
+                        NENHUMA MARCA CADASTRADA.
                       </p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -685,7 +541,7 @@ export default function SettingsPage() {
                             key={i}
                             className="flex items-center justify-between p-3 bg-muted/10 hover:bg-muted/30 transition-colors rounded-lg border"
                           >
-                            <span className="font-semibold text-sm uppercase">{b}</span>
+                            <span className="font-bold text-sm uppercase">{b}</span>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -703,12 +559,6 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
           </>
-        )}
-
-        {isMaster && (
-          <TabsContent value="role-permissions" className="space-y-6">
-            <RolePermissionsPanel />
-          </TabsContent>
         )}
       </Tabs>
     </div>

@@ -34,6 +34,7 @@ import DRECategories from './pages/DRECategories'
 import HourlyCost from './pages/HourlyCost'
 import MaterialsPage from './pages/Materials'
 import ForcePasswordChange from './components/ForcePasswordChange'
+import UsersPage from './pages/Users'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/users" element={<UsersPage />} />
               <Route path="/audit-logs" element={<AuditTrail />} />
               <Route path="/accounts-payable" element={<AccountsPayable />} />
               <Route path="/inventory" element={<Inventory />} />
