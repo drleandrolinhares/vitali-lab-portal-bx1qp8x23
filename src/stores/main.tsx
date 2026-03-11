@@ -375,8 +375,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (
       currentUser &&
-      currentUser.role !== 'admin' &&
-      currentUser.role !== ('master' as any) &&
       currentUser.assigned_dentists !== null &&
       currentUser.assigned_dentists !== undefined
     ) {
@@ -420,7 +418,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         basePrice,
       }
     })
-  }, [orders, priceList, currentUser?.role, currentUser?.assigned_dentists])
+  }, [orders, priceList, currentUser?.assigned_dentists])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
@@ -484,7 +482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user_id: currentUser.id,
       action,
       entity_type: entityType,
-      entity_id: entityId,
+      entityId: entityId,
       details,
     } as any)
   }

@@ -545,7 +545,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          assigned_dentists: Json | null
           avatar_url: string | null
+          can_move_kanban_cards: boolean | null
           clinic: string | null
           clinic_contact_name: string | null
           clinic_contact_phone: string | null
@@ -571,7 +573,9 @@ export type Database = {
           work_start: string | null
         }
         Insert: {
+          assigned_dentists?: Json | null
           avatar_url?: string | null
+          can_move_kanban_cards?: boolean | null
           clinic?: string | null
           clinic_contact_name?: string | null
           clinic_contact_phone?: string | null
@@ -597,7 +601,9 @@ export type Database = {
           work_start?: string | null
         }
         Update: {
+          assigned_dentists?: Json | null
           avatar_url?: string | null
+          can_move_kanban_cards?: boolean | null
           clinic?: string | null
           clinic_contact_name?: string | null
           clinic_contact_phone?: string | null
@@ -954,6 +960,8 @@ export const Constants = {
 //   lunch_end: text (nullable)
 //   work_end: text (nullable)
 //   requires_password_change: boolean (not null, default: false)
+//   assigned_dentists: jsonb (nullable)
+//   can_move_kanban_cards: boolean (nullable, default: true)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

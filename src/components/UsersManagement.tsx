@@ -547,25 +547,33 @@ export function UsersManagement() {
 
                     {isDentistRestricted && (
                       <div className="mt-2 p-3 border rounded-md bg-muted/20 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {dentistsList.map((d) => (
-                          <div key={d.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`dentist-${d.id}`}
-                              checked={assignedDentists.includes(d.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) setAssignedDentists([...assignedDentists, d.id])
-                                else
-                                  setAssignedDentists(assignedDentists.filter((id) => id !== d.id))
-                              }}
-                            />
-                            <Label
-                              htmlFor={`dentist-${d.id}`}
-                              className="text-xs uppercase font-bold cursor-pointer truncate"
-                            >
-                              {d.name}
-                            </Label>
-                          </div>
-                        ))}
+                        {dentistsList.length === 0 ? (
+                          <span className="text-xs text-muted-foreground uppercase col-span-2">
+                            Nenhum dentista encontrado.
+                          </span>
+                        ) : (
+                          dentistsList.map((d) => (
+                            <div key={d.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`dentist-${d.id}`}
+                                checked={assignedDentists.includes(d.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) setAssignedDentists([...assignedDentists, d.id])
+                                  else
+                                    setAssignedDentists(
+                                      assignedDentists.filter((id) => id !== d.id),
+                                    )
+                                }}
+                              />
+                              <Label
+                                htmlFor={`dentist-${d.id}`}
+                                className="text-xs uppercase font-bold cursor-pointer truncate"
+                              >
+                                {d.name}
+                              </Label>
+                            </div>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
