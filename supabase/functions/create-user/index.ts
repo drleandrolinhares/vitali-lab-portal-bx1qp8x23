@@ -48,6 +48,8 @@ Deno.serve(async (req: Request) => {
       whatsapp_group_link,
       personal_phone,
       requires_password_change,
+      assigned_dentists,
+      can_move_kanban_cards,
     } = await req.json()
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
@@ -86,6 +88,9 @@ Deno.serve(async (req: Request) => {
     if (phoneToUse) updateData.personal_phone = phoneToUse
     if (requires_password_change !== undefined)
       updateData.requires_password_change = requires_password_change
+    if (assigned_dentists !== undefined) updateData.assigned_dentists = assigned_dentists
+    if (can_move_kanban_cards !== undefined)
+      updateData.can_move_kanban_cards = can_move_kanban_cards
 
     if (Object.keys(updateData).length > 0) {
       await supabaseAdmin.from('profiles').update(updateData).eq('id', data.user.id)

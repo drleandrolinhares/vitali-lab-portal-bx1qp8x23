@@ -11,17 +11,37 @@ import {
 import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Search, Loader2, MessageCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function HistoryPage() {
   const { orders, currentUser } = useAppStore()
   const [search, setSearch] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
+  const [dentistFilter, setDentistFilter] = useState<string>('all')
+
+  const availableDentists = useMemo(() => {
+    const map = new Map<string, string>()
+    orders.forEach((o) => {
+      if (o.dentistId && o.dentistName) {
+        map.set(o.dentistId, o.dentistName)
+      }
+    })
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [orders])
 
   if (!currentUser) {
     return (
@@ -37,6 +57,8 @@ export default function HistoryPage() {
       o.friendlyId.toLowerCase().includes(search.toLowerCase())
 
     if (!matchesSearch) return false
+
+    if (dentistFilter !== 'all' && o.dentistId !== dentistFilter) return false
 
     const isFinished =
       o.status === 'completed' || o.status === 'delivered' || o.status === 'cancelled'
@@ -58,6 +80,22 @@ export default function HistoryPage() {
           <p className="text-muted-foreground">Consulte todos os casos registrados.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          {showDentistCol && (
+            <Select value={dentistFilter} onValueChange={setDentistFilter}>
+              <SelectTrigger className="w-full sm:w-[220px] h-10 bg-background shadow-sm border-border">
+                <SelectValue placeholder="Filtrar por Dentista" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Dentistas</SelectItem>
+                {availableDentists.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <div className="flex items-center space-x-2 bg-background border px-3 py-2 rounded-md h-10 w-full sm:w-auto shadow-sm">
             <Switch
               id="show-completed"

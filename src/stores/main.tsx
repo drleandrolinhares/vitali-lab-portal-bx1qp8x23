@@ -134,6 +134,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         is_approved: data.is_approved,
         is_active: data.is_active !== false,
         requires_password_change: data.requires_password_change,
+        assigned_dentists: data.assigned_dentists,
+        can_move_kanban_cards: data.can_move_kanban_cards,
       })
     } else {
       setCurrentUser({
@@ -342,6 +344,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     requires_password_change: payload.new.requires_password_change,
                     permissions: payload.new.permissions || [],
                     role: payload.new.role,
+                    assigned_dentists: payload.new.assigned_dentists,
+                    can_move_kanban_cards: payload.new.can_move_kanban_cards,
                   }
                 : prev,
             )
@@ -367,7 +371,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const computedOrders = useMemo(() => {
     if (!orders || orders.length === 0) return []
 
-    return orders.map((o) => {
+    let baseOrders = orders
+
+    if (
+      currentUser &&
+      currentUser.role !== 'admin' &&
+      currentUser.role !== ('master' as any) &&
+      currentUser.assigned_dentists !== null &&
+      currentUser.assigned_dentists !== undefined
+    ) {
+      baseOrders = baseOrders.filter((o) => currentUser.assigned_dentists!.includes(o.dentistId))
+    }
+
+    return baseOrders.map((o) => {
       let unitPrice = o.unitPrice || 0
       let basePrice = o.basePrice || 0
       const discount = o.dentistDiscount || 0
@@ -404,7 +420,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         basePrice,
       }
     })
-  }, [orders, priceList])
+  }, [orders, priceList, currentUser?.role, currentUser?.assigned_dentists])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase

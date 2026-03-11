@@ -55,7 +55,10 @@ export default function KanbanPage() {
     deleteKanbanStage,
     reorderKanbanStages,
   } = useAppStore()
-  const isAdmin = currentUser?.role === 'admin'
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
+  const canDragCards = isAdmin || currentUser?.can_move_kanban_cards !== false
+
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
 
@@ -116,12 +119,14 @@ export default function KanbanPage() {
   }, [selectedOrder])
 
   const visibleOrders = useMemo(() => {
-    if (!isAdmin) return orders
-    if (selectedDentistId === 'all') return []
-    return orders.filter((o) => o.dentistId === selectedDentistId)
-  }, [orders, isAdmin, selectedDentistId])
+    if (currentUser?.role === 'dentist') return orders
+    if (selectedDentistId !== 'all') return orders.filter((o) => o.dentistId === selectedDentistId)
+    return orders
+  }, [orders, currentUser?.role, selectedDentistId])
 
-  const shouldShowBoard = !isAdmin || selectedDentistId !== 'all'
+  const shouldShowBoard =
+    currentUser?.role !== 'dentist' ? (isAdmin ? selectedDentistId !== 'all' : true) : true
+
   const hasOrders = useMemo(
     () => (deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false),
     [deleteStageData, orders],
@@ -146,7 +151,7 @@ export default function KanbanPage() {
 
   const handleDrop = (e: React.DragEvent, stage: string, sector: string) => {
     e.preventDefault()
-    if (!isAdmin) return
+    if (!canDragCards) return
     const cardId = e.dataTransfer.getData('card-id') || e.dataTransfer.getData('text/plain')
     if (cardId) {
       const o = orders.find((x) => x.id === cardId)
@@ -298,8 +303,11 @@ export default function KanbanPage() {
                         e.preventDefault()
                         setDragOverStageId(null)
                         const columnId = e.dataTransfer.getData('column-id')
-                        if (columnId) handleColumnDrop(e, stage.id)
-                        else handleDrop(e, stage.name, sector)
+                        if (columnId) {
+                          if (isAdmin) handleColumnDrop(e, stage.id)
+                        } else {
+                          handleDrop(e, stage.name, sector)
+                        }
                       }}
                       className={cn(
                         'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
@@ -415,8 +423,9 @@ export default function KanbanPage() {
                           <Tooltip key={o.id} delayDuration={300}>
                             <TooltipTrigger asChild>
                               <div
-                                draggable={isAdmin}
+                                draggable={canDragCards}
                                 onDragStart={(e) => {
+                                  if (!canDragCards) return
                                   e.stopPropagation()
                                   e.dataTransfer.setData('card-id', o.id)
                                   e.dataTransfer.setData('card-sector', o.sector)
@@ -431,11 +440,11 @@ export default function KanbanPage() {
                                   setDraggedCardSector(null)
                                   setDragOverStageId(null)
                                 }}
-                                onClick={() => isAdmin && setSelectedOrderId(o.id)}
+                                onClick={() => setSelectedOrderId(o.id)}
                                 className={cn(
-                                  'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden',
-                                  isAdmin &&
-                                    'cursor-pointer active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                                  'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                                  canDragCards &&
+                                    'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
                                   draggedCardId === o.id &&
                                     'opacity-50 scale-[0.98] border-dashed shadow-none',
                                 )}
@@ -461,10 +470,10 @@ export default function KanbanPage() {
                                 </p>
                                 <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
                                   <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
-                                    {isAdmin && o.dentistName}
+                                    {currentUser?.role !== 'dentist' && o.dentistName}
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
-                                    {isAdmin &&
+                                    {currentUser?.role !== 'dentist' &&
                                       !stage.name.toUpperCase().includes('FINALIZADO') &&
                                       !stage.name.toUpperCase().includes('ENTREGUE') && (
                                         <Button
@@ -504,10 +513,12 @@ export default function KanbanPage() {
                                   </p>
                                 </div>
                                 <div className="text-xs space-y-1 opacity-90">
-                                  <p>
-                                    <span className="font-semibold opacity-100">Dr(a):</span>{' '}
-                                    {o.dentistName}
-                                  </p>
+                                  {currentUser?.role !== 'dentist' && (
+                                    <p>
+                                      <span className="font-semibold opacity-100">Dr(a):</span>{' '}
+                                      {o.dentistName}
+                                    </p>
+                                  )}
                                   <p>
                                     <span className="font-semibold opacity-100">Trabalho:</span>{' '}
                                     {o.workType}

@@ -56,6 +56,7 @@ export const PERMISSION_OPTIONS = [
 export function UsersManagement() {
   const { currentUser, logAudit } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
+  const [dentistsList, setDentistsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
@@ -78,10 +79,17 @@ export function UsersManagement() {
   })
   const [selectedPerms, setSelectedPerms] = useState<string[]>([])
 
+  const [isDentistRestricted, setIsDentistRestricted] = useState(false)
+  const [assignedDentists, setAssignedDentists] = useState<string[]>([])
+  const [canMoveKanbanCards, setCanMoveKanbanCards] = useState(true)
+
   const fetchUsers = async () => {
     setLoading(true)
     const { data } = await supabase.from('profiles').select('*').order('name', { ascending: true })
-    if (data) setUsers(data)
+    if (data) {
+      setUsers(data)
+      setDentistsList(data.filter((u) => u.role === 'dentist'))
+    }
     setLoading(false)
   }
 
@@ -104,6 +112,11 @@ export function UsersManagement() {
         is_active: user.is_active !== false,
       })
       setSelectedPerms(user.permissions || [])
+      setIsDentistRestricted(
+        user.assigned_dentists !== null && user.assigned_dentists !== undefined,
+      )
+      setAssignedDentists(user.assigned_dentists || [])
+      setCanMoveKanbanCards(user.can_move_kanban_cards ?? true)
     } else {
       setEditingUser(null)
       setFormData({
@@ -118,6 +131,9 @@ export function UsersManagement() {
         is_active: true,
       })
       setSelectedPerms([])
+      setIsDentistRestricted(false)
+      setAssignedDentists([])
+      setCanMoveKanbanCards(true)
     }
     setModalOpen(true)
   }
@@ -147,6 +163,8 @@ export function UsersManagement() {
       finalGroupLink = `https://${finalGroupLink}`
     }
 
+    const assignedDentistsPayload = isDentistRestricted ? assignedDentists : null
+
     if (editingUser) {
       const { error } = await updateUser({
         userId: editingUser.id,
@@ -160,6 +178,8 @@ export function UsersManagement() {
         permissions: selectedPerms,
         personal_phone: formData.personal_phone,
         is_active: formData.is_active,
+        assigned_dentists: assignedDentistsPayload,
+        can_move_kanban_cards: canMoveKanbanCards,
       })
 
       if (error) {
@@ -181,6 +201,8 @@ export function UsersManagement() {
         whatsapp_group_link: finalGroupLink,
         permissions: selectedPerms,
         phone: formData.personal_phone,
+        assigned_dentists: assignedDentistsPayload,
+        can_move_kanban_cards: canMoveKanbanCards,
       })
       if (error)
         toast({
@@ -489,6 +511,63 @@ export function UsersManagement() {
                     <span className="text-sm font-medium uppercase">
                       {formData.is_active ? 'ATIVO' : 'INATIVO (BLOQUEADO)'}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {formData.role !== 'dentist' && (
+                <div className="space-y-4 pt-4 border-t col-span-2">
+                  <h4 className="text-sm font-bold uppercase text-primary">
+                    Configurações de Acesso
+                  </h4>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch checked={canMoveKanbanCards} onCheckedChange={setCanMoveKanbanCards} />
+                    <Label
+                      className="uppercase text-xs font-bold cursor-pointer"
+                      onClick={() => setCanMoveKanbanCards(!canMoveKanbanCards)}
+                    >
+                      Permitir movimentar cards no Kanban
+                    </Label>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={isDentistRestricted}
+                        onCheckedChange={setIsDentistRestricted}
+                      />
+                      <Label
+                        className="uppercase text-xs font-bold cursor-pointer"
+                        onClick={() => setIsDentistRestricted(!isDentistRestricted)}
+                      >
+                        Restringir acesso por Dentistas específicos
+                      </Label>
+                    </div>
+
+                    {isDentistRestricted && (
+                      <div className="mt-2 p-3 border rounded-md bg-muted/20 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {dentistsList.map((d) => (
+                          <div key={d.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`dentist-${d.id}`}
+                              checked={assignedDentists.includes(d.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) setAssignedDentists([...assignedDentists, d.id])
+                                else
+                                  setAssignedDentists(assignedDentists.filter((id) => id !== d.id))
+                              }}
+                            />
+                            <Label
+                              htmlFor={`dentist-${d.id}`}
+                              className="text-xs uppercase font-bold cursor-pointer truncate"
+                            >
+                              {d.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

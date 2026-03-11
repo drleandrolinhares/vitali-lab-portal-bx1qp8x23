@@ -50,6 +50,8 @@ Deno.serve(async (req: Request) => {
       personal_phone,
       is_active,
       job_function,
+      assigned_dentists,
+      can_move_kanban_cards,
     } = await req.json()
 
     if (!userId) throw new Error('UserId is required')
@@ -95,6 +97,9 @@ Deno.serve(async (req: Request) => {
       if (role !== undefined) updateData.role = role
       if (is_active !== undefined) updateData.is_active = is_active
       if (permissions !== undefined) updateData.permissions = permissions
+      if (assigned_dentists !== undefined) updateData.assigned_dentists = assigned_dentists
+      if (can_move_kanban_cards !== undefined)
+        updateData.can_move_kanban_cards = can_move_kanban_cards
     }
 
     const { error: dbProfileError } = await supabaseAdmin

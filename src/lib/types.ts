@@ -11,6 +11,8 @@ export interface User {
   whatsapp_group_link?: string
   avatar_url?: string
   permissions?: string[] // if empty, applies defaults
+  assigned_dentists?: string[] | null
+  can_move_kanban_cards?: boolean
 }
 
 export interface Stage {
