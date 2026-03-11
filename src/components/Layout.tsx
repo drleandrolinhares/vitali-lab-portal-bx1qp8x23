@@ -216,6 +216,7 @@ function AppSidebar() {
   // Base permission evaluation logic
   const hasPerm = (id: string) => {
     if (isMaster) return true // Master has unlimited access
+    if (roleStr === 'dentist') return true // Dentists should always see their default menu
     if (id === 'profile' || id === 'my-profile') return true // Ensure profile is allowed
 
     const hasCustom = customPermissions.length > 0
@@ -239,7 +240,6 @@ function AppSidebar() {
 
     // Fallback logic for roles that have empty permissions
     if (roleStr === 'admin') return true
-    if (roleStr === 'dentist') return true // Dentists should always see their default menu
 
     return false
   }
