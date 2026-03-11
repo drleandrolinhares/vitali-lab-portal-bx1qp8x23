@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -352,6 +353,13 @@ export function UsersManagement() {
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden flex flex-col h-[90vh]">
+          <DialogTitle className="sr-only">
+            {formData.name ? `Editar Usuário: ${formData.name}` : 'Criar Novo Usuário'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário para gerenciar dados pessoais, perfil e permissões de acesso do usuário.
+          </DialogDescription>
+
           <div className="flex items-center justify-between p-4 border-b shrink-0 bg-muted/10">
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12">
