@@ -48,6 +48,7 @@ export default function AccountsPayable() {
     const { data } = await supabase
       .from('expenses')
       .select('*')
+      .is('order_id', null)
       .order('due_date', { ascending: true })
     if (data) setExpenses(data)
   }
@@ -61,6 +62,7 @@ export default function AccountsPayable() {
       if (e.status === 'paid' && !filterStatus.paid) return false
       if (e.status === 'pending' && !filterStatus.pending) return false
       if (selectedLab !== 'Todos' && e.sector !== selectedLab) return false
+      if (e.order_id !== null) return false
       const date = parseISO(e.due_date)
       if (dateRange?.from && isBefore(date, startOfDay(dateRange.from))) return false
       if (dateRange?.to && isAfter(date, endOfDay(dateRange.to))) return false
