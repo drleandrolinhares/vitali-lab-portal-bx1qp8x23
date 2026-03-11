@@ -14,7 +14,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'tex
         if (start !== null && end !== null) {
           try {
             e.target.setSelectionRange(start, end)
-          } catch (err) {}
+          } catch (err) {
+            // Ignore error on elements that don't support setSelectionRange
+          }
         }
       }
       if (onChange) onChange(e)

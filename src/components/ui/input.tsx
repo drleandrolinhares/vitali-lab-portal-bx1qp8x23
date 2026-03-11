@@ -19,7 +19,9 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
           ) {
             try {
               e.target.setSelectionRange(start, end)
-            } catch (err) {}
+            } catch (err) {
+              // Ignore error on elements that don't support setSelectionRange
+            }
           }
         }
       }
