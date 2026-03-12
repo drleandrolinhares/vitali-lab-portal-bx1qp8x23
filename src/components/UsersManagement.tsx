@@ -31,6 +31,8 @@ import {
   Building,
   Users,
   ShieldCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -99,6 +101,7 @@ export function UsersManagement() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [saving, setSaving] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const [activeTab, setActiveTab] = useState<'pessoais' | 'perfil' | 'permissoes'>('pessoais')
 
@@ -254,6 +257,7 @@ export function UsersManagement() {
 
   const openModal = (user?: any) => {
     setActiveTab('pessoais')
+    setShowPassword(false)
     if (user) {
       setEditingUser(user)
       setFormData({
@@ -827,15 +831,30 @@ export function UsersManagement() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Nova Senha</Label>
-                        <Input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          placeholder={
-                            editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
-                          }
-                          className="h-9"
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            placeholder={
+                              editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
+                            }
+                            className="h-9 pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </section>
