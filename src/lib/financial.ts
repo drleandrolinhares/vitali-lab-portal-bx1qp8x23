@@ -143,6 +143,30 @@ export function filterOrdersForFinancials(orders: any[], selectedMonth: string) 
   })
 }
 
+export function getBillingCycleDates(monthStr: string, closingDay: number) {
+  const [yearStr, monthNumStr] = monthStr.split('-')
+  const year = parseInt(yearStr, 10)
+  const month = parseInt(monthNumStr, 10) - 1 // 0-11
+
+  let prevMonth = month - 1
+  let prevYear = year
+  if (prevMonth < 0) {
+    prevMonth = 11
+    prevYear--
+  }
+
+  const daysInCurrentMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate()
+
+  const safeEndDay = Math.min(closingDay, daysInCurrentMonth)
+  const safePrevEndDay = Math.min(closingDay, daysInPrevMonth)
+
+  const start = new Date(prevYear, prevMonth, safePrevEndDay + 1, 0, 0, 0, 0)
+  const end = new Date(year, month, safeEndDay, 23, 59, 59, 999)
+
+  return { start, end }
+}
+
 export function calculateProcedureProfitability({
   price,
   executionTime,

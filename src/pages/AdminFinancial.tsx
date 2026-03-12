@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   TrendingUp,
   Wallet,
@@ -50,6 +51,7 @@ import {
 } from 'lucide-react'
 import { Navigate, Link } from 'react-router-dom'
 import { format } from 'date-fns'
+import { DentistBillingTab } from '@/components/financial/DentistBillingTab'
 
 export default function AdminFinancial() {
   const { currentUser, orders, refreshOrders, selectedLab, priceList, dreCategories } =
@@ -495,101 +497,116 @@ export default function AdminFinancial() {
         </Card>
       </div>
 
-      <Card className="shadow-subtle mt-8">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
-            {selectedMonthLabel})
-            {displayedDentists.length > 0 && (
-              <div className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-bold ml-2">
-                {displayedDentists.length} pendentes
+      <Tabs defaultValue="geral" className="w-full mt-8">
+        <TabsList className="mb-2">
+          <TabsTrigger value="geral">Visão Consolidada</TabsTrigger>
+          <TabsTrigger value="faturamento">Faturamento Dentistas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="geral" className="mt-0">
+          <Card className="shadow-subtle">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
+                {selectedMonthLabel})
+                {displayedDentists.length > 0 && (
+                  <div className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-bold ml-2">
+                    {displayedDentists.length} pendentes
+                  </div>
+                )}
+              </CardTitle>
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar dentista (exibe faturas enviadas)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-            )}
-          </CardTitle>
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar dentista (exibe faturas enviadas)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="h-10 py-2">Dentista / Clínica</TableHead>
-                <TableHead className="h-10 py-2 text-center">Vencimento</TableHead>
-                <TableHead className="h-10 py-2 text-right">Pipeline no Mês</TableHead>
-                <TableHead className="h-10 py-2 text-right">Saldo Devedor (Faturado)</TableHead>
-                <TableHead className="h-10 py-2 text-center">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayedDentists.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {searchQuery
-                      ? 'Nenhum dentista encontrado para a busca.'
-                      : 'Nenhum faturamento pendente para este mês.'}
-                  </TableCell>
-                </TableRow>
-              )}
-              {displayedDentists.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell className="py-2.5 font-medium">
-                    {d.name}
-                    <div className="text-xs text-muted-foreground font-normal mt-0.5">
-                      {d.clinic || 'Clínica não informada'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2.5 text-center text-muted-foreground">
-                    {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
-                  </TableCell>
-                  <TableCell className="py-2.5 text-right font-medium text-amber-600">
-                    {formatBRL(d.pipelineBalance)}
-                  </TableCell>
-                  <TableCell className="py-2.5 text-right font-bold text-red-600">
-                    {formatBRL(d.outstandingBalance)}
-                  </TableCell>
-                  <TableCell className="py-2.5 text-center">
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                      <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
-                        <List className="w-4 h-4 mr-1.5" /> Detalhes
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                        disabled={d.invoiceSent}
-                        onClick={() => handleInvoiceSent(d.id)}
-                      >
-                        {d.invoiceSent ? (
-                          <CheckCircle className="w-4 h-4 mr-1.5" />
-                        ) : (
-                          <Send className="w-4 h-4 mr-1.5" />
-                        )}
-                        {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                        disabled={d.outstandingBalance <= 0}
-                        onClick={() => setSettleDialog(d)}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-10 py-2">Dentista / Clínica</TableHead>
+                    <TableHead className="h-10 py-2 text-center">Vencimento</TableHead>
+                    <TableHead className="h-10 py-2 text-right">Pipeline no Mês</TableHead>
+                    <TableHead className="h-10 py-2 text-right">Saldo Devedor (Faturado)</TableHead>
+                    <TableHead className="h-10 py-2 text-center">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedDentists.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {searchQuery
+                          ? 'Nenhum dentista encontrado para a busca.'
+                          : 'Nenhum faturamento pendente para este mês.'}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {displayedDentists.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="py-2.5 font-medium">
+                        {d.name}
+                        <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                          {d.clinic || 'Clínica não informada'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2.5 text-center text-muted-foreground">
+                        {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right font-medium text-amber-600">
+                        {formatBRL(d.pipelineBalance)}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right font-bold text-red-600">
+                        {formatBRL(d.outstandingBalance)}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-center">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                          <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
+                            <List className="w-4 h-4 mr-1.5" /> Detalhes
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                            disabled={d.invoiceSent}
+                            onClick={() => handleInvoiceSent(d.id)}
+                          >
+                            {d.invoiceSent ? (
+                              <CheckCircle className="w-4 h-4 mr-1.5" />
+                            ) : (
+                              <Send className="w-4 h-4 mr-1.5" />
+                            )}
+                            {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                            disabled={d.outstandingBalance <= 0}
+                            onClick={() => setSettleDialog(d)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="faturamento" className="mt-0">
+          <DentistBillingTab
+            selectedMonth={selectedMonth}
+            dentists={dentists}
+            selectedMonthLabel={selectedMonthLabel}
+          />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
