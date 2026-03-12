@@ -531,7 +531,7 @@ export default function KanbanPage() {
                                   }}
                                 >
                                   <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
-                                  <span className="truncate">Requisição</span>
+                                  <span className="truncate">ABRIR REQUISIÇÃO</span>
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -543,7 +543,7 @@ export default function KanbanPage() {
                                   }}
                                 >
                                   <QrCode className="w-3 h-3 mr-1 shrink-0" />
-                                  <span className="truncate">QR Code</span>
+                                  <span className="truncate">QRCODE</span>
                                 </Button>
                               </div>
                             </div>

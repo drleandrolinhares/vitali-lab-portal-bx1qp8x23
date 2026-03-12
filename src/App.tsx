@@ -35,6 +35,7 @@ import HourlyCost from './pages/HourlyCost'
 import MaterialsPage from './pages/Materials'
 import ForcePasswordChange from './components/ForcePasswordChange'
 import UsersPage from './pages/Users'
+import PublicGuide from './pages/PublicGuide'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -98,6 +99,7 @@ const App = () => (
           <Sonner />
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/public/guide/:id" element={<PublicGuide />} />
             <Route
               element={
                 <PrivateRoute>

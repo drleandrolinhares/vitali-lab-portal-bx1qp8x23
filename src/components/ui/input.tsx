@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
   ({ className, type, onChange, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (type !== 'password' && type !== 'email' && type !== 'url') {
+      const isNormalCase = className?.includes('normal-case') || false
+      if (!isNormalCase && type !== 'password' && type !== 'email' && type !== 'url') {
         const start = e.target.selectionStart
         const end = e.target.selectionEnd
         const val = e.target.value
@@ -33,7 +34,11 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
         type={type}
         className={cn(
           'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-          type !== 'password' && type !== 'email' && type !== 'url' && 'uppercase',
+          !className?.includes('normal-case') &&
+            type !== 'password' &&
+            type !== 'email' &&
+            type !== 'url' &&
+            'uppercase',
           className,
         )}
         ref={ref}

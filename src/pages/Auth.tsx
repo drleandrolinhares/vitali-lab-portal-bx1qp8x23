@@ -32,6 +32,7 @@ const PasswordInput = ({
       onChange={onChange}
       required
       minLength={6}
+      className="normal-case pr-10"
     />
     <Button
       type="button"
@@ -173,6 +174,7 @@ export default function AuthPage() {
                   value={forgotId}
                   onChange={(e) => setForgotId(e.target.value)}
                   required
+                  className="normal-case"
                 />
               </div>
               {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
@@ -225,6 +227,7 @@ export default function AuthPage() {
                       value={loginId}
                       onChange={(e) => setLoginId(e.target.value)}
                       required
+                      className="normal-case"
                     />
                   </div>
                   <div className="space-y-2">
@@ -294,6 +297,7 @@ export default function AuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        className="normal-case"
                       />
                     </div>
                     <div className="space-y-2">
