@@ -33,7 +33,18 @@ export const createUser = async (payload: any) => {
         window.location.href = '/'
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
-      return { data: null, error }
+
+      let extractedMsg = error.message
+      try {
+        const parsed = JSON.parse(error.message)
+        if (parsed.error) extractedMsg = parsed.error
+      } catch (e) {}
+
+      if (error.context && error.context.error) {
+        extractedMsg = error.context.error
+      }
+
+      return { data: null, error: new Error(extractedMsg) }
     }
 
     if (data && data.error) return { data: null, error: new Error(data.error) }
@@ -81,7 +92,18 @@ export const updateUser = async (payload: any) => {
         window.location.href = '/'
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
-      return { data: null, error }
+
+      let extractedMsg = error.message
+      try {
+        const parsed = JSON.parse(error.message)
+        if (parsed.error) extractedMsg = parsed.error
+      } catch (e) {}
+
+      if (error.context && error.context.error) {
+        extractedMsg = error.context.error
+      }
+
+      return { data: null, error: new Error(extractedMsg) }
     }
 
     if (data && data.error) return { data: null, error: new Error(data.error) }

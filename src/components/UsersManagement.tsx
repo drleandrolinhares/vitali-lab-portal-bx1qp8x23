@@ -346,6 +346,12 @@ export function UsersManagement() {
     setModalOpen(true)
   }
 
+  const sanitizeString = (val: string | undefined | null) => {
+    if (!val) return null
+    const trimmed = val.trim()
+    return trimmed === '' ? null : trimmed
+  }
+
   const handleSave = async () => {
     if (!isMasterOrAdmin) return
 
@@ -395,25 +401,37 @@ export function UsersManagement() {
         if (formData.email.toLowerCase() !== (editingUser.email || '').toLowerCase())
           payload.email = formData.email.toLowerCase()
         if (formData.role !== editingUser.role) payload.role = formData.role
-        if (formData.personal_phone !== (editingUser.personal_phone || ''))
-          payload.personal_phone = formData.personal_phone || null
-        if (formData.clinic !== (editingUser.clinic || '')) payload.clinic = formData.clinic || null
+
+        const checkField = (field: string, formVal: any, userVal: any) => {
+          const sanitizedForm = typeof formVal === 'string' ? sanitizeString(formVal) : formVal
+          const sanitizedUser = typeof userVal === 'string' ? sanitizeString(userVal) : userVal
+          if (sanitizedForm !== sanitizedUser) {
+            payload[field] = sanitizedForm
+          }
+        }
+
+        checkField('personal_phone', formData.personal_phone, editingUser.personal_phone)
+        checkField('clinic', formData.clinic, editingUser.clinic)
+        checkField('username', formData.username, editingUser.username)
+        checkField('rg', formData.rg, editingUser.rg)
+        checkField('cpf', formData.cpf, editingUser.cpf)
+        checkField('cep', formData.cep, editingUser.cep)
+        checkField('address', formData.address, editingUser.address)
+        checkField('address_number', formData.address_number, editingUser.address_number)
+        checkField(
+          'address_complement',
+          formData.address_complement,
+          editingUser.address_complement,
+        )
+        checkField('city', formData.city, editingUser.city)
+        checkField('state', formData.state, editingUser.state)
+
+        const currentBD = sanitizeString(formData.birth_date)
+        const oldBD = sanitizeString(editingUser.birth_date)
+        if (currentBD !== oldBD) payload.birth_date = currentBD
+
         if (currentCA !== oldCA) payload.commercial_agreement = currentCA
-        if (formData.username !== (editingUser.username || ''))
-          payload.username = formData.username || null
-        if (formData.rg !== (editingUser.rg || '')) payload.rg = formData.rg || null
-        if (formData.cpf !== (editingUser.cpf || '')) payload.cpf = formData.cpf || null
-        if (formData.birth_date !== (editingUser.birth_date || ''))
-          payload.birth_date = formData.birth_date || null
-        if (formData.cep !== (editingUser.cep || '')) payload.cep = formData.cep || null
-        if (formData.address !== (editingUser.address || ''))
-          payload.address = formData.address || null
-        if (formData.address_number !== (editingUser.address_number || ''))
-          payload.address_number = formData.address_number || null
-        if (formData.address_complement !== (editingUser.address_complement || ''))
-          payload.address_complement = formData.address_complement || null
-        if (formData.city !== (editingUser.city || '')) payload.city = formData.city || null
-        if (formData.state !== (editingUser.state || '')) payload.state = formData.state || null
+
         if (formData.has_access_schedule !== (editingUser.has_access_schedule || false))
           payload.has_access_schedule = formData.has_access_schedule
         if (formData.can_move_kanban_cards !== (editingUser.can_move_kanban_cards ?? true))
@@ -446,19 +464,19 @@ export function UsersManagement() {
           name: formData.name,
           email: formData.email.toLowerCase(),
           role: formData.role,
-          personal_phone: formData.personal_phone || null,
-          clinic: formData.clinic || null,
+          personal_phone: sanitizeString(formData.personal_phone),
+          clinic: sanitizeString(formData.clinic),
           commercial_agreement: parseFloat(formData.commercial_agreement) || 0,
-          username: formData.username || null,
-          rg: formData.rg || null,
-          cpf: formData.cpf || null,
-          birth_date: formData.birth_date || null,
-          cep: formData.cep || null,
-          address: formData.address || null,
-          address_number: formData.address_number || null,
-          address_complement: formData.address_complement || null,
-          city: formData.city || null,
-          state: formData.state || null,
+          username: sanitizeString(formData.username),
+          rg: sanitizeString(formData.rg),
+          cpf: sanitizeString(formData.cpf),
+          birth_date: sanitizeString(formData.birth_date),
+          cep: sanitizeString(formData.cep),
+          address: sanitizeString(formData.address),
+          address_number: sanitizeString(formData.address_number),
+          address_complement: sanitizeString(formData.address_complement),
+          city: sanitizeString(formData.city),
+          state: sanitizeString(formData.state),
           has_access_schedule: formData.has_access_schedule,
           can_move_kanban_cards: formData.can_move_kanban_cards,
           is_active: formData.is_active,

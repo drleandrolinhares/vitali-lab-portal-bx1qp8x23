@@ -132,8 +132,11 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Target auth user not found: ${authFetchError?.message}`)
 
     let phoneToUse: string | null | undefined = undefined
-    if (phone !== undefined) phoneToUse = phone === '' ? null : phone
-    if (personal_phone !== undefined) phoneToUse = personal_phone === '' ? null : personal_phone
+    if (phone !== undefined)
+      phoneToUse = typeof phone === 'string' && phone.trim() === '' ? null : phone
+    if (personal_phone !== undefined)
+      phoneToUse =
+        typeof personal_phone === 'string' && personal_phone.trim() === '' ? null : personal_phone
 
     const authPayload: any = {
       user_metadata: {},
@@ -183,9 +186,10 @@ Deno.serve(async (req: Request) => {
         let errorMsg = authError.message
         if (
           errorMsg.toLowerCase().includes('already registered') ||
-          errorMsg.toLowerCase().includes('already exists')
+          errorMsg.toLowerCase().includes('already exists') ||
+          errorMsg.toLowerCase().includes('duplicate key')
         ) {
-          errorMsg = 'Este e-mail ou telefone já está em uso por outro usuário.'
+          errorMsg = 'Este e-mail já está em uso por outro usuário.'
         } else if (errorMsg.toLowerCase().includes('password')) {
           errorMsg =
             'A senha informada é muito fraca ou inválida. Deve conter ao menos 6 caracteres.'
@@ -268,8 +272,20 @@ Deno.serve(async (req: Request) => {
     })
   } catch (error: any) {
     console.error('Update user error details:', error)
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 200,
+
+    let status = 400
+    let errorMsg = error.message || 'Erro interno no servidor.'
+
+    if (errorMsg.includes('já está em uso') || errorMsg.includes('duplicate key')) {
+      status = 409
+    }
+
+    if (errorMsg.startsWith('Erro de autenticação: ')) {
+      errorMsg = errorMsg.replace('Erro de autenticação: ', '')
+    }
+
+    return new Response(JSON.stringify({ success: false, error: errorMsg }), {
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
