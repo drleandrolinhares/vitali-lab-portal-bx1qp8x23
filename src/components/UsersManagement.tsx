@@ -350,10 +350,22 @@ export function UsersManagement() {
     if (!isMasterOrAdmin) return
 
     if (!formData.name) return toast({ title: 'O Nome é obrigatório', variant: 'destructive' })
-    if (!formData.email || !formData.email.includes('@'))
-      return toast({ title: 'Email inválido', variant: 'destructive' })
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      return toast({
+        title: 'Email inválido',
+        description: 'Por favor, insira um endereço de e-mail válido.',
+        variant: 'destructive',
+      })
+    }
+
     if (!editingUser && (!formData.password || formData.password.length < 6))
-      return toast({ title: 'Senha deve ter no mínimo 6 caracteres', variant: 'destructive' })
+      return toast({
+        title: 'Senha inválida',
+        description: 'A senha deve ter no mínimo 6 caracteres',
+        variant: 'destructive',
+      })
 
     setSaving(true)
 
@@ -376,19 +388,19 @@ export function UsersManagement() {
         name: formData.name,
         email: formData.email.toLowerCase(),
         role: formData.role,
-        personal_phone: formData.personal_phone,
-        clinic: formData.clinic,
+        personal_phone: formData.personal_phone || null,
+        clinic: formData.clinic || null,
         commercial_agreement: parseFloat(formData.commercial_agreement) || 0,
-        username: formData.username,
-        rg: formData.rg,
-        cpf: formData.cpf,
+        username: formData.username || null,
+        rg: formData.rg || null,
+        cpf: formData.cpf || null,
         birth_date: formData.birth_date || null,
-        cep: formData.cep,
-        address: formData.address,
-        address_number: formData.address_number,
-        address_complement: formData.address_complement,
-        city: formData.city,
-        state: formData.state,
+        cep: formData.cep || null,
+        address: formData.address || null,
+        address_number: formData.address_number || null,
+        address_complement: formData.address_complement || null,
+        city: formData.city || null,
+        state: formData.state || null,
         has_access_schedule: formData.has_access_schedule,
         can_move_kanban_cards: formData.can_move_kanban_cards,
         is_active: formData.is_active,
@@ -408,14 +420,6 @@ export function UsersManagement() {
         })
 
         if (error) {
-          if (
-            error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token')
-          ) {
-            await supabase.auth.signOut()
-            window.location.href = '/'
-            return
-          }
           throw error
         } else {
           toast({ title: 'Usuário atualizado com sucesso!' })
@@ -444,14 +448,6 @@ export function UsersManagement() {
           password: formData.password,
         })
         if (error) {
-          if (
-            error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token')
-          ) {
-            await supabase.auth.signOut()
-            window.location.href = '/'
-            return
-          }
           throw error
         } else {
           toast({ title: 'Usuário criado com sucesso!' })
@@ -467,18 +463,22 @@ export function UsersManagement() {
           }
         }
       }
+
+      setModalOpen(false)
     } catch (err: any) {
       if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
         await supabase.auth.signOut()
         window.location.href = '/'
         return
       }
-      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' })
+      toast({
+        title: 'Erro ao salvar',
+        description: err.message || 'Ocorreu um erro inesperado.',
+        variant: 'destructive',
+      })
     } finally {
       setSaving(false)
     }
-
-    setModalOpen(false)
   }
 
   const applyDentistVisionMode = async () => {

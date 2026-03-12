@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
       canAddDentist &&
       (targetProfile.role === 'dentist' ||
         targetProfile.role === 'laboratory' ||
-        targetProfile.role === undefined)
+        !targetProfile.role)
 
     if (!isAdmin && callerUser.id !== userId && !isUpdatingDentist) {
       throw new Error('Unauthorized: You can only update your own profile')
@@ -140,17 +140,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (name !== undefined) authPayload.user_metadata.name = name
-    if (clinic !== undefined) authPayload.user_metadata.clinic = clinic
+    if (clinic !== undefined) authPayload.user_metadata.clinic = clinic === '' ? null : clinic
     if (whatsapp_group_link !== undefined)
-      authPayload.user_metadata.whatsapp_group_link = whatsapp_group_link
+      authPayload.user_metadata.whatsapp_group_link =
+        whatsapp_group_link === '' ? null : whatsapp_group_link
 
     if (phoneToUse !== undefined) {
       authPayload.user_metadata.phone = phoneToUse
-      if (phoneToUse === null) {
-        authPayload.phone = null
-      } else if (phoneToUse.trim() !== '') {
-        authPayload.phone = phoneToUse
-      }
+      authPayload.phone = phoneToUse
     }
 
     if (role !== undefined) {
@@ -175,6 +172,10 @@ Deno.serve(async (req: Request) => {
 
     let authData = null
     if (shouldUpdateAuth) {
+      if (Object.keys(authPayload.user_metadata).length === 0) {
+        delete authPayload.user_metadata
+      }
+
       const { data: updatedAuthData, error: authError } =
         await supabaseAdmin.auth.admin.updateUserById(userId, authPayload)
       if (authError) {
@@ -188,7 +189,7 @@ Deno.serve(async (req: Request) => {
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
-    if (clinic !== undefined) updateData.clinic = clinic
+    if (clinic !== undefined) updateData.clinic = clinic === '' ? null : clinic
     if (email !== undefined && email.trim() !== '') updateData.email = email.trim()
     if (whatsapp_group_link !== undefined)
       updateData.whatsapp_group_link = whatsapp_group_link === '' ? null : whatsapp_group_link
@@ -199,7 +200,20 @@ Deno.serve(async (req: Request) => {
     if (username !== undefined) updateData.username = username === '' ? null : username
     if (rg !== undefined) updateData.rg = rg === '' ? null : rg
     if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
-    if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
+
+    if (birth_date !== undefined) {
+      if (birth_date === '') {
+        updateData.birth_date = null
+      } else {
+        const parsedDate = new Date(birth_date)
+        if (!isNaN(parsedDate.getTime())) {
+          updateData.birth_date = birth_date
+        } else {
+          updateData.birth_date = null
+        }
+      }
+    }
+
     if (cep !== undefined) updateData.cep = cep === '' ? null : cep
     if (address !== undefined) updateData.address = address === '' ? null : address
     if (address_number !== undefined)
@@ -245,7 +259,7 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error('Update user error details:', error)
     return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 200,
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
