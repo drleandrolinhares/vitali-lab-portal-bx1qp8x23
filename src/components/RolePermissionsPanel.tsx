@@ -185,25 +185,24 @@ export function RolePermissionsPanel() {
                     key={mod.id}
                     className="border bg-background rounded-lg px-2 shadow-sm"
                   >
-                    <AccordionTrigger className="hover:no-underline py-3 group">
-                      <div className="flex justify-between w-full pr-4 items-center">
-                        <span className="font-bold text-sm uppercase group-hover:text-primary transition-colors">
-                          {mod.label}
-                        </span>
-                        <div
-                          className="flex items-center gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="text-[10px] text-muted-foreground font-semibold uppercase">
-                            Acesso ao Menu
+                    <div className="relative w-full">
+                      <AccordionTrigger className="hover:no-underline py-3 group">
+                        <div className="flex w-full pr-[140px] items-center text-left">
+                          <span className="font-bold text-sm uppercase group-hover:text-primary transition-colors">
+                            {mod.label}
                           </span>
-                          <Switch
-                            checked={perms[r.id]?.[mod.id]?.access || false}
-                            onCheckedChange={(c) => updateAccess(r.id, mod.id, c)}
-                          />
                         </div>
+                      </AccordionTrigger>
+                      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10 bg-background pl-2 rounded-l-md">
+                        <span className="text-[10px] text-muted-foreground font-semibold uppercase">
+                          Acesso ao Menu
+                        </span>
+                        <Switch
+                          checked={perms[r.id]?.[mod.id]?.access || false}
+                          onCheckedChange={(c) => updateAccess(r.id, mod.id, c)}
+                        />
                       </div>
-                    </AccordionTrigger>
+                    </div>
                     {mod.actions.length > 0 && (
                       <AccordionContent className="pt-2 pb-4">
                         <div className="space-y-3 pl-4 border-l-2 border-primary/20 ml-2">

@@ -414,7 +414,15 @@ export function UsersManagement() {
                     >
                       {user.is_active !== false ? 'Ativo' : 'Inativo'}
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 -mr-2 -mt-2 relative z-10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openModal(user)
+                      }}
+                    >
                       <MoreVertical className="w-4 h-4 text-muted-foreground" />
                     </Button>
                   </div>
