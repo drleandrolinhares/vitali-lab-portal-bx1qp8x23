@@ -38,7 +38,9 @@ export const createUser = async (payload: any) => {
       try {
         const parsed = JSON.parse(error.message)
         if (parsed.error) extractedMsg = parsed.error
-      } catch (e) {}
+      } catch (e) {
+        // ignore parsing error
+      }
 
       if (error.context && error.context.error) {
         extractedMsg = error.context.error
@@ -97,7 +99,9 @@ export const updateUser = async (payload: any) => {
       try {
         const parsed = JSON.parse(error.message)
         if (parsed.error) extractedMsg = parsed.error
-      } catch (e) {}
+      } catch (e) {
+        // ignore parsing error
+      }
 
       if (error.context && error.context.error) {
         extractedMsg = error.context.error
