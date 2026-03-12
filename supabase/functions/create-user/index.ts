@@ -21,6 +21,8 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing authorization header')
 
+    const token = authHeader.replace('Bearer ', '')
+
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
@@ -29,8 +31,9 @@ Deno.serve(async (req: Request) => {
     const {
       data: { user: callerUser },
       error: callerError,
-    } = await authClient.auth.getUser()
-    if (callerError || !callerUser) throw new Error('Invalid or expired token')
+    } = await authClient.auth.getUser(token)
+    if (callerError || !callerUser)
+      throw new Error(`Invalid or expired token: ${callerError?.message || 'User not found'}`)
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
