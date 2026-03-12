@@ -74,10 +74,15 @@ export default function AuthPage() {
     setError('')
     setMessage('')
     setLoading(true)
+    sessionStorage.setItem('vitali_just_logged_in', 'true')
     const { error } = await action()
-    if (error) setError(error.message)
-    else setMessage('Ação concluída com sucesso.')
-    setLoading(false)
+    if (error) {
+      sessionStorage.removeItem('vitali_just_logged_in')
+      setError(error.message)
+      setLoading(false)
+    } else {
+      setMessage('Ação concluída com sucesso.')
+    }
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,14 +146,22 @@ export default function AuthPage() {
         <CardContent className="pt-6 bg-card rounded-b-lg border-t border-border">
           {view === 'forgot_password' ? (
             <form
-              onSubmit={(e) =>
-                handleAction(e, () => {
-                  if (!forgotId.includes('@')) {
-                    return Promise.resolve({ error: new Error('Formato de email inválido.') })
-                  }
-                  return resetPassword(forgotId)
+              onSubmit={(e) => {
+                e.preventDefault()
+                setError('')
+                setMessage('')
+                setLoading(true)
+                if (!forgotId.includes('@')) {
+                  setError('Formato de email inválido.')
+                  setLoading(false)
+                  return
+                }
+                resetPassword(forgotId).then(({ error }) => {
+                  if (error) setError(error.message)
+                  else setMessage('Ação concluída com sucesso.')
+                  setLoading(false)
                 })
-              }
+              }}
               className="space-y-4 animate-fade-in"
             >
               <div className="space-y-2">

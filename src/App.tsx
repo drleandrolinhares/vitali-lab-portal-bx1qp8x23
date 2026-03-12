@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -39,12 +39,27 @@ import UsersPage from './pages/Users'
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
   const { currentUser } = useAppStore()
+  const location = useLocation()
 
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center font-medium">Carregando...</div>
     )
   if (!session) return <AuthPage />
+
+  const justLoggedIn = sessionStorage.getItem('vitali_just_logged_in') === 'true'
+  if (justLoggedIn && currentUser) {
+    sessionStorage.removeItem('vitali_just_logged_in')
+    if (currentUser.role === 'admin' || currentUser.role === 'master') {
+      if (location.pathname !== '/dashboard') {
+        return <Navigate to="/dashboard" replace />
+      }
+    } else {
+      if (location.pathname !== '/app') {
+        return <Navigate to="/app" replace />
+      }
+    }
+  }
 
   if (currentUser && currentUser.is_active === false) {
     return (
