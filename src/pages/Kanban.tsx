@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
-import { Stage } from '@/lib/types'
+import { Stage, Order } from '@/lib/types'
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Paperclip,
   ExternalLink,
+  QrCode,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { KanbanCardTimer } from '@/components/KanbanCardTimer'
+import { MiniGuideDialog } from '@/components/MiniGuideDialog'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -106,6 +108,8 @@ export default function KanbanPage() {
 
   const [finishingOrderId, setFinishingOrderId] = useState<string | null>(null)
   const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
+
+  const [selectedQrOrder, setSelectedQrOrder] = useState<Order | null>(null)
 
   const savingRef = useRef(false)
 
@@ -516,18 +520,32 @@ export default function KanbanPage() {
                                   <KanbanCardTimer order={o} currentStage={stage.name} />
                                 </div>
                               </div>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="w-full text-[10px] font-bold mt-3 uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate(`/order/${o.id}`)
-                                }}
-                              >
-                                <ExternalLink className="w-3 h-3 mr-1.5" />
-                                Abrir Requisição
-                              </Button>
+                              <div className="flex gap-2 mt-3 w-full">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="flex-1 text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigate(`/order/${o.id}`)
+                                  }}
+                                >
+                                  <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
+                                  <span className="truncate">Requisição</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-[10px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedQrOrder(o)
+                                  }}
+                                >
+                                  <QrCode className="w-3 h-3 mr-1 shrink-0" />
+                                  <span className="truncate">QR Code</span>
+                                </Button>
+                              </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent
@@ -749,6 +767,12 @@ export default function KanbanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MiniGuideDialog
+        order={selectedQrOrder}
+        isOpen={!!selectedQrOrder}
+        onClose={() => setSelectedQrOrder(null)}
+      />
     </div>
   )
 }
