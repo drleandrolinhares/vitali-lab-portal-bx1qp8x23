@@ -137,6 +137,7 @@ export function UsersManagement() {
     city: '',
     state: '',
     has_access_schedule: false,
+    can_move_kanban_cards: true,
     role: 'dentist',
     is_active: true,
     assigned_dentists: [] as string[],
@@ -298,6 +299,7 @@ export function UsersManagement() {
         city: user.city || '',
         state: user.state || '',
         has_access_schedule: user.has_access_schedule || false,
+        can_move_kanban_cards: user.can_move_kanban_cards ?? true,
         role: user.role || 'dentist',
         is_active: user.is_active !== false,
         assigned_dentists: user.assigned_dentists || [],
@@ -323,6 +325,7 @@ export function UsersManagement() {
         city: '',
         state: '',
         has_access_schedule: false,
+        can_move_kanban_cards: true,
         role: 'dentist',
         is_active: true,
         assigned_dentists: [],
@@ -376,6 +379,7 @@ export function UsersManagement() {
         city: formData.city,
         state: formData.state,
         has_access_schedule: formData.has_access_schedule,
+        can_move_kanban_cards: formData.can_move_kanban_cards,
         is_active: formData.is_active,
         permissions: selectedPerms,
         assigned_dentists: formData.assigned_dentists,
@@ -464,6 +468,83 @@ export function UsersManagement() {
     }
 
     setModalOpen(false)
+  }
+
+  const applyDentistVisionMode = async () => {
+    const referenceUser = users.find(
+      (u) => u.name?.trim().toUpperCase() === 'LEANDRO DE SOUZA DENTISTA',
+    )
+    if (!referenceUser) {
+      toast({
+        title: 'Usuário referência "LEANDRO DE SOUZA DENTISTA" não encontrado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const newPerms = referenceUser.permissions || {}
+    const newRole = referenceUser.role || 'dentist'
+    const newCanMoveKanbanCards = referenceUser.can_move_kanban_cards ?? true
+    const newHasAccessSchedule = referenceUser.has_access_schedule ?? false
+
+    setSelectedPerms(newPerms)
+    setFormData((prev) => ({
+      ...prev,
+      role: newRole,
+      has_access_schedule: newHasAccessSchedule,
+      can_move_kanban_cards: newCanMoveKanbanCards,
+    }))
+
+    if (editingUser?.id) {
+      setSaving(true)
+      try {
+        const { error } = await updateUser({
+          userId: editingUser.id,
+          role: newRole,
+          permissions: newPerms,
+          has_access_schedule: newHasAccessSchedule,
+          can_move_kanban_cards: newCanMoveKanbanCards,
+        })
+
+        if (error) {
+          if (
+            error.message?.includes('Refresh Token') ||
+            error.message?.includes('refresh token')
+          ) {
+            await supabase.auth.signOut()
+            window.location.href = '/'
+            return
+          }
+          throw error
+        }
+
+        toast({ title: 'Modo Visão Dentista aplicado com sucesso!' })
+
+        const updatedUser = {
+          ...editingUser,
+          role: newRole,
+          permissions: newPerms,
+          has_access_schedule: newHasAccessSchedule,
+          can_move_kanban_cards: newCanMoveKanbanCards,
+        }
+        setUsers((prev) =>
+          prev.map((u) => (u.id === editingUser.id ? { ...u, ...updatedUser } : u)),
+        )
+        setEditingUser(updatedUser)
+      } catch (err: any) {
+        toast({
+          title: 'Erro ao aplicar permissões',
+          description: err.message,
+          variant: 'destructive',
+        })
+      } finally {
+        setSaving(false)
+      }
+    } else {
+      toast({
+        title: 'Modo Visão Dentista aplicado ao formulário! Salve o usuário para efetivar.',
+      })
+    }
   }
 
   const updateAccess = (moduleId: string, checked: boolean) => {
@@ -1257,6 +1338,28 @@ export function UsersManagement() {
                       permissões padrão do Perfil.
                     </p>
                   </div>
+
+                  {isCurrentUserMaster && (
+                    <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300">
+                          Perfil Padrão de Dentista
+                        </h4>
+                        <p className="text-xs text-blue-600 dark:text-blue-400/80 mt-1">
+                          Aplicar permissões e restrições idênticas ao usuário de referência
+                          (LEANDRO DE SOUZA DENTISTA).
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={applyDentistVisionMode}
+                        disabled={saving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] sm:text-xs tracking-wider shrink-0"
+                      >
+                        PERFIL MODO VISÃO DENTISTA
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-xl mb-6">
                     <div>
