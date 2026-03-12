@@ -98,13 +98,20 @@ Deno.serve(async (req: Request) => {
     if (!email) throw new Error('Email is required')
     if (!password) throw new Error('Password is required')
 
-    const phoneToUse = phone || personal_phone || null
+    let phoneToUse: string | null = null
+    if (phone !== undefined) phoneToUse = phone === '' ? null : phone
+    else if (personal_phone !== undefined)
+      phoneToUse = personal_phone === '' ? null : personal_phone
 
     const payload: any = {
       email,
       password,
       email_confirm: true,
       user_metadata: { name, role, clinic, phone: phoneToUse, whatsapp_group_link },
+    }
+
+    if (phoneToUse !== null) {
+      payload.phone = phoneToUse
     }
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser(payload)
@@ -116,21 +123,22 @@ Deno.serve(async (req: Request) => {
     const updateData: any = { is_approved: true, is_active: true }
     if (permissions && Object.keys(permissions).length > 0) updateData.permissions = permissions
     if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
-    if (phoneToUse) updateData.personal_phone = phoneToUse
+    if (phoneToUse !== null) updateData.personal_phone = phoneToUse
     if (requires_password_change !== undefined)
       updateData.requires_password_change = requires_password_change
     if (assigned_dentists !== undefined) updateData.assigned_dentists = assigned_dentists
     if (can_move_kanban_cards !== undefined)
       updateData.can_move_kanban_cards = can_move_kanban_cards
 
-    if (username !== undefined) updateData.username = username
-    if (rg !== undefined) updateData.rg = rg
-    if (cpf !== undefined) updateData.cpf = cpf
-    if (birth_date !== undefined) updateData.birth_date = birth_date
+    if (username !== undefined) updateData.username = username === '' ? null : username
+    if (rg !== undefined) updateData.rg = rg === '' ? null : rg
+    if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
+    if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
     if (cep !== undefined) updateData.cep = cep
     if (address !== undefined) updateData.address = address
     if (address_number !== undefined) updateData.address_number = address_number
-    if (address_complement !== undefined) updateData.address_complement = address_complement
+    if (address_complement !== undefined)
+      updateData.address_complement = address_complement === '' ? null : address_complement
     if (city !== undefined) updateData.city = city
     if (state !== undefined) updateData.state = state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
@@ -143,6 +151,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
+    console.error('Create user error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -114,19 +114,37 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized: Only admins can change roles to non-dentist')
     }
 
-    const phoneToUse = phone || personal_phone || null
+    const { data: targetAuthUser, error: authFetchError } =
+      await supabaseAdmin.auth.admin.getUserById(userId)
+    if (authFetchError || !targetAuthUser?.user) throw new Error('Target auth user not found')
+
+    let phoneToUse: string | null | undefined = undefined
+    if (phone !== undefined) phoneToUse = phone === '' ? null : phone
+    if (personal_phone !== undefined) phoneToUse = personal_phone === '' ? null : personal_phone
 
     const authPayload: any = {
       email_confirm: true,
-      user_metadata: { name, clinic, phone: phoneToUse, whatsapp_group_link },
+      user_metadata: {},
     }
 
+    if (name !== undefined) authPayload.user_metadata.name = name
+    if (clinic !== undefined) authPayload.user_metadata.clinic = clinic
+    if (whatsapp_group_link !== undefined)
+      authPayload.user_metadata.whatsapp_group_link = whatsapp_group_link
+    if (phoneToUse !== undefined) {
+      authPayload.phone = phoneToUse
+      authPayload.user_metadata.phone = phoneToUse
+    }
     if (role !== undefined) {
       authPayload.user_metadata.role = role
     }
 
-    if (email) authPayload.email = email
-    if (password) authPayload.password = password
+    if (email && email !== targetAuthUser.user.email) {
+      authPayload.email = email
+    }
+    if (password) {
+      authPayload.password = password
+    }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
@@ -134,21 +152,23 @@ Deno.serve(async (req: Request) => {
     )
     if (authError) throw authError
 
-    const updateData: any = { name }
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
     if (clinic !== undefined) updateData.clinic = clinic
-    if (email) updateData.email = email
+    if (email !== undefined) updateData.email = email
     if (whatsapp_group_link !== undefined) updateData.whatsapp_group_link = whatsapp_group_link
     if (phoneToUse !== undefined) updateData.personal_phone = phoneToUse
     if (job_function !== undefined) updateData.job_function = job_function
 
-    if (username !== undefined) updateData.username = username
-    if (rg !== undefined) updateData.rg = rg
-    if (cpf !== undefined) updateData.cpf = cpf
-    if (birth_date !== undefined) updateData.birth_date = birth_date
+    if (username !== undefined) updateData.username = username === '' ? null : username
+    if (rg !== undefined) updateData.rg = rg === '' ? null : rg
+    if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
+    if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
     if (cep !== undefined) updateData.cep = cep
     if (address !== undefined) updateData.address = address
     if (address_number !== undefined) updateData.address_number = address_number
-    if (address_complement !== undefined) updateData.address_complement = address_complement
+    if (address_complement !== undefined)
+      updateData.address_complement = address_complement === '' ? null : address_complement
     if (city !== undefined) updateData.city = city
     if (state !== undefined) updateData.state = state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
@@ -176,6 +196,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
+    console.error('Update user error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

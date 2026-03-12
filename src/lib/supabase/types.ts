@@ -97,6 +97,47 @@ export type Database = {
           },
         ]
       }
+      billing_installments: {
+        Row: {
+          created_at: string
+          dentist_id: string
+          id: string
+          installment_value: number
+          remaining_installments: number
+          status: string
+          total_amount: number
+          total_installments: number
+        }
+        Insert: {
+          created_at?: string
+          dentist_id: string
+          id?: string
+          installment_value: number
+          remaining_installments: number
+          status?: string
+          total_amount: number
+          total_installments: number
+        }
+        Update: {
+          created_at?: string
+          dentist_id?: string
+          id?: string
+          installment_value?: number
+          remaining_installments?: number
+          status?: string
+          total_amount?: number
+          total_installments?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'billing_installments_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       dre_categories: {
         Row: {
           category_type: string
@@ -871,6 +912,15 @@ export const Constants = {
 //   month: text (not null)
 //   status: text (not null, default: 'sent'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: billing_installments
+//   id: uuid (not null, default: gen_random_uuid())
+//   dentist_id: uuid (not null)
+//   total_amount: numeric (not null)
+//   installment_value: numeric (not null)
+//   total_installments: integer (not null)
+//   remaining_installments: integer (not null)
+//   status: text (not null, default: 'active'::text)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: dre_categories
 //   name: text (not null)
 //   category_type: text (not null, default: 'fixed'::text)
@@ -1035,6 +1085,9 @@ export const Constants = {
 //   FOREIGN KEY billing_controls_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   UNIQUE billing_controls_dentist_id_month_key: UNIQUE (dentist_id, month)
 //   PRIMARY KEY billing_controls_pkey: PRIMARY KEY (id)
+// Table: billing_installments
+//   FOREIGN KEY billing_installments_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   PRIMARY KEY billing_installments_pkey: PRIMARY KEY (id)
 // Table: dre_categories
 //   PRIMARY KEY dre_categories_pkey: PRIMARY KEY (name)
 // Table: expenses
@@ -1086,6 +1139,11 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 //   Policy "Public read billing_controls" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: billing_installments
+//   Policy "Admin access billing_installments" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'financial'::text])))))
+//   Policy "Dentist read own billing_installments" (SELECT, PERMISSIVE) roles={public}
+//     USING: (dentist_id = auth.uid())
 // Table: dre_categories
 //   Policy "Admin write dre_categories" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
