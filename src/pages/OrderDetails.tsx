@@ -80,13 +80,24 @@ export default function OrderDetails() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">
-          <Card className="shadow-subtle h-fit">
-            <CardHeader>
+          <Card className="shadow-subtle h-fit overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-muted/20">
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" /> Detalhes Clínicos
               </CardTitle>
+              <div
+                className="bg-white p-1.5 rounded-md shadow-sm border border-slate-200 shrink-0 select-none"
+                title="Código de Barras do Pedido"
+              >
+                <img
+                  src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${order.friendlyId}&scale=2&height=10&includetext=false`}
+                  alt={`Barcode ${order.friendlyId}`}
+                  className="h-9 object-contain dark:invert mix-blend-multiply"
+                  draggable={false}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Paciente</p>

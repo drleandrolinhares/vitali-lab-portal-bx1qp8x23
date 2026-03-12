@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Stage } from '@/lib/types'
 import {
@@ -19,6 +19,7 @@ import {
   Info,
   CheckCircle2,
   Paperclip,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,6 +57,7 @@ export default function KanbanPage() {
     checkPermission,
   } = useAppStore()
 
+  const navigate = useNavigate()
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const isDentist = currentUser?.role === 'dentist'
 
@@ -103,6 +105,7 @@ export default function KanbanPage() {
   const [draggedCardSector, setDraggedCardSector] = useState<string | null>(null)
 
   const [finishingOrderId, setFinishingOrderId] = useState<string | null>(null)
+  const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
   const savingRef = useRef(false)
 
@@ -285,6 +288,10 @@ export default function KanbanPage() {
                 const cols = visibleOrders.filter(
                   (o) => o.sector === sector && o.kanbanStage === stage.name,
                 )
+                const isExpanded = expandedCols.has(`${sector}-${stage.id}`)
+                const displayCols = isExpanded ? cols : cols.slice(0, 4)
+                const hasMore = cols.length > 4
+
                 return (
                   <div
                     key={stage.id}
@@ -430,7 +437,7 @@ export default function KanbanPage() {
                       </span>
                     </div>
                     <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
-                      {cols.map((o) => (
+                      {displayCols.map((o) => (
                         <Tooltip key={o.id} delayDuration={300}>
                           <TooltipTrigger asChild>
                             <div
@@ -509,6 +516,18 @@ export default function KanbanPage() {
                                   <KanbanCardTimer order={o} currentStage={stage.name} />
                                 </div>
                               </div>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="w-full text-[10px] font-bold mt-3 uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/order/${o.id}`)
+                                }}
+                              >
+                                <ExternalLink className="w-3 h-3 mr-1.5" />
+                                Abrir Requisição
+                              </Button>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent
@@ -559,6 +578,20 @@ export default function KanbanPage() {
                           </TooltipContent>
                         </Tooltip>
                       ))}
+                      {hasMore && (
+                        <Button
+                          variant="ghost"
+                          className="w-full text-xs font-semibold mt-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border"
+                          onClick={() => {
+                            const newSet = new Set(expandedCols)
+                            if (isExpanded) newSet.delete(`${sector}-${stage.id}`)
+                            else newSet.add(`${sector}-${stage.id}`)
+                            setExpandedCols(newSet)
+                          }}
+                        >
+                          {isExpanded ? 'Ver Menos' : `Ver mais (${cols.length - 4})`}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )

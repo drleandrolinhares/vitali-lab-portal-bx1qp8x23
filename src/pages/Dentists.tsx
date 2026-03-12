@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import {
   Trash2,
   Tag,
   Plus,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,7 @@ export default function DentistsPage() {
   const [loading, setLoading] = useState(true)
   const [editingDentist, setEditingDentist] = useState<any>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [createData, setCreateData] = useState({
     name: '',
     email: '',
@@ -102,6 +104,15 @@ export default function DentistsPage() {
   useEffect(() => {
     if (hasAccess) fetchDentists()
   }, [hasAccess])
+
+  const filteredDentists = useMemo(() => {
+    if (!searchQuery.trim()) return dentists
+    const lowerQuery = searchQuery.toLowerCase()
+    return dentists.filter(
+      (d) =>
+        d.name.toLowerCase().includes(lowerQuery) || d.clinic.toLowerCase().includes(lowerQuery),
+    )
+  }, [dentists, searchQuery])
 
   const handleEditClick = (dentist: any) => {
     setEditingDentist(dentist)
@@ -223,22 +234,38 @@ export default function DentistsPage() {
             GERENCIE SEUS CLIENTES, CLÍNICAS PARCEIRAS E INFORMAÇÕES DE CONTATO.
           </p>
         </div>
-        {canAddDentist && (
-          <Button onClick={() => setIsCreating(true)} className="gap-2 uppercase text-xs font-bold">
-            <Plus className="w-4 h-4" /> NOVO DENTISTA
-          </Button>
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou clínica..."
+              className="pl-9 bg-background uppercase text-xs"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {canAddDentist && (
+            <Button
+              onClick={() => setIsCreating(true)}
+              className="gap-2 uppercase text-xs font-bold w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4" /> NOVO DENTISTA
+            </Button>
+          )}
+        </div>
       </div>
 
-      {dentists.length === 0 ? (
+      {filteredDentists.length === 0 ? (
         <div className="p-12 text-center border rounded-lg bg-muted/20">
           <p className="text-muted-foreground uppercase text-xs font-bold">
-            NENHUM DENTISTA CADASTRADO NO SISTEMA AINDA.
+            {searchQuery
+              ? 'NENHUM DENTISTA ENCONTRADO PARA A BUSCA.'
+              : 'NENHUM DENTISTA CADASTRADO NO SISTEMA AINDA.'}
           </p>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {dentists.map((dentist) => (
+          {filteredDentists.map((dentist) => (
             <Card
               key={dentist.id}
               className="shadow-subtle hover:shadow-md transition-shadow relative"
