@@ -29,7 +29,7 @@ import { Navigate } from 'react-router-dom'
 import { format } from 'date-fns'
 
 export default function ComparativeDashboard() {
-  const { currentUser, orders, kanbanStages, dreCategories } = useAppStore()
+  const { currentUser, orders, kanbanStages, dreCategories, checkPermission } = useAppStore()
   const [priceList, setPriceList] = useState<PriceItem[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
 
@@ -113,8 +113,12 @@ export default function ComparativeDashboard() {
     Despesas: { label: 'Despesas (R$)', color: 'hsl(var(--red-500))' },
   }
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
-    return <Navigate to="/" replace />
+  const canView =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === ('master' as any) ||
+    checkPermission('dashboards', 'view_operational')
+
+  if (!canView) return <Navigate to="/" replace />
 
   const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
 

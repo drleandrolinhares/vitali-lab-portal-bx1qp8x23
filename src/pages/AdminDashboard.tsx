@@ -125,7 +125,7 @@ function Top10List({
 }
 
 export default function AdminDashboard() {
-  const { orders, selectedLab, currentUser } = useAppStore()
+  const { orders, selectedLab, currentUser, checkPermission } = useAppStore()
 
   // Improved filtering logic to handle case-insensitivity since DB default is uppercase
   const filteredOrders = useMemo(
@@ -188,7 +188,12 @@ export default function AdminDashboard() {
     }
   }, [filteredOrders])
 
-  if (currentUser?.role !== 'admin') {
+  const canView =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === ('master' as any) ||
+    checkPermission('dashboards', 'view_general')
+
+  if (!canView) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
         <h2 className="text-2xl font-bold text-destructive mb-2">Acesso Restrito</h2>

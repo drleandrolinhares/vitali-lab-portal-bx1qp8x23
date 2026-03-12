@@ -50,6 +50,15 @@ export const MODULES = [
     ],
   },
   {
+    id: 'dashboards',
+    label: 'Dashboards',
+    actions: [
+      { id: 'view_general', label: 'Dashboard Gerencial' },
+      { id: 'view_financial', label: 'Dashboard Financeiro' },
+      { id: 'view_operational', label: 'Dashboard Comparativo Interno' },
+    ],
+  },
+  {
     id: 'finances',
     label: 'Financeiro / Faturamento',
     actions: [],

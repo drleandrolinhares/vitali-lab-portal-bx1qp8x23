@@ -204,13 +204,18 @@ function AppSidebar() {
     if (isMaster) return true
     if (id === 'profile' || id === 'my-profile') return true
 
+    if (id === 'new-request') {
+      return checkPermission('inbox', 'create_order')
+    }
+
+    if (id === 'dashboard') return checkPermission('dashboards', 'view_general')
+    if (id === 'finances') return checkPermission('dashboards', 'view_financial')
+    if (id === 'comparative-dashboard') return checkPermission('dashboards', 'view_operational')
+
     const map: Record<string, string> = {
       inbox: 'inbox',
       kanban: 'kanban',
       history: 'history',
-      dashboard: 'finances',
-      finances: 'finances',
-      'comparative-dashboard': 'finances',
       'accounts-payable': 'finances',
       'admin-financial': 'finances',
       prices: 'finances',
@@ -222,10 +227,6 @@ function AppSidebar() {
       'pending-users': 'settings',
       dentists: 'settings',
       patients: 'settings',
-    }
-
-    if (id === 'new-request') {
-      return checkPermission('inbox', 'create_order')
     }
 
     const moduleName = map[id]

@@ -27,7 +27,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export default function DREPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [basis, setBasis] = useState<'cash' | 'accrual'>('accrual')
-  const { orders, kanbanStages, priceList, currentUser, dreCategories } = useAppStore()
+  const { orders, kanbanStages, priceList, currentUser, dreCategories, checkPermission } =
+    useAppStore()
 
   const [settlements, setSettlements] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -255,8 +256,12 @@ export default function DREPage() {
     a.click()
   }
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
-    return <Navigate to="/" replace />
+  const canView =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === ('master' as any) ||
+    checkPermission('dashboards', 'view_financial')
+
+  if (!canView) return <Navigate to="/" replace />
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in print:max-w-none print:m-0 print:p-0">

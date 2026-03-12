@@ -291,6 +291,10 @@ export function UsersManagement() {
     }
 
     if (editingUser) {
+      const dashboardsChanged =
+        JSON.stringify(editingUser.permissions?.dashboards) !==
+        JSON.stringify(selectedPerms.dashboards)
+
       const { error } = await updateUser({
         userId: editingUser.id,
         ...payload,
@@ -312,6 +316,13 @@ export function UsersManagement() {
         return // Do not close modal on error
       } else {
         toast({ title: 'Usuário atualizado com sucesso!' })
+        if (dashboardsChanged) {
+          await logAudit('UPDATE_PERMISSIONS', 'profiles', editingUser.id, {
+            reason: 'Dashboard permissions changed',
+            target_user: formData.name,
+            dashboards: selectedPerms.dashboards,
+          })
+        }
       }
     } else {
       const { error } = await createUser({
