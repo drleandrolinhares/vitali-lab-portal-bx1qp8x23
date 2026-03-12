@@ -122,6 +122,10 @@ Deno.serve(async (req: Request) => {
     if (state !== undefined) updateData.state = state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
 
+    if (password && callerUser.id !== userId) {
+      updateData.requires_password_change = true
+    }
+
     if (isAdmin || isUpdatingDentist) {
       if (role !== undefined) updateData.role = role
       if (is_active !== undefined) updateData.is_active = is_active

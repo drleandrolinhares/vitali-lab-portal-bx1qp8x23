@@ -29,6 +29,7 @@ import {
   CreditCard,
   Building,
   Users,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -626,7 +627,7 @@ export function UsersManagement() {
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
                       <User className="w-4 h-4 text-[#e76f51]" /> Informações Básicas
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-xl bg-background">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Nome Completo *</Label>
                         <Input
@@ -644,14 +645,6 @@ export function UsersManagement() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Email *</Label>
-                        <Input
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Telefone *</Label>
                         <Input
                           value={formData.personal_phone}
@@ -661,8 +654,25 @@ export function UsersManagement() {
                           className="h-9"
                         />
                       </div>
-                      <div className="space-y-1 md:col-span-4 max-w-sm">
-                        <Label className="text-xs text-muted-foreground">Senha de Acesso</Label>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                      <ShieldCheck className="w-4 h-4 text-[#e76f51]" /> Acesso e Segurança
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-xl bg-background">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">E-mail de Login *</Label>
+                        <Input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Nova Senha</Label>
                         <Input
                           type="password"
                           value={formData.password}
