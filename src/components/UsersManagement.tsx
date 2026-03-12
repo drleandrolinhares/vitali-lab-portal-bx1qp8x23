@@ -296,18 +296,47 @@ export function UsersManagement() {
         ...payload,
         password: formData.password || undefined,
       })
-      if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-      else toast({ title: 'Usuário atualizado!' })
+      setSaving(false)
+      if (error) {
+        toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' })
+        if (
+          error.message.includes('Sessão expirada') ||
+          error.message.includes('Invalid or expired token')
+        ) {
+          setTimeout(() => {
+            supabase.auth.signOut().then(() => {
+              window.location.href = '/'
+            })
+          }, 2000)
+        }
+        return // Do not close modal on error
+      } else {
+        toast({ title: 'Usuário atualizado com sucesso!' })
+      }
     } else {
       const { error } = await createUser({
         ...payload,
         password: formData.password,
       })
-      if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-      else toast({ title: 'Usuário criado!' })
+      setSaving(false)
+      if (error) {
+        toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' })
+        if (
+          error.message.includes('Sessão expirada') ||
+          error.message.includes('Invalid or expired token')
+        ) {
+          setTimeout(() => {
+            supabase.auth.signOut().then(() => {
+              window.location.href = '/'
+            })
+          }, 2000)
+        }
+        return // Do not close modal on error
+      } else {
+        toast({ title: 'Usuário criado com sucesso!' })
+      }
     }
 
-    setSaving(false)
     setModalOpen(false)
   }
 
