@@ -180,9 +180,19 @@ Deno.serve(async (req: Request) => {
         await supabaseAdmin.auth.admin.updateUserById(userId, authPayload)
       if (authError) {
         console.error('Auth update error:', authError)
-        throw new Error(
-          `Erro ao atualizar usuário no sistema de autenticação: ${authError.message}`,
-        )
+        let errorMsg = authError.message
+        if (
+          errorMsg.toLowerCase().includes('already registered') ||
+          errorMsg.toLowerCase().includes('already exists')
+        ) {
+          errorMsg = 'Este e-mail ou telefone já está em uso por outro usuário.'
+        } else if (errorMsg.toLowerCase().includes('password')) {
+          errorMsg =
+            'A senha informada é muito fraca ou inválida. Deve conter ao menos 6 caracteres.'
+        } else if (errorMsg.toLowerCase().includes('error updating user')) {
+          errorMsg = 'Falha ao atualizar credenciais (verifique se o e-mail não está duplicado).'
+        }
+        throw new Error(`Erro de autenticação: ${errorMsg}`)
       }
       authData = updatedAuthData
     }
@@ -202,7 +212,7 @@ Deno.serve(async (req: Request) => {
     if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
 
     if (birth_date !== undefined) {
-      if (birth_date === '') {
+      if (birth_date === null || birth_date === '') {
         updateData.birth_date = null
       } else {
         const parsedDate = new Date(birth_date)
@@ -259,7 +269,7 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error('Update user error details:', error)
     return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 400,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

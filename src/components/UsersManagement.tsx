@@ -384,40 +384,97 @@ export function UsersManagement() {
         return
       }
 
-      const payload = {
-        name: formData.name,
-        email: formData.email.toLowerCase(),
-        role: formData.role,
-        personal_phone: formData.personal_phone || null,
-        clinic: formData.clinic || null,
-        commercial_agreement: parseFloat(formData.commercial_agreement) || 0,
-        username: formData.username || null,
-        rg: formData.rg || null,
-        cpf: formData.cpf || null,
-        birth_date: formData.birth_date || null,
-        cep: formData.cep || null,
-        address: formData.address || null,
-        address_number: formData.address_number || null,
-        address_complement: formData.address_complement || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        has_access_schedule: formData.has_access_schedule,
-        can_move_kanban_cards: formData.can_move_kanban_cards,
-        is_active: formData.is_active,
-        permissions: selectedPerms,
-        assigned_dentists: formData.assigned_dentists,
+      let payload: any = {}
+
+      if (editingUser) {
+        payload = { userId: editingUser.id }
+        const currentCA = parseFloat(formData.commercial_agreement) || 0
+        const oldCA = editingUser.commercial_agreement || 0
+
+        if (formData.name !== editingUser.name) payload.name = formData.name
+        if (formData.email.toLowerCase() !== (editingUser.email || '').toLowerCase())
+          payload.email = formData.email.toLowerCase()
+        if (formData.role !== editingUser.role) payload.role = formData.role
+        if (formData.personal_phone !== (editingUser.personal_phone || ''))
+          payload.personal_phone = formData.personal_phone || null
+        if (formData.clinic !== (editingUser.clinic || '')) payload.clinic = formData.clinic || null
+        if (currentCA !== oldCA) payload.commercial_agreement = currentCA
+        if (formData.username !== (editingUser.username || ''))
+          payload.username = formData.username || null
+        if (formData.rg !== (editingUser.rg || '')) payload.rg = formData.rg || null
+        if (formData.cpf !== (editingUser.cpf || '')) payload.cpf = formData.cpf || null
+        if (formData.birth_date !== (editingUser.birth_date || ''))
+          payload.birth_date = formData.birth_date || null
+        if (formData.cep !== (editingUser.cep || '')) payload.cep = formData.cep || null
+        if (formData.address !== (editingUser.address || ''))
+          payload.address = formData.address || null
+        if (formData.address_number !== (editingUser.address_number || ''))
+          payload.address_number = formData.address_number || null
+        if (formData.address_complement !== (editingUser.address_complement || ''))
+          payload.address_complement = formData.address_complement || null
+        if (formData.city !== (editingUser.city || '')) payload.city = formData.city || null
+        if (formData.state !== (editingUser.state || '')) payload.state = formData.state || null
+        if (formData.has_access_schedule !== (editingUser.has_access_schedule || false))
+          payload.has_access_schedule = formData.has_access_schedule
+        if (formData.can_move_kanban_cards !== (editingUser.can_move_kanban_cards ?? true))
+          payload.can_move_kanban_cards = formData.can_move_kanban_cards
+        if (formData.is_active !== (editingUser.is_active !== false))
+          payload.is_active = formData.is_active
+        if (JSON.stringify(selectedPerms) !== JSON.stringify(editingUser.permissions || {}))
+          payload.permissions = selectedPerms
+        if (
+          JSON.stringify(formData.assigned_dentists) !==
+          JSON.stringify(editingUser.assigned_dentists || [])
+        )
+          payload.assigned_dentists = formData.assigned_dentists
+
+        if (formData.password && formData.password.trim() !== '') {
+          payload.password = formData.password
+        }
+
+        if (Object.keys(payload).length === 1 && payload.userId) {
+          toast({
+            title: 'Aviso',
+            description: 'Nenhuma alteração foi detectada nos dados do usuário.',
+          })
+          setSaving(false)
+          setModalOpen(false)
+          return
+        }
+      } else {
+        payload = {
+          name: formData.name,
+          email: formData.email.toLowerCase(),
+          role: formData.role,
+          personal_phone: formData.personal_phone || null,
+          clinic: formData.clinic || null,
+          commercial_agreement: parseFloat(formData.commercial_agreement) || 0,
+          username: formData.username || null,
+          rg: formData.rg || null,
+          cpf: formData.cpf || null,
+          birth_date: formData.birth_date || null,
+          cep: formData.cep || null,
+          address: formData.address || null,
+          address_number: formData.address_number || null,
+          address_complement: formData.address_complement || null,
+          city: formData.city || null,
+          state: formData.state || null,
+          has_access_schedule: formData.has_access_schedule,
+          can_move_kanban_cards: formData.can_move_kanban_cards,
+          is_active: formData.is_active,
+          permissions: selectedPerms,
+          assigned_dentists: formData.assigned_dentists,
+          password: formData.password,
+        }
       }
 
       if (editingUser) {
         const dashboardsChanged =
+          payload.permissions &&
           JSON.stringify(editingUser.permissions?.dashboards) !==
-          JSON.stringify(selectedPerms.dashboards)
+            JSON.stringify(selectedPerms.dashboards)
 
-        const { error } = await updateUser({
-          userId: editingUser.id,
-          ...payload,
-          password: formData.password || undefined,
-        })
+        const { error } = await updateUser(payload)
 
         if (error) {
           throw error
@@ -443,10 +500,7 @@ export function UsersManagement() {
           }
         }
       } else {
-        const { error, data } = await createUser({
-          ...payload,
-          password: formData.password,
-        })
+        const { error, data } = await createUser(payload)
         if (error) {
           throw error
         } else {
@@ -472,8 +526,8 @@ export function UsersManagement() {
         return
       }
       toast({
-        title: 'Erro ao salvar',
-        description: err.message || 'Ocorreu um erro inesperado.',
+        title: 'Falha ao salvar',
+        description: err.message || 'Ocorreu um erro inesperado. Tente novamente.',
         variant: 'destructive',
       })
     } finally {

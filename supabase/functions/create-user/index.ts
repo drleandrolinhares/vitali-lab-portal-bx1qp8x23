@@ -121,7 +121,16 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       console.error('Auth create error:', error)
-      throw new Error(`Erro ao criar usuário no sistema de autenticação: ${error.message}`)
+      let errorMsg = error.message
+      if (
+        errorMsg.toLowerCase().includes('already registered') ||
+        errorMsg.toLowerCase().includes('already exists')
+      ) {
+        errorMsg = 'Este e-mail ou telefone já está em uso por outro usuário.'
+      } else if (errorMsg.toLowerCase().includes('password')) {
+        errorMsg = 'A senha informada é muito fraca ou inválida. Deve conter ao menos 6 caracteres.'
+      }
+      throw new Error(`Erro de autenticação: ${errorMsg}`)
     }
 
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -140,7 +149,18 @@ Deno.serve(async (req: Request) => {
     if (username !== undefined) updateData.username = username === '' ? null : username
     if (rg !== undefined) updateData.rg = rg === '' ? null : rg
     if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
-    if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
+    if (birth_date !== undefined) {
+      if (birth_date === null || birth_date === '') {
+        updateData.birth_date = null
+      } else {
+        const parsedDate = new Date(birth_date)
+        if (!isNaN(parsedDate.getTime())) {
+          updateData.birth_date = birth_date
+        } else {
+          updateData.birth_date = null
+        }
+      }
+    }
     if (cep !== undefined) updateData.cep = cep === '' ? null : cep
     if (address !== undefined) updateData.address = address === '' ? null : address
     if (address_number !== undefined)
