@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -148,6 +148,37 @@ export function RolePermissionsPanel() {
     }
   }
 
+  const isAllActiveRolePermsSelected = useMemo(() => {
+    const activeRolePerms = perms[activeTab] || {}
+    return MODULES.every((mod) => {
+      const modPerm = activeRolePerms[mod.id]
+      if (!modPerm?.access) return false
+      if (mod.actions.length > 0) {
+        return mod.actions.every((act) => modPerm.actions?.[act.id])
+      }
+      return true
+    })
+  }, [perms, activeTab])
+
+  const handleToggleAllActiveRolePerms = (checked: boolean) => {
+    setPerms((prev) => {
+      const newPerms = { ...prev }
+      if (checked) {
+        const allForRole: Record<string, any> = {}
+        MODULES.forEach((mod) => {
+          allForRole[mod.id] = { access: true, actions: {} }
+          mod.actions.forEach((act) => {
+            allForRole[mod.id].actions[act.id] = true
+          })
+        })
+        newPerms[activeTab] = allForRole
+      } else {
+        newPerms[activeTab] = {}
+      }
+      return newPerms
+    })
+  }
+
   return (
     <Card className="shadow-subtle">
       <CardHeader>
@@ -172,6 +203,24 @@ export function RolePermissionsPanel() {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          <div className="flex justify-between items-center bg-muted/20 p-4 border rounded-xl mb-4">
+            <div>
+              <h4 className="text-sm font-bold uppercase">Permissões Globais do Perfil</h4>
+              <p className="text-xs text-muted-foreground uppercase mt-0.5">
+                Marcar todos os acessos disponíveis para este perfil.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border shadow-sm">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                MARCAR TODAS
+              </span>
+              <Switch
+                checked={isAllActiveRolePermsSelected}
+                onCheckedChange={handleToggleAllActiveRolePerms}
+              />
+            </div>
+          </div>
 
           {ROLES.map((r) => (
             <TabsContent key={r.id} value={r.id} className="space-y-4">

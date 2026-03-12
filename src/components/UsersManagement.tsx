@@ -112,6 +112,7 @@ export function UsersManagement() {
     has_access_schedule: false,
     role: 'dentist',
     is_active: true,
+    assigned_dentists: [] as string[],
   })
 
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any>>({})
@@ -200,6 +201,12 @@ export function UsersManagement() {
     })
   }, [baseFilteredUsers, selectedCategory])
 
+  const dentistsList = useMemo(() => {
+    return users
+      .filter((u) => u.role === 'dentist')
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [users])
+
   const openModal = (user?: any) => {
     setActiveTab('pessoais')
     if (user) {
@@ -222,6 +229,7 @@ export function UsersManagement() {
         has_access_schedule: user.has_access_schedule || false,
         role: user.role || 'dentist',
         is_active: user.is_active !== false,
+        assigned_dentists: user.assigned_dentists || [],
       })
       setSelectedPerms(user.permissions || {})
     } else {
@@ -244,6 +252,7 @@ export function UsersManagement() {
         has_access_schedule: false,
         role: 'dentist',
         is_active: true,
+        assigned_dentists: [],
       })
       setSelectedPerms({})
     }
@@ -277,6 +286,7 @@ export function UsersManagement() {
       has_access_schedule: formData.has_access_schedule,
       is_active: formData.is_active,
       permissions: selectedPerms,
+      assigned_dentists: formData.assigned_dentists,
     }
 
     if (editingUser) {
@@ -315,6 +325,54 @@ export function UsersManagement() {
       if (!newPerms[moduleId]) newPerms[moduleId] = { access: true, actions: {} }
       newPerms[moduleId].actions = { ...newPerms[moduleId].actions, [actionId]: checked }
       return newPerms
+    })
+  }
+
+  const isAllPermsSelected = useMemo(() => {
+    return MODULES.every((mod) => {
+      const modPerm = selectedPerms[mod.id]
+      if (!modPerm?.access) return false
+      if (mod.actions.length > 0) {
+        return mod.actions.every((act) => modPerm.actions?.[act.id])
+      }
+      return true
+    })
+  }, [selectedPerms])
+
+  const handleToggleAllPerms = (checked: boolean) => {
+    if (checked) {
+      const allPerms: Record<string, any> = {}
+      MODULES.forEach((mod) => {
+        allPerms[mod.id] = { access: true, actions: {} }
+        mod.actions.forEach((act) => {
+          allPerms[mod.id].actions[act.id] = true
+        })
+      })
+      setSelectedPerms(allPerms)
+    } else {
+      setSelectedPerms({})
+    }
+  }
+
+  const isAllDentistsSelected =
+    dentistsList.length > 0 && formData.assigned_dentists.length === dentistsList.length
+
+  const handleToggleAllDentists = (checked: boolean) => {
+    if (checked) {
+      setFormData((prev) => ({ ...prev, assigned_dentists: dentistsList.map((d) => d.id) }))
+    } else {
+      setFormData((prev) => ({ ...prev, assigned_dentists: [] }))
+    }
+  }
+
+  const toggleDentist = (dentistId: string, checked: boolean) => {
+    setFormData((prev) => {
+      const current = prev.assigned_dentists || []
+      if (checked) {
+        return { ...prev, assigned_dentists: [...current, dentistId] }
+      } else {
+        return { ...prev, assigned_dentists: current.filter((id) => id !== dentistId) }
+      }
     })
   }
 
@@ -790,6 +848,76 @@ export function UsersManagement() {
                       )
                     })}
                   </div>
+
+                  {[
+                    'receptionist',
+                    'technical_assistant',
+                    'financial',
+                    'relationship_manager',
+                  ].includes(formData.role) && (
+                    <div className="mt-8">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-bold">Dentistas Atribuídos</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione os dentistas que este usuário poderá visualizar e gerenciar os
+                          pedidos.
+                        </p>
+                      </div>
+                      <div className="border rounded-xl bg-background overflow-hidden">
+                        <div className="flex items-center justify-between p-4 bg-muted/20 border-b">
+                          <span className="font-bold text-sm">
+                            Lista de Dentistas ({dentistsList.length})
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold uppercase text-muted-foreground">
+                              MARCAR TODAS
+                            </span>
+                            <Switch
+                              checked={isAllDentistsSelected}
+                              onCheckedChange={handleToggleAllDentists}
+                            />
+                          </div>
+                        </div>
+                        <div className="p-2 max-h-60 overflow-y-auto space-y-1">
+                          {dentistsList.map((dentist) => (
+                            <div
+                              key={dentist.id}
+                              className="flex items-center gap-3 p-2 hover:bg-muted/10 rounded-lg cursor-pointer"
+                              onClick={() =>
+                                toggleDentist(
+                                  dentist.id,
+                                  !formData.assigned_dentists.includes(dentist.id),
+                                )
+                              }
+                            >
+                              <Checkbox
+                                checked={formData.assigned_dentists.includes(dentist.id)}
+                                onCheckedChange={(c) => toggleDentist(dentist.id, !!c)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={dentist.avatar_url} />
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                  {dentist.name?.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-semibold">{dentist.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {dentist.clinic || 'Sem clínica vinculada'}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {dentistsList.length === 0 && (
+                            <p className="text-sm text-muted-foreground p-4 text-center">
+                              Nenhum dentista encontrado no sistema.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="permissoes" className="mt-0">
@@ -800,6 +928,22 @@ export function UsersManagement() {
                       permissões padrão do Perfil.
                     </p>
                   </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-xl mb-6">
+                    <div>
+                      <h4 className="font-bold text-sm">Permissões Globais</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Conceder todas as permissões de acesso ao sistema de uma vez.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg shadow-sm border">
+                      <span className="text-xs font-bold uppercase text-muted-foreground">
+                        MARCAR TODAS
+                      </span>
+                      <Switch checked={isAllPermsSelected} onCheckedChange={handleToggleAllPerms} />
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     {MODULES.map((mod) => {
                       const hasAccess = selectedPerms[mod.id]?.access || false
