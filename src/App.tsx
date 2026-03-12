@@ -36,6 +36,7 @@ import MaterialsPage from './pages/Materials'
 import ForcePasswordChange from './components/ForcePasswordChange'
 import UsersPage from './pages/Users'
 import PublicGuide from './pages/PublicGuide'
+import PublicOrderFull from './pages/PublicOrderFull'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -100,6 +101,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/public/guide/:id" element={<PublicGuide />} />
+            <Route path="/public/order/:id/full" element={<PublicOrderFull />} />
             <Route
               element={
                 <PrivateRoute>

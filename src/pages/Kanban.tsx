@@ -109,7 +109,8 @@ export default function KanbanPage() {
   const [finishingOrderId, setFinishingOrderId] = useState<string | null>(null)
   const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set())
 
-  const [selectedQrOrder, setSelectedQrOrder] = useState<Order | null>(null)
+  const [selectedPrintQrOrder, setSelectedPrintQrOrder] = useState<Order | null>(null)
+  const [selectedFullQrOrder, setSelectedFullQrOrder] = useState<Order | null>(null)
 
   const savingRef = useRef(false)
 
@@ -520,11 +521,11 @@ export default function KanbanPage() {
                                   <KanbanCardTimer order={o} currentStage={stage.name} />
                                 </div>
                               </div>
-                              <div className="flex gap-2 mt-3 w-full">
+                              <div className="flex flex-col gap-1.5 mt-3 w-full">
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  className="flex-1 text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
+                                  className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     navigate(`/order/${o.id}`)
@@ -533,18 +534,32 @@ export default function KanbanPage() {
                                   <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
                                   <span className="truncate">ABRIR REQUISIÇÃO</span>
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1 text-[10px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedQrOrder(o)
-                                  }}
-                                >
-                                  <QrCode className="w-3 h-3 mr-1 shrink-0" />
-                                  <span className="truncate">QRCODE</span>
-                                </Button>
+                                <div className="flex gap-1.5 w-full">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedFullQrOrder(o)
+                                    }}
+                                  >
+                                    <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
+                                    <span className="truncate">QR PEDIDO</span>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedPrintQrOrder(o)
+                                    }}
+                                  >
+                                    <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
+                                    <span className="truncate">QR IMPRESSÃO</span>
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </TooltipTrigger>
@@ -769,9 +784,16 @@ export default function KanbanPage() {
       </Dialog>
 
       <MiniGuideDialog
-        order={selectedQrOrder}
-        isOpen={!!selectedQrOrder}
-        onClose={() => setSelectedQrOrder(null)}
+        order={selectedPrintQrOrder}
+        isOpen={!!selectedPrintQrOrder}
+        onClose={() => setSelectedPrintQrOrder(null)}
+        type="print"
+      />
+      <MiniGuideDialog
+        order={selectedFullQrOrder}
+        isOpen={!!selectedFullQrOrder}
+        onClose={() => setSelectedFullQrOrder(null)}
+        type="full"
       />
     </div>
   )

@@ -13,13 +13,23 @@ interface Props {
   order: Order | null
   isOpen: boolean
   onClose: () => void
+  type?: 'print' | 'full'
 }
 
-export function MiniGuideDialog({ order, isOpen, onClose }: Props) {
+export function MiniGuideDialog({ order, isOpen, onClose, type = 'print' }: Props) {
   if (!order) return null
 
-  const orderUrl = `${window.location.origin}/public/guide/${order.id}`
+  const orderUrl =
+    type === 'full'
+      ? `${window.location.origin}/public/order/${order.id}/full`
+      : `${window.location.origin}/public/guide/${order.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(orderUrl)}`
+
+  const title = type === 'full' ? 'QR Code do Pedido Completo' : 'Mini Guia de Trabalho'
+  const description =
+    type === 'full'
+      ? 'Escaneie para visualizar todos os detalhes clínicos e financeiros do pedido.'
+      : 'Imprima esta guia para colar ou acompanhar a caixa física do trabalho na bancada.'
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -52,12 +62,8 @@ export function MiniGuideDialog({ order, isOpen, onClose }: Props) {
 
         <div className="print:hidden">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
-              Mini Guia de Trabalho
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 mt-1">
-              Imprima esta guia para colar ou acompanhar a caixa física do trabalho na bancada.
-            </DialogDescription>
+            <DialogTitle className="text-xl font-bold text-slate-800">{title}</DialogTitle>
+            <DialogDescription className="text-slate-500 mt-1">{description}</DialogDescription>
           </DialogHeader>
         </div>
 
