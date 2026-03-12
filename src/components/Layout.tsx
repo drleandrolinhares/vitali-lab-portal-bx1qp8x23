@@ -198,7 +198,7 @@ function AppSidebar() {
 
   if (!currentUser) return null
 
-  const isMaster = currentUser.role === ('master' as any)
+  const isMaster = currentUser.role === 'master'
 
   const hasPerm = (id: string) => {
     if (isMaster) return true
@@ -251,7 +251,7 @@ function AppSidebar() {
   if (
     (currentUser.role === 'admin' ||
       currentUser.role === 'receptionist' ||
-      currentUser.role === ('master' as any)) &&
+      currentUser.role === 'master') &&
     location.pathname.startsWith('/order/')
   ) {
     const orderId = location.pathname.split('/').pop()
@@ -325,7 +325,7 @@ function AppSidebar() {
                 if (
                   item.id === 'pending-users' &&
                   currentUser.role !== 'admin' &&
-                  currentUser.role !== ('master' as any)
+                  currentUser.role !== 'master'
                 )
                   return null
                 if (!hasPerm(item.id)) return null
@@ -448,7 +448,7 @@ function AppSidebar() {
                 <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
                   {currentUser.role === 'dentist'
                     ? 'DENTISTA'
-                    : currentUser.role === ('master' as any)
+                    : currentUser.role === 'master'
                       ? 'MASTER'
                       : currentUser.role === 'admin'
                         ? 'ADMINISTRADOR'
@@ -491,7 +491,7 @@ function MainHeader() {
   ].includes(location.pathname)
   const showLabSelector =
     (currentUser.role === 'admin' ||
-      currentUser.role === ('master' as any) ||
+      currentUser.role === 'master' ||
       currentUser.role === 'receptionist') &&
     isFinancialRoute
 
@@ -500,7 +500,7 @@ function MainHeader() {
 
   if (
     (currentUser.role === 'admin' ||
-      currentUser.role === ('master' as any) ||
+      currentUser.role === 'master' ||
       currentUser.role === 'receptionist') &&
     location.pathname.startsWith('/order/')
   ) {

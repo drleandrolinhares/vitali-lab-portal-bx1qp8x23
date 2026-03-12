@@ -1,6 +1,13 @@
-export type UserRole = 'dentist' | 'admin' | 'master' | 'receptionist'
+export type UserRole =
+  | 'dentist'
+  | 'admin'
+  | 'master'
+  | 'receptionist'
+  | 'technical_assistant'
+  | 'financial'
+  | 'relationship_manager'
 export type OrderStatus = 'pending' | 'in_production' | 'completed' | 'delivered'
-export type KanbanStage = string // Dynamic now
+export type KanbanStage = string
 
 export interface User {
   id: string
@@ -10,7 +17,7 @@ export interface User {
   job_function?: string
   whatsapp_group_link?: string
   avatar_url?: string
-  permissions?: any // Updated to support new JSONB format
+  permissions?: any
   assigned_dentists?: string[] | null
   can_move_kanban_cards?: boolean
 }

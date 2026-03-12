@@ -19,7 +19,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { toast } from '@/hooks/use-toast'
-import { ShieldCheck, Loader2 } from 'lucide-react'
+import { ShieldCheck, Loader2, Info } from 'lucide-react'
 
 export const MODULES = [
   {
@@ -76,6 +76,7 @@ export const MODULES = [
 ]
 
 const ROLES = [
+  { id: 'master', label: 'MASTER' },
   { id: 'admin', label: 'ADMINISTRADOR' },
   { id: 'receptionist', label: 'RECEPCIONISTA' },
   { id: 'technical_assistant', label: 'AUX. TÉCNICO' },
@@ -85,7 +86,7 @@ const ROLES = [
 ]
 
 export function RolePermissionsPanel() {
-  const { appSettings, updateSetting } = useAppStore()
+  const { appSettings, updateSetting, currentUser } = useAppStore()
   const [activeTab, setActiveTab] = useState('admin')
   const [saving, setSaving] = useState(false)
   const [perms, setPerms] = useState<Record<string, any>>({})
@@ -112,6 +113,7 @@ export function RolePermissionsPanel() {
   }, [appSettings])
 
   const updateAccess = (role: string, moduleId: string, checked: boolean) => {
+    if (role === 'master') return
     setPerms((prev) => {
       const newRolePerms = { ...(prev[role] || {}) }
       if (!newRolePerms[moduleId]) {
@@ -123,6 +125,7 @@ export function RolePermissionsPanel() {
   }
 
   const updateAction = (role: string, moduleId: string, actionId: string, checked: boolean) => {
+    if (role === 'master') return
     setPerms((prev) => {
       const newRolePerms = { ...(prev[role] || {}) }
       if (!newRolePerms[moduleId]) {
@@ -143,6 +146,7 @@ export function RolePermissionsPanel() {
 
     try {
       for (const role of ROLES.map((r) => r.id)) {
+        if (role === 'master') continue
         await supabase.from('profiles').update({ permissions: perms[role] }).eq('role', role)
       }
       toast({ title: 'Permissões salvas e aplicadas a todos os usuários!' })
@@ -158,6 +162,7 @@ export function RolePermissionsPanel() {
   }
 
   const isAllActiveRolePermsSelected = useMemo(() => {
+    if (activeTab === 'master') return true
     const activeRolePerms = perms[activeTab] || {}
     return MODULES.every((mod) => {
       const modPerm = activeRolePerms[mod.id]
@@ -170,6 +175,7 @@ export function RolePermissionsPanel() {
   }, [perms, activeTab])
 
   const handleToggleAllActiveRolePerms = (checked: boolean) => {
+    if (activeTab === 'master') return
     setPerms((prev) => {
       const newPerms = { ...prev }
       if (checked) {
@@ -188,6 +194,9 @@ export function RolePermissionsPanel() {
     })
   }
 
+  const availableRoles =
+    currentUser?.role === 'master' ? ROLES : ROLES.filter((r) => r.id !== 'master')
+
   return (
     <Card className="shadow-subtle">
       <CardHeader>
@@ -202,16 +211,32 @@ export function RolePermissionsPanel() {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex w-full overflow-x-auto justify-start mb-6 pb-2 scrollbar-hide h-auto bg-transparent border-b rounded-none">
-            {ROLES.map((r) => (
+            {availableRoles.map((r) => (
               <TabsTrigger
                 key={r.id}
                 value={r.id}
-                className="uppercase text-xs font-bold whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 mr-2 rounded-md"
+                className={cn(
+                  'uppercase text-xs font-bold whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 mr-2 rounded-md',
+                  r.id === 'master' && 'data-[state=active]:bg-[#e76f51]',
+                )}
               >
                 {r.label}
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {activeTab === 'master' && (
+            <div className="mb-4 p-4 bg-[#e76f51]/10 border border-[#e76f51]/20 rounded-xl flex items-start gap-3">
+              <Info className="w-5 h-5 text-[#e76f51] mt-0.5" />
+              <div>
+                <h4 className="text-sm font-bold text-[#e76f51]">Acesso MASTER Irrestrito</h4>
+                <p className="text-xs text-[#e76f51]/80 mt-1">
+                  Este perfil possui acesso total ao sistema por padrão de sistema. As permissões
+                  abaixo são apenas ilustrativas, pois o acesso não pode ser revogado.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between items-center bg-muted/20 p-4 border rounded-xl mb-4">
             <div>
@@ -227,11 +252,12 @@ export function RolePermissionsPanel() {
               <Switch
                 checked={isAllActiveRolePermsSelected}
                 onCheckedChange={handleToggleAllActiveRolePerms}
+                disabled={activeTab === 'master'}
               />
             </div>
           </div>
 
-          {ROLES.map((r) => (
+          {availableRoles.map((r) => (
             <TabsContent key={r.id} value={r.id} className="space-y-4">
               <Accordion
                 type="multiple"
@@ -256,8 +282,11 @@ export function RolePermissionsPanel() {
                           Acesso ao Menu
                         </span>
                         <Switch
-                          checked={perms[r.id]?.[mod.id]?.access || false}
+                          checked={
+                            r.id === 'master' ? true : perms[r.id]?.[mod.id]?.access || false
+                          }
                           onCheckedChange={(c) => updateAccess(r.id, mod.id, c)}
+                          disabled={r.id === 'master'}
                         />
                       </div>
                     </div>
@@ -271,8 +300,13 @@ export function RolePermissionsPanel() {
                             <div className="flex justify-between items-center py-1.5" key={act.id}>
                               <span className="text-sm font-medium">{act.label}</span>
                               <Switch
-                                checked={perms[r.id]?.[mod.id]?.actions?.[act.id] || false}
+                                checked={
+                                  r.id === 'master'
+                                    ? true
+                                    : perms[r.id]?.[mod.id]?.actions?.[act.id] || false
+                                }
                                 onCheckedChange={(c) => updateAction(r.id, mod.id, act.id, c)}
+                                disabled={r.id === 'master'}
                               />
                             </div>
                           ))}
@@ -289,7 +323,7 @@ export function RolePermissionsPanel() {
       <CardFooter className="bg-muted/20 border-t px-6 py-4 flex justify-end rounded-b-lg mt-4">
         <Button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || activeTab === 'master'}
           className="min-w-[150px] uppercase font-bold text-xs"
         >
           {saving ? (

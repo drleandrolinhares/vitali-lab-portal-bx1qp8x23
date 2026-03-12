@@ -183,7 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const checkPermission = useCallback(
     (module: string, action?: string) => {
       if (!currentUser) return false
-      if (currentUser.role === ('master' as any) || currentUser.role === 'admin') return true
+      if (currentUser.role === 'master') return true
 
       let perms = currentUser.permissions
 
@@ -278,7 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const canViewAll =
       currentUser.role === 'admin' ||
-      currentUser.role === ('master' as any) ||
+      currentUser.role === 'master' ||
       checkPermission('inbox', 'view_all') ||
       checkPermission('kanban', 'view_all') ||
       ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
@@ -406,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchSettingsRef.current()
     fetchPriceListRef.current()
     fetchDRECategoriesRef.current()
-    if (roleRef.current === 'admin' || roleRef.current === ('master' as any)) {
+    if (roleRef.current === 'admin' || roleRef.current === 'master') {
       fetchPendingUsersRef.current()
     }
 
@@ -428,7 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchDRECategoriesRef.current(),
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-        if (roleRef.current === 'admin' || roleRef.current === ('master' as any)) {
+        if (roleRef.current === 'admin' || roleRef.current === 'master') {
           fetchPendingUsersRef.current()
         }
         if (payload.new && payload.new.id === idRef.current) {
@@ -463,7 +463,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const canViewAll =
       currentUser &&
       (currentUser.role === 'admin' ||
-        currentUser.role === ('master' as any) ||
+        currentUser.role === 'master' ||
         checkPermission('inbox', 'view_all') ||
         checkPermission('kanban', 'view_all') ||
         ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
@@ -594,7 +594,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return false
     const targetDentistId =
       (currentUser.role === 'admin' ||
-        currentUser.role === ('master' as any) ||
+        currentUser.role === 'master' ||
         ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
           currentUser.role,
         )) &&
@@ -678,7 +678,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const deleteOrder = async (dbId: string, reason: string) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
 
     const orderToDelete = orders.find((o) => o.id === dbId)
 
@@ -810,7 +810,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
     await supabase.from('kanban_stages').update({ name: newName.trim().toUpperCase() }).eq('id', id)
   }
 
@@ -828,7 +828,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const reorderKanbanStages = async (reorderedStages: Stage[]) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== ('master' as any)) return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
     setKanbanStages(reorderedStages)
     const updates = reorderedStages.map((stage, index) =>
       supabase

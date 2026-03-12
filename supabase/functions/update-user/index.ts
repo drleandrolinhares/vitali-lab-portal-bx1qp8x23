@@ -42,6 +42,8 @@ Deno.serve(async (req: Request) => {
     if (profileError || !callerProfile) throw new Error('Caller profile not found')
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
+    const isMaster = callerProfile.role === 'master'
+
     const callerPerms = callerProfile.permissions || {}
     let canAddDentist = false
     if (Array.isArray(callerPerms)) {
@@ -80,13 +82,32 @@ Deno.serve(async (req: Request) => {
 
     if (!userId) throw new Error('UserId is required')
 
-    const isUpdatingDentist = canAddDentist && (role === 'dentist' || role === undefined)
+    const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+
+    if (targetProfileError || !targetProfile) throw new Error('Target profile not found')
+
+    // Prevent non-master from editing a master
+    if (targetProfile.role === 'master' && !isMaster && callerUser.id !== userId) {
+      throw new Error('Unauthorized: Apenas usuários MASTER podem editar perfis MASTER.')
+    }
+
+    // Prevent non-master from elevating to master
+    if (role === 'master' && !isMaster) {
+      throw new Error('Unauthorized: Apenas usuários MASTER podem atribuir a função MASTER.')
+    }
+
+    const isUpdatingDentist =
+      canAddDentist && (targetProfile.role === 'dentist' || targetProfile.role === undefined)
 
     if (!isAdmin && callerUser.id !== userId && !isUpdatingDentist) {
       throw new Error('Unauthorized: You can only update your own profile')
     }
 
-    if (!isAdmin && role !== undefined && role !== 'dentist') {
+    if (!isAdmin && role !== undefined && role !== 'dentist' && callerUser.id !== userId) {
       throw new Error('Unauthorized: Only admins can change roles to non-dentist')
     }
 
@@ -133,7 +154,7 @@ Deno.serve(async (req: Request) => {
       updateData.requires_password_change = true
     }
 
-    if (isAdmin || isUpdatingDentist) {
+    if (isAdmin || isUpdatingDentist || isMaster) {
       if (role !== undefined) updateData.role = role
       if (is_active !== undefined) updateData.is_active = is_active
       if (permissions !== undefined) updateData.permissions = permissions

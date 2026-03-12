@@ -88,6 +88,10 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (role === 'master' && callerProfile.role !== 'master') {
+      throw new Error('Unauthorized: Apenas usuários MASTER podem criar um perfil MASTER.')
+    }
+
     if (!email) throw new Error('Email is required')
     if (!password) throw new Error('Password is required')
 

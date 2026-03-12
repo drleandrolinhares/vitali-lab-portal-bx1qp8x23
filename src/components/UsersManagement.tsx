@@ -43,9 +43,15 @@ import { cn } from '@/lib/utils'
 
 const ROLES_INFO = [
   {
+    id: 'master',
+    title: 'Master',
+    desc: 'Este perfil possui acesso total e irrestrito a todas as funções e visualizações do sistema.',
+    icon: ShieldCheck,
+  },
+  {
     id: 'admin',
     title: 'Administrador',
-    desc: 'Este perfil é responsável por coordenar as operações, organizando a equipe e configurando o sistema. Possui acesso total e irrestrito.',
+    desc: 'Este perfil é responsável por coordenar as operações, organizando a equipe e configurando o sistema. Possui acesso estendido baseado em permissões.',
     icon: Building,
   },
   {
@@ -519,26 +525,48 @@ export function UsersManagement() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredUsers.map((user) => {
             const roleObj = ROLES_INFO.find((r) => r.id === user.role)
+            const isMaster = user.role === 'master'
+
             return (
               <Card
                 key={user.id}
                 className={cn(
                   'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow',
                   user.is_active === false && 'opacity-60 grayscale-[0.5]',
+                  isMaster &&
+                    'border-[#e76f51] shadow-sm shadow-[#e76f51]/20 ring-1 ring-[#e76f51]/50',
                 )}
-                onClick={() => openModal(user)}
+                onClick={() => {
+                  if (isMaster && currentUser?.role !== 'master') {
+                    toast({
+                      title: 'Acesso Negado',
+                      description:
+                        'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                      variant: 'destructive',
+                    })
+                    return
+                  }
+                  openModal(user)
+                }}
               >
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between p-4 pb-0">
-                    <div
-                      className={cn(
-                        'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
-                        user.is_active !== false
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30',
+                    <div className="flex gap-2">
+                      {isMaster && (
+                        <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#e76f51] text-white">
+                          MASTER
+                        </div>
                       )}
-                    >
-                      {user.is_active !== false ? 'Ativo' : 'Inativo'}
+                      <div
+                        className={cn(
+                          'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+                          user.is_active !== false
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30',
+                        )}
+                      >
+                        {user.is_active !== false ? 'Ativo' : 'Inativo'}
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -546,6 +574,15 @@ export function UsersManagement() {
                       className="h-6 w-6 -mr-2 -mt-2 relative z-10"
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isMaster && currentUser?.role !== 'master') {
+                          toast({
+                            title: 'Acesso Negado',
+                            description:
+                              'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                            variant: 'destructive',
+                          })
+                          return
+                        }
                         openModal(user)
                       }}
                     >
@@ -847,7 +884,9 @@ export function UsersManagement() {
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {ROLES_INFO.map((role) => {
+                    {ROLES_INFO.filter(
+                      (r) => r.id !== 'master' || currentUser?.role === 'master',
+                    ).map((role) => {
                       const Icon = role.icon
                       const isSelected = formData.role === role.id
                       return (
@@ -971,6 +1010,21 @@ export function UsersManagement() {
                 </TabsContent>
 
                 <TabsContent value="permissoes" className="mt-0">
+                  {formData.role === 'master' && (
+                    <div className="mb-6 p-4 bg-[#e76f51]/10 border border-[#e76f51]/20 rounded-xl flex items-start gap-3">
+                      <ShieldCheck className="w-5 h-5 text-[#e76f51] mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-[#e76f51]">
+                          Acesso Total e Irrestrito
+                        </h4>
+                        <p className="text-xs text-[#e76f51]/80 mt-1">
+                          Este usuário possui acesso MASTER. Todas as funções e visualizações estão
+                          liberadas de forma irrestrita.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mb-6">
                     <h3 className="text-lg font-bold">Configurações Específicas de Permissão</h3>
                     <p className="text-sm text-muted-foreground">
@@ -990,13 +1044,18 @@ export function UsersManagement() {
                       <span className="text-xs font-bold uppercase text-muted-foreground">
                         MARCAR TODAS
                       </span>
-                      <Switch checked={isAllPermsSelected} onCheckedChange={handleToggleAllPerms} />
+                      <Switch
+                        checked={formData.role === 'master' ? true : isAllPermsSelected}
+                        onCheckedChange={handleToggleAllPerms}
+                        disabled={formData.role === 'master'}
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     {MODULES.map((mod) => {
-                      const hasAccess = selectedPerms[mod.id]?.access || false
+                      const hasAccess =
+                        formData.role === 'master' ? true : selectedPerms[mod.id]?.access || false
                       return (
                         <Card key={mod.id} className="shadow-none">
                           <CardContent className="p-4">
@@ -1009,6 +1068,7 @@ export function UsersManagement() {
                                 <Switch
                                   checked={hasAccess}
                                   onCheckedChange={(c) => updateAccess(mod.id, c)}
+                                  disabled={formData.role === 'master'}
                                 />
                               </div>
                             </div>
@@ -1020,9 +1080,13 @@ export function UsersManagement() {
                                       MARCAR TODAS
                                     </span>
                                     <Switch
-                                      checked={mod.actions.every(
-                                        (act) => selectedPerms[mod.id]?.actions?.[act.id],
-                                      )}
+                                      checked={
+                                        formData.role === 'master'
+                                          ? true
+                                          : mod.actions.every(
+                                              (act) => selectedPerms[mod.id]?.actions?.[act.id],
+                                            )
+                                      }
                                       onCheckedChange={(c) => {
                                         setSelectedPerms((prev) => {
                                           const newPerms = { ...prev }
@@ -1036,6 +1100,7 @@ export function UsersManagement() {
                                           return newPerms
                                         })
                                       }}
+                                      disabled={formData.role === 'master'}
                                     />
                                   </div>
                                 )}
@@ -1046,8 +1111,13 @@ export function UsersManagement() {
                                   >
                                     <span>{act.label}</span>
                                     <Switch
-                                      checked={selectedPerms[mod.id]?.actions?.[act.id] || false}
+                                      checked={
+                                        formData.role === 'master'
+                                          ? true
+                                          : selectedPerms[mod.id]?.actions?.[act.id] || false
+                                      }
                                       onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
+                                      disabled={formData.role === 'master'}
                                     />
                                   </div>
                                 ))}

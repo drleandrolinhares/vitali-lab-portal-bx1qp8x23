@@ -4,7 +4,7 @@ import { RolePermissionsPanel } from '@/components/RolePermissionsPanel'
 
 export default function UsersPage() {
   const { currentUser } = useAppStore()
-  const isMaster = currentUser?.role === ('master' as any)
+  const isMaster = currentUser?.role === 'master'
 
   return (
     <div className="max-w-6xl mx-auto py-6 space-y-6 animate-fade-in">
