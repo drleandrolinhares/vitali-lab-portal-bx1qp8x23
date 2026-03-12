@@ -370,6 +370,9 @@ export function UsersManagement() {
           throw error
         } else {
           toast({ title: 'Usuário atualizado com sucesso!' })
+
+          setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? { ...u, ...payload } : u)))
+
           if (dashboardsChanged) {
             await logAudit('UPDATE_PERMISSIONS', 'profiles', editingUser.id, {
               reason: 'Dashboard permissions changed',
@@ -379,7 +382,7 @@ export function UsersManagement() {
           }
         }
       } else {
-        const { error } = await createUser({
+        const { error, data } = await createUser({
           ...payload,
           password: formData.password,
         })
@@ -395,6 +398,16 @@ export function UsersManagement() {
           throw error
         } else {
           toast({ title: 'Usuário criado com sucesso!' })
+
+          if (data?.data?.user?.id) {
+            setUsers((prev) => {
+              if (prev.some((u) => u.id === data.data.user.id)) return prev
+              return [
+                ...prev,
+                { id: data.data.user.id, ...payload, created_at: new Date().toISOString() },
+              ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+            })
+          }
         }
       }
     } catch (err: any) {
