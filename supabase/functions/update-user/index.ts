@@ -10,6 +10,7 @@ const corsHeaders = {
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -42,7 +43,8 @@ Deno.serve(async (req: Request) => {
       .eq('id', callerUser.id)
       .single()
 
-    if (profileError || !callerProfile) throw new Error('Caller profile not found')
+    if (profileError || !callerProfile)
+      throw new Error(`Caller profile not found: ${profileError?.message}`)
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
     const isMaster = callerProfile.role === 'master'
@@ -55,6 +57,7 @@ Deno.serve(async (req: Request) => {
       canAddDentist = !!callerPerms?.settings?.access
     }
 
+    const body = await req.json()
     const {
       userId,
       email,
@@ -82,7 +85,7 @@ Deno.serve(async (req: Request) => {
       state,
       has_access_schedule,
       commercial_agreement,
-    } = await req.json()
+    } = body
 
     if (!userId) throw new Error('UserId is required')
 
@@ -92,7 +95,8 @@ Deno.serve(async (req: Request) => {
       .eq('id', userId)
       .single()
 
-    if (targetProfileError || !targetProfile) throw new Error('Target profile not found')
+    if (targetProfileError || !targetProfile)
+      throw new Error(`Target profile not found: ${targetProfileError?.message}`)
 
     // Prevent non-master from editing a master
     if (targetProfile.role === 'master' && !isMaster && callerUser.id !== userId) {
@@ -126,14 +130,14 @@ Deno.serve(async (req: Request) => {
 
     const { data: targetAuthUser, error: authFetchError } =
       await supabaseAdmin.auth.admin.getUserById(userId)
-    if (authFetchError || !targetAuthUser?.user) throw new Error('Target auth user not found')
+    if (authFetchError || !targetAuthUser?.user)
+      throw new Error(`Target auth user not found: ${authFetchError?.message}`)
 
     let phoneToUse: string | null | undefined = undefined
     if (phone !== undefined) phoneToUse = phone === '' ? null : phone
     if (personal_phone !== undefined) phoneToUse = personal_phone === '' ? null : personal_phone
 
     const authPayload: any = {
-      email_confirm: true,
       user_metadata: {},
     }
 
@@ -141,50 +145,78 @@ Deno.serve(async (req: Request) => {
     if (clinic !== undefined) authPayload.user_metadata.clinic = clinic
     if (whatsapp_group_link !== undefined)
       authPayload.user_metadata.whatsapp_group_link = whatsapp_group_link
+
     if (phoneToUse !== undefined) {
-      authPayload.phone = phoneToUse
       authPayload.user_metadata.phone = phoneToUse
+      // Only set authPayload.phone if it's a valid string to avoid unique constraint errors on empty strings
+      if (phoneToUse && phoneToUse.trim() !== '') {
+        authPayload.phone = phoneToUse
+      }
     }
+
     if (role !== undefined) {
       authPayload.user_metadata.role = role
     }
 
-    if (email && email !== targetAuthUser.user.email) {
-      authPayload.email = email
-    }
-    if (password) {
-      authPayload.password = password
+    let shouldUpdateAuth = false
+    if (Object.keys(authPayload.user_metadata).length > 0 || authPayload.phone !== undefined) {
+      shouldUpdateAuth = true
     }
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      authPayload,
-    )
-    if (authError) throw authError
+    if (email && email.trim() !== '' && email !== targetAuthUser.user.email) {
+      authPayload.email = email.trim()
+      authPayload.email_confirm = true
+      shouldUpdateAuth = true
+    }
+
+    if (password && password.trim() !== '') {
+      authPayload.password = password
+      shouldUpdateAuth = true
+    }
+
+    let authData = null
+    if (shouldUpdateAuth) {
+      const { data: updatedAuthData, error: authError } =
+        await supabaseAdmin.auth.admin.updateUserById(userId, authPayload)
+      if (authError) {
+        console.error('Auth update error:', authError)
+        throw new Error(
+          `Erro ao atualizar usuário no sistema de autenticação: ${authError.message}`,
+        )
+      }
+      authData = updatedAuthData
+    }
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (clinic !== undefined) updateData.clinic = clinic
-    if (email !== undefined) updateData.email = email
-    if (whatsapp_group_link !== undefined) updateData.whatsapp_group_link = whatsapp_group_link
+    if (email !== undefined && email.trim() !== '') updateData.email = email.trim()
+    if (whatsapp_group_link !== undefined)
+      updateData.whatsapp_group_link = whatsapp_group_link === '' ? null : whatsapp_group_link
     if (phoneToUse !== undefined) updateData.personal_phone = phoneToUse
-    if (job_function !== undefined) updateData.job_function = job_function
+    if (job_function !== undefined)
+      updateData.job_function = job_function === '' ? null : job_function
 
     if (username !== undefined) updateData.username = username === '' ? null : username
     if (rg !== undefined) updateData.rg = rg === '' ? null : rg
     if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
     if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
-    if (cep !== undefined) updateData.cep = cep
-    if (address !== undefined) updateData.address = address
-    if (address_number !== undefined) updateData.address_number = address_number
+    if (cep !== undefined) updateData.cep = cep === '' ? null : cep
+    if (address !== undefined) updateData.address = address === '' ? null : address
+    if (address_number !== undefined)
+      updateData.address_number = address_number === '' ? null : address_number
     if (address_complement !== undefined)
       updateData.address_complement = address_complement === '' ? null : address_complement
-    if (city !== undefined) updateData.city = city
-    if (state !== undefined) updateData.state = state
+    if (city !== undefined) updateData.city = city === '' ? null : city
+    if (state !== undefined) updateData.state = state === '' ? null : state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
-    if (commercial_agreement !== undefined) updateData.commercial_agreement = commercial_agreement
 
-    if (password && callerUser.id !== userId) {
+    if (commercial_agreement !== undefined) {
+      const caVal = parseFloat(commercial_agreement)
+      updateData.commercial_agreement = isNaN(caVal) ? 0 : caVal
+    }
+
+    if (password && password.trim() !== '' && callerUser.id !== userId) {
       updateData.requires_password_change = true
     }
 
@@ -197,17 +229,22 @@ Deno.serve(async (req: Request) => {
         updateData.can_move_kanban_cards = can_move_kanban_cards
     }
 
-    const { error: dbProfileError } = await supabaseAdmin
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-    if (dbProfileError) throw dbProfileError
+    if (Object.keys(updateData).length > 0) {
+      const { error: dbProfileError } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId)
+      if (dbProfileError) {
+        console.error('Profile update error:', dbProfileError)
+        throw new Error(`Erro ao atualizar o perfil do usuário: ${dbProfileError.message}`)
+      }
+    }
 
-    return new Response(JSON.stringify({ data: authData }), {
+    return new Response(JSON.stringify({ data: authData, success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Update user error:', error)
+    console.error('Update user error details:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

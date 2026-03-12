@@ -113,19 +113,23 @@ Deno.serve(async (req: Request) => {
       user_metadata: { name, role, clinic, phone: phoneToUse, whatsapp_group_link },
     }
 
-    if (phoneToUse !== null) {
+    if (phoneToUse && phoneToUse.trim() !== '') {
       payload.phone = phoneToUse
     }
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser(payload)
 
-    if (error) throw error
+    if (error) {
+      console.error('Auth create error:', error)
+      throw new Error(`Erro ao criar usuário no sistema de autenticação: ${error.message}`)
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     const updateData: any = { is_approved: true, is_active: true }
     if (permissions && Object.keys(permissions).length > 0) updateData.permissions = permissions
-    if (whatsapp_group_link) updateData.whatsapp_group_link = whatsapp_group_link
+    if (whatsapp_group_link)
+      updateData.whatsapp_group_link = whatsapp_group_link === '' ? null : whatsapp_group_link
     if (phoneToUse !== null) updateData.personal_phone = phoneToUse
     if (requires_password_change !== undefined)
       updateData.requires_password_change = requires_password_change
@@ -137,25 +141,36 @@ Deno.serve(async (req: Request) => {
     if (rg !== undefined) updateData.rg = rg === '' ? null : rg
     if (cpf !== undefined) updateData.cpf = cpf === '' ? null : cpf
     if (birth_date !== undefined) updateData.birth_date = birth_date === '' ? null : birth_date
-    if (cep !== undefined) updateData.cep = cep
-    if (address !== undefined) updateData.address = address
-    if (address_number !== undefined) updateData.address_number = address_number
+    if (cep !== undefined) updateData.cep = cep === '' ? null : cep
+    if (address !== undefined) updateData.address = address === '' ? null : address
+    if (address_number !== undefined)
+      updateData.address_number = address_number === '' ? null : address_number
     if (address_complement !== undefined)
       updateData.address_complement = address_complement === '' ? null : address_complement
-    if (city !== undefined) updateData.city = city
-    if (state !== undefined) updateData.state = state
+    if (city !== undefined) updateData.city = city === '' ? null : city
+    if (state !== undefined) updateData.state = state === '' ? null : state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
-    if (commercial_agreement !== undefined) updateData.commercial_agreement = commercial_agreement
 
-    if (Object.keys(updateData).length > 0) {
-      await supabaseAdmin.from('profiles').update(updateData).eq('id', data.user.id)
+    if (commercial_agreement !== undefined) {
+      const caVal = parseFloat(commercial_agreement)
+      updateData.commercial_agreement = isNaN(caVal) ? 0 : caVal
     }
 
-    return new Response(JSON.stringify({ data }), {
+    if (Object.keys(updateData).length > 0) {
+      const { error: dbError } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('id', data.user.id)
+      if (dbError) {
+        console.error('Profile init error:', dbError)
+      }
+    }
+
+    return new Response(JSON.stringify({ data, success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Create user error:', error)
+    console.error('Create user error details:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
