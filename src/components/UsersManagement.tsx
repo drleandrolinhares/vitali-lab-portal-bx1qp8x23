@@ -28,6 +28,7 @@ import {
   Calendar,
   CreditCard,
   Building,
+  Users,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -85,6 +86,7 @@ export function UsersManagement() {
 
   const [search, setSearch] = useState('')
   const [activeOnly, setActiveOnly] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
@@ -127,7 +129,7 @@ export function UsersManagement() {
     fetchUsers()
   }, [])
 
-  const filteredUsers = useMemo(() => {
+  const baseFilteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchSearch =
         u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -136,6 +138,39 @@ export function UsersManagement() {
       return matchSearch && matchActive
     })
   }, [users, search, activeOnly])
+
+  const counts = useMemo(() => {
+    return {
+      all: baseFilteredUsers.length,
+      staff: baseFilteredUsers.filter((u) =>
+        ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
+          u.role,
+        ),
+      ).length,
+      dentists: baseFilteredUsers.filter((u) => u.role === 'dentist').length,
+      admins: baseFilteredUsers.filter((u) => ['admin', 'master'].includes(u.role)).length,
+    }
+  }, [baseFilteredUsers])
+
+  const filteredUsers = useMemo(() => {
+    return baseFilteredUsers.filter((u) => {
+      if (selectedCategory === 'staff') {
+        return [
+          'receptionist',
+          'technical_assistant',
+          'financial',
+          'relationship_manager',
+        ].includes(u.role)
+      }
+      if (selectedCategory === 'dentists') {
+        return u.role === 'dentist'
+      }
+      if (selectedCategory === 'admins') {
+        return ['admin', 'master'].includes(u.role)
+      }
+      return true
+    })
+  }, [baseFilteredUsers, selectedCategory])
 
   const openModal = (user?: any) => {
     setActiveTab('pessoais')
@@ -285,71 +320,150 @@ export function UsersManagement() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredUsers.map((user) => {
-          const roleObj = ROLES_INFO.find((r) => r.id === user.role)
-          return (
-            <Card
-              key={user.id}
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 flex gap-6 overflow-x-auto scrollbar-hide">
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
+          >
+            Todos
+            <span
               className={cn(
-                'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow',
-                user.is_active === false && 'opacity-60 grayscale-[0.5]',
+                'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                selectedCategory === 'all'
+                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                  : 'bg-muted text-muted-foreground',
               )}
-              onClick={() => openModal(user)}
             >
-              <CardContent className="p-0">
-                <div className="flex items-start justify-between p-4 pb-0">
-                  <div
-                    className={cn(
-                      'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
-                      user.is_active !== false
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/30',
-                    )}
-                  >
-                    {user.is_active !== false ? 'Ativo' : 'Inativo'}
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2">
-                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                </div>
+              {counts.all}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="staff"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
+          >
+            Colaboradores
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                selectedCategory === 'staff'
+                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {counts.staff}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="dentists"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
+          >
+            Dentistas
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                selectedCategory === 'dentists'
+                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {counts.dentists}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="admins"
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
+          >
+            Administradores
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-bold',
+                selectedCategory === 'admins'
+                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {counts.admins}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-                <div className="flex flex-col items-center p-4 pt-2">
-                  <Avatar className="w-16 h-16 border-2 border-muted/50 mb-3">
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
-                      {user.name?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-bold text-base text-center line-clamp-1">{user.name}</h3>
-                </div>
+      {filteredUsers.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredUsers.map((user) => {
+            const roleObj = ROLES_INFO.find((r) => r.id === user.role)
+            return (
+              <Card
+                key={user.id}
+                className={cn(
+                  'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow',
+                  user.is_active === false && 'opacity-60 grayscale-[0.5]',
+                )}
+                onClick={() => openModal(user)}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-start justify-between p-4 pb-0">
+                    <div
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+                        user.is_active !== false
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30',
+                      )}
+                    >
+                      {user.is_active !== false ? 'Ativo' : 'Inativo'}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2">
+                      <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </div>
 
-                <div className="bg-muted/30 p-4 space-y-2 text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Briefcase className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{roleObj?.title || user.role}</span>
+                  <div className="flex flex-col items-center p-4 pt-2">
+                    <Avatar className="w-16 h-16 border-2 border-muted/50 mb-3">
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
+                        {user.name?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-bold text-base text-center line-clamp-1">{user.name}</h3>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{user.email || 'Não encontrado'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{user.personal_phone || 'Não encontrado'}</span>
-                  </div>
-                </div>
 
-                <div className="p-3 border-t text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 bg-muted/10">
-                  <Clock className="w-3.5 h-3.5" />
-                  {user.last_access_at
-                    ? `Último acesso em: ${format(new Date(user.last_access_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`
-                    : 'Último acesso em: não registrado'}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                  <div className="bg-muted/30 p-4 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{roleObj?.title || user.role}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{user.email || 'Não encontrado'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{user.personal_phone || 'Não encontrado'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 border-t text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 bg-muted/10">
+                    <Clock className="w-3.5 h-3.5" />
+                    {user.last_access_at
+                      ? `Último acesso em: ${format(new Date(user.last_access_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`
+                      : 'Último acesso em: não registrado'}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-16 px-4 border rounded-xl bg-muted/10 border-dashed animate-fade-in">
+          <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-1">Nenhum usuário encontrado</h3>
+          <p className="text-sm text-muted-foreground">
+            Nenhum usuário encontrado nesta categoria.
+          </p>
+        </div>
+      )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden flex flex-col h-[90vh]">
