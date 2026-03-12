@@ -116,17 +116,45 @@ export function UsersManagement() {
 
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any>>({})
 
-  const fetchUsers = async () => {
-    setLoading(true)
-    const { data } = await supabase.from('profiles').select('*').order('name', { ascending: true })
-    if (data) {
-      setUsers(data)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    fetchUsers()
+    let isMounted = true
+
+    const loadUsers = async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('name', { ascending: true })
+      if (isMounted && data) {
+        setUsers(data)
+      }
+      if (isMounted) setLoading(false)
+    }
+
+    loadUsers()
+
+    const channel = supabase
+      .channel('users-management-profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setUsers((prev) => {
+            if (prev.some((u) => u.id === payload.new.id)) return prev
+            return [...prev, payload.new].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+          })
+        } else if (payload.eventType === 'UPDATE') {
+          setUsers((prev) =>
+            prev.map((u) => (u.id === payload.new.id ? { ...u, ...payload.new } : u)),
+          )
+        } else if (payload.eventType === 'DELETE') {
+          setUsers((prev) => prev.filter((u) => u.id !== payload.old.id))
+        }
+      })
+      .subscribe()
+
+    return () => {
+      isMounted = false
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const baseFilteredUsers = useMemo(() => {
@@ -270,7 +298,6 @@ export function UsersManagement() {
 
     setSaving(false)
     setModalOpen(false)
-    fetchUsers()
   }
 
   const updateAccess = (moduleId: string, checked: boolean) => {

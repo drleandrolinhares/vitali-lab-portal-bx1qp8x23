@@ -94,6 +94,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const hasFetchedOrders = useRef(false)
 
+  const fetchOrdersRef = useRef<() => void>(() => {})
+  const fetchStagesRef = useRef<() => void>(() => {})
+  const fetchSettingsRef = useRef<() => void>(() => {})
+  const fetchPriceListRef = useRef<() => void>(() => {})
+  const fetchDRECategoriesRef = useRef<() => void>(() => {})
+  const fetchPendingUsersRef = useRef<() => void>(() => {})
+
+  const roleRef = useRef<string | undefined>(undefined)
+  const idRef = useRef<string | undefined>(undefined)
+
+  roleRef.current = currentUser?.role
+  idRef.current = currentUser?.id
+
   const [selectedLab, setSelectedLab] = useState<string>(
     () => localStorage.getItem('vitali_selected_lab') || 'Soluções Cerâmicas',
   )
@@ -107,7 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentUser(null)
       setOrders([])
       setKanbanStages([])
-      setAppSettings([])
+      setAppSettings({})
       setPendingUsers([])
       setPriceList([])
       setDreCategories([])
@@ -217,7 +230,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         acc[row.key] = row.value
         return acc
       }, {})
-      setAppSettings(settings)
+      setAppSettings((prev) =>
+        JSON.stringify(prev) === JSON.stringify(settings) ? prev : settings,
+      )
     }
   }, [])
 
@@ -376,69 +391,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [session?.user, currentUser, checkPermission])
 
+  fetchOrdersRef.current = fetchOrders
+  fetchStagesRef.current = fetchStages
+  fetchSettingsRef.current = fetchSettings
+  fetchPriceListRef.current = fetchPriceList
+  fetchDRECategoriesRef.current = fetchDRECategories
+  fetchPendingUsersRef.current = fetchPendingUsers
+
   useEffect(() => {
-    if (currentUser) {
-      fetchOrders()
-      fetchStages()
-      fetchSettings()
-      fetchPriceList()
-      fetchDRECategories()
-      if (currentUser.role === 'admin' || currentUser.role === ('master' as any))
-        fetchPendingUsers()
+    if (!currentUser?.id) return
 
-      const channel = supabase
-        .channel('app-updates')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
-          fetchOrders(),
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'kanban_stages' }, () =>
-          fetchStages(),
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () =>
-          fetchSettings(),
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'price_list' }, () =>
-          fetchPriceList(),
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'dre_categories' }, () =>
-          fetchDRECategories(),
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-          if (currentUser.role === 'admin' || currentUser.role === ('master' as any))
-            fetchPendingUsers()
-          if (payload.new && payload.new.id === currentUser.id) {
-            setCurrentUser((prev: any) =>
-              prev
-                ? {
-                    ...prev,
-                    is_approved: payload.new.is_approved,
-                    is_active: payload.new.is_active,
-                    requires_password_change: payload.new.requires_password_change,
-                    permissions: payload.new.permissions || {},
-                    role: payload.new.role,
-                    assigned_dentists: payload.new.assigned_dentists,
-                    can_move_kanban_cards: payload.new.can_move_kanban_cards,
-                  }
-                : prev,
-            )
-          }
-        })
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(channel)
-      }
+    fetchOrdersRef.current()
+    fetchStagesRef.current()
+    fetchSettingsRef.current()
+    fetchPriceListRef.current()
+    fetchDRECategoriesRef.current()
+    if (roleRef.current === 'admin' || roleRef.current === ('master' as any)) {
+      fetchPendingUsersRef.current()
     }
-  }, [
-    currentUser?.id,
-    currentUser?.role,
-    fetchOrders,
-    fetchStages,
-    fetchSettings,
-    fetchPriceList,
-    fetchPendingUsers,
-    fetchDRECategories,
-  ])
+
+    const channel = supabase
+      .channel('app-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
+        fetchOrdersRef.current(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kanban_stages' }, () =>
+        fetchStagesRef.current(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () =>
+        fetchSettingsRef.current(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_list' }, () =>
+        fetchPriceListRef.current(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dre_categories' }, () =>
+        fetchDRECategoriesRef.current(),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+        if (roleRef.current === 'admin' || roleRef.current === ('master' as any)) {
+          fetchPendingUsersRef.current()
+        }
+        if (payload.new && payload.new.id === idRef.current) {
+          setCurrentUser((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  is_approved: payload.new.is_approved,
+                  is_active: payload.new.is_active,
+                  requires_password_change: payload.new.requires_password_change,
+                  permissions: payload.new.permissions || {},
+                  role: payload.new.role,
+                  assigned_dentists: payload.new.assigned_dentists,
+                  can_move_kanban_cards: payload.new.can_move_kanban_cards,
+                }
+              : prev,
+          )
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentUser?.id])
 
   const computedOrders = useMemo(() => {
     if (!orders || orders.length === 0) return []
