@@ -15,6 +15,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
 import {
   Search,
   Plus,
@@ -618,22 +619,31 @@ export function UsersManagement() {
               >
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between p-4 pb-0">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {isMaster && (
-                        <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#e76f51] text-white">
+                        <Badge className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#e76f51] hover:bg-[#d95f43] text-white border-transparent shadow-none">
                           MASTER
-                        </div>
+                        </Badge>
                       )}
-                      <div
+                      {user.role === 'dentist' && (
+                        <Badge
+                          variant="secondary"
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border-transparent shadow-none"
+                        >
+                          DENTISTA
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="outline"
                         className={cn(
-                          'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide',
+                          'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shadow-none',
                           user.is_active !== false
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30',
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800'
+                            : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:border-red-800',
                         )}
                       >
                         {user.is_active !== false ? 'Ativo' : 'Inativo'}
-                      </div>
+                      </Badge>
                     </div>
                     <Button
                       variant="ghost"
