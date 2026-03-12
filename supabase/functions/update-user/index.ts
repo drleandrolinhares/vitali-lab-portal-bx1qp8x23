@@ -98,12 +98,10 @@ Deno.serve(async (req: Request) => {
     if (targetProfileError || !targetProfile)
       throw new Error(`Target profile not found: ${targetProfileError?.message}`)
 
-    // Prevent non-master from editing a master
     if (targetProfile.role === 'master' && !isMaster && callerUser.id !== userId) {
       throw new Error('Unauthorized: Apenas usuários MASTER podem editar perfis MASTER.')
     }
 
-    // Prevent non-master from elevating to master
     if (role === 'master' && !isMaster) {
       throw new Error('Unauthorized: Apenas usuários MASTER podem atribuir a função MASTER.')
     }
@@ -148,8 +146,9 @@ Deno.serve(async (req: Request) => {
 
     if (phoneToUse !== undefined) {
       authPayload.user_metadata.phone = phoneToUse
-      // Only set authPayload.phone if it's a valid string to avoid unique constraint errors on empty strings
-      if (phoneToUse && phoneToUse.trim() !== '') {
+      if (phoneToUse === null) {
+        authPayload.phone = null
+      } else if (phoneToUse.trim() !== '') {
         authPayload.phone = phoneToUse
       }
     }
@@ -245,8 +244,8 @@ Deno.serve(async (req: Request) => {
     })
   } catch (error: any) {
     console.error('Update user error details:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
