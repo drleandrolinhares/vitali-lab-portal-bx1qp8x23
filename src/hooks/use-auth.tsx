@@ -33,6 +33,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', currentUser.id)
         .maybeSingle()
 
+      if (error) {
+        if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+          await supabase.auth.signOut()
+          window.location.href = '/'
+          return
+        }
+        throw error
+      }
+
       if (!data && !error) {
         await supabase.from('profiles').insert({
           id: currentUser.id,
@@ -50,8 +59,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           })
           .eq('id', currentUser.id)
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to reconcile profile:', e)
+      if (e?.message?.includes('Refresh Token') || e?.message?.includes('refresh token')) {
+        supabase.auth.signOut().then(() => {
+          window.location.href = '/'
+        })
+      }
     }
   }
 
@@ -69,7 +83,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setSession(null)
+        setUser(null)
+        setLoading(false)
+        localStorage.removeItem('vitali_remember_me')
+        return
+      }
+
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
@@ -79,15 +101,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          if (
+            error.message?.includes('Refresh Token') ||
+            error.message?.includes('refresh token') ||
+            error.name === 'AuthApiError'
+          ) {
+            supabase.auth
+              .signOut()
+              .then(() => {
+                window.location.href = '/'
+              })
+              .catch(() => {
+                window.location.href = '/'
+              })
+            return
+          }
+        }
+        setSession(session)
+        setUser(session?.user ?? null)
+        setLoading(false)
 
-      if (session?.user) {
-        reconcileProfile(session.user).catch(console.error)
-      }
-    })
+        if (session?.user) {
+          reconcileProfile(session.user).catch(console.error)
+        }
+      })
+      .catch((err) => {
+        console.error('getSession error', err)
+        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+          supabase.auth
+            .signOut()
+            .then(() => {
+              window.location.href = '/'
+            })
+            .catch(() => {
+              window.location.href = '/'
+            })
+        }
+      })
 
     return () => subscription.unsubscribe()
   }, [])

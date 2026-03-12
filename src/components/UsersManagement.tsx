@@ -128,15 +128,52 @@ export function UsersManagement() {
     let isMounted = true
 
     const loadUsers = async () => {
-      setLoading(true)
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('name', { ascending: true })
-      if (isMounted && data) {
-        setUsers(data)
+      try {
+        setLoading(true)
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          if (
+            sessionError.message?.includes('Refresh Token') ||
+            sessionError.message?.includes('refresh token')
+          ) {
+            await supabase.auth.signOut()
+            window.location.href = '/'
+            return
+          }
+        }
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('name', { ascending: true })
+
+        if (error) {
+          if (
+            error.message?.includes('Refresh Token') ||
+            error.message?.includes('refresh token')
+          ) {
+            await supabase.auth.signOut()
+            window.location.href = '/'
+            return
+          }
+          console.error('Error loading users', error)
+        }
+
+        if (isMounted && data) {
+          setUsers(data)
+        }
+      } catch (err: any) {
+        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+          await supabase.auth.signOut()
+          window.location.href = '/'
+        }
+      } finally {
+        if (isMounted) setLoading(false)
       }
-      if (isMounted) setLoading(false)
     }
 
     loadUsers()
@@ -275,83 +312,100 @@ export function UsersManagement() {
 
     setSaving(true)
 
-    const payload = {
-      name: formData.name,
-      email: formData.email.toLowerCase(),
-      role: formData.role,
-      personal_phone: formData.personal_phone,
-      username: formData.username,
-      rg: formData.rg,
-      cpf: formData.cpf,
-      birth_date: formData.birth_date || null,
-      cep: formData.cep,
-      address: formData.address,
-      address_number: formData.address_number,
-      address_complement: formData.address_complement,
-      city: formData.city,
-      state: formData.state,
-      has_access_schedule: formData.has_access_schedule,
-      is_active: formData.is_active,
-      permissions: selectedPerms,
-      assigned_dentists: formData.assigned_dentists,
-    }
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+      if (
+        sessionError &&
+        (sessionError.message?.includes('Refresh Token') ||
+          sessionError.message?.includes('refresh token'))
+      ) {
+        await supabase.auth.signOut()
+        window.location.href = '/'
+        return
+      }
 
-    if (editingUser) {
-      const dashboardsChanged =
-        JSON.stringify(editingUser.permissions?.dashboards) !==
-        JSON.stringify(selectedPerms.dashboards)
+      const payload = {
+        name: formData.name,
+        email: formData.email.toLowerCase(),
+        role: formData.role,
+        personal_phone: formData.personal_phone,
+        username: formData.username,
+        rg: formData.rg,
+        cpf: formData.cpf,
+        birth_date: formData.birth_date || null,
+        cep: formData.cep,
+        address: formData.address,
+        address_number: formData.address_number,
+        address_complement: formData.address_complement,
+        city: formData.city,
+        state: formData.state,
+        has_access_schedule: formData.has_access_schedule,
+        is_active: formData.is_active,
+        permissions: selectedPerms,
+        assigned_dentists: formData.assigned_dentists,
+      }
 
-      const { error } = await updateUser({
-        userId: editingUser.id,
-        ...payload,
-        password: formData.password || undefined,
-      })
-      setSaving(false)
-      if (error) {
-        toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' })
-        if (
-          error.message.includes('Sessão expirada') ||
-          error.message.includes('Invalid or expired token')
-        ) {
-          setTimeout(() => {
-            supabase.auth.signOut().then(() => {
-              window.location.href = '/'
+      if (editingUser) {
+        const dashboardsChanged =
+          JSON.stringify(editingUser.permissions?.dashboards) !==
+          JSON.stringify(selectedPerms.dashboards)
+
+        const { error } = await updateUser({
+          userId: editingUser.id,
+          ...payload,
+          password: formData.password || undefined,
+        })
+        if (error) {
+          if (
+            error.message?.includes('Refresh Token') ||
+            error.message?.includes('refresh token')
+          ) {
+            await supabase.auth.signOut()
+            window.location.href = '/'
+            return
+          }
+          throw error
+        } else {
+          toast({ title: 'Usuário atualizado com sucesso!' })
+          if (dashboardsChanged) {
+            await logAudit('UPDATE_PERMISSIONS', 'profiles', editingUser.id, {
+              reason: 'Dashboard permissions changed',
+              target_user: formData.name,
+              dashboards: selectedPerms.dashboards,
             })
-          }, 2000)
+          }
         }
-        return // Do not close modal on error
       } else {
-        toast({ title: 'Usuário atualizado com sucesso!' })
-        if (dashboardsChanged) {
-          await logAudit('UPDATE_PERMISSIONS', 'profiles', editingUser.id, {
-            reason: 'Dashboard permissions changed',
-            target_user: formData.name,
-            dashboards: selectedPerms.dashboards,
-          })
+        const { error } = await createUser({
+          ...payload,
+          password: formData.password,
+        })
+        if (error) {
+          if (
+            error.message?.includes('Refresh Token') ||
+            error.message?.includes('refresh token')
+          ) {
+            await supabase.auth.signOut()
+            window.location.href = '/'
+            return
+          }
+          throw error
+        } else {
+          toast({ title: 'Usuário criado com sucesso!' })
         }
       }
-    } else {
-      const { error } = await createUser({
-        ...payload,
-        password: formData.password,
-      })
-      setSaving(false)
-      if (error) {
-        toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' })
-        if (
-          error.message.includes('Sessão expirada') ||
-          error.message.includes('Invalid or expired token')
-        ) {
-          setTimeout(() => {
-            supabase.auth.signOut().then(() => {
-              window.location.href = '/'
-            })
-          }, 2000)
-        }
-        return // Do not close modal on error
-      } else {
-        toast({ title: 'Usuário criado com sucesso!' })
+    } catch (err: any) {
+      if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+        await supabase.auth.signOut()
+        window.location.href = '/'
+        return
       }
+      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' })
+    } finally {
+      setSaving(false)
     }
 
     setModalOpen(false)
