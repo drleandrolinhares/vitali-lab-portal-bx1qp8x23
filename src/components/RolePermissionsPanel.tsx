@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/accordion'
 import { toast } from '@/hooks/use-toast'
 import { ShieldCheck, Loader2, Info } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export const MODULES = [
   {
