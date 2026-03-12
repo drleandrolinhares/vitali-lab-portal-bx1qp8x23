@@ -837,7 +837,7 @@ export function UsersManagement() {
                   >
                     Configurações de permissão
                   </TabsTrigger>
-                  {formData.role === 'laboratory' && (
+                  {formData.role === 'laboratory' && isCurrentUserMaster && (
                     <TabsTrigger
                       value="precos"
                       className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
@@ -1345,7 +1345,7 @@ export function UsersManagement() {
                   </div>
                 </TabsContent>
 
-                {formData.role === 'laboratory' && (
+                {formData.role === 'laboratory' && isCurrentUserMaster && (
                   <TabsContent value="precos" className="mt-0">
                     {!editingUser?.id ? (
                       <div className="p-6 text-center border rounded-xl bg-muted/10 mt-4">
@@ -1355,10 +1355,7 @@ export function UsersManagement() {
                         </p>
                       </div>
                     ) : (
-                      <PartnerPricesPanel
-                        partnerId={editingUser.id}
-                        isReadOnly={!isMasterOrAdmin}
-                      />
+                      <PartnerPricesPanel partnerId={editingUser.id} isReadOnly={false} />
                     )}
                   </TabsContent>
                 )}

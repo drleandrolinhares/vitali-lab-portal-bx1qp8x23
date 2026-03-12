@@ -17,6 +17,7 @@ import { Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 export function PartnerPricesPanel({
   partnerId,
@@ -27,7 +28,7 @@ export function PartnerPricesPanel({
 }) {
   const { priceList } = useAppStore()
   const [partnerPrices, setPartnerPrices] = useState<
-    Record<string, { custom_price: string; is_enabled: boolean }>
+    Record<string, { custom_price: string; is_enabled: boolean; in_db: boolean }>
   >({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -40,11 +41,15 @@ export function PartnerPricesPanel({
         .select('*')
         .eq('partner_id', partnerId)
       if (data) {
-        const pricesMap: Record<string, { custom_price: string; is_enabled: boolean }> = {}
+        const pricesMap: Record<
+          string,
+          { custom_price: string; is_enabled: boolean; in_db: boolean }
+        > = {}
         data.forEach((p: any) => {
           pricesMap[p.price_list_id] = {
             custom_price: p.custom_price != null ? String(p.custom_price) : '',
             is_enabled: p.is_enabled,
+            in_db: true,
           }
         })
         setPartnerPrices(pricesMap)
@@ -64,6 +69,7 @@ export function PartnerPricesPanel({
         ...prev[priceListId],
         custom_price: val,
         is_enabled: prev[priceListId]?.is_enabled ?? true,
+        in_db: prev[priceListId]?.in_db ?? false,
       },
     }))
   }
@@ -76,34 +82,53 @@ export function PartnerPricesPanel({
         ...prev[priceListId],
         is_enabled: checked,
         custom_price: prev[priceListId]?.custom_price ?? '',
+        in_db: prev[priceListId]?.in_db ?? false,
       },
     }))
   }
 
+  const filteredPriceList = useMemo(() => {
+    let list = priceList
+    if (showOnlyCustom) {
+      list = list.filter((item) => {
+        const pp = partnerPrices[item.id]
+        if (!pp) return false
+        const hasCustomVal = pp.custom_price && pp.custom_price.trim() !== ''
+        const isDisabled = !pp.is_enabled
+        return hasCustomVal || isDisabled || pp.in_db
+      })
+    }
+    return list
+  }, [priceList, showOnlyCustom, partnerPrices])
+
   const handleEnableAll = () => {
     if (isReadOnly) return
-    const allEnabled: Record<string, any> = { ...partnerPrices }
-    priceList.forEach((p) => {
-      if (!allEnabled[p.id]) {
-        allEnabled[p.id] = { custom_price: '', is_enabled: true }
-      } else {
-        allEnabled[p.id].is_enabled = true
-      }
+    setPartnerPrices((prev) => {
+      const next = { ...prev }
+      filteredPriceList.forEach((item) => {
+        if (next[item.id]) {
+          next[item.id] = { ...next[item.id], is_enabled: true }
+        } else {
+          next[item.id] = { custom_price: '', is_enabled: true, in_db: false }
+        }
+      })
+      return next
     })
-    setPartnerPrices(allEnabled)
   }
 
   const handleDisableAll = () => {
     if (isReadOnly) return
-    const allDisabled: Record<string, any> = { ...partnerPrices }
-    priceList.forEach((p) => {
-      if (!allDisabled[p.id]) {
-        allDisabled[p.id] = { custom_price: '', is_enabled: false }
-      } else {
-        allDisabled[p.id].is_enabled = false
-      }
+    setPartnerPrices((prev) => {
+      const next = { ...prev }
+      filteredPriceList.forEach((item) => {
+        if (next[item.id]) {
+          next[item.id] = { ...next[item.id], is_enabled: false }
+        } else {
+          next[item.id] = { custom_price: '', is_enabled: false, in_db: false }
+        }
+      })
+      return next
     })
-    setPartnerPrices(allDisabled)
   }
 
   const handleSave = async () => {
@@ -119,17 +144,17 @@ export function PartnerPricesPanel({
       const isEnabled = pp.is_enabled
 
       if (!hasCustomPrice && isEnabled) {
-        deletes.push(priceListId)
+        if (pp.in_db) deletes.push(priceListId)
       } else {
-        const defaultPrice = priceList.find((p) => p.id === priceListId)?.price || '0'
+        const defaultPriceStr = priceList.find((p) => p.id === priceListId)?.price || '0'
         let customPriceNum = 0
 
         if (hasCustomPrice) {
-          customPriceNum = parseFloat(pp.custom_price.replace(',', '.'))
+          customPriceNum = parseFloat(String(pp.custom_price).replace(',', '.'))
         } else {
           customPriceNum =
             parseFloat(
-              String(defaultPrice)
+              String(defaultPriceStr)
                 .replace(/[^\d,.-]/g, '')
                 .replace(/\./g, '')
                 .replace(',', '.'),
@@ -162,6 +187,17 @@ export function PartnerPricesPanel({
         if (error) throw error
       }
 
+      setPartnerPrices((prev) => {
+        const next = { ...prev }
+        deletes.forEach((id) => {
+          if (next[id]) next[id].in_db = false
+        })
+        upserts.forEach((u) => {
+          if (next[u.price_list_id]) next[u.price_list_id].in_db = true
+        })
+        return next
+      })
+
       toast({ title: 'Tabela de preços salva com sucesso!' })
     } catch (error: any) {
       toast({
@@ -173,19 +209,6 @@ export function PartnerPricesPanel({
       setSaving(false)
     }
   }
-
-  const filteredPriceList = useMemo(() => {
-    if (!showOnlyCustom) return priceList
-    return priceList.filter((item) => {
-      const pp = partnerPrices[item.id]
-      if (!pp) return false
-
-      const hasCustomPrice = pp.custom_price && pp.custom_price.trim() !== ''
-      const isEnabled = pp.is_enabled
-
-      return hasCustomPrice && isEnabled
-    })
-  }, [priceList, partnerPrices, showOnlyCustom])
 
   if (loading)
     return (
@@ -237,7 +260,7 @@ export function PartnerPricesPanel({
             onCheckedChange={(c) => setShowOnlyCustom(!!c)}
           />
           <Label htmlFor="show-only-custom" className="text-sm cursor-pointer font-medium">
-            Exibir apenas procedimentos com valores cadastrados
+            Mostrar apenas procedimentos com valores cadastrados
           </Label>
         </div>
       </div>
@@ -247,7 +270,7 @@ export function PartnerPricesPanel({
           <Table>
             <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
               <TableRow>
-                <TableHead>Procedimento</TableHead>
+                <TableHead>Procedimento/Item</TableHead>
                 <TableHead>Setor</TableHead>
                 <TableHead>Valor Padrão</TableHead>
                 <TableHead>Valor Negociado (R$)</TableHead>
@@ -266,19 +289,34 @@ export function PartnerPricesPanel({
                   const pp = partnerPrices[item.id]
                   const isEnabled = pp?.is_enabled ?? true
                   const customPrice = pp?.custom_price ?? ''
+                  const isCustomized = pp?.in_db || customPrice !== '' || !isEnabled
 
                   return (
                     <TableRow key={item.id} className={!isEnabled ? 'opacity-50 bg-muted/20' : ''}>
-                      <TableCell className="font-medium text-xs">{item.work_type}</TableCell>
+                      <TableCell className="font-medium text-xs">
+                        {item.work_type}
+                        {item.material && (
+                          <span className="block text-[10px] text-muted-foreground mt-0.5">
+                            {item.material}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{item.sector}</TableCell>
                       <TableCell className="text-xs font-semibold">{item.price}</TableCell>
                       <TableCell>
                         <Input
-                          placeholder="Ex: 250,00"
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 250.00"
                           value={customPrice}
                           onChange={(e) => handlePriceChange(item.id, e.target.value)}
                           disabled={!isEnabled || isReadOnly}
-                          className="w-32 h-8 text-xs"
+                          className={cn(
+                            'w-32 h-8 text-xs',
+                            isCustomized && customPrice !== ''
+                              ? 'border-[#e76f51] focus-visible:ring-[#e76f51]'
+                              : '',
+                          )}
                         />
                       </TableCell>
                       <TableCell className="text-center">
