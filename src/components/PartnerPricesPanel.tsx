@@ -36,7 +36,14 @@ export const PartnerPricesPanel = forwardRef<
   >({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showOnlyCustom, setShowOnlyCustom] = useState(false)
+
+  const [showOnlyCustom, setShowOnlyCustom] = useState<boolean>(() => {
+    return localStorage.getItem('vitali_partner_prices_filter') === 'true'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('vitali_partner_prices_filter', showOnlyCustom.toString())
+  }, [showOnlyCustom])
 
   useEffect(() => {
     async function fetchPrices() {
@@ -97,9 +104,10 @@ export const PartnerPricesPanel = forwardRef<
       list = list.filter((item) => {
         const pp = partnerPrices[item.id]
         if (!pp) return false
+        if (!pp.is_enabled) return false
+
         const hasCustomVal = pp.custom_price && String(pp.custom_price).trim() !== ''
-        const isDisabled = !pp.is_enabled
-        return hasCustomVal || isDisabled || pp.in_db
+        return hasCustomVal || pp.in_db
       })
     }
     return list
