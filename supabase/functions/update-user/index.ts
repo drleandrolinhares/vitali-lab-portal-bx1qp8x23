@@ -35,7 +35,13 @@ Deno.serve(async (req: Request) => {
     if (profileError || !callerProfile) throw new Error('Caller profile not found')
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
-    const canAddDentist = (callerProfile.permissions || []).includes('add-dentist')
+    const callerPerms = callerProfile.permissions || {}
+    let canAddDentist = false
+    if (Array.isArray(callerPerms)) {
+      canAddDentist = callerPerms.includes('add-dentist')
+    } else if (typeof callerPerms === 'object') {
+      canAddDentist = !!callerPerms?.settings?.access
+    }
 
     const {
       userId,
