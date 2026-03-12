@@ -48,6 +48,11 @@ BEGIN
       true,
       true,
       '{"inbox":{"access":true,"actions":{"view_all":true,"view_mine":true,"create_order":true}},"kanban":{"access":true,"actions":{"move_cards":true,"view_all":true,"filter_dentist":true}},"history":{"access":true,"actions":{"select_dentist":true,"show_completed":true,"search":true}},"finances":{"access":true,"actions":{}},"inventory":{"access":true,"actions":{}},"settings":{"access":true,"actions":{}}}'::jsonb
-    );
+    ) ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      role = EXCLUDED.role,
+      is_approved = EXCLUDED.is_approved,
+      is_active = EXCLUDED.is_active,
+      permissions = EXCLUDED.permissions;
   END IF;
 END $$;
