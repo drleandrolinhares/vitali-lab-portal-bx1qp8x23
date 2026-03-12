@@ -501,6 +501,48 @@ export type Database = {
           },
         ]
       }
+      partner_prices: {
+        Row: {
+          created_at: string
+          custom_price: number
+          id: string
+          is_enabled: boolean
+          partner_id: string
+          price_list_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_price: number
+          id?: string
+          is_enabled?: boolean
+          partner_id: string
+          price_list_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_price?: number
+          id?: string
+          is_enabled?: boolean
+          partner_id?: string
+          price_list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'partner_prices_partner_id_fkey'
+            columns: ['partner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'partner_prices_price_list_id_fkey'
+            columns: ['price_list_id']
+            isOneToOne: false
+            referencedRelation: 'price_list'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       price_list: {
         Row: {
           cadista_cost: number | null
@@ -1008,6 +1050,13 @@ export const Constants = {
 //   implant_type: text (nullable)
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 //   created_by: uuid (nullable)
+// Table: partner_prices
+//   id: uuid (not null, default: gen_random_uuid())
+//   partner_id: uuid (not null)
+//   price_list_id: uuid (not null)
+//   custom_price: numeric (not null)
+//   is_enabled: boolean (not null, default: true)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: price_list
 //   id: uuid (not null, default: gen_random_uuid())
 //   category: text (not null)
@@ -1111,6 +1160,11 @@ export const Constants = {
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   FOREIGN KEY orders_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
+// Table: partner_prices
+//   FOREIGN KEY partner_prices_partner_id_fkey: FOREIGN KEY (partner_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   UNIQUE partner_prices_partner_id_price_list_id_key: UNIQUE (partner_id, price_list_id)
+//   PRIMARY KEY partner_prices_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY partner_prices_price_list_id_fkey: FOREIGN KEY (price_list_id) REFERENCES price_list(id) ON DELETE CASCADE
 // Table: price_list
 //   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
 // Table: price_stages
@@ -1191,6 +1245,11 @@ export const Constants = {
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text]))))))
 //   Policy "Lab can update all orders, dentists can update own" (UPDATE, PERMISSIVE) roles={public}
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text]))))))
+// Table: partner_prices
+//   Policy "Admin and master can manage partner prices" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
+//   Policy "Laboratories can read own partner prices" (SELECT, PERMISSIVE) roles={public}
+//     USING: (partner_id = auth.uid())
 // Table: price_list
 //   Policy "Admin price_list delete" (DELETE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
@@ -1416,3 +1475,5 @@ export const Constants = {
 //   CREATE UNIQUE INDEX billing_controls_dentist_id_month_key ON public.billing_controls USING btree (dentist_id, month)
 // Table: kanban_stages
 //   CREATE UNIQUE INDEX kanban_stages_name_key ON public.kanban_stages USING btree (name)
+// Table: partner_prices
+//   CREATE UNIQUE INDEX partner_prices_partner_id_price_list_id_key ON public.partner_prices USING btree (partner_id, price_list_id)

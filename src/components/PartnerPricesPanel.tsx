@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,8 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 export function PartnerPricesPanel({
   partnerId,
@@ -29,6 +31,7 @@ export function PartnerPricesPanel({
   >({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showOnlyCustom, setShowOnlyCustom] = useState(false)
 
   useEffect(() => {
     async function fetchPrices() {
@@ -90,45 +93,99 @@ export function PartnerPricesPanel({
     setPartnerPrices(allEnabled)
   }
 
+  const handleDisableAll = () => {
+    if (isReadOnly) return
+    const allDisabled: Record<string, any> = { ...partnerPrices }
+    priceList.forEach((p) => {
+      if (!allDisabled[p.id]) {
+        allDisabled[p.id] = { custom_price: '', is_enabled: false }
+      } else {
+        allDisabled[p.id].is_enabled = false
+      }
+    })
+    setPartnerPrices(allDisabled)
+  }
+
   const handleSave = async () => {
     if (isReadOnly) return
     setSaving(true)
-    const upserts = Object.keys(partnerPrices).map((priceListId) => {
-      const pp = partnerPrices[priceListId]
-      const defaultPrice = priceList.find((p) => p.id === priceListId)?.price || '0'
-      const customPriceNum = pp.custom_price
-        ? parseFloat(pp.custom_price.replace(',', '.'))
-        : parseFloat(
-            String(defaultPrice)
-              .replace(/[^\d,.-]/g, '')
-              .replace(/\./g, '')
-              .replace(',', '.'),
-          ) || 0
 
-      return {
-        partner_id: partnerId,
-        price_list_id: priceListId,
-        custom_price: isNaN(customPriceNum) ? 0 : customPriceNum,
-        is_enabled: pp.is_enabled,
+    const upserts: any[] = []
+    const deletes: string[] = []
+
+    Object.keys(partnerPrices).forEach((priceListId) => {
+      const pp = partnerPrices[priceListId]
+      const hasCustomPrice = pp.custom_price && pp.custom_price.trim() !== ''
+      const isEnabled = pp.is_enabled
+
+      if (!hasCustomPrice && isEnabled) {
+        deletes.push(priceListId)
+      } else {
+        const defaultPrice = priceList.find((p) => p.id === priceListId)?.price || '0'
+        let customPriceNum = 0
+
+        if (hasCustomPrice) {
+          customPriceNum = parseFloat(pp.custom_price.replace(',', '.'))
+        } else {
+          customPriceNum =
+            parseFloat(
+              String(defaultPrice)
+                .replace(/[^\d,.-]/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.'),
+            ) || 0
+        }
+
+        upserts.push({
+          partner_id: partnerId,
+          price_list_id: priceListId,
+          custom_price: isNaN(customPriceNum) ? 0 : customPriceNum,
+          is_enabled: isEnabled,
+        })
       }
     })
 
-    if (upserts.length > 0) {
-      const { error } = await supabase
-        .from('partner_prices')
-        .upsert(upserts, { onConflict: 'partner_id,price_list_id' })
-      if (error) {
-        toast({
-          title: 'Erro ao salvar tabela',
-          description: error.message,
-          variant: 'destructive',
-        })
-      } else {
-        toast({ title: 'Tabela de preços salva com sucesso!' })
+    try {
+      if (deletes.length > 0) {
+        await supabase
+          .from('partner_prices')
+          .delete()
+          .eq('partner_id', partnerId)
+          .in('price_list_id', deletes)
       }
+
+      if (upserts.length > 0) {
+        const { error } = await supabase
+          .from('partner_prices')
+          .upsert(upserts, { onConflict: 'partner_id,price_list_id' })
+
+        if (error) throw error
+      }
+
+      toast({ title: 'Tabela de preços salva com sucesso!' })
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao salvar tabela',
+        description: error.message,
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
+
+  const filteredPriceList = useMemo(() => {
+    if (!showOnlyCustom) return priceList
+    return priceList.filter((item) => {
+      const pp = partnerPrices[item.id]
+      if (!pp) return false
+
+      const hasCustomPrice = pp.custom_price && pp.custom_price.trim() !== ''
+      const isEnabled = pp.is_enabled
+
+      return hasCustomPrice && isEnabled
+    })
+  }, [priceList, partnerPrices, showOnlyCustom])
 
   if (loading)
     return (
@@ -139,34 +196,52 @@ export function PartnerPricesPanel({
 
   return (
     <div className="space-y-4 pt-2">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div>
-          <h3 className="text-lg font-bold">Tabela de Preços Personalizada</h3>
-          <p className="text-sm text-muted-foreground">
-            Defina os valores negociados e habilite os procedimentos para este parceiro.
-          </p>
-        </div>
-        {!isReadOnly && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleEnableAll}>
-              Habilitar Todos
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-[#e76f51] hover:bg-[#d95f43] text-white"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
-                </>
-              ) : (
-                'Salvar Tabela'
-              )}
-            </Button>
+      <div className="flex flex-col gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-lg font-bold">Tabela de Preços Personalizada</h3>
+            <p className="text-sm text-muted-foreground">
+              Defina os valores negociados e habilite os procedimentos para este parceiro.
+            </p>
           </div>
-        )}
+          {!isReadOnly && (
+            <div className="flex gap-2 shrink-0 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleDisableAll}>
+                Desabilitar Todos
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleEnableAll}>
+                Habilitar Todos
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                size="sm"
+                className="bg-[#e76f51] hover:bg-[#d95f43] text-white"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
+                  </>
+                ) : (
+                  'Salvar Tabela'
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2 bg-muted/20 p-3 border rounded-lg">
+          <Checkbox
+            id="show-only-custom"
+            checked={showOnlyCustom}
+            onCheckedChange={(c) => setShowOnlyCustom(!!c)}
+          />
+          <Label htmlFor="show-only-custom" className="text-sm cursor-pointer font-medium">
+            Exibir apenas procedimentos com valores cadastrados
+          </Label>
+        </div>
       </div>
+
       <div className="border rounded-xl bg-background overflow-hidden">
         <ScrollArea className="h-[400px]">
           <Table>
@@ -180,35 +255,43 @@ export function PartnerPricesPanel({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {priceList.map((item) => {
-                const pp = partnerPrices[item.id]
-                const isEnabled = pp?.is_enabled ?? true
-                const customPrice = pp?.custom_price ?? ''
+              {filteredPriceList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Nenhum procedimento encontrado com os filtros atuais.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPriceList.map((item) => {
+                  const pp = partnerPrices[item.id]
+                  const isEnabled = pp?.is_enabled ?? true
+                  const customPrice = pp?.custom_price ?? ''
 
-                return (
-                  <TableRow key={item.id} className={!isEnabled ? 'opacity-50 bg-muted/20' : ''}>
-                    <TableCell className="font-medium text-xs">{item.work_type}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{item.sector}</TableCell>
-                    <TableCell className="text-xs font-semibold">{item.price}</TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Ex: 250,00"
-                        value={customPrice}
-                        onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                        disabled={!isEnabled || isReadOnly}
-                        className="w-32 h-8 text-xs"
-                      />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Switch
-                        checked={isEnabled}
-                        onCheckedChange={(c) => handleToggle(item.id, c)}
-                        disabled={isReadOnly}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
+                  return (
+                    <TableRow key={item.id} className={!isEnabled ? 'opacity-50 bg-muted/20' : ''}>
+                      <TableCell className="font-medium text-xs">{item.work_type}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{item.sector}</TableCell>
+                      <TableCell className="text-xs font-semibold">{item.price}</TableCell>
+                      <TableCell>
+                        <Input
+                          placeholder="Ex: 250,00"
+                          value={customPrice}
+                          onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                          disabled={!isEnabled || isReadOnly}
+                          className="w-32 h-8 text-xs"
+                        />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={isEnabled}
+                          onCheckedChange={(c) => handleToggle(item.id, c)}
+                          disabled={isReadOnly}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
             </TableBody>
           </Table>
         </ScrollArea>
