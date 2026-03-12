@@ -1,4 +1,4 @@
-DO $
+DO $$
 BEGIN
   -- Ensure Leandro de Souza is set to master role
   UPDATE public.profiles
@@ -11,5 +11,4 @@ BEGIN
   WHERE id IN (
     SELECT id FROM public.profiles WHERE name ILIKE '%Leandro de Souza%'
   );
-END $;
-
+END $$;
