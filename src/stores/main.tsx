@@ -288,12 +288,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let query = supabase
       .from('orders')
       .select(
-        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), creator:profiles!orders_created_by_fkey(name, role), order_history(*)`,
+        `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement, role), creator:profiles!orders_created_by_fkey(name, role), order_history(*)`,
       )
       .order('created_at', { ascending: false })
 
     if (!canViewAll) {
-      if (currentUser.role === 'dentist') {
+      if (currentUser.role === 'dentist' || currentUser.role === 'laboratory') {
         query = query.eq('dentist_id', currentUser.id)
       } else if (currentUser.assigned_dentists && currentUser.assigned_dentists.length > 0) {
         query = query.in('dentist_id', currentUser.assigned_dentists)
@@ -313,12 +313,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let fallbackQuery = supabase
         .from('orders')
         .select(
-          `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement), order_history(*)`,
+          `*, profiles!orders_dentist_id_fkey(name, clinic, whatsapp_group_link, commercial_agreement, role), order_history(*)`,
         )
         .order('created_at', { ascending: false })
 
       if (!canViewAll) {
-        if (currentUser.role === 'dentist') {
+        if (currentUser.role === 'dentist' || currentUser.role === 'laboratory') {
           fallbackQuery = fallbackQuery.eq('dentist_id', currentUser.id)
         } else if (currentUser.assigned_dentists && currentUser.assigned_dentists.length > 0) {
           fallbackQuery = fallbackQuery.in('dentist_id', currentUser.assigned_dentists)
@@ -351,6 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             dentistClinic: o.profiles?.clinic || '',
             dentistGroupLink: o.profiles?.whatsapp_group_link || '',
             dentistDiscount: discount,
+            dentistRole: o.profiles?.role || 'dentist',
             sector: o.sector,
             kanbanStage: o.kanban_stage,
             workType: o.work_type,
@@ -471,7 +472,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ))
 
     if (!canViewAll && currentUser) {
-      if (currentUser.role !== 'dentist') {
+      if (currentUser.role !== 'dentist' && currentUser.role !== 'laboratory') {
         if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
           return []
         } else {
@@ -487,7 +488,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let basePrice = o.basePrice || 0
       const discount = o.dentistDiscount || 0
 
-      if (priceList && priceList.length > 0) {
+      if (o.dentistRole !== 'laboratory' && priceList && priceList.length > 0) {
         const priceItem =
           priceList.find(
             (p) => p.work_type === o.workType && (!p.sector || p.sector === o.sector),
@@ -592,6 +593,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addOrder = async (orderData: any): Promise<boolean> => {
     if (!currentUser) return false
+
     const targetDentistId =
       (currentUser.role === 'admin' ||
         currentUser.role === 'master' ||
@@ -604,11 +606,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const { data: dentistProfile } = await supabase
       .from('profiles' as any)
-      .select('commercial_agreement')
+      .select('commercial_agreement, role')
       .eq('id', targetDentistId)
       .maybeSingle()
 
     const discountPercent = dentistProfile?.commercial_agreement || 0
+    const isLaboratory = dentistProfile?.role === 'laboratory'
 
     const priceItem =
       priceList.find(
@@ -616,13 +619,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ) || priceList.find((p) => p.work_type === orderData.workType)
 
     let unitPrice = 0
-    if (priceItem && priceItem.price != null) {
+
+    if (isLaboratory && priceItem) {
+      const { data: customPrice } = await supabase
+        .from('partner_prices')
+        .select('custom_price, is_enabled')
+        .eq('partner_id', targetDentistId)
+        .eq('price_list_id', priceItem.id)
+        .maybeSingle()
+
+      if (customPrice && customPrice.is_enabled) {
+        unitPrice = Number(customPrice.custom_price)
+      } else if (customPrice && !customPrice.is_enabled) {
+        toast({
+          title: 'Erro',
+          description: 'Procedimento desabilitado para este laboratório.',
+          variant: 'destructive',
+        })
+        return false
+      } else if (priceItem.price != null) {
+        const numericString = String(priceItem.price)
+          .replace(/[^\d,.-]/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.')
+        unitPrice = !isNaN(parseFloat(numericString)) ? parseFloat(numericString) : 0
+      }
+    } else if (priceItem && priceItem.price != null) {
       const numericString = String(priceItem.price)
         .replace(/[^\d,.-]/g, '')
         .replace(/\./g, '')
         .replace(',', '.')
-      const parsed = parseFloat(numericString)
-      unitPrice = !isNaN(parsed) ? parsed : 0
+      unitPrice = !isNaN(parseFloat(numericString)) ? parseFloat(numericString) : 0
     }
 
     const teethCount = orderData.teeth?.length || 0

@@ -1,5 +1,6 @@
 export type UserRole =
   | 'dentist'
+  | 'laboratory'
   | 'admin'
   | 'master'
   | 'receptionist'
@@ -53,6 +54,7 @@ export interface Order {
   dentistClinic?: string
   dentistGroupLink?: string
   dentistDiscount?: number
+  dentistRole?: string
   sector: string
   kanbanStage: KanbanStage
   workType: string

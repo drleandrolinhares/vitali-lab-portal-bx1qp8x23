@@ -81,6 +81,7 @@ Deno.serve(async (req: Request) => {
       city,
       state,
       has_access_schedule,
+      commercial_agreement,
     } = await req.json()
 
     if (!userId) throw new Error('UserId is required')
@@ -104,13 +105,22 @@ Deno.serve(async (req: Request) => {
     }
 
     const isUpdatingDentist =
-      canAddDentist && (targetProfile.role === 'dentist' || targetProfile.role === undefined)
+      canAddDentist &&
+      (targetProfile.role === 'dentist' ||
+        targetProfile.role === 'laboratory' ||
+        targetProfile.role === undefined)
 
     if (!isAdmin && callerUser.id !== userId && !isUpdatingDentist) {
       throw new Error('Unauthorized: You can only update your own profile')
     }
 
-    if (!isAdmin && role !== undefined && role !== 'dentist' && callerUser.id !== userId) {
+    if (
+      !isAdmin &&
+      role !== undefined &&
+      role !== 'dentist' &&
+      role !== 'laboratory' &&
+      callerUser.id !== userId
+    ) {
       throw new Error('Unauthorized: Only admins can change roles to non-dentist')
     }
 
@@ -172,6 +182,7 @@ Deno.serve(async (req: Request) => {
     if (city !== undefined) updateData.city = city
     if (state !== undefined) updateData.state = state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
+    if (commercial_agreement !== undefined) updateData.commercial_agreement = commercial_agreement
 
     if (password && callerUser.id !== userId) {
       updateData.requires_password_change = true

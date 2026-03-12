@@ -71,6 +71,7 @@ Deno.serve(async (req: Request) => {
       city,
       state,
       has_access_schedule,
+      commercial_agreement,
     } = await req.json()
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
@@ -83,11 +84,13 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!isAdmin) {
-      if (role !== 'dentist') {
+      if (role !== 'dentist' && role !== 'laboratory') {
         throw new Error('Unauthorized: Apenas administradores podem criar este tipo de usuário.')
       }
       if (!canAddDentist) {
-        throw new Error('Unauthorized: Você não tem permissão para adicionar novos dentistas.')
+        throw new Error(
+          'Unauthorized: Você não tem permissão para adicionar novos dentistas/laboratórios.',
+        )
       }
     }
 
@@ -142,6 +145,7 @@ Deno.serve(async (req: Request) => {
     if (city !== undefined) updateData.city = city
     if (state !== undefined) updateData.state = state
     if (has_access_schedule !== undefined) updateData.has_access_schedule = has_access_schedule
+    if (commercial_agreement !== undefined) updateData.commercial_agreement = commercial_agreement
 
     if (Object.keys(updateData).length > 0) {
       await supabaseAdmin.from('profiles').update(updateData).eq('id', data.user.id)

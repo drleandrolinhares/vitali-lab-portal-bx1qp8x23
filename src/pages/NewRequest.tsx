@@ -99,7 +99,7 @@ export default function NewRequest() {
         const { data } = await supabase
           .from('profiles')
           .select('id, name, clinic')
-          .eq('role', 'dentist')
+          .in('role', ['dentist', 'laboratory'])
         if (data) {
           const sorted = data
             .map((d: any) => ({
@@ -186,7 +186,7 @@ export default function NewRequest() {
     if (isAdminOrReception && !formData.dentistId) {
       toast({
         title: 'Atenção',
-        description: 'Selecione um dentista para este pedido.',
+        description: 'Selecione um dentista ou laboratório parceiro para este pedido.',
         variant: 'destructive',
       })
       return
@@ -287,7 +287,7 @@ export default function NewRequest() {
                   required
                 >
                   <SelectTrigger className="h-11 bg-background">
-                    <SelectValue placeholder="Escolha um dentista cadastrado..." />
+                    <SelectValue placeholder="Escolha um dentista ou laboratório parceiro..." />
                   </SelectTrigger>
                   <SelectContent>
                     {dentistsList.map((d) => (

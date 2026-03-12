@@ -52,7 +52,7 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   let unitPrice = order.unitPrice || 0
   const discount = order.dentistDiscount || 0
 
-  if (priceList && priceList.length > 0) {
+  if (order.dentistRole !== 'laboratory' && priceList && priceList.length > 0) {
     const priceItem =
       priceList.find(
         (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),

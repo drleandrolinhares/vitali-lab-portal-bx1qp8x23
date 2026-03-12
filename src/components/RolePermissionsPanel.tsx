@@ -84,6 +84,7 @@ const ROLES = [
   { id: 'financial', label: 'FINANCEIRO' },
   { id: 'relationship_manager', label: 'GESTÃO REL.' },
   { id: 'dentist', label: 'DENTISTA' },
+  { id: 'laboratory', label: 'LABORATÓRIO PARCEIRO' },
 ]
 
 export function RolePermissionsPanel() {

@@ -80,7 +80,7 @@ const ADMIN_MENUS = [
   {
     group: 'ADMINISTRATIVO',
     items: [
-      { id: 'dentists', title: 'DENTISTAS', icon: Users, path: '/dentists' },
+      { id: 'dentists', title: 'CLIENTES E PARCEIROS', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
       { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
       { id: 'pending-users', title: 'CADASTROS PENDENTES', icon: UserPlus, path: '/pending-users' },
@@ -199,6 +199,7 @@ function AppSidebar() {
   if (!currentUser) return null
 
   const isMaster = currentUser.role === 'master'
+  const isClientRole = currentUser.role === 'dentist' || currentUser.role === 'laboratory'
 
   const hasPerm = (id: string) => {
     if (isMaster) return true
@@ -248,12 +249,7 @@ function AppSidebar() {
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
 
-  if (
-    (currentUser.role === 'admin' ||
-      currentUser.role === 'receptionist' ||
-      currentUser.role === 'master') &&
-    location.pathname.startsWith('/order/')
-  ) {
+  if (!isClientRole && location.pathname.startsWith('/order/')) {
     const orderId = location.pathname.split('/').pop()
     const order = orders.find((o: any) => o.id === orderId)
     if (order && order.dentistGroupLink) {
@@ -263,31 +259,34 @@ function AppSidebar() {
   }
 
   const clinicName = currentUser.clinic?.trim()
-  const groupTitle = clinicName ? `GRUPO ${clinicName.toUpperCase()}` : 'GRUPO DA CLÍNICA'
+  const groupTitle = clinicName
+    ? `GRUPO ${clinicName.toUpperCase()}`
+    : currentUser.role === 'laboratory'
+      ? 'GRUPO DO LABORATÓRIO'
+      : 'GRUPO DA CLÍNICA'
 
-  const commLinks =
-    currentUser.role === 'dentist'
-      ? [
-          {
-            title: groupTitle,
-            icon: WhatsAppIcon,
-            url: (currentUser as any).whatsapp_group_link,
-          },
-          { title: 'VITALI LAB RECEPÇÃO', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
-        ]
-      : [
-          {
-            title: viewingClient ? 'WHATSAPP CLIENTE (GRUPO)' : 'VITALI LAB RECEPÇÃO',
-            icon: WhatsAppIcon,
-            url: viewingClient ? adminDynamicLink : appSettings?.whatsapp_lab_link,
-          },
-        ]
+  const commLinks = isClientRole
+    ? [
+        {
+          title: groupTitle,
+          icon: WhatsAppIcon,
+          url: (currentUser as any).whatsapp_group_link,
+        },
+        { title: 'VITALI LAB RECEPÇÃO', icon: WhatsAppIcon, url: appSettings?.whatsapp_lab_link },
+      ]
+    : [
+        {
+          title: viewingClient ? 'WHATSAPP CLIENTE (GRUPO)' : 'VITALI LAB RECEPÇÃO',
+          icon: WhatsAppIcon,
+          url: viewingClient ? adminDynamicLink : appSettings?.whatsapp_lab_link,
+        },
+      ]
 
   return (
     <Sidebar variant="inset">
       <SidebarHeader className="py-6 flex flex-col items-center justify-center">
         <Link
-          to={currentUser.role === 'dentist' ? '/app' : '/dashboard'}
+          to={isClientRole ? '/app' : '/dashboard'}
           className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
           title="Ir para o Dashboard"
         >
@@ -295,7 +294,7 @@ function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
-        {currentUser.role === 'dentist' ? (
+        {isClientRole ? (
           <SidebarMenu>
             {dentistNavItems.map((item) => {
               if (!hasPerm(item.id)) return null
@@ -446,8 +445,10 @@ function AppSidebar() {
               <div className="flex flex-col items-start text-xs truncate flex-1">
                 <span className="font-medium truncate">{currentUser.name}</span>
                 <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
-                  {currentUser.role === 'dentist'
-                    ? 'DENTISTA'
+                  {isClientRole
+                    ? currentUser.role === 'laboratory'
+                      ? 'LABORATÓRIO'
+                      : 'DENTISTA'
                     : currentUser.role === 'master'
                       ? 'MASTER'
                       : currentUser.role === 'admin'
@@ -482,6 +483,8 @@ function MainHeader() {
 
   if (!currentUser) return null
 
+  const isClientRole = currentUser.role === 'dentist' || currentUser.role === 'laboratory'
+
   const isFinancialRoute = [
     '/dashboard',
     '/admin-financial',
@@ -489,6 +492,7 @@ function MainHeader() {
     '/inventory',
     '/prices',
   ].includes(location.pathname)
+
   const showLabSelector =
     (currentUser.role === 'admin' ||
       currentUser.role === 'master' ||
@@ -498,12 +502,7 @@ function MainHeader() {
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
 
-  if (
-    (currentUser.role === 'admin' ||
-      currentUser.role === 'master' ||
-      currentUser.role === 'receptionist') &&
-    location.pathname.startsWith('/order/')
-  ) {
+  if (!isClientRole && location.pathname.startsWith('/order/')) {
     const orderId = location.pathname.split('/').pop()
     const order = orders.find((o: any) => o.id === orderId)
     if (order && order.dentistGroupLink) {
@@ -512,12 +511,11 @@ function MainHeader() {
     }
   }
 
-  const clinicLink =
-    currentUser.role === 'dentist'
-      ? (currentUser as any).whatsapp_group_link
-      : viewingClient
-        ? adminDynamicLink
-        : (currentUser as any).whatsapp_group_link
+  const clinicLink = isClientRole
+    ? (currentUser as any).whatsapp_group_link
+    : viewingClient
+      ? adminDynamicLink
+      : (currentUser as any).whatsapp_group_link
 
   const labLink = appSettings?.whatsapp_lab_link
 
