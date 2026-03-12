@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
 import { Input } from '@/components/ui/input'
@@ -19,13 +19,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
-export function PartnerPricesPanel({
-  partnerId,
-  isReadOnly,
-}: {
-  partnerId: string
-  isReadOnly?: boolean
-}) {
+export interface PartnerPricesPanelRef {
+  save: () => Promise<void>
+}
+
+export const PartnerPricesPanel = forwardRef<
+  PartnerPricesPanelRef,
+  {
+    partnerId: string
+    isReadOnly?: boolean
+  }
+>(({ partnerId, isReadOnly }, ref) => {
   const { priceList } = useAppStore()
   const [partnerPrices, setPartnerPrices] = useState<
     Record<string, { custom_price: string; is_enabled: boolean; in_db: boolean }>
@@ -36,10 +40,12 @@ export function PartnerPricesPanel({
 
   useEffect(() => {
     async function fetchPrices() {
+      setLoading(true)
       const { data, error } = await supabase
         .from('partner_prices')
         .select('*')
         .eq('partner_id', partnerId)
+
       if (data) {
         const pricesMap: Record<
           string,
@@ -58,7 +64,7 @@ export function PartnerPricesPanel({
       }
       setLoading(false)
     }
-    fetchPrices()
+    if (partnerId) fetchPrices()
   }, [partnerId])
 
   const handlePriceChange = (priceListId: string, val: string) => {
@@ -66,7 +72,6 @@ export function PartnerPricesPanel({
     setPartnerPrices((prev) => ({
       ...prev,
       [priceListId]: {
-        ...prev[priceListId],
         custom_price: val,
         is_enabled: prev[priceListId]?.is_enabled ?? true,
         in_db: prev[priceListId]?.in_db ?? false,
@@ -79,7 +84,6 @@ export function PartnerPricesPanel({
     setPartnerPrices((prev) => ({
       ...prev,
       [priceListId]: {
-        ...prev[priceListId],
         is_enabled: checked,
         custom_price: prev[priceListId]?.custom_price ?? '',
         in_db: prev[priceListId]?.in_db ?? false,
@@ -93,7 +97,7 @@ export function PartnerPricesPanel({
       list = list.filter((item) => {
         const pp = partnerPrices[item.id]
         if (!pp) return false
-        const hasCustomVal = pp.custom_price && pp.custom_price.trim() !== ''
+        const hasCustomVal = pp.custom_price && String(pp.custom_price).trim() !== ''
         const isDisabled = !pp.is_enabled
         return hasCustomVal || isDisabled || pp.in_db
       })
@@ -131,7 +135,7 @@ export function PartnerPricesPanel({
     })
   }
 
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     if (isReadOnly) return
     setSaving(true)
 
@@ -140,31 +144,25 @@ export function PartnerPricesPanel({
 
     Object.keys(partnerPrices).forEach((priceListId) => {
       const pp = partnerPrices[priceListId]
-      const hasCustomPrice = pp.custom_price && pp.custom_price.trim() !== ''
+      if (!pp) return
+
+      const customPriceStr = String(pp.custom_price || '').trim()
+      const hasCustomPrice = customPriceStr !== ''
       const isEnabled = pp.is_enabled
 
-      if (!hasCustomPrice && isEnabled) {
+      if (isEnabled && !hasCustomPrice) {
         if (pp.in_db) deletes.push(priceListId)
       } else {
-        const defaultPriceStr = priceList.find((p) => p.id === priceListId)?.price || '0'
         let customPriceNum = 0
-
         if (hasCustomPrice) {
-          customPriceNum = parseFloat(String(pp.custom_price).replace(',', '.'))
-        } else {
-          customPriceNum =
-            parseFloat(
-              String(defaultPriceStr)
-                .replace(/[^\d,.-]/g, '')
-                .replace(/\./g, '')
-                .replace(',', '.'),
-            ) || 0
+          customPriceNum = parseFloat(customPriceStr.replace(',', '.'))
+          if (isNaN(customPriceNum)) customPriceNum = 0
         }
 
         upserts.push({
           partner_id: partnerId,
           price_list_id: priceListId,
-          custom_price: isNaN(customPriceNum) ? 0 : customPriceNum,
+          custom_price: customPriceNum,
           is_enabled: isEnabled,
         })
       }
@@ -198,7 +196,9 @@ export function PartnerPricesPanel({
         return next
       })
 
-      toast({ title: 'Tabela de preços salva com sucesso!' })
+      if (!silent) {
+        toast({ title: 'Tabela de preços salva com sucesso!' })
+      }
     } catch (error: any) {
       toast({
         title: 'Erro ao salvar tabela',
@@ -209,6 +209,10 @@ export function PartnerPricesPanel({
       setSaving(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    save: () => handleSave(true),
+  }))
 
   if (loading)
     return (
@@ -236,7 +240,7 @@ export function PartnerPricesPanel({
                 Habilitar Todos
               </Button>
               <Button
-                onClick={handleSave}
+                onClick={() => handleSave(false)}
                 disabled={saving}
                 size="sm"
                 className="bg-[#e76f51] hover:bg-[#d95f43] text-white"
@@ -336,4 +340,5 @@ export function PartnerPricesPanel({
       </div>
     </div>
   )
-}
+})
+PartnerPricesPanel.displayName = 'PartnerPricesPanel'

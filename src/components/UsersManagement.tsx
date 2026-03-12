@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { createUser, updateUser } from '@/services/users'
 import { Button } from '@/components/ui/button'
@@ -43,7 +43,7 @@ import { ptBR } from 'date-fns/locale'
 import { MODULES } from './RolePermissionsPanel'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { PartnerPricesPanel } from './PartnerPricesPanel'
+import { PartnerPricesPanel, PartnerPricesPanelRef } from './PartnerPricesPanel'
 
 const ROLES_INFO = [
   {
@@ -113,6 +113,8 @@ export function UsersManagement() {
   const [activeTab, setActiveTab] = useState<'pessoais' | 'perfil' | 'permissoes' | 'precos'>(
     'pessoais',
   )
+
+  const partnerPricesRef = useRef<PartnerPricesPanelRef>(null)
 
   const isCurrentUserMaster = currentUser?.role === 'master'
   const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin'
@@ -389,6 +391,7 @@ export function UsersManagement() {
           ...payload,
           password: formData.password || undefined,
         })
+
         if (error) {
           if (
             error.message?.includes('Refresh Token') ||
@@ -410,6 +413,14 @@ export function UsersManagement() {
               target_user: formData.name,
               dashboards: selectedPerms.dashboards,
             })
+          }
+
+          if (formData.role === 'laboratory' && isCurrentUserMaster && partnerPricesRef.current) {
+            try {
+              await partnerPricesRef.current.save()
+            } catch (e) {
+              console.error('Failed to save partner prices', e)
+            }
           }
         }
       } else {
@@ -1355,7 +1366,11 @@ export function UsersManagement() {
                         </p>
                       </div>
                     ) : (
-                      <PartnerPricesPanel partnerId={editingUser.id} isReadOnly={false} />
+                      <PartnerPricesPanel
+                        ref={partnerPricesRef}
+                        partnerId={editingUser.id}
+                        isReadOnly={false}
+                      />
                     )}
                   </TabsContent>
                 )}
