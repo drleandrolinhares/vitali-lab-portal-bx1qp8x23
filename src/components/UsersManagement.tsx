@@ -964,6 +964,31 @@ export function UsersManagement() {
                             </div>
                             {mod.actions.length > 0 && hasAccess && (
                               <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-[#e76f51]/30 ml-1">
+                                {mod.actions.length > 1 && (
+                                  <div className="flex justify-between items-center pb-2 border-b border-muted/30">
+                                    <span className="text-xs font-bold uppercase text-muted-foreground">
+                                      MARCAR TODAS
+                                    </span>
+                                    <Switch
+                                      checked={mod.actions.every(
+                                        (act) => selectedPerms[mod.id]?.actions?.[act.id],
+                                      )}
+                                      onCheckedChange={(c) => {
+                                        setSelectedPerms((prev) => {
+                                          const newPerms = { ...prev }
+                                          if (!newPerms[mod.id])
+                                            newPerms[mod.id] = { access: true, actions: {} }
+                                          mod.actions.forEach((act) => {
+                                            if (!newPerms[mod.id].actions)
+                                              newPerms[mod.id].actions = {}
+                                            newPerms[mod.id].actions[act.id] = c
+                                          })
+                                          return newPerms
+                                        })
+                                      }}
+                                    />
+                                  </div>
+                                )}
                                 {mod.actions.map((act) => (
                                   <div
                                     key={act.id}
