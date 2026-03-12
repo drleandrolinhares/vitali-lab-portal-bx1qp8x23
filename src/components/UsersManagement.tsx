@@ -12,6 +12,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
@@ -472,11 +483,11 @@ export function UsersManagement() {
 
   const applyDentistVisionMode = async () => {
     const referenceUser = users.find(
-      (u) => u.name?.trim().toUpperCase() === 'LEANDRO DE SOUZA DENTISTA',
+      (u) => u.email?.toLowerCase() === 'dr.leandro@studiovitalilab.com.br',
     )
     if (!referenceUser) {
       toast({
-        title: 'Usuário referência "LEANDRO DE SOUZA DENTISTA" não encontrado.',
+        title: 'Usuário referência "dr.leandro@studiovitalilab.com.br" não encontrado.',
         variant: 'destructive',
       })
       return
@@ -518,7 +529,7 @@ export function UsersManagement() {
           throw error
         }
 
-        toast({ title: 'Modo Visão Dentista aplicado com sucesso!' })
+        toast({ title: 'Configurações de visão aplicadas com sucesso!' })
 
         const updatedUser = {
           ...editingUser,
@@ -542,7 +553,7 @@ export function UsersManagement() {
       }
     } else {
       toast({
-        title: 'Modo Visão Dentista aplicado ao formulário! Salve o usuário para efetivar.',
+        title: 'Configurações de visão aplicadas com sucesso! Salve o usuário para efetivar.',
       })
     }
   }
@@ -1350,14 +1361,33 @@ export function UsersManagement() {
                           (LEANDRO DE SOUZA DENTISTA).
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        onClick={applyDentistVisionMode}
-                        disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] sm:text-xs tracking-wider shrink-0"
-                      >
-                        PERFIL MODO VISÃO DENTISTA
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] sm:text-xs tracking-wider shrink-0"
+                          >
+                            PERFIL MODO VISÃO DENTISTA
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Replicar Configurações?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deseja replicar todas as permissões e configurações de visão do perfil
+                              LEANDRO DE SOUZA DENTISTA para este usuário? Esta ação não afetará os
+                              dados pessoais.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={applyDentistVisionMode}>
+                              Continuar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   )}
 
