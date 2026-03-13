@@ -107,10 +107,16 @@ export default function FinancialPage() {
       try {
         setFetchError(null)
 
-        const { data, error } = await supabase
+        let query = supabase
           .from('settlements')
           .select('*')
           .order('created_at', { ascending: false })
+
+        if (currentUser.role === 'dentist' || currentUser.role === 'laboratory') {
+          query = query.eq('dentist_id', currentUser.id)
+        }
+
+        const { data, error } = await query
 
         if (!isMounted) return
 
@@ -135,7 +141,7 @@ export default function FinancialPage() {
     return () => {
       isMounted = false
     }
-  }, [currentUser?.id])
+  }, [currentUser?.id, currentUser?.role])
 
   if (currentUser && currentUser.role !== 'dentist') {
     if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
@@ -200,7 +206,7 @@ export default function FinancialPage() {
             <DollarSign className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">Minhas Finanças</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Dash Financeiro</h2>
             <p className="text-muted-foreground text-sm">
               Acompanhe seus custos pendentes, pipeline de produção e histórico de pagamentos.
             </p>

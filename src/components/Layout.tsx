@@ -245,7 +245,7 @@ function AppSidebar() {
     { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
     { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
-    { id: 'finances', title: 'FINANÇAS', icon: DollarSign, path: '/financial' },
+    { id: 'finances', title: 'DASH FINANCEIRO', icon: DollarSign, path: '/financial' },
     { id: 'settings', title: 'MEU PERFIL', icon: User, path: '/settings' },
   ]
 
