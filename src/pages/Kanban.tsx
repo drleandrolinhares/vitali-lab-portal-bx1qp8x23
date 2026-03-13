@@ -63,9 +63,13 @@ export default function KanbanPage() {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const isDentist = currentUser?.role === 'dentist'
 
-  const canDragCards = checkPermission('kanban', 'move_cards')
+  const canDragCards =
+    !isDentist &&
+    (['admin', 'master', 'receptionist', 'technical_assistant'].includes(currentUser?.role || '') ||
+      checkPermission('kanban', 'move_cards'))
+
   const canFilterDentist = checkPermission('kanban', 'filter_dentist')
-  const showDentistFilter = currentUser?.role !== 'dentist' && canFilterDentist
+  const showDentistFilter = !isDentist && canFilterDentist
 
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
@@ -296,6 +300,8 @@ export default function KanbanPage() {
                 const isExpanded = expandedCols.has(`${sector}-${stage.id}`)
                 const displayCols = isExpanded ? cols : cols.slice(0, 4)
                 const hasMore = cols.length > 4
+                const isPendingDentist =
+                  stage.name.toUpperCase() === 'AGUARDANDO RETORNO DO DENTISTA'
 
                 return (
                   <div
@@ -333,7 +339,10 @@ export default function KanbanPage() {
                       }
                     }}
                     className={cn(
-                      'w-[300px] shrink-0 bg-slate-50/60 dark:bg-muted/40 rounded-xl p-3 flex flex-col gap-3 border border-slate-200 dark:border-border/50 snap-start transition-all duration-200',
+                      'w-[300px] shrink-0 rounded-xl p-3 flex flex-col gap-3 border snap-start transition-all duration-200',
+                      isPendingDentist
+                        ? 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50'
+                        : 'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
                       draggedStageId === stage.id &&
                         'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
                       dragOverStageId === `${sector}-${stage.id}` &&
@@ -373,8 +382,17 @@ export default function KanbanPage() {
                               }
                             }}
                             className={cn(
-                              'font-semibold text-xs tracking-wide uppercase text-slate-600 dark:text-muted-foreground truncate flex items-center gap-1.5',
-                              isAdmin && 'cursor-pointer hover:text-primary transition-colors',
+                              'font-semibold text-xs tracking-wide uppercase truncate flex items-center gap-1.5',
+                              isPendingDentist
+                                ? 'bg-red-700 text-white px-2 py-1 rounded-md'
+                                : 'text-slate-600 dark:text-muted-foreground',
+                              isAdmin && 'cursor-pointer',
+                              isAdmin &&
+                                !isPendingDentist &&
+                                'hover:text-primary transition-colors',
+                              isAdmin &&
+                                isPendingDentist &&
+                                'hover:bg-red-800 hover:text-white transition-colors',
                             )}
                             title={isAdmin ? 'Clique para renomear' : ''}
                           >
@@ -392,6 +410,8 @@ export default function KanbanPage() {
                                   className={cn(
                                     'h-5 w-5 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-800',
                                     !stage.description && 'opacity-30 hover:opacity-100',
+                                    isPendingDentist &&
+                                      'text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50',
                                   )}
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -401,7 +421,7 @@ export default function KanbanPage() {
                                     }
                                   }}
                                 >
-                                  <Info className="w-3.5 h-3.5 text-slate-500" />
+                                  <Info className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent
@@ -437,7 +457,14 @@ export default function KanbanPage() {
                           )}
                         </div>
                       )}
-                      <span className="bg-white dark:bg-background px-2 py-0.5 rounded text-xs font-bold border border-slate-200 dark:border-border text-primary shrink-0">
+                      <span
+                        className={cn(
+                          'px-2 py-0.5 rounded text-xs font-bold border shrink-0',
+                          isPendingDentist
+                            ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800'
+                            : 'bg-white dark:bg-background border-slate-200 dark:border-border text-primary',
+                        )}
+                      >
                         {cols.length}
                       </span>
                     </div>
@@ -472,7 +499,14 @@ export default function KanbanPage() {
                                   'opacity-50 scale-[0.98] border-dashed shadow-none',
                               )}
                             >
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 dark:bg-primary/40" />
+                              <div
+                                className={cn(
+                                  'absolute left-0 top-0 bottom-0 w-1',
+                                  isPendingDentist
+                                    ? 'bg-red-500/50'
+                                    : 'bg-primary/20 dark:bg-primary/40',
+                                )}
+                              />
                               <div className="flex justify-between items-start mb-2 pl-1">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs font-bold text-slate-500">
@@ -525,7 +559,11 @@ export default function KanbanPage() {
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
+                                  className={cn(
+                                    'w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1',
+                                    isPendingDentist &&
+                                      'text-red-700 border-red-200 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/50',
+                                  )}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     navigate(`/order/${o.id}`)
@@ -566,7 +604,10 @@ export default function KanbanPage() {
                           <TooltipContent
                             side="right"
                             sideOffset={8}
-                            className="bg-primary text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95"
+                            className={cn(
+                              'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
+                              isPendingDentist ? 'bg-red-800 border-red-900' : 'bg-primary',
+                            )}
                           >
                             <div className="space-y-2">
                               <div>

@@ -64,7 +64,14 @@ const AppContext = createContext<AppState | undefined>(undefined)
 
 const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
   const stg = (stage || '').toUpperCase()
-  if (stg === 'TRIAGEM' || stg === 'CAIXA DE ENTRADA' || stg === 'PENDÊNCIAS') {
+  if (
+    stg === 'EM TRIAGEM' ||
+    stg === 'TRIAGEM' ||
+    stg === 'CAIXA DE ENTRADA' ||
+    stg === 'AGUARDANDO RETORNO DO DENTISTA' ||
+    stg === 'PENDÊNCIAS' ||
+    stg === 'PENDENCIAS'
+  ) {
     return 'pending'
   }
   if (stg === 'PRONTO PARA ENVIO' || stg.includes('FINALIZADO') || stg.includes('ENTREGUE')) {
@@ -675,7 +682,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dentist_id: targetDentistId,
         created_by: currentUser.id,
         sector: orderData.sector,
-        kanban_stage: kanbanStages[0]?.name || 'TRIAGEM',
+        kanban_stage: kanbanStages[0]?.name || 'EM TRIAGEM',
         work_type: orderData.workType,
         material: orderData.material,
         tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },

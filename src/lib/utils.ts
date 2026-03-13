@@ -45,7 +45,7 @@ export function processOrderHistory(
         lastRealStage = note.trim()
         break
       } else if (i === 0) {
-        lastRealStage = kanbanStages[0]?.name || 'TRIAGEM'
+        lastRealStage = kanbanStages[0]?.name || 'EM TRIAGEM'
         break
       }
     }
@@ -74,7 +74,7 @@ export function processOrderHistory(
       } else if (event.note) {
         stageName = event.note.trim()
       } else if (i === 0) {
-        stageName = kanbanStages[0]?.name || 'TRIAGEM'
+        stageName = kanbanStages[0]?.name || 'EM TRIAGEM'
       } else {
         stageName = 'Atualização de Status'
       }
