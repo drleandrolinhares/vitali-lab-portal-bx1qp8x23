@@ -12,17 +12,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
@@ -109,7 +98,7 @@ const ROLES_INFO = [
 ]
 
 export function UsersManagement() {
-  const { currentUser, realUser, simulatedUser, setSimulatedUser, logAudit } = useAppStore()
+  const { currentUser, logAudit } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -128,8 +117,7 @@ export function UsersManagement() {
 
   const partnerPricesRef = useRef<PartnerPricesPanelRef>(null)
 
-  // O "isMasterOrAdmin" real para validar permissões de edição na interface
-  const actualUserRole = realUser?.role || currentUser?.role
+  const actualUserRole = currentUser?.role
   const isCurrentUserMaster = actualUserRole === 'master'
   const isMasterOrAdmin = actualUserRole === 'master' || actualUserRole === 'admin'
 
@@ -207,35 +195,6 @@ export function UsersManagement() {
       supabase.removeChannel(channel)
     }
   }, [])
-
-  const handleSimulateDentist = (checked: boolean) => {
-    if (checked) {
-      const referenceUser = users.find(
-        (u) =>
-          u.email?.toLowerCase() === 'dr.leandro@studiovitalilab.com.br' ||
-          u.name?.toLowerCase().includes('leandro de souza'),
-      )
-      if (referenceUser) {
-        setSimulatedUser(referenceUser)
-        toast({
-          title: 'Modo Visão Dentista Ativado',
-          description: `Você agora está navegando como ${referenceUser.name}.`,
-        })
-      } else {
-        toast({
-          title: 'Erro',
-          description: 'Usuário referência "Leandro de Souza" não encontrado.',
-          variant: 'destructive',
-        })
-      }
-    } else {
-      setSimulatedUser(null)
-      toast({
-        title: 'Modo Visão Restaurado',
-        description: 'Você voltou para sua visão original.',
-      })
-    }
-  }
 
   const baseFilteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -542,76 +501,6 @@ export function UsersManagement() {
     }
   }
 
-  const applyDentistVisionMode = async () => {
-    const referenceUser = users.find(
-      (u) => u.email?.toLowerCase() === 'dr.leandro@studiovitalilab.com.br',
-    )
-    if (!referenceUser) {
-      toast({
-        title: 'Usuário referência "dr.leandro@studiovitalilab.com.br" não encontrado.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const newPerms = referenceUser.permissions || {}
-    const newRole = referenceUser.role || 'dentist'
-    const newCanMoveKanbanCards = referenceUser.can_move_kanban_cards ?? true
-    const newHasAccessSchedule = referenceUser.has_access_schedule ?? false
-
-    setSelectedPerms(newPerms)
-    setFormData((prev) => ({
-      ...prev,
-      role: newRole,
-      has_access_schedule: newHasAccessSchedule,
-      can_move_kanban_cards: newCanMoveKanbanCards,
-    }))
-
-    if (editingUser?.id) {
-      setSaving(true)
-      try {
-        const { error } = await updateUser({
-          userId: editingUser.id,
-          role: newRole,
-          permissions: newPerms,
-          has_access_schedule: newHasAccessSchedule,
-          can_move_kanban_cards: newCanMoveKanbanCards,
-        })
-
-        if (error) {
-          throw error
-        }
-
-        toast({ title: 'Configurações de visão aplicadas com sucesso!' })
-
-        const updatedUser = {
-          ...editingUser,
-          role: newRole,
-          permissions: newPerms,
-          has_access_schedule: newHasAccessSchedule,
-          can_move_kanban_cards: newCanMoveKanbanCards,
-        }
-        setUsers((prev) =>
-          prev.map((u) => (u.id === editingUser.id ? { ...u, ...updatedUser } : u)),
-        )
-        setEditingUser(updatedUser)
-      } catch (err: any) {
-        const errorMsg = typeof err === 'string' ? err : err?.message || 'Ocorreu um erro.'
-        toast({
-          title: 'Atenção',
-          description: errorMsg,
-          variant: 'destructive',
-        })
-      } finally {
-        setSaving(false)
-      }
-    } else {
-      toast({
-        title: 'Configurações de visão aplicadas com sucesso! Salve o usuário para efetivar.',
-      })
-    }
-  }
-
   const updateAccess = (moduleId: string, checked: boolean) => {
     if (!isMasterOrAdmin) return
     setSelectedPerms((prev) => {
@@ -706,21 +595,6 @@ export function UsersManagement() {
               Mostrar apenas ativos
             </Label>
           </div>
-          {isMasterOrAdmin && (
-            <div className="flex items-center space-x-2 shrink-0 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
-              <Checkbox
-                id="simulate-dentist"
-                checked={!!simulatedUser}
-                onCheckedChange={(c) => handleSimulateDentist(!!c)}
-              />
-              <Label
-                htmlFor="simulate-dentist"
-                className="text-sm cursor-pointer text-blue-800 dark:text-blue-300 font-bold"
-              >
-                Perfil Modo Visão Dentista
-              </Label>
-            </div>
-          )}
         </div>
         {isMasterOrAdmin && (
           <Button
@@ -1420,47 +1294,6 @@ export function UsersManagement() {
                       permissões padrão do Perfil.
                     </p>
                   </div>
-
-                  {isCurrentUserMaster && (
-                    <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300">
-                          Perfil Padrão de Dentista
-                        </h4>
-                        <p className="text-xs text-blue-600 dark:text-blue-400/80 mt-1">
-                          Aplicar permissões e restrições idênticas ao usuário de referência
-                          (LEANDRO DE SOUZA DENTISTA).
-                        </p>
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            disabled={saving}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] sm:text-xs tracking-wider shrink-0"
-                          >
-                            REPLICAR PERMISSÕES
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Replicar Configurações?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Deseja replicar todas as permissões e configurações de visão do perfil
-                              LEANDRO DE SOUZA DENTISTA para este usuário? Esta ação não afetará os
-                              dados pessoais.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction disabled={saving} onClick={applyDentistVisionMode}>
-                              Continuar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
 
                   <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-xl mb-6">
                     <div>

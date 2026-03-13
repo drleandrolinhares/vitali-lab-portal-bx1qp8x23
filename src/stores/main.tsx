@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { getOrderFinancials } from '@/lib/financial'
 
 interface AppState {
-  realUser:
+  currentUser:
     | (User & {
         is_approved?: boolean
         job_function?: string
@@ -23,14 +23,6 @@ interface AppState {
         requires_password_change?: boolean
       })
     | null
-  currentUser: User & {
-    is_approved?: boolean
-    job_function?: string
-    is_active?: boolean
-    requires_password_change?: boolean
-  }
-  simulatedUser: any | null
-  setSimulatedUser: (user: any | null) => void
   orders: any[]
   kanbanStages: Stage[]
   appSettings: Record<string, string>
@@ -85,7 +77,7 @@ const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
 
-  const [realUser, setRealUser] = useState<
+  const [currentUser, setCurrentUser] = useState<
     | (User & {
         is_approved?: boolean
         job_function?: string
@@ -94,13 +86,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     | null
   >(null)
-
-  const [simulatedUser, setSimulatedUser] = useState<any | null>(() => {
-    const stored = sessionStorage.getItem('vitali_simulated_user')
-    return stored ? JSON.parse(stored) : null
-  })
-
-  const currentUser = simulatedUser || realUser
 
   const [orders, setOrders] = useState<any[]>([])
   const [kanbanStages, setKanbanStages] = useState<Stage[]>([])
@@ -134,19 +119,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('vitali_selected_lab', selectedLab)
   }, [selectedLab])
 
-  const setSimulatedUserWithStorage = useCallback((user: any | null) => {
-    setSimulatedUser(user)
-    if (user) {
-      sessionStorage.setItem('vitali_simulated_user', JSON.stringify(user))
-    } else {
-      sessionStorage.removeItem('vitali_simulated_user')
-    }
-    hasFetchedOrders.current = false
+  useEffect(() => {
+    sessionStorage.removeItem('vitali_simulated_user')
   }, [])
 
   const fetchProfile = async () => {
     if (!session?.user) {
-      setRealUser(null)
+      setCurrentUser(null)
       setOrders([])
       setKanbanStages([])
       setAppSettings({})
@@ -157,7 +136,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hasFetchedOrders.current = false
       return
     }
-    if (realUser?.id !== session.user.id) setProfileLoading(true)
+    if (currentUser?.id !== session.user.id) setProfileLoading(true)
 
     const { data } = await supabase
       .from('profiles')
@@ -165,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', session.user.id)
       .maybeSingle()
     if (data) {
-      setRealUser({
+      setCurrentUser({
         id: data.id,
         name: data.name,
         role: data.role as UserRole,
@@ -191,7 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .then()
       }
     } else {
-      setRealUser({
+      setCurrentUser({
         id: session.user.id,
         name: session.user.user_metadata?.name || 'Usuário',
         role: session.user.user_metadata?.role || 'dentist',
@@ -462,25 +441,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           fetchPendingUsersRef.current()
         }
 
-        if (payload.new && realUser && payload.new.id === realUser.id) {
-          setRealUser((prev: any) =>
-            prev
-              ? {
-                  ...prev,
-                  is_approved: payload.new.is_approved,
-                  is_active: payload.new.is_active,
-                  requires_password_change: payload.new.requires_password_change,
-                  permissions: payload.new.permissions || {},
-                  role: payload.new.role,
-                  assigned_dentists: payload.new.assigned_dentists,
-                  can_move_kanban_cards: payload.new.can_move_kanban_cards,
-                }
-              : prev,
-          )
-        }
-
-        if (payload.new && simulatedUser && payload.new.id === simulatedUser.id) {
-          setSimulatedUser((prev: any) =>
+        if (payload.new && idRef.current && payload.new.id === idRef.current) {
+          setCurrentUser((prev: any) =>
             prev
               ? {
                   ...prev,
@@ -626,9 +588,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     entityId: string,
     details: any = {},
   ) => {
-    if (!realUser) return
+    if (!currentUser) return
     await supabase.from('audit_logs').insert({
-      user_id: realUser.id,
+      user_id: currentUser.id,
       action,
       entity_type: entityType,
       entityId: entityId,
@@ -938,10 +900,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return
     const { error } = await supabase.from('profiles').update(updates).eq('id', currentUser.id)
     if (!error) {
-      setRealUser((prev) => (prev ? ({ ...prev, ...updates } as any) : prev))
-      if (simulatedUser && simulatedUser.id === currentUser.id) {
-        setSimulatedUser((prev) => (prev ? ({ ...prev, ...updates } as any) : prev))
-      }
+      setCurrentUser((prev) => (prev ? ({ ...prev, ...updates } as any) : prev))
       toast({ title: 'Perfil atualizado' })
     }
   }
@@ -954,10 +913,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        realUser: realUser as any,
         currentUser: currentUser as any,
-        simulatedUser,
-        setSimulatedUser: setSimulatedUserWithStorage,
         orders: computedOrders,
         kanbanStages,
         appSettings,

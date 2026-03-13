@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Medal,
   Radio,
-  Settings,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 
@@ -204,14 +203,6 @@ export default function AdminDashboard() {
     )
   }
 
-  const applyDentistProfile = () => {
-    updateSetting('dentist_profile_standard', 'leandro_de_souza')
-    toast({
-      title: 'Perfil Configurado',
-      description: 'As configurações padrão do Perfil Dentista Leandro de Souza foram aplicadas.',
-    })
-  }
-
   return (
     <div className="space-y-8 max-w-screen-2xl mx-auto animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -229,14 +220,6 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
-          <Button
-            onClick={applyDentistProfile}
-            size="lg"
-            className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
-          >
-            <Settings className="w-5 h-5 mr-2" />
-            PERFIL DENTISTA LEANDRO DE SOUZA
-          </Button>
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm w-full sm:w-auto justify-center">
             <Radio className="w-4 h-4 animate-pulse" />
             Sincronização em Tempo Real Ativa
