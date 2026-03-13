@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/main'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,6 @@ import {
   PieChart,
   UserPlus,
   Tags,
-  Phone,
   Wallet,
   User,
 } from 'lucide-react'
@@ -241,8 +240,8 @@ function AppSidebar() {
     { id: 'inbox', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
     { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
+    { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
     { id: 'finances', title: 'FINANÇAS', icon: DollarSign, path: '/financial' },
-    { id: 'history', title: 'HISTÓRICO', icon: History, path: '/history' },
     { id: 'settings', title: 'MEU PERFIL', icon: User, path: '/settings' },
   ]
 

@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, Wallet } from 'lucide-react'
+import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
@@ -24,7 +24,7 @@ export function DentistDashboard() {
 
   const financialData = useMemo(() => orders.map((o) => getOrderFinancials(o)), [orders])
   const pipelineTotal = financialData.reduce((acc, o) => acc + o.pipelineCost, 0)
-  const outstandingTotal = financialData.reduce((acc, o) => acc + o.outstandingCost, 0)
+  const completedTotal = financialData.reduce((acc, o) => acc + o.completedCost, 0)
 
   const rawWhatsappLink =
     (currentUser as any).whatsapp_group_link ||
@@ -101,7 +101,7 @@ export function DentistDashboard() {
           )}
           <Button asChild size="lg" className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto">
             <Link to="/new-request">
-              <PlusCircle className="w-5 h-5" /> Novo Pedido
+              <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
             </Link>
           </Button>
         </div>
@@ -123,37 +123,44 @@ export function DentistDashboard() {
         ))}
       </div>
 
+      <div className="mt-8 flex items-center gap-3 mb-6">
+        <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
+        <div className="h-px flex-1 bg-border/50 ml-4"></div>
+      </div>
+
       <div className="grid gap-5 md:grid-cols-2">
-        <Card className="shadow-subtle border-l-4 border-l-amber-500">
+        <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Trabalhos em Pipeline
+              Financeiro Finalizado
+            </CardTitle>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Soma de valores de trabalhos concluídos/entregues
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Valores a Faturar
             </CardTitle>
             <Activity className="w-5 h-5 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
-            <p className="text-sm text-muted-foreground mt-1">Estimativa de custos em produção</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-subtle border-l-4 border-l-red-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Saldo Devedor
-            </CardTitle>
-            <Wallet className="w-5 h-5 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">{formatBRL(outstandingTotal)}</div>
             <p className="text-sm text-muted-foreground mt-1">
-              Trabalhos finalizados pendentes de pagamento
+              Soma de valores em produção (pipeline)
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="shadow-subtle border-muted/60">
+      <Card className="shadow-subtle border-muted/60 mt-8">
         <CardHeader className="bg-muted/10">
           <CardTitle>Casos Ativos</CardTitle>
           <CardDescription>
@@ -167,8 +174,8 @@ export function DentistDashboard() {
                 <Activity className="w-8 h-8 opacity-50" />
               </div>
               <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
-              <Button variant="link" asChild className="mt-2">
-                <Link to="/new-request">Iniciar um novo pedido</Link>
+              <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
+                <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
               </Button>
             </div>
           ) : (

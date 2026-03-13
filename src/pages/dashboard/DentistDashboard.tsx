@@ -7,6 +7,8 @@ import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock } from 'lucide-re
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
+import { formatBRL, getOrderFinancials } from '@/lib/financial'
+import { useMemo } from 'react'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -16,7 +18,13 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function DentistDashboard() {
   const { orders, currentUser, appSettings } = useAppStore()
-  const activeOrders = orders.filter((o) => o.status !== 'delivered' && o.status !== 'completed')
+  const activeOrders = orders.filter(
+    (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
+  )
+
+  const financialData = useMemo(() => orders.map((o) => getOrderFinancials(o)), [orders])
+  const pipelineTotal = financialData.reduce((acc, o) => acc + o.pipelineCost, 0)
+  const completedTotal = financialData.reduce((acc, o) => acc + o.completedCost, 0)
 
   const rawWhatsappLink =
     (currentUser as any).whatsapp_group_link ||
@@ -93,7 +101,7 @@ export function DentistDashboard() {
           )}
           <Button asChild size="lg" className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto">
             <Link to="/new-request">
-              <PlusCircle className="w-5 h-5" /> Novo Pedido
+              <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
             </Link>
           </Button>
         </div>
@@ -115,7 +123,44 @@ export function DentistDashboard() {
         ))}
       </div>
 
-      <Card className="shadow-subtle border-muted/60">
+      <div className="mt-8 flex items-center gap-3 mb-6">
+        <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
+        <div className="h-px flex-1 bg-border/50 ml-4"></div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Financeiro Finalizado
+            </CardTitle>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Soma de valores de trabalhos concluídos/entregues
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Valores a Faturar
+            </CardTitle>
+            <Activity className="w-5 h-5 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Soma de valores em produção (pipeline)
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-subtle border-muted/60 mt-8">
         <CardHeader className="bg-muted/10">
           <CardTitle>Casos Ativos</CardTitle>
           <CardDescription>
@@ -129,8 +174,8 @@ export function DentistDashboard() {
                 <Activity className="w-8 h-8 opacity-50" />
               </div>
               <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
-              <Button variant="link" asChild className="mt-2">
-                <Link to="/new-request">Iniciar um novo pedido</Link>
+              <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
+                <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
               </Button>
             </div>
           ) : (
@@ -140,7 +185,7 @@ export function DentistDashboard() {
                   key={order.id}
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4"
                 >
-                  <div className="grid gap-1.5">
+                  <div className="grid gap-1.5 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-lg">{order.patientName}</span>
                       <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
@@ -153,9 +198,18 @@ export function DentistDashboard() {
                       {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                    <StatusBadge status={order.status} className="px-3 py-1" />
-                    <Button variant="ghost" size="icon" asChild className="rounded-full">
+
+                  <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="text-right flex flex-col justify-center">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                        Estimativa
+                      </span>
+                      <span className="font-bold text-foreground">
+                        {formatBRL(order.basePrice || 0)}
+                      </span>
+                    </div>
+                    <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
+                    <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
                       <Link to={`/order/${order.id}`}>
                         <ArrowRight className="w-5 h-5" />
                       </Link>
