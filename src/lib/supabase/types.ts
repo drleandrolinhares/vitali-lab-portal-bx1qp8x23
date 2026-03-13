@@ -1429,6 +1429,7 @@ export const Constants = {
 //    SECURITY DEFINER
 //   AS $function$
 //   BEGIN
+//     -- Only execute logic if is_approved is actually changing
 //     IF NEW.is_approved IS DISTINCT FROM OLD.is_approved THEN
 //       IF auth.uid() IS NOT NULL THEN
 //         IF NOT EXISTS (
@@ -1439,6 +1440,8 @@ export const Constants = {
 //         END IF;
 //       END IF;
 //     END IF;
+//
+//     -- Ensure other fields like is_active remain untouched by this trigger
 //     RETURN NEW;
 //   END;
 //   $function$

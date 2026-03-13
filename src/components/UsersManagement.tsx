@@ -163,47 +163,18 @@ export function UsersManagement() {
     const loadUsers = async () => {
       try {
         setLoading(true)
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          if (
-            sessionError.message?.includes('Refresh Token') ||
-            sessionError.message?.includes('refresh token')
-          ) {
-            await supabase.auth.signOut()
-            window.location.href = '/'
-            return
-          }
-        }
-
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .order('name', { ascending: true })
 
         if (error) {
-          if (
-            error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token')
-          ) {
-            await supabase.auth.signOut()
-            window.location.href = '/'
-            return
-          }
           console.error('Error loading users', error)
-        }
-
-        if (isMounted && data) {
+        } else if (isMounted && data) {
           setUsers(data)
         }
       } catch (err: any) {
-        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
-          await supabase.auth.signOut()
-          window.location.href = '/'
-        }
+        console.error('Exception loading users', err)
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -530,15 +501,6 @@ export function UsersManagement() {
           ? err
           : err?.message || 'Ocorreu um erro ao processar sua requisição.'
 
-      if (
-        errorMsg.includes('Auth session missing') ||
-        errorMsg.includes('Invalid or expired token')
-      ) {
-        await supabase.auth.signOut()
-        window.location.href = '/'
-        return
-      }
-
       toast({
         title: 'Atenção',
         description: errorMsg,
@@ -604,16 +566,6 @@ export function UsersManagement() {
         setEditingUser(updatedUser)
       } catch (err: any) {
         const errorMsg = typeof err === 'string' ? err : err?.message || 'Ocorreu um erro.'
-
-        if (
-          errorMsg.includes('Auth session missing') ||
-          errorMsg.includes('Invalid or expired token')
-        ) {
-          await supabase.auth.signOut()
-          window.location.href = '/'
-          return
-        }
-
         toast({
           title: 'Atenção',
           description: errorMsg,
