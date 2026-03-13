@@ -64,7 +64,7 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
   return extractedMsg
 }
 
-const ensureValidSession = async () => {
+const ensureValidSession = async (forceRefresh = false) => {
   const {
     data: { session },
     error,
@@ -76,9 +76,9 @@ const ensureValidSession = async () => {
     throw new Error('Sessão expirada. Por favor, faça login novamente.')
   }
 
-  // Refresh if expiring in less than 2 minutes (120 seconds)
+  // Refresh se expirar em menos de 2 minutos ou se solicitado explicitamente para retry
   const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
-  if (expiresAt > 0 && expiresAt - Date.now() < 120000) {
+  if (forceRefresh || (expiresAt > 0 && expiresAt - Date.now() < 120000)) {
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
     if (refreshError || !refreshData.session) {
       throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.')
@@ -89,9 +89,9 @@ const ensureValidSession = async () => {
   return session.access_token
 }
 
-export const createUser = async (payload: any) => {
+export const createUser = async (payload: any, isRetry = false): Promise<any> => {
   try {
-    const token = await ensureValidSession()
+    const token = await ensureValidSession(isRetry)
     const { data, error } = await supabase.functions.invoke('create-user', {
       body: payload,
       headers: { Authorization: `Bearer ${token}` },
@@ -99,19 +99,42 @@ export const createUser = async (payload: any) => {
 
     if (error) {
       const extractedMsg = await extractErrorMessage(error, error.message)
+      if (
+        !isRetry &&
+        (extractedMsg.includes('Auth session missing') ||
+          extractedMsg.includes('Unauthorized') ||
+          error.status === 401 ||
+          error.status === 403)
+      ) {
+        return createUser(payload, true)
+      }
       return { data: null, error: new Error(extractedMsg) }
     }
 
-    if (data && data.error) return { data: null, error: new Error(data.error) }
+    if (data && data.error) {
+      if (
+        !isRetry &&
+        (data.error.includes('Auth session missing') || data.error.includes('Unauthorized'))
+      ) {
+        return createUser(payload, true)
+      }
+      return { data: null, error: new Error(data.error) }
+    }
     return { data, error: null }
   } catch (err: any) {
+    if (
+      !isRetry &&
+      (err.message?.includes('Auth session missing') || err.message?.includes('Unauthorized'))
+    ) {
+      return createUser(payload, true)
+    }
     return { data: null, error: err }
   }
 }
 
-export const updateUser = async (payload: any) => {
+export const updateUser = async (payload: any, isRetry = false): Promise<any> => {
   try {
-    const token = await ensureValidSession()
+    const token = await ensureValidSession(isRetry)
     const { data, error } = await supabase.functions.invoke('update-user', {
       body: payload,
       headers: { Authorization: `Bearer ${token}` },
@@ -119,12 +142,35 @@ export const updateUser = async (payload: any) => {
 
     if (error) {
       const extractedMsg = await extractErrorMessage(error, error.message)
+      if (
+        !isRetry &&
+        (extractedMsg.includes('Auth session missing') ||
+          extractedMsg.includes('Unauthorized') ||
+          error.status === 401 ||
+          error.status === 403)
+      ) {
+        return updateUser(payload, true)
+      }
       return { data: null, error: new Error(extractedMsg) }
     }
 
-    if (data && data.error) return { data: null, error: new Error(data.error) }
+    if (data && data.error) {
+      if (
+        !isRetry &&
+        (data.error.includes('Auth session missing') || data.error.includes('Unauthorized'))
+      ) {
+        return updateUser(payload, true)
+      }
+      return { data: null, error: new Error(data.error) }
+    }
     return { data, error: null }
   } catch (err: any) {
+    if (
+      !isRetry &&
+      (err.message?.includes('Auth session missing') || err.message?.includes('Unauthorized'))
+    ) {
+      return updateUser(payload, true)
+    }
     return { data: null, error: err }
   }
 }
