@@ -65,7 +65,14 @@ export default function KanbanPage() {
 
   const canDragCards =
     !isDentist &&
-    (['admin', 'master', 'receptionist', 'technical_assistant'].includes(currentUser?.role || '') ||
+    ([
+      'admin',
+      'master',
+      'receptionist',
+      'technical_assistant',
+      'financial',
+      'relationship_manager',
+    ].includes(currentUser?.role || '') ||
       checkPermission('kanban', 'move_cards'))
 
   const canFilterDentist = checkPermission('kanban', 'filter_dentist')
@@ -300,8 +307,7 @@ export default function KanbanPage() {
                 const isExpanded = expandedCols.has(`${sector}-${stage.id}`)
                 const displayCols = isExpanded ? cols : cols.slice(0, 4)
                 const hasMore = cols.length > 4
-                const isPendingDentist =
-                  stage.name.toUpperCase() === 'AGUARDANDO RETORNO DO DENTISTA'
+                const isPendingCard = stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
 
                 return (
                   <div
@@ -340,9 +346,7 @@ export default function KanbanPage() {
                     }}
                     className={cn(
                       'w-[300px] shrink-0 rounded-xl p-3 flex flex-col gap-3 border snap-start transition-all duration-200',
-                      isPendingDentist
-                        ? 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50'
-                        : 'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
+                      'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
                       draggedStageId === stage.id &&
                         'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
                       dragOverStageId === `${sector}-${stage.id}` &&
@@ -383,16 +387,9 @@ export default function KanbanPage() {
                             }}
                             className={cn(
                               'font-semibold text-xs tracking-wide uppercase truncate flex items-center gap-1.5',
-                              isPendingDentist
-                                ? 'bg-red-700 text-white px-2 py-1 rounded-md'
-                                : 'text-slate-600 dark:text-muted-foreground',
+                              'text-slate-600 dark:text-muted-foreground',
                               isAdmin && 'cursor-pointer',
-                              isAdmin &&
-                                !isPendingDentist &&
-                                'hover:text-primary transition-colors',
-                              isAdmin &&
-                                isPendingDentist &&
-                                'hover:bg-red-800 hover:text-white transition-colors',
+                              isAdmin && 'hover:text-primary transition-colors',
                             )}
                             title={isAdmin ? 'Clique para renomear' : ''}
                           >
@@ -410,8 +407,6 @@ export default function KanbanPage() {
                                   className={cn(
                                     'h-5 w-5 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-800',
                                     !stage.description && 'opacity-30 hover:opacity-100',
-                                    isPendingDentist &&
-                                      'text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50',
                                   )}
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -460,9 +455,7 @@ export default function KanbanPage() {
                       <span
                         className={cn(
                           'px-2 py-0.5 rounded text-xs font-bold border shrink-0',
-                          isPendingDentist
-                            ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800'
-                            : 'bg-white dark:bg-background border-slate-200 dark:border-border text-primary',
+                          'bg-white dark:bg-background border-slate-200 dark:border-border text-primary',
                         )}
                       >
                         {cols.length}
@@ -502,8 +495,8 @@ export default function KanbanPage() {
                               <div
                                 className={cn(
                                   'absolute left-0 top-0 bottom-0 w-1',
-                                  isPendingDentist
-                                    ? 'bg-red-500/50'
+                                  isPendingCard
+                                    ? 'bg-red-500/80 dark:bg-red-600/80'
                                     : 'bg-primary/20 dark:bg-primary/40',
                                 )}
                               />
@@ -525,6 +518,13 @@ export default function KanbanPage() {
                               <p className="text-xs text-slate-500 mt-1 truncate pl-1">
                                 {o.workType}
                               </p>
+
+                              {isPendingCard && (
+                                <div className="mt-2.5 mb-0.5 bg-red-600 dark:bg-red-700 text-white text-[10px] font-bold px-2 py-1.5 rounded text-center uppercase tracking-wider shadow-sm w-full leading-tight">
+                                  Aguardando Retorno do Dentista
+                                </div>
+                              )}
+
                               <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
                                 <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
                                   {currentUser?.role !== 'dentist' && o.dentistName}
@@ -559,11 +559,7 @@ export default function KanbanPage() {
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  className={cn(
-                                    'w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1',
-                                    isPendingDentist &&
-                                      'text-red-700 border-red-200 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/50',
-                                  )}
+                                  className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     navigate(`/order/${o.id}`)
@@ -606,7 +602,7 @@ export default function KanbanPage() {
                             sideOffset={8}
                             className={cn(
                               'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
-                              isPendingDentist ? 'bg-red-800 border-red-900' : 'bg-primary',
+                              'bg-primary',
                             )}
                           >
                             <div className="space-y-2">
