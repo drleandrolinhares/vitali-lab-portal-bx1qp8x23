@@ -544,8 +544,8 @@ export function UsersManagement() {
         return
       }
       toast({
-        title: 'Falha ao salvar',
-        description: err.message || 'Ocorreu um erro inesperado. Tente novamente.',
+        title: 'Atenção',
+        description: err.message || 'Ocorreu um erro ao processar sua requisição.',
         variant: 'destructive',
       })
     } finally {
@@ -616,7 +616,7 @@ export function UsersManagement() {
         setEditingUser(updatedUser)
       } catch (err: any) {
         toast({
-          title: 'Erro ao aplicar permissões',
+          title: 'Atenção',
           description: err.message,
           variant: 'destructive',
         })

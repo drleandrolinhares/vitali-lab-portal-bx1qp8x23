@@ -184,12 +184,14 @@ Deno.serve(async (req: Request) => {
       if (authError) {
         console.error('Auth update error:', authError)
         let errorMsg = authError.message
-        if (
+        if (errorMsg.includes('users_phone_key') || errorMsg.includes('phone')) {
+          errorMsg = 'Este número de telefone já está vinculado a outra conta.'
+        } else if (
           errorMsg.toLowerCase().includes('already registered') ||
           errorMsg.toLowerCase().includes('already exists') ||
           errorMsg.toLowerCase().includes('duplicate key')
         ) {
-          errorMsg = 'Este e-mail já está em uso por outro usuário.'
+          errorMsg = 'Este e-mail já está em uso por outro perfil.'
         } else if (errorMsg.toLowerCase().includes('password')) {
           errorMsg =
             'A senha informada é muito fraca ou inválida. Deve conter ao menos 6 caracteres.'
@@ -263,7 +265,16 @@ Deno.serve(async (req: Request) => {
         .eq('id', userId)
       if (dbProfileError) {
         console.error('Profile update error:', dbProfileError)
-        throw new Error(`Erro ao atualizar o perfil do usuário: ${dbProfileError.message}`)
+        let errorMsg = dbProfileError.message
+        if (dbProfileError.code === '23505') {
+          // unique violation
+          if (dbProfileError.message.includes('cpf'))
+            errorMsg = 'O CPF informado já está cadastrado em outro perfil.'
+          else if (dbProfileError.message.includes('rg'))
+            errorMsg = 'O RG informado já está cadastrado em outro perfil.'
+          else errorMsg = 'Um dos dados informados já está em uso (conflito de duplicidade).'
+        }
+        throw new Error(`Erro ao atualizar o perfil do usuário: ${errorMsg}`)
       }
     }
 
@@ -276,12 +287,27 @@ Deno.serve(async (req: Request) => {
     let status = 400
     let errorMsg = error.message || 'Erro interno no servidor.'
 
-    if (errorMsg.includes('já está em uso') || errorMsg.includes('duplicate key')) {
+    if (
+      errorMsg.includes('users_phone_key') ||
+      errorMsg.includes('telefone já está vinculado') ||
+      errorMsg.includes('phone')
+    ) {
+      errorMsg = 'Este número de telefone já está vinculado a outra conta.'
+      status = 409
+    } else if (
+      errorMsg.includes('já está em uso') ||
+      errorMsg.includes('duplicate key') ||
+      errorMsg.includes('already registered')
+    ) {
+      errorMsg = 'Este e-mail já está em uso por outro perfil.'
       status = 409
     }
 
     if (errorMsg.startsWith('Erro de autenticação: ')) {
       errorMsg = errorMsg.replace('Erro de autenticação: ', '')
+    }
+    if (errorMsg.startsWith('Erro ao atualizar o perfil do usuário: ')) {
+      errorMsg = errorMsg.replace('Erro ao atualizar o perfil do usuário: ', '')
     }
 
     return new Response(JSON.stringify({ success: false, error: errorMsg }), {

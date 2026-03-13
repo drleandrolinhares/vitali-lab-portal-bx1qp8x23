@@ -124,12 +124,14 @@ Deno.serve(async (req: Request) => {
     if (error) {
       console.error('Auth create error:', error)
       let errorMsg = error.message
-      if (
+      if (errorMsg.includes('users_phone_key') || errorMsg.includes('phone')) {
+        errorMsg = 'Este número de telefone já está vinculado a outra conta.'
+      } else if (
         errorMsg.toLowerCase().includes('already registered') ||
         errorMsg.toLowerCase().includes('already exists') ||
         errorMsg.toLowerCase().includes('duplicate key')
       ) {
-        errorMsg = 'Este e-mail já está em uso por outro usuário.'
+        errorMsg = 'Este e-mail já está em uso por outro perfil.'
       } else if (errorMsg.toLowerCase().includes('password')) {
         errorMsg = 'A senha informada é muito fraca ou inválida. Deve conter ao menos 6 caracteres.'
       }
@@ -198,7 +200,19 @@ Deno.serve(async (req: Request) => {
     let status = 400
     let errorMsg = error.message || 'Erro interno no servidor.'
 
-    if (errorMsg.includes('já está em uso') || errorMsg.includes('duplicate key')) {
+    if (
+      errorMsg.includes('users_phone_key') ||
+      errorMsg.includes('telefone já está vinculado') ||
+      errorMsg.includes('phone')
+    ) {
+      errorMsg = 'Este número de telefone já está vinculado a outra conta.'
+      status = 409
+    } else if (
+      errorMsg.includes('já está em uso') ||
+      errorMsg.includes('duplicate key') ||
+      errorMsg.includes('already registered')
+    ) {
+      errorMsg = 'Este e-mail já está em uso por outro perfil.'
       status = 409
     }
 

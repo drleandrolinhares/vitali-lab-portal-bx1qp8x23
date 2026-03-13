@@ -1,5 +1,43 @@
 import { supabase } from '@/lib/supabase/client'
 
+// Função auxiliar para extrair mensagens de erro de forma robusta da resposta do Edge Function
+const extractErrorMessage = async (error: any, defaultMsg: string): Promise<string> => {
+  let extractedMsg = error?.message || defaultMsg
+
+  if (error?.context && typeof error.context.clone === 'function') {
+    try {
+      const errBody = await error.context.clone().json()
+      if (errBody && errBody.error) return errBody.error
+    } catch (e) {
+      try {
+        const errText = await error.context.clone().text()
+        if (errText) {
+          try {
+            const parsedText = JSON.parse(errText)
+            if (parsedText.error) return parsedText.error
+          } catch (pe) {
+            return errText
+          }
+        }
+      } catch (e2) {}
+    }
+  } else if (error?.context && typeof error.context.json === 'function') {
+    try {
+      const errBody = await error.context.json()
+      if (errBody && errBody.error) return errBody.error
+    } catch (e) {}
+  } else if (error?.context && error.context.error) {
+    return error.context.error
+  }
+
+  try {
+    const parsed = JSON.parse(extractedMsg)
+    if (parsed.error) return parsed.error
+  } catch (e) {}
+
+  return extractedMsg
+}
+
 export const createUser = async (payload: any) => {
   try {
     const {
@@ -34,18 +72,7 @@ export const createUser = async (payload: any) => {
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
 
-      let extractedMsg = error.message
-      try {
-        const parsed = JSON.parse(error.message)
-        if (parsed.error) extractedMsg = parsed.error
-      } catch (e) {
-        // ignore parsing error
-      }
-
-      if (error.context && error.context.error) {
-        extractedMsg = error.context.error
-      }
-
+      const extractedMsg = await extractErrorMessage(error, error.message)
       return { data: null, error: new Error(extractedMsg) }
     }
 
@@ -95,18 +122,7 @@ export const updateUser = async (payload: any) => {
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
 
-      let extractedMsg = error.message
-      try {
-        const parsed = JSON.parse(error.message)
-        if (parsed.error) extractedMsg = parsed.error
-      } catch (e) {
-        // ignore parsing error
-      }
-
-      if (error.context && error.context.error) {
-        extractedMsg = error.context.error
-      }
-
+      const extractedMsg = await extractErrorMessage(error, error.message)
       return { data: null, error: new Error(extractedMsg) }
     }
 
