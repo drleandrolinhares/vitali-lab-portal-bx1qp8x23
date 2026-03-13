@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -48,6 +49,7 @@ const PasswordInput = ({
 
 export default function AuthPage() {
   const { signIn, signUp, resetPassword } = useAuth()
+  const { toast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
   const isAdminView = location.pathname === '/dashboard'
@@ -76,13 +78,40 @@ export default function AuthPage() {
     setMessage('')
     setLoading(true)
     sessionStorage.setItem('vitali_just_logged_in', 'true')
-    const { error } = await action()
-    if (error) {
+
+    try {
+      const { error: actionError } = await action()
+      if (actionError) {
+        sessionStorage.removeItem('vitali_just_logged_in')
+
+        let errorMessage = actionError.message
+        if (
+          errorMessage === 'Invalid login credentials' ||
+          errorMessage.includes('invalid_credentials')
+        ) {
+          errorMessage = 'Credenciais de login inválidas. E-mail ou senha incorretos.'
+        }
+
+        setError(errorMessage)
+        toast({
+          variant: 'destructive',
+          title: 'Atenção',
+          description: errorMessage,
+        })
+        setLoading(false)
+      } else {
+        setMessage('Acesso autorizado. Redirecionando...')
+      }
+    } catch (err: any) {
       sessionStorage.removeItem('vitali_just_logged_in')
-      setError(error.message)
+      const errorMessage = err?.message || 'Ocorreu um erro inesperado ao tentar acessar.'
+      setError(errorMessage)
+      toast({
+        variant: 'destructive',
+        title: 'Erro de Sistema',
+        description: errorMessage,
+      })
       setLoading(false)
-    } else {
-      setMessage('Ação concluída com sucesso.')
     }
   }
 
@@ -114,10 +143,16 @@ export default function AuthPage() {
     const rawPhone = phone.replace(/\D/g, '')
     if (rawPhone.length < 10) {
       setError('Telefone inválido. Inclua o DDD e número correto.')
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Telefone inválido. Inclua o DDD e número correto.',
+      })
       return
     }
-    handleAction(e, () =>
-      signUp(email, password, { name, clinic, role: 'dentist', phone: rawPhone }),
+    handleAction(
+      e,
+      async () => await signUp(email, password, { name, clinic, role: 'dentist', phone: rawPhone }),
     )
   }
 
@@ -147,21 +182,48 @@ export default function AuthPage() {
         <CardContent className="pt-6 bg-card rounded-b-lg border-t border-border">
           {view === 'forgot_password' ? (
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
                 setError('')
                 setMessage('')
                 setLoading(true)
                 if (!forgotId.includes('@')) {
                   setError('Formato de email inválido.')
+                  toast({
+                    variant: 'destructive',
+                    title: 'Atenção',
+                    description: 'Formato de email inválido.',
+                  })
                   setLoading(false)
                   return
                 }
-                resetPassword(forgotId).then(({ error }) => {
-                  if (error) setError(error.message)
-                  else setMessage('Ação concluída com sucesso.')
+
+                try {
+                  const { error: resetError } = await resetPassword(forgotId)
+                  if (resetError) {
+                    setError(resetError.message)
+                    toast({
+                      variant: 'destructive',
+                      title: 'Erro',
+                      description: resetError.message,
+                    })
+                  } else {
+                    setMessage('E-mail de recuperação enviado com sucesso.')
+                    toast({
+                      title: 'Sucesso',
+                      description: 'E-mail de recuperação enviado com sucesso.',
+                    })
+                  }
+                } catch (err: any) {
+                  setError(err.message || 'Erro ao enviar recuperação')
+                  toast({
+                    variant: 'destructive',
+                    title: 'Erro',
+                    description: err.message || 'Erro ao enviar recuperação',
+                  })
+                } finally {
                   setLoading(false)
-                })
+                }
               }}
               className="space-y-4 animate-fade-in"
             >
@@ -210,11 +272,11 @@ export default function AuthPage() {
               <TabsContent value="login" className="animate-fade-in">
                 <form
                   onSubmit={(e) =>
-                    handleAction(e, () => {
+                    handleAction(e, async () => {
                       if (!loginId.includes('@')) {
-                        return Promise.resolve({ error: new Error('Formato de email inválido.') })
+                        return { error: new Error('Formato de email inválido.') }
                       }
-                      return signIn(loginId, password, rememberMe)
+                      return await signIn(loginId, password, rememberMe)
                     })
                   }
                   className="space-y-4"
@@ -264,8 +326,9 @@ export default function AuthPage() {
                     </Label>
                   </div>
                   {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+                  {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
-                    Entrar
+                    {loading ? 'Entrando...' : 'Entrar'}
                   </Button>
                 </form>
               </TabsContent>
@@ -313,7 +376,7 @@ export default function AuthPage() {
                     {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                     {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
                     <Button type="submit" className="w-full" disabled={loading}>
-                      Criar Conta
+                      {loading ? 'Processando...' : 'Criar Conta'}
                     </Button>
                   </form>
                 </TabsContent>

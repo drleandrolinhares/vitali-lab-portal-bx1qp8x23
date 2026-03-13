@@ -147,20 +147,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const signUp = async (email: string, password: string, metadata: any) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-        emailRedirectTo: `${window.location.origin}/app`,
-      },
-    })
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/app`,
+        },
+      })
 
-    if (data?.user && !error) {
-      await reconcileProfile(data.user)
+      if (data?.user && !error) {
+        await reconcileProfile(data.user)
+      }
+
+      return { error }
+    } catch (err: any) {
+      return { error: err }
     }
-
-    return { error }
   }
 
   const signIn = async (identifier: string, password: string, rememberMe: boolean = true) => {
@@ -172,12 +176,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: identifier,
-      password,
-    })
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password,
+      })
 
-    if (!authError) {
+      if (authError) {
+        return { error: authError }
+      }
+
       if (!rememberMe) {
         localStorage.setItem('vitali_remember_me', 'false')
       } else {
@@ -188,8 +196,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (authData?.user) {
         await reconcileProfile(authData.user)
       }
+
+      return { error: null }
+    } catch (err: any) {
+      return { error: err }
     }
-    return { error: authError }
   }
 
   const signOut = async () => {
@@ -205,10 +216,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: new Error('Formato de email inválido.') }
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
-      redirectTo: `${window.location.origin}/app`,
-    })
-    return { error }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
+        redirectTo: `${window.location.origin}/app`,
+      })
+      return { error }
+    } catch (err: any) {
+      return { error: err }
+    }
   }
 
   return (
