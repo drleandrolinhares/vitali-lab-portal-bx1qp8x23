@@ -1,4 +1,4 @@
-DO $
+DO $$
 DECLARE
     target_user_id uuid;
 BEGIN
@@ -14,5 +14,4 @@ BEGIN
     IF target_user_id IS NOT NULL THEN
         DELETE FROM auth.users WHERE id = target_user_id;
     END IF;
-END $;
-
+END $$;

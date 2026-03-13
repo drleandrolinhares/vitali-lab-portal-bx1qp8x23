@@ -43,8 +43,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ) {
           toast({
             title: 'Aviso de Sessão',
-            description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-            variant: 'destructive'
+            description:
+              'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+            variant: 'destructive',
           })
           return
         }
@@ -78,8 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ) {
         toast({
           title: 'Aviso de Sessão',
-          description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-          variant: 'destructive'
+          description:
+            'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+          variant: 'destructive',
         })
       }
     }
@@ -130,8 +132,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ) {
             toast({
               title: 'Aviso de Sessão',
-              description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-              variant: 'destructive'
+              description:
+                'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+              variant: 'destructive',
             })
             setLoading(false)
             return
@@ -155,8 +158,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ) {
           toast({
             title: 'Aviso de Sessão',
-            description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-            variant: 'destructive'
+            description:
+              'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+            variant: 'destructive',
           })
         }
         setLoading(false)
@@ -182,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error }
     } catch (err: any) {
-      return { error err }
+      return { error: err }
     }
   }
 
@@ -253,4 +257,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   )
 }
-
