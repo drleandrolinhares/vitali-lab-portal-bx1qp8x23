@@ -1099,7 +1099,7 @@ export function UsersManagement() {
                             placeholder={
                               editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
                             }
-                            className="h-9 pr-10"
+                            className="h-9 pr-10 normal-case"
                             disabled={!isMasterOrAdmin}
                           />
                           <Button

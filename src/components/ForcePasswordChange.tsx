@@ -65,7 +65,7 @@ export default function ForcePasswordChange() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="pr-10 normal-case"
                 />
                 <Button
                   type="button"
@@ -86,7 +86,7 @@ export default function ForcePasswordChange() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="pr-10 normal-case"
                 />
                 <Button
                   type="button"

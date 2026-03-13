@@ -80,7 +80,7 @@ function ResetPasswordTab() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                className="pr-10"
+                className="pr-10 normal-case"
               />
               <Button
                 type="button"
@@ -101,7 +101,7 @@ function ResetPasswordTab() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="pr-10"
+                className="pr-10 normal-case"
               />
               <Button
                 type="button"
