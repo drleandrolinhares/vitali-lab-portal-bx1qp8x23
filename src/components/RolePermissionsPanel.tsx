@@ -132,7 +132,7 @@ export function RolePermissionsPanel() {
   const updateAccess = (role: string, moduleId: string, checked: boolean) => {
     if (role === 'master') return
     setPerms((prev) => {
-      const newRolePerms = { ...(prev[role] || {}) }
+      const newRolePerms = JSON.parse(JSON.stringify(prev[role] || {}))
       if (!newRolePerms[moduleId]) {
         newRolePerms[moduleId] = { access: false, actions: {} }
       }
@@ -144,14 +144,14 @@ export function RolePermissionsPanel() {
   const updateAction = (role: string, moduleId: string, actionId: string, checked: boolean) => {
     if (role === 'master') return
     setPerms((prev) => {
-      const newRolePerms = { ...(prev[role] || {}) }
+      const newRolePerms = JSON.parse(JSON.stringify(prev[role] || {}))
       if (!newRolePerms[moduleId]) {
         newRolePerms[moduleId] = { access: true, actions: {} }
       }
-      newRolePerms[moduleId].actions = {
-        ...newRolePerms[moduleId].actions,
-        [actionId]: checked,
+      if (!newRolePerms[moduleId].actions) {
+        newRolePerms[moduleId].actions = {}
       }
+      newRolePerms[moduleId].actions[actionId] = checked
       return { ...prev, [role]: newRolePerms }
     })
   }
@@ -196,9 +196,10 @@ export function RolePermissionsPanel() {
     if (activeTab === 'master') return
     setPerms((prev) => {
       const newPerms = { ...prev }
+      const allForRole: Record<string, any> = {}
+      const visibleMods = MODULES.filter((m) => !m.roles || m.roles.includes(activeTab))
+
       if (checked) {
-        const allForRole: Record<string, any> = {}
-        const visibleMods = MODULES.filter((m) => !m.roles || m.roles.includes(activeTab))
         visibleMods.forEach((mod) => {
           allForRole[mod.id] = { access: true, actions: {} }
           if (mod.actions) {
@@ -207,10 +208,17 @@ export function RolePermissionsPanel() {
             })
           }
         })
-        newPerms[activeTab] = allForRole
       } else {
-        newPerms[activeTab] = {}
+        visibleMods.forEach((mod) => {
+          allForRole[mod.id] = { access: false, actions: {} }
+          if (mod.actions) {
+            mod.actions.forEach((act) => {
+              allForRole[mod.id].actions[act.id] = false
+            })
+          }
+        })
       }
+      newPerms[activeTab] = allForRole
       return newPerms
     })
   }

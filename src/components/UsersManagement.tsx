@@ -97,6 +97,20 @@ const ROLES_INFO = [
   },
 ]
 
+const deepEqual = (obj1: any, obj2: any): boolean => {
+  if (obj1 === obj2) return true
+  if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) {
+    return false
+  }
+  const keys1 = Object.keys(obj1)
+  const keys2 = Object.keys(obj2)
+  if (keys1.length !== keys2.length) return false
+  for (const key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false
+  }
+  return true
+}
+
 export function UsersManagement() {
   const { currentUser, logAudit, appSettings } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
@@ -287,9 +301,11 @@ export function UsersManagement() {
         is_active: user.is_active !== false,
         assigned_dentists: user.assigned_dentists || [],
       })
-      setSelectedPerms(
-        user.permissions && Object.keys(user.permissions).length > 0 ? user.permissions : null,
-      )
+      let initialPerms = user.permissions
+      if (Array.isArray(initialPerms) || !initialPerms || Object.keys(initialPerms).length === 0) {
+        initialPerms = null
+      }
+      setSelectedPerms(initialPerms)
     } else {
       setEditingUser(null)
       setFormData({
@@ -399,10 +415,12 @@ export function UsersManagement() {
         if (formData.is_active !== (editingUser.is_active !== false))
           payload.is_active = formData.is_active
 
-        if (
-          selectedPerms !== null &&
-          JSON.stringify(selectedPerms) !== JSON.stringify(editingUser.permissions || {})
-        ) {
+        let normalizedUserPerms = editingUser.permissions
+        if (Array.isArray(normalizedUserPerms) || !normalizedUserPerms) {
+          normalizedUserPerms = {}
+        }
+
+        if (selectedPerms !== null && !deepEqual(selectedPerms, normalizedUserPerms)) {
           payload.permissions = selectedPerms
         }
 
@@ -453,10 +471,13 @@ export function UsersManagement() {
       }
 
       if (editingUser) {
+        let normalizedUserPerms = editingUser.permissions
+        if (Array.isArray(normalizedUserPerms) || !normalizedUserPerms) {
+          normalizedUserPerms = {}
+        }
         const dashboardsChanged =
           payload.permissions &&
-          JSON.stringify(editingUser.permissions?.dashboards) !==
-            JSON.stringify(selectedPerms?.dashboards)
+          !deepEqual(normalizedUserPerms.dashboards, selectedPerms?.dashboards)
 
         const { error } = await updateUser(payload)
 
@@ -522,7 +543,8 @@ export function UsersManagement() {
   const updateAccess = (moduleId: string, checked: boolean) => {
     if (!isMasterOrAdmin) return
     setSelectedPerms((prev) => {
-      const newPerms = { ...(prev ?? effectivePerms) }
+      const source = prev ?? effectivePerms
+      const newPerms = JSON.parse(JSON.stringify(source || {}))
       if (!newPerms[moduleId]) newPerms[moduleId] = { access: false, actions: {} }
       newPerms[moduleId].access = checked
       return newPerms
@@ -532,9 +554,11 @@ export function UsersManagement() {
   const updateAction = (moduleId: string, actionId: string, checked: boolean) => {
     if (!isMasterOrAdmin) return
     setSelectedPerms((prev) => {
-      const newPerms = { ...(prev ?? effectivePerms) }
+      const source = prev ?? effectivePerms
+      const newPerms = JSON.parse(JSON.stringify(source || {}))
       if (!newPerms[moduleId]) newPerms[moduleId] = { access: true, actions: {} }
-      newPerms[moduleId].actions = { ...newPerms[moduleId].actions, [actionId]: checked }
+      if (!newPerms[moduleId].actions) newPerms[moduleId].actions = {}
+      newPerms[moduleId].actions[actionId] = checked
       return newPerms
     })
   }
@@ -557,8 +581,8 @@ export function UsersManagement() {
 
   const handleToggleAllPerms = (checked: boolean) => {
     if (!isMasterOrAdmin) return
+    const allPerms: Record<string, any> = {}
     if (checked) {
-      const allPerms: Record<string, any> = {}
       visibleModules.forEach((mod) => {
         allPerms[mod.id] = { access: true, actions: {} }
         if (mod.actions) {
@@ -567,10 +591,17 @@ export function UsersManagement() {
           })
         }
       })
-      setSelectedPerms(allPerms)
     } else {
-      setSelectedPerms({})
+      visibleModules.forEach((mod) => {
+        allPerms[mod.id] = { access: false, actions: {} }
+        if (mod.actions) {
+          mod.actions.forEach((act) => {
+            allPerms[mod.id].actions[act.id] = false
+          })
+        }
+      })
     }
+    setSelectedPerms(allPerms)
   }
 
   const isAllDentistsSelected =
@@ -1380,7 +1411,8 @@ export function UsersManagement() {
                                       onCheckedChange={(c) => {
                                         if (!isMasterOrAdmin) return
                                         setSelectedPerms((prev) => {
-                                          const newPerms = { ...(prev ?? effectivePerms) }
+                                          const source = prev ?? effectivePerms
+                                          const newPerms = JSON.parse(JSON.stringify(source || {}))
                                           if (!newPerms[mod.id])
                                             newPerms[mod.id] = { access: true, actions: {} }
                                           mod.actions.forEach((act) => {
