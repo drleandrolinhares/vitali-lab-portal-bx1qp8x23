@@ -9,6 +9,7 @@ import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
 import { formatBRL, getOrderFinancials } from '@/lib/financial'
 import { useMemo } from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -17,7 +18,7 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 export function DentistDashboard() {
-  const { orders, currentUser, appSettings } = useAppStore()
+  const { orders, currentUser, appSettings, loading } = useAppStore()
   const activeOrders = orders.filter(
     (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
   )
@@ -56,7 +57,7 @@ export function DentistDashboard() {
     },
     {
       label: 'Concluídos',
-      value: orders.filter((o) => o.status === 'completed').length,
+      value: orders.filter((o) => o.status === 'completed' || o.status === 'delivered').length,
       icon: CheckCircle2,
       color: 'text-emerald-500',
     },
@@ -117,7 +118,11 @@ export function DentistDashboard() {
               <s.icon className={`h-5 w-5 ${s.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">{s.value}</div>
+              {loading ? (
+                <Skeleton className="h-10 w-16" />
+              ) : (
+                <div className="text-4xl font-bold">{s.value}</div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -137,7 +142,11 @@ export function DentistDashboard() {
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
+            {loading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
+            )}
             <p className="text-sm text-muted-foreground mt-1">
               Soma de valores de trabalhos concluídos/entregues
             </p>
@@ -152,7 +161,11 @@ export function DentistDashboard() {
             <Activity className="w-5 h-5 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
+            {loading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
+            )}
             <p className="text-sm text-muted-foreground mt-1">
               Soma de valores em produção (pipeline)
             </p>
@@ -168,7 +181,13 @@ export function DentistDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {activeOrders.length === 0 ? (
+          {loading ? (
+            <div className="p-5 space-y-4">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : activeOrders.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Activity className="w-8 h-8 opacity-50" />

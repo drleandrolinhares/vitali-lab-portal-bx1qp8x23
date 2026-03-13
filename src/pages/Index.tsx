@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
+import { DentistDashboard } from '@/pages/dashboard/DentistDashboard'
 
 export default function Index() {
   const { currentUser, orders, acknowledgeOrder, updateOrderObservations, checkPermission } =
@@ -15,6 +16,7 @@ export default function Index() {
 
   const showGlobalInbox = checkPermission('inbox', 'view_all')
   const canCreateOrder = checkPermission('inbox', 'create_order')
+  const hasIndividualDash = checkPermission('individual_financial_dash')
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -27,6 +29,10 @@ export default function Index() {
   }
 
   if (!showGlobalInbox) {
+    if (currentUser?.role === 'dentist' && hasIndividualDash) {
+      return <DentistDashboard />
+    }
+
     const myOrders = orders.filter((o) => o.dentistId === currentUser?.id)
 
     return (

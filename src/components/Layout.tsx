@@ -208,6 +208,10 @@ function AppSidebar() {
       return checkPermission('inbox', 'create_order')
     }
 
+    if (isClientRole && id === 'finances') {
+      return checkPermission('individual_financial_dash')
+    }
+
     if (id === 'dashboard') return checkPermission('dashboards', 'view_general')
     if (id === 'finances') return checkPermission('dashboards', 'view_financial')
     if (id === 'comparative-dashboard') return checkPermission('dashboards', 'view_operational')
