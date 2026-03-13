@@ -47,34 +47,63 @@ function ResetPasswordTab() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    if (error) {
-      if (
-        error.message?.includes('Session from session_id claim in JWT does not exist') ||
-        error.message?.includes('session_not_found') ||
-        (error as any).code === 'session_not_found'
-      ) {
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) {
+        if (
+          error.message?.includes('Session from session_id claim in JWT does not exist') ||
+          error.message?.includes('session_not_found') ||
+          (error as any).code === 'session_not_found' ||
+          (error as any).status === 403
+        ) {
+          await supabase.auth.signOut()
+          toast({
+            title: 'SESSÃO EXPIRADA',
+            description:
+              'Sua sessão expirou. Por favor, realize o login novamente para alterar sua senha.',
+            variant: 'destructive',
+          })
+          window.location.href = '/'
+          return
+        }
+
         toast({
-          title: 'SESSÃO EXPIRADA',
-          description: 'SUA SESSÃO EXPIROU. POR FAVOR, FAÇA LOGIN NOVAMENTE.',
+          title: 'ERRO AO ATUALIZAR SENHA',
+          description: error.message,
           variant: 'destructive',
         })
+      } else {
+        toast({ title: 'SENHA ATUALIZADA COM SUCESSO!' })
+        setNewPassword('')
+        setConfirmPassword('')
+      }
+    } catch (err: any) {
+      if (
+        err?.message?.includes('Session from session_id claim in JWT does not exist') ||
+        err?.message?.includes('session_not_found') ||
+        err?.code === 'session_not_found' ||
+        err?.status === 403
+      ) {
         await supabase.auth.signOut()
+        toast({
+          title: 'SESSÃO EXPIRADA',
+          description:
+            'Sua sessão expirou. Por favor, realize o login novamente para alterar sua senha.',
+          variant: 'destructive',
+        })
         window.location.href = '/'
         return
       }
 
       toast({
         title: 'ERRO AO ATUALIZAR SENHA',
-        description: error.message,
+        description: err.message || 'Ocorreu um erro inesperado.',
         variant: 'destructive',
       })
-    } else {
-      toast({ title: 'SENHA ATUALIZADA COM SUCESSO!' })
-      setNewPassword('')
-      setConfirmPassword('')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

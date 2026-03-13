@@ -34,7 +34,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle()
 
       if (error) {
-        if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+        if (
+          error.message?.includes('Refresh Token') ||
+          error.message?.includes('refresh token') ||
+          error.message?.includes('Session from session_id claim in JWT does not exist') ||
+          error.message?.includes('session_not_found')
+        ) {
           await supabase.auth.signOut()
           window.location.href = '/'
           return
@@ -61,7 +66,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (e: any) {
       console.error('Failed to reconcile profile:', e)
-      if (e?.message?.includes('Refresh Token') || e?.message?.includes('refresh token')) {
+      if (
+        e?.message?.includes('Refresh Token') ||
+        e?.message?.includes('refresh token') ||
+        e?.message?.includes('Session from session_id claim in JWT does not exist') ||
+        e?.message?.includes('session_not_found')
+      ) {
         supabase.auth.signOut().then(() => {
           window.location.href = '/'
         })
@@ -108,6 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (
             error.message?.includes('Refresh Token') ||
             error.message?.includes('refresh token') ||
+            error.message?.includes('Session from session_id claim in JWT does not exist') ||
+            error.message?.includes('session_not_found') ||
             error.name === 'AuthApiError'
           ) {
             supabase.auth
@@ -131,7 +143,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .catch((err) => {
         console.error('getSession error', err)
-        if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+        if (
+          err?.message?.includes('Refresh Token') ||
+          err?.message?.includes('refresh token') ||
+          err?.message?.includes('Session from session_id claim in JWT does not exist') ||
+          err?.message?.includes('session_not_found')
+        ) {
           supabase.auth
             .signOut()
             .then(() => {
