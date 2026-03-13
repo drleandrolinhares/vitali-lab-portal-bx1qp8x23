@@ -10,6 +10,7 @@ import {
 } from '@/lib/financial'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -33,43 +34,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   TrendingUp,
   Wallet,
   CheckCircle,
-  TrendingDown,
-  DollarSign,
-  BarChart3,
-  List,
   Activity,
   CalendarDays,
-  Search,
   Send,
   Download,
   FileText,
+  Eye,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react'
-import { Navigate, Link } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { DentistBillingTab } from '@/components/financial/DentistBillingTab'
+import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
+function getSafeDate(year: number, month: number, day: number) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  return new Date(year, month, Math.min(day, daysInMonth))
+}
 
 export default function AdminFinancial() {
-  const {
-    currentUser,
-    orders,
-    refreshOrders,
-    selectedLab,
-    priceList,
-    dreCategories,
-    checkPermission,
-  } = useAppStore()
+  const { currentUser, orders, refreshOrders, selectedLab, priceList, checkPermission } =
+    useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
-  const [expenses, setExpenses] = useState<any[]>([])
   const [billingControls, setBillingControls] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
-  const [searchQuery, setSearchQuery] = useState('')
 
   const monthOptions = useMemo(() => generateMonthOptions(), [])
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
@@ -82,14 +78,6 @@ export default function AdminFinancial() {
       .then(({ data }) => {
         if (data) setDentists(data)
       })
-    if (currentUser && currentUser.role !== 'dentist') {
-      supabase
-        .from('expenses')
-        .select('*')
-        .then(({ data }) => {
-          if (data) setExpenses(data)
-        })
-    }
   }, [currentUser])
 
   useEffect(() => {
@@ -109,95 +97,136 @@ export default function AdminFinancial() {
     })
   }, [orders, selectedLab])
 
-  const monthFilteredOrders = useMemo(
-    () => filterOrdersForFinancials(filteredOrders, selectedMonth),
-    [filteredOrders, selectedMonth],
-  )
+  const timelineData = useMemo(() => {
+    if (!dentists.length || !filteredOrders.length) return []
 
-  const financials = useMemo(() => {
-    return monthFilteredOrders.map((o) => getOrderFinancials(o, priceList))
-  }, [monthFilteredOrders, priceList])
+    const [yearStr, monthStr] = selectedMonth.split('-')
+    const year = parseInt(yearStr, 10)
+    const month = parseInt(monthStr, 10) - 1
 
-  const monthlyActualRevenue = useMemo(
-    () =>
-      financials.reduce((acc, o) => {
-        if (o.status === 'completed' || o.status === 'delivered') {
-          if (currentUser?.role === 'dentist' && o.dentistId !== currentUser.id) return acc
-          return acc + o.clearedBalance
+    const items = dentists
+      .filter((d) => (currentUser?.role === 'dentist' ? d.id === currentUser.id : true))
+      .map((d) => {
+        const dueDay = d.payment_due_date || 5
+        const closeDay = d.closing_date || 30
+
+        const dueDate = getSafeDate(year, month, dueDay)
+
+        let closeYear = year
+        let closeMonth = month
+
+        if (closeDay >= dueDay) {
+          closeMonth -= 1
+          if (closeMonth < 0) {
+            closeMonth = 11
+            closeYear -= 1
+          }
         }
-        return acc
-      }, 0),
-    [financials, currentUser],
-  )
 
-  const monthlyForecastedRevenue = useMemo(
-    () =>
-      financials.reduce((acc, o) => {
-        if (o.status === 'completed' || o.status === 'delivered') {
-          if (currentUser?.role === 'dentist' && o.dentistId !== currentUser.id) return acc
-          return acc + o.outstandingCost
+        const closeDate = getSafeDate(closeYear, closeMonth, closeDay)
+        closeDate.setHours(23, 59, 59, 999)
+
+        let startMonth = closeMonth - 1
+        let startYear = closeYear
+        if (startMonth < 0) {
+          startMonth = 11
+          startYear -= 1
         }
-        return acc
-      }, 0),
-    [financials, currentUser],
-  )
+        const cycleStart = getSafeDate(startYear, startMonth, closeDay)
+        cycleStart.setDate(cycleStart.getDate() + 1)
+        cycleStart.setHours(0, 0, 0, 0)
 
-  const filteredExpenses = useMemo(() => {
-    return expenses.filter((e) => {
-      if (selectedLab === 'Todos') return true
-      return (e.sector || '').trim().toUpperCase() === selectedLab.trim().toUpperCase()
-    })
-  }, [expenses, selectedLab])
+        const dOrders = filteredOrders.filter((o) => o.dentistId === d.id)
+        const financials = dOrders.map((o) => getOrderFinancials(o, priceList))
 
-  const revenueCategories = useMemo(() => {
-    return dreCategories.filter((c) => c.category_type === 'revenue').map((c) => c.name)
-  }, [dreCategories])
-
-  const monthlyExpenses = useMemo(
-    () =>
-      filteredExpenses
-        .filter((e) => {
-          const isRevenue =
-            revenueCategories.includes(e.dre_category) ||
-            e.dre_category === 'Receita' ||
-            e.category === 'Serviços Realizados'
-          return e.due_date && e.due_date.startsWith(selectedMonth) && !isRevenue
+        const cycleOrders = financials.filter((o) => {
+          if (o.status !== 'completed' && o.status !== 'delivered') return false
+          const compDate = getOrderCompletionDate(o)
+          return compDate && compDate >= cycleStart && compDate <= closeDate
         })
-        .reduce((acc, e) => acc + Number(e.amount), 0),
-    [filteredExpenses, selectedMonth, revenueCategories],
-  )
 
-  const monthlyProfit = monthlyActualRevenue - monthlyExpenses
-  const profitability = monthlyActualRevenue > 0 ? (monthlyProfit / monthlyActualRevenue) * 100 : 0
+        const pendingOrders = financials.filter(
+          (o) => o.status === 'pending' || o.status === 'in_production',
+        )
 
-  const dentistStats = dentists
-    .filter((d) => (currentUser?.role === 'dentist' ? d.id === currentUser.id : true))
-    .map((d) => {
-      const dentistOrders = financials.filter((o) => o.dentistId === d.id)
-      const outstandingBalance = dentistOrders.reduce((acc, o) => acc + o.outstandingCost, 0)
-      const pipelineBalance = dentistOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
-      const invoiceSent = billingControls.some((b) => b.dentist_id === d.id)
-      return { ...d, outstandingBalance, pipelineBalance, dentistOrders, invoiceSent }
+        const invoicedAmount = cycleOrders.reduce((acc, o) => acc + o.completedCost, 0)
+        const clearedAmount = cycleOrders.reduce((acc, o) => acc + o.clearedBalance, 0)
+        const outstandingAmount = Math.max(0, invoicedAmount - clearedAmount)
+        const pipelineAmount = pendingOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
+
+        const now = new Date()
+        const isOpen = now < closeDate
+        const isPastDue = !isOpen && now > dueDate && outstandingAmount > 0
+        const isSent = billingControls.some((b) => b.dentist_id === d.id)
+
+        let status: 'FATURA EM ABERTO' | 'PENDENTE' | 'VENCIDO' | 'ENVIADO' | 'LIQUIDADO' =
+          'PENDENTE'
+        if (isOpen) status = 'FATURA EM ABERTO'
+        else if (outstandingAmount === 0 && invoicedAmount > 0) status = 'LIQUIDADO'
+        else if (isPastDue) status = 'VENCIDO'
+        else if (isSent) status = 'ENVIADO'
+
+        const displayAmount = isOpen ? invoicedAmount + pipelineAmount : outstandingAmount
+
+        return {
+          id: d.id,
+          dentist: d,
+          dueDate,
+          dueDay,
+          closeDate,
+          cycleStart,
+          cycleOrders,
+          pendingOrders,
+          invoicedAmount,
+          clearedAmount,
+          outstandingAmount,
+          pipelineAmount,
+          displayAmount,
+          isOpen,
+          isPastDue,
+          isSent,
+          status,
+          hasActivity: invoicedAmount > 0 || (isOpen && pipelineAmount > 0),
+        }
+      })
+      .filter((item) => item.hasActivity)
+
+    const grouped = items.reduce(
+      (acc, item) => {
+        if (!acc[item.dueDay]) acc[item.dueDay] = []
+        acc[item.dueDay].push(item)
+        return acc
+      },
+      {} as Record<number, typeof items>,
+    )
+
+    return Object.entries(grouped)
+      .map(([day, items]) => ({ day: parseInt(day, 10), items }))
+      .sort((a, b) => a.day - b.day)
+  }, [dentists, filteredOrders, selectedMonth, billingControls, priceList, currentUser])
+
+  const topCardsData = useMemo(() => {
+    let faturadoFechadas = 0
+    let emAberto = 0
+    let recebido = 0
+    let inadimplencia = 0
+
+    timelineData.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.isOpen) {
+          emAberto += item.displayAmount
+        } else {
+          faturadoFechadas += item.invoicedAmount
+          recebido += item.clearedAmount
+          if (item.isPastDue && item.status !== 'LIQUIDADO') {
+            inadimplencia += item.outstandingAmount
+          }
+        }
+      })
     })
-    .filter((d) => d.outstandingBalance > 0)
-    .sort((a, b) => {
-      const aDue = a.payment_due_date || 999
-      const bDue = b.payment_due_date || 999
-      if (aDue !== bDue) return aDue - bDue
-      return a.name.localeCompare(b.name)
-    })
 
-  const displayedDentists = dentistStats.filter((d) => {
-    const searchLower = searchQuery.toLowerCase()
-    const matchesSearch =
-      d.name.toLowerCase().includes(searchLower) ||
-      (d.clinic && d.clinic.toLowerCase().includes(searchLower))
-
-    if (searchQuery.trim() !== '') {
-      return matchesSearch
-    }
-    return !d.invoiceSent
-  })
+    return { faturadoFechadas, emAberto, recebido, inadimplencia }
+  }, [timelineData])
 
   const canView =
     currentUser?.role === 'admin' ||
@@ -233,9 +262,9 @@ export default function AdminFinancial() {
 
   const handleSettle = async () => {
     if (!settleDialog) return
-    const { id: dentistId, outstandingBalance, dentistOrders } = settleDialog
+    const { dentist, outstandingAmount, cycleOrders } = settleDialog
 
-    const ordersToSettle = dentistOrders.filter((o: any) => o.outstandingCost > 0)
+    const ordersToSettle = cycleOrders.filter((o: any) => o.outstandingCost > 0)
 
     const snapshot = ordersToSettle.map((o: any) => ({
       orderId: o.id,
@@ -246,8 +275,8 @@ export default function AdminFinancial() {
     }))
 
     const { error } = await supabase.from('settlements').insert({
-      dentist_id: dentistId,
-      amount: outstandingBalance,
+      dentist_id: dentist.id,
+      amount: outstandingAmount,
       orders_snapshot: snapshot,
     })
 
@@ -272,6 +301,7 @@ export default function AdminFinancial() {
   const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
 
   const handleExportAllClosed = () => {
+    const monthFilteredOrders = filterOrdersForFinancials(filteredOrders, selectedMonth)
     const closedOrders = monthFilteredOrders.filter(
       (o) => o.status === 'completed' || o.status === 'delivered',
     )
@@ -287,15 +317,16 @@ export default function AdminFinancial() {
       'Status Pagamento',
     ]
     const rows = closedOrders.map((o) => {
+      const fin = getOrderFinancials(o, priceList)
       const compDate = getOrderCompletionDate(o)
-      const isPaid = o.outstandingCost === 0 ? 'Pago' : 'Pendente'
+      const isPaid = fin.outstandingCost === 0 ? 'Pago' : 'Pendente'
       return [
         o.friendlyId,
         o.patientName,
         o.dentistName || 'Desconhecido',
         o.workType,
-        formatBRL(o.basePrice),
-        formatBRL(o.completedCost),
+        formatBRL(fin.basePrice),
+        formatBRL(fin.completedCost),
         compDate ? format(compDate, 'dd/MM/yyyy') : '-',
         isPaid,
       ]
@@ -316,9 +347,9 @@ export default function AdminFinancial() {
 
   const handleExportExcel = () => {
     if (!detailsDialog) return
-    const orders = detailsDialog.dentistOrders.filter(
-      (o: any) => o.outstandingCost > 0 || o.pipelineCost > 0,
-    )
+    const orders = detailsDialog.isOpen
+      ? [...detailsDialog.cycleOrders, ...detailsDialog.pendingOrders]
+      : detailsDialog.cycleOrders
 
     const headers = [
       'Pedido',
@@ -327,8 +358,7 @@ export default function AdminFinancial() {
       'Status',
       'Qtd',
       'Valor Unitário',
-      'Saldo Devedor',
-      'Estimativa Pipeline',
+      'Valor Total',
     ]
     const rows = orders.map((o: any) => [
       o.friendlyId,
@@ -337,8 +367,7 @@ export default function AdminFinancial() {
       o.status,
       o.quantity,
       o.effectiveUnitPrice,
-      o.outstandingCost,
-      o.pipelineCost,
+      o.status === 'pending' || o.status === 'in_production' ? o.pipelineCost : o.outstandingCost,
     ])
 
     const csvContent = [
@@ -350,140 +379,51 @@ export default function AdminFinancial() {
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `Fechamento_${detailsDialog.name}_${selectedMonth}.csv`
+    link.download = `Fatura_${detailsDialog.dentist.name}_${selectedMonth}.csv`
     link.click()
   }
 
-  const handleExportPDF = () => {
-    if (!detailsDialog) return
-    const orders = detailsDialog.dentistOrders.filter(
-      (o: any) => o.outstandingCost > 0 || o.pipelineCost > 0,
-    )
-
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
-
-    const html = `
-      <html>
-        <head>
-          <title>Fechamento - ${detailsDialog.name}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #333; }
-            h2, h3 { margin: 0 0 10px 0; color: #111; }
-            p { margin: 0 0 5px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; }
-            th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; font-size: 13px; }
-            th { background-color: #f9fafb; font-weight: 600; color: #374151; }
-            .text-right { text-align: right; }
-            .text-center { text-align: center; }
-            .total-row { font-weight: bold; background-color: #f3f4f6; }
-          </style>
-        </head>
-        <body>
-          <div style="margin-bottom: 30px;">
-            <h2>Fechamento Financeiro</h2>
-            <p><strong>Dentista / Clínica:</strong> ${detailsDialog.name} ${
-              detailsDialog.clinic ? `(${detailsDialog.clinic})` : ''
-            }</p>
-            <p><strong>Mês de Referência:</strong> ${selectedMonthLabel}</p>
-          </div>
-          
-          <h3>Trabalhos Finalizados (Saldo Devedor)</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Pedido</th>
-                <th>Paciente</th>
-                <th>Trabalho</th>
-                <th class="text-center">Qtd.</th>
-                <th class="text-right">Unitário</th>
-                <th class="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${
-                orders.filter((o: any) => o.outstandingCost > 0).length === 0
-                  ? `<tr><td colspan="6" class="text-center">Nenhum pedido finalizado</td></tr>`
-                  : orders
-                      .filter((o: any) => o.outstandingCost > 0)
-                      .map(
-                        (o: any) => `
-                <tr>
-                  <td>${o.friendlyId}</td>
-                  <td>${o.patientName}</td>
-                  <td>${o.workType}</td>
-                  <td class="text-center">${o.quantity}</td>
-                  <td class="text-right">${formatBRL(o.effectiveUnitPrice || 0)}</td>
-                  <td class="text-right">${formatBRL(o.outstandingCost)}</td>
-                </tr>
-              `,
-                      )
-                      .join('')
-              }
-              <tr class="total-row">
-                <td colspan="5" class="text-right">Total Faturado:</td>
-                <td class="text-right">${formatBRL(detailsDialog.outstandingBalance)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h3>Pipeline (Em Produção neste Mês)</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Pedido</th>
-                <th>Paciente</th>
-                <th>Trabalho</th>
-                <th class="text-center">Qtd.</th>
-                <th class="text-right">Unitário</th>
-                <th class="text-right">Estimativa</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${
-                orders.filter((o: any) => o.pipelineCost > 0).length === 0
-                  ? `<tr><td colspan="6" class="text-center">Nenhum pedido em produção</td></tr>`
-                  : orders
-                      .filter((o: any) => o.pipelineCost > 0)
-                      .map(
-                        (o: any) => `
-                <tr>
-                  <td>${o.friendlyId}</td>
-                  <td>${o.patientName}</td>
-                  <td>${o.workType}</td>
-                  <td class="text-center">${o.quantity}</td>
-                  <td class="text-right">${formatBRL(o.effectiveUnitPrice || 0)}</td>
-                  <td class="text-right">${formatBRL(o.pipelineCost)}</td>
-                </tr>
-              `,
-                      )
-                      .join('')
-              }
-              <tr class="total-row">
-                <td colspan="5" class="text-right">Total Estimado:</td>
-                <td class="text-right">${formatBRL(detailsDialog.pipelineBalance)}</td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <div style="margin-top: 40px; font-size: 12px; color: #6b7280; text-align: center;">
-            <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-          </div>
-        </body>
-      </html>
-    `
-
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
-    }, 250)
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'FATURA EM ABERTO':
+        return 'bg-muted text-muted-foreground border-muted-foreground/30'
+      case 'PENDENTE':
+        return 'bg-amber-100 text-amber-700 border-amber-200'
+      case 'VENCIDO':
+        return 'bg-red-100 text-red-700 border-red-200'
+      case 'ENVIADO':
+        return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'LIQUIDADO':
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      default:
+        return 'bg-muted text-muted-foreground'
+    }
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'FATURA EM ABERTO':
+        return <Activity className="w-3 h-3 mr-1" />
+      case 'PENDENTE':
+        return <Clock className="w-3 h-3 mr-1" />
+      case 'VENCIDO':
+        return <AlertCircle className="w-3 h-3 mr-1" />
+      case 'ENVIADO':
+        return <Send className="w-3 h-3 mr-1" />
+      case 'LIQUIDADO':
+        return <CheckCircle2 className="w-3 h-3 mr-1" />
+      default:
+        return null
+    }
+  }
+
+  const [yearStr, monthStr] = selectedMonth.split('-')
+  const timelineMonthShort = format(new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1), 'MMM', {
+    locale: ptBR,
+  }).toUpperCase()
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary/10 rounded-xl">
@@ -506,7 +446,7 @@ export default function AdminFinancial() {
               onClick={handleExportAllClosed}
               className="hidden sm:flex bg-background border-border"
             >
-              <Download className="w-4 h-4 mr-2" /> Exportar Casos Fechados
+              <Download className="w-4 h-4 mr-2" /> Exportar Fechados
             </Button>
           )}
 
@@ -525,30 +465,20 @@ export default function AdminFinancial() {
               </SelectContent>
             </Select>
           </div>
-
-          {(currentUser?.role === 'admin' ||
-            currentUser?.role === 'master' ||
-            currentUser?.role === 'financial') && (
-            <Button asChild variant="outline" className="hidden sm:flex">
-              <Link to="/dre">
-                <BarChart3 className="w-4 h-4 mr-2" /> Relatório DRE
-              </Link>
-            </Button>
-          )}
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              {currentUser?.role === 'dentist' ? 'Total Pago' : `Receitas (${selectedMonthLabel})`}
+              {currentUser?.role === 'dentist' ? 'Faturado no Mês' : `Faturado (Fechadas)`}
             </CardTitle>
-            <DollarSign className="w-4 h-4 text-emerald-500" />
+            <Wallet className="w-4 h-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">
-              {formatBRL(monthlyActualRevenue)}
+              {formatBRL(topCardsData.faturadoFechadas)}
             </div>
           </CardContent>
         </Card>
@@ -556,51 +486,42 @@ export default function AdminFinancial() {
         <Card className="shadow-subtle border-l-4 border-l-amber-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              {currentUser?.role === 'dentist' ? 'A Pagar' : `Previsão (${selectedMonthLabel})`}
+              {currentUser?.role === 'dentist' ? 'Estimativa Aberta' : `Em Aberto (Estimativa)`}
             </CardTitle>
             <Activity className="w-4 h-4 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">
-              {formatBRL(monthlyForecastedRevenue)}
+              {formatBRL(topCardsData.emAberto)}
             </div>
           </CardContent>
         </Card>
 
         {currentUser?.role !== 'dentist' && (
           <>
-            <Card className="shadow-subtle border-l-4 border-l-red-500">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Despesas ({selectedMonthLabel})
-                </CardTitle>
-                <TrendingDown className="w-4 h-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{formatBRL(monthlyExpenses)}</div>
-              </CardContent>
-            </Card>
             <Card className="shadow-subtle border-l-4 border-l-blue-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Lucro Operacional
+                  Recebido (Liquidadas)
                 </CardTitle>
-                <Wallet className="w-4 h-4 text-blue-500" />
+                <CheckCircle className="w-4 h-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{formatBRL(monthlyProfit)}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatBRL(topCardsData.recebido)}
+                </div>
               </CardContent>
             </Card>
-            <Card className="shadow-subtle border-l-4 border-l-purple-500">
+            <Card className="shadow-subtle border-l-4 border-l-red-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                  Rentabilidade (%)
+                  Inadimplência (Vencidas)
                 </CardTitle>
-                <TrendingUp className="w-4 h-4 text-purple-500" />
+                <TrendingUp className="w-4 h-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {profitability.toFixed(1)}%
+                <div className="text-2xl font-bold text-red-600">
+                  {formatBRL(topCardsData.inadimplencia)}
                 </div>
               </CardContent>
             </Card>
@@ -608,133 +529,176 @@ export default function AdminFinancial() {
         )}
       </div>
 
-      <Tabs defaultValue="geral" className="w-full mt-8">
-        <TabsList className="mb-2">
-          <TabsTrigger value="geral">Visão Consolidada</TabsTrigger>
-          {currentUser?.role !== 'dentist' && (
-            <TabsTrigger value="faturamento">Faturamento Dentistas</TabsTrigger>
-          )}
+      <Tabs defaultValue="faturas" className="w-full mt-8">
+        <TabsList className="mb-6">
+          <TabsTrigger value="faturas">FATURAS FECHADAS</TabsTrigger>
         </TabsList>
-        <TabsContent value="geral" className="mt-0">
-          <Card className="shadow-subtle">
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-muted-foreground" /> Contas a Receber do Período (
-                {selectedMonthLabel})
-                {displayedDentists.length > 0 && (
-                  <div className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-bold ml-2">
-                    {displayedDentists.length} pendentes
+        <TabsContent value="faturas" className="mt-0">
+          <Card className="shadow-subtle border-0 bg-transparent sm:bg-card sm:border">
+            <CardContent className="p-0 sm:p-6">
+              <div className="hidden md:grid grid-cols-[140px_1fr_120px_120px_130px] gap-4 px-6 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 rounded-t-lg border-b ml-[4.5rem]">
+                <div>Status</div>
+                <div>Dentista / Clínica</div>
+                <div className="text-right">Faturado</div>
+                <div className="text-right">Aberto/Prev.</div>
+                <div className="text-center">Ações</div>
+              </div>
+
+              <div className="mt-4 sm:mt-0 space-y-0">
+                {timelineData.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground bg-background rounded-lg border sm:border-0 sm:bg-transparent">
+                    Nenhum faturamento esperado para este período.
                   </div>
+                ) : (
+                  timelineData.map(({ day, items }, groupIdx) => {
+                    const isLastGroup = groupIdx === timelineData.length - 1
+                    return (
+                      <div key={day} className="flex relative">
+                        {/* Timeline Date Column */}
+                        <div className="flex flex-col items-center mr-4 sm:mr-6 w-14 shrink-0">
+                          <div className="w-14 h-14 rounded-xl border-2 border-border bg-background flex flex-col items-center justify-center z-10 shadow-sm mt-3">
+                            <span className="text-xl font-bold leading-none text-foreground">
+                              {day}
+                            </span>
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground mt-0.5 tracking-wider">
+                              {timelineMonthShort}
+                            </span>
+                          </div>
+                          {!isLastGroup && <div className="w-0.5 bg-border flex-1 my-2"></div>}
+                        </div>
+
+                        {/* Timeline Items Column */}
+                        <div className="flex-1 pb-8 pt-3 space-y-3 min-w-0">
+                          {items.map((item) => (
+                            <Card
+                              key={item.id}
+                              className="shadow-sm border border-border/60 hover:border-primary/30 transition-colors overflow-hidden"
+                            >
+                              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_120px_120px_130px] gap-3 md:gap-4 items-center p-3 sm:p-4">
+                                <div>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'font-semibold border uppercase text-[10px] tracking-wider w-fit flex items-center',
+                                      getStatusColor(item.status),
+                                    )}
+                                  >
+                                    {getStatusIcon(item.status)}
+                                    {item.status}
+                                  </Badge>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-foreground truncate text-sm sm:text-base">
+                                    {item.dentist.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate font-medium">
+                                    {item.dentist.clinic || 'Clínica não informada'}
+                                  </div>
+                                </div>
+                                <div className="md:text-right flex justify-between md:block items-center">
+                                  <span className="text-xs text-muted-foreground md:hidden uppercase font-semibold">
+                                    Faturado:
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      'font-bold text-sm sm:text-base',
+                                      item.invoicedAmount > 0
+                                        ? 'text-foreground'
+                                        : 'text-muted-foreground/50',
+                                    )}
+                                  >
+                                    {formatBRL(item.invoicedAmount)}
+                                  </span>
+                                </div>
+                                <div className="md:text-right flex justify-between md:block items-center">
+                                  <span className="text-xs text-muted-foreground md:hidden uppercase font-semibold">
+                                    Em Aberto/Prev:
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      'font-semibold text-sm sm:text-base',
+                                      item.pipelineAmount > 0
+                                        ? 'text-amber-600'
+                                        : 'text-muted-foreground/50',
+                                    )}
+                                  >
+                                    {formatBRL(item.pipelineAmount)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-0 border-border/50">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                    onClick={() => setDetailsDialog(item)}
+                                    title="Ver Detalhes"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  {currentUser?.role !== 'dentist' && (
+                                    <>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className={cn(
+                                          'h-8 w-8 transition-colors',
+                                          item.isSent
+                                            ? 'text-blue-500 hover:bg-blue-50 hover:text-blue-600'
+                                            : 'text-muted-foreground hover:text-blue-600 hover:bg-blue-50',
+                                        )}
+                                        disabled={
+                                          item.isOpen || item.isSent || item.invoicedAmount <= 0
+                                        }
+                                        onClick={() => handleInvoiceSent(item.dentist.id)}
+                                        title={
+                                          item.isSent ? 'Fatura Enviada' : 'Marcar como Enviada'
+                                        }
+                                      >
+                                        <Send className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className={cn(
+                                          'h-8 w-8 transition-colors',
+                                          item.status === 'LIQUIDADO'
+                                            ? 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600'
+                                            : 'text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50',
+                                        )}
+                                        disabled={item.isOpen || item.outstandingAmount <= 0}
+                                        onClick={() => setSettleDialog(item)}
+                                        title={
+                                          item.status === 'LIQUIDADO' ? 'Liquidado' : 'Liquidar'
+                                        }
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
                 )}
-              </CardTitle>
-              {currentUser?.role !== 'dentist' && (
-                <div className="relative w-full sm:w-80">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar dentista (exibe faturas enviadas)..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="h-10 py-2">Dentista / Clínica</TableHead>
-                    <TableHead className="h-10 py-2 text-center">Vencimento</TableHead>
-                    <TableHead className="h-10 py-2 text-right">Saldo Devedor (Faturado)</TableHead>
-                    <TableHead className="h-10 py-2 text-center">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedDentists.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        {searchQuery
-                          ? 'Nenhum dentista encontrado para a busca.'
-                          : 'Nenhum faturamento pendente para este mês.'}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {displayedDentists.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell
-                        className="py-2.5 font-medium cursor-pointer group"
-                        onClick={() => setDetailsDialog(d)}
-                      >
-                        <span className="group-hover:underline text-primary transition-all">
-                          {d.name}
-                        </span>
-                        <div className="text-xs text-muted-foreground font-normal mt-0.5">
-                          {d.clinic || 'Clínica não informada'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2.5 text-center text-muted-foreground">
-                        {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
-                      </TableCell>
-                      <TableCell className="py-2.5 text-right font-bold text-red-600">
-                        {formatBRL(d.outstandingBalance)}
-                      </TableCell>
-                      <TableCell className="py-2.5 text-center">
-                        <div className="flex items-center justify-center gap-2 flex-wrap">
-                          <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
-                            <List className="w-4 h-4 mr-1.5" /> Detalhes
-                          </Button>
-                          {currentUser?.role !== 'dentist' && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                                disabled={d.invoiceSent}
-                                onClick={() => handleInvoiceSent(d.id)}
-                              >
-                                {d.invoiceSent ? (
-                                  <CheckCircle className="w-4 h-4 mr-1.5" />
-                                ) : (
-                                  <Send className="w-4 h-4 mr-1.5" />
-                                )}
-                                {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                                disabled={d.outstandingBalance <= 0}
-                                onClick={() => setSettleDialog(d)}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
-        {currentUser?.role !== 'dentist' && (
-          <TabsContent value="faturamento" className="mt-0">
-            <DentistBillingTab
-              selectedMonth={selectedMonth}
-              dentists={dentists}
-              selectedMonthLabel={selectedMonthLabel}
-            />
-          </TabsContent>
-        )}
       </Tabs>
 
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-6">
-            <DialogTitle>
-              Detalhes Financeiros - {detailsDialog?.name} ({selectedMonthLabel})
+            <DialogTitle className="flex flex-col">
+              <span>Fatura - {detailsDialog?.dentist.name}</span>
+              <span className="text-sm font-normal text-muted-foreground mt-1">
+                Ciclo: {detailsDialog && format(detailsDialog.cycleStart, 'dd/MM/yyyy')} a{' '}
+                {detailsDialog && format(detailsDialog.closeDate, 'dd/MM/yyyy')}
+              </span>
             </DialogTitle>
             <div className="flex gap-2 w-full sm:w-auto">
               <Button
@@ -743,26 +707,18 @@ export default function AdminFinancial() {
                 onClick={handleExportExcel}
                 className="flex-1 sm:flex-initial"
               >
-                <Download className="w-4 h-4 mr-2" /> Excel
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExportPDF}
-                className="flex-1 sm:flex-initial"
-              >
-                <FileText className="w-4 h-4 mr-2" /> PDF
+                <Download className="w-4 h-4 mr-2" /> CSV
               </Button>
             </div>
           </DialogHeader>
-          <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4">
+          <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4 mt-2">
             <div>
-              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-red-600">
-                <Wallet className="w-4 h-4" /> Saldo Devedor (Finalizados no Mês)
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-primary uppercase tracking-wider">
+                <Wallet className="w-4 h-4" /> Faturado no Ciclo (Finalizados)
               </h4>
-              <div className="border rounded-md">
+              <div className="border rounded-md shadow-sm">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead className="h-10 py-2">Pedido</TableHead>
                       <TableHead className="h-10 py-2">Trabalho</TableHead>
@@ -772,70 +728,56 @@ export default function AdminFinancial() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {detailsDialog?.dentistOrders.filter((o: any) => o.outstandingCost > 0)
-                      .length === 0 && (
+                    {detailsDialog?.cycleOrders.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                          Nenhum pedido finalizado pendente para este mês.
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                          Nenhum pedido finalizado neste ciclo.
                         </TableCell>
                       </TableRow>
                     )}
-                    {detailsDialog?.dentistOrders
-                      .filter((o: any) => o.outstandingCost > 0)
-                      .map((o: any) => (
-                        <TableRow key={o.id}>
-                          <TableCell className="py-2.5 font-medium">
-                            {o.friendlyId}
-                            <div className="text-xs text-muted-foreground font-normal">
-                              {o.patientName}
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-2.5 text-muted-foreground">
-                            {o.workType}
-                          </TableCell>
-                          <TableCell className="py-2.5 text-center text-muted-foreground">
-                            {o.quantity}
-                          </TableCell>
-                          <TableCell className="py-2.5 text-right text-muted-foreground">
-                            {formatBRL(o.effectiveUnitPrice || 0)}
-                          </TableCell>
-                          <TableCell className="py-2.5 text-right font-medium">
-                            {formatBRL(o.outstandingCost)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {detailsDialog?.cycleOrders.map((o: any) => (
+                      <TableRow key={o.id}>
+                        <TableCell className="py-2.5 font-medium">
+                          {o.friendlyId}
+                          <div className="text-xs text-muted-foreground font-normal">
+                            {o.patientName}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-muted-foreground">{o.workType}</TableCell>
+                        <TableCell className="py-2.5 text-center text-muted-foreground">
+                          {o.quantity}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right text-muted-foreground">
+                          {formatBRL(o.effectiveUnitPrice || 0)}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right font-semibold">
+                          {formatBRL(o.completedCost)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-600">
-                <Activity className="w-4 h-4" /> Pipeline (Em Produção neste Mês)
-              </h4>
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="h-10 py-2">Pedido</TableHead>
-                      <TableHead className="h-10 py-2">Trabalho</TableHead>
-                      <TableHead className="h-10 py-2 text-center">Qtd.</TableHead>
-                      <TableHead className="h-10 py-2 text-right">Unitário</TableHead>
-                      <TableHead className="h-10 py-2 text-right">Estimativa</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {detailsDialog?.dentistOrders.filter((o: any) => o.pipelineCost > 0).length ===
-                      0 && (
+            {detailsDialog?.isOpen && detailsDialog?.pendingOrders.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-amber-600 uppercase tracking-wider">
+                  <Activity className="w-4 h-4" /> Em Produção (Estimativa)
+                </h4>
+                <div className="border rounded-md shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-amber-50/50">
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                          Nenhum pedido em produção.
-                        </TableCell>
+                        <TableHead className="h-10 py-2">Pedido</TableHead>
+                        <TableHead className="h-10 py-2">Trabalho</TableHead>
+                        <TableHead className="h-10 py-2 text-center">Qtd.</TableHead>
+                        <TableHead className="h-10 py-2 text-right">Unitário</TableHead>
+                        <TableHead className="h-10 py-2 text-right">Estimativa</TableHead>
                       </TableRow>
-                    )}
-                    {detailsDialog?.dentistOrders
-                      .filter((o: any) => o.pipelineCost > 0)
-                      .map((o: any) => (
+                    </TableHeader>
+                    <TableBody>
+                      {detailsDialog?.pendingOrders.map((o: any) => (
                         <TableRow key={o.id}>
                           <TableCell className="py-2.5 font-medium">
                             {o.friendlyId}
@@ -852,15 +794,16 @@ export default function AdminFinancial() {
                           <TableCell className="py-2.5 text-right text-muted-foreground">
                             {formatBRL(o.effectiveUnitPrice || 0)}
                           </TableCell>
-                          <TableCell className="py-2.5 text-right font-medium">
+                          <TableCell className="py-2.5 text-right font-semibold text-amber-700">
                             {formatBRL(o.pipelineCost)}
                           </TableCell>
                         </TableRow>
                       ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -868,17 +811,22 @@ export default function AdminFinancial() {
       <Dialog open={!!settleDialog} onOpenChange={(open) => !open && setSettleDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Liquidação do Mês</DialogTitle>
+            <DialogTitle>Confirmar Liquidação</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Você está prestes a liquidar o saldo devedor de <strong>{selectedMonthLabel}</strong>{' '}
-              para o dentista <strong>{settleDialog?.name}</strong>. Isso arquivará o valor de{' '}
-              <strong>{settleDialog && formatBRL(settleDialog.outstandingBalance)}</strong> no
-              histórico de pagamentos e zerará o saldo destes pedidos específicos.
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+              Você está prestes a liquidar o saldo devedor do ciclo encerrado em{' '}
+              <strong>{settleDialog && format(settleDialog.closeDate, 'dd/MM/yyyy')}</strong> para o
+              dentista <strong>{settleDialog?.dentist.name}</strong>.
             </p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4 flex items-center justify-between">
+              <span className="font-semibold text-emerald-800">Valor a Liquidar:</span>
+              <span className="text-xl font-bold text-emerald-600">
+                {settleDialog && formatBRL(settleDialog.outstandingAmount)}
+              </span>
+            </div>
             <p className="text-sm font-medium text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
-              Atenção: Esta ação não pode ser desfeita.
+              Atenção: Esta ação registrará o pagamento e zerará o saldo destes pedidos específicos.
             </p>
           </div>
           <DialogFooter>
@@ -889,7 +837,7 @@ export default function AdminFinancial() {
               onClick={handleSettle}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              Confirmar Liquidação
+              <CheckCircle className="w-4 h-4 mr-2" /> Confirmar Recebimento
             </Button>
           </DialogFooter>
         </DialogContent>
