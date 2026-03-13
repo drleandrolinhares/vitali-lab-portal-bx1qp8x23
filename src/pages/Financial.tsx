@@ -2,12 +2,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -18,10 +12,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
-  Clock,
   Activity,
   FileDown,
   History,
@@ -36,6 +37,7 @@ import {
 } from '@/lib/financial'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { Navigate } from 'react-router-dom'
 
 export default function FinancialPage() {
@@ -50,20 +52,16 @@ export default function FinancialPage() {
   const safePriceList = Array.isArray(priceList) ? priceList : []
   const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-  // Filter orders by selected month to provide accurate historical view
   const monthFilteredOrders = useMemo(
     () => filterOrdersForFinancials(safeOrders, selectedMonth),
     [safeOrders, selectedMonth],
   )
 
-  // Calculate financials for the filtered orders.
   const displayOrders = useMemo(
     () => monthFilteredOrders.map((o) => getOrderFinancials(o, safePriceList, safeKanbanStages)),
     [monthFilteredOrders, safePriceList, safeKanbanStages],
   )
 
-  // Pre-render Verification Gate: strictly validate and correct mathematical integrity of totals
-  // explicitly comparing `(Unit * Qty) * (1 - Discount/100)` against existing database output.
   const verifiedDisplayOrders = useMemo(() => {
     return displayOrders.map((order) => {
       const discount = order.dentistDiscount || 0
@@ -77,7 +75,6 @@ export default function FinancialPage() {
         )
       }
 
-      // Automatically correct legacy or out-of-sync totals ensuring exact discounted values display
       const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
 
       const outstandingCost =
@@ -110,8 +107,6 @@ export default function FinancialPage() {
       try {
         setFetchError(null)
 
-        // RLS natively guarantees that the user only sees their own settlements.
-        // We omit the manual `.eq('dentist_id', ...)` to strictly comply with backend isolation rules.
         const { data, error } = await supabase
           .from('settlements')
           .select('*')
@@ -142,9 +137,6 @@ export default function FinancialPage() {
     }
   }, [currentUser?.id])
 
-  // Security & Data Isolation: Automatically redirect non-dentists to prevent unauthorized access
-  // or confusion, as this page's design is strictly catered towards the dentist's point of view.
-  // Admins have their own comprehensive financial module under /admin-financial.
   if (currentUser && currentUser.role !== 'dentist') {
     if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
       return <Navigate to="/admin-financial" replace />
@@ -163,11 +155,15 @@ export default function FinancialPage() {
     )
   }
 
-  const totalAccumulated = verifiedDisplayOrders.reduce(
-    (acc, o) => acc + (o?.outstandingCost || 0),
-    0,
+  const concludedOrders = verifiedDisplayOrders.filter(
+    (o) => o.status === 'completed' || o.status === 'delivered',
   )
-  const totalPending = verifiedDisplayOrders.reduce((acc, o) => acc + (o?.pendingCost || 0), 0)
+  const pipelineOrders = verifiedDisplayOrders.filter(
+    (o) => o.status === 'pending' || o.status === 'in_production',
+  )
+
+  const totalConcluded = concludedOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
+  const totalPipeline = pipelineOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
 
   const handleExportCSV = (settlement: any) => {
     try {
@@ -197,7 +193,7 @@ export default function FinancialPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in print:max-w-none print:m-0 print:p-0">
+    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in print:max-w-none print:m-0 print:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 justify-between print:hidden">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary/10 rounded-xl">
@@ -237,165 +233,138 @@ export default function FinancialPage() {
         <TabsContent value="overview" className="space-y-6 print:hidden">
           <div className="grid gap-5 md:grid-cols-2 mb-8">
             <Card className="shadow-subtle border-l-4 border-l-emerald-500">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Saldo Devedor ({monthOptions.find((m) => m.value === selectedMonth)?.label})
+                  Trabalhos Finalizados (
+                  {monthOptions.find((m) => m.value === selectedMonth)?.label})
                 </CardTitle>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-emerald-600">
-                  {formatBRL(totalAccumulated)}
+                  {formatBRL(totalConcluded)}
                 </div>
               </CardContent>
             </Card>
             <Card className="shadow-subtle border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Trabalhos em Pipeline (A Faturar)
+                  Trabalhos em Produção (Pipeline)
                 </CardTitle>
+                <Activity className="w-4 h-4 text-amber-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-foreground">{formatBRL(totalPending)}</div>
+                <div className="text-3xl font-bold text-foreground">{formatBRL(totalPipeline)}</div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-muted-foreground" /> Seus Procedimentos do Período
-            </h3>
+          <Tabs defaultValue="concluded" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="concluded" className="gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Finalizados (
+                {concludedOrders.length})
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="gap-2">
+                <Activity className="w-4 h-4 text-amber-500" /> Em Produção ({pipelineOrders.length}
+                )
+              </TabsTrigger>
+            </TabsList>
 
-            {verifiedDisplayOrders.length === 0 ? (
-              <Card className="border-dashed bg-muted/20">
-                <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
-                  <DollarSign className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="font-medium text-lg">Nenhum pedido encontrado</p>
-                  <p className="text-sm mt-1 text-center">
-                    Não existem trabalhos registrados, pendentes ou finalizados para o mês
-                    selecionado.
-                  </p>
+            <TabsContent value="concluded">
+              <Card className="shadow-subtle">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-6">Pedido</TableHead>
+                        <TableHead>Paciente</TableHead>
+                        <TableHead>Trabalho</TableHead>
+                        <TableHead>Data de Criação</TableHead>
+                        <TableHead className="text-right pr-6">Valor Faturado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {concludedOrders.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            Nenhum pedido finalizado neste período.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        concludedOrders.map((o) => (
+                          <TableRow key={o.id} className="hover:bg-muted/30">
+                            <TableCell className="pl-6 font-medium text-primary">
+                              {o.friendlyId}
+                            </TableCell>
+                            <TableCell className="font-semibold">{o.patientName}</TableCell>
+                            <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(o.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-right pr-6 font-bold text-emerald-600">
+                              {formatBRL(o.basePrice)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
-            ) : (
-              <Accordion type="multiple" className="space-y-4">
-                {verifiedDisplayOrders.map((order) => (
-                  <AccordionItem
-                    key={order.id}
-                    value={order.id}
-                    className="border rounded-xl bg-card px-4 shadow-subtle overflow-hidden"
-                  >
-                    <AccordionTrigger className="hover:no-underline py-4">
-                      <div className="flex flex-1 items-center justify-between pr-4">
-                        <div className="flex flex-col items-start gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground">
-                              {order.patientName}
-                            </span>
-                            <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                              {order.friendlyId}
-                            </span>
-                            {(order.dentistDiscount || 0) > 0 && (
-                              <span
-                                className="text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded"
-                                title="Desconto de Acordo Comercial aplicado"
-                              >
-                                -{order.dentistDiscount}% OFF
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-sm text-muted-foreground">{order.workType}</span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span
-                            className={`font-bold text-lg ${order.status === 'completed' || order.status === 'delivered' ? 'text-emerald-600' : 'text-amber-600'}`}
-                          >
-                            {formatBRL(
-                              order.status === 'completed' || order.status === 'delivered'
-                                ? order.outstandingCost || 0
-                                : order.pipelineCost || 0,
-                            )}
-                          </span>
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {order.status === 'completed' || order.status === 'delivered'
-                              ? 'Saldo a Pagar'
-                              : 'Estimativa Pipeline'}
-                          </span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-4">
-                      <div className="space-y-5 mt-2">
-                        <div className="flex items-center justify-between text-sm bg-muted/40 p-3 rounded-lg border border-border/50">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-muted-foreground">
-                              Fase Atual no Laboratório:
-                            </span>
-                            <Badge variant="secondary" className="font-semibold tracking-wide">
-                              {order.kanbanStage}
-                            </Badge>
-                          </div>
-                          {(order.clearedBalance || 0) > 0 && (
-                            <div className="text-amber-600 font-medium text-xs">
-                              Já Liquidado: {formatBRL(order.clearedBalance)}
-                            </div>
-                          )}
-                        </div>
+            </TabsContent>
 
-                        {order.mappedStages?.length > 0 ? (
-                          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800 pl-2">
-                            {order.mappedStages.map((st: any, i: number) => (
-                              <div key={i} className="relative flex items-center gap-4 ml-8">
-                                <div
-                                  className={`absolute -left-10 w-4 h-4 rounded-full border-2 bg-background z-10 flex items-center justify-center ${st.isCompleted ? 'border-emerald-500' : 'border-slate-300 dark:border-slate-700'}`}
-                                >
-                                  {st.isCompleted && (
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  )}
-                                </div>
-                                <div
-                                  className={`flex-1 flex justify-between items-center p-3.5 rounded-lg border transition-colors ${st.isCompleted ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30 shadow-sm' : 'bg-muted/30 border-transparent opacity-70'}`}
-                                >
-                                  <div>
-                                    <p
-                                      className={`font-semibold text-sm ${st.isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}
-                                    >
-                                      {st.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
-                                      {st.isCompleted ? (
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                      ) : (
-                                        <Clock className="w-3.5 h-3.5" />
-                                      )}
-                                      {st.kanban_stage}
-                                    </p>
-                                  </div>
-                                  <span
-                                    className={`font-bold text-sm ${st.isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
-                                  >
-                                    {formatBRL(st.price || 0)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-900/50">
-                            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                            <p className="leading-relaxed">
-                              Nenhuma etapa de cobrança detalhada foi configurada para este tipo de
-                              trabalho. O valor será cobrado integralmente ao final do processo
-                              (Total: {formatBRL(order.totalCost || 0)}).
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-          </div>
+            <TabsContent value="pipeline">
+              <Card className="shadow-subtle">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-6">Pedido</TableHead>
+                        <TableHead>Paciente</TableHead>
+                        <TableHead>Status (Laboratório)</TableHead>
+                        <TableHead>Trabalho</TableHead>
+                        <TableHead className="text-right pr-6">Valor Estimado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pipelineOrders.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            Nenhum pedido em produção neste período.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        pipelineOrders.map((o) => (
+                          <TableRow key={o.id} className="hover:bg-muted/30">
+                            <TableCell className="pl-6 font-medium text-primary">
+                              {o.friendlyId}
+                            </TableCell>
+                            <TableCell className="font-semibold">{o.patientName}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="font-medium bg-muted">
+                                {o.kanbanStage}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{o.workType}</TableCell>
+                            <TableCell className="text-right pr-6 font-bold text-amber-600">
+                              {formatBRL(o.basePrice)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
@@ -411,7 +380,7 @@ export default function FinancialPage() {
           <div className="hidden print:block mb-6">
             <h2 className="text-2xl font-bold">Relatório de Histórico de Pagamentos</h2>
             <p className="text-muted-foreground">
-              Clínica: {currentUser.clinic || currentUser.name}
+              Clínica: {currentUser?.clinic || currentUser?.name}
             </p>
             <p className="text-muted-foreground">
               Data da emissão: {new Date().toLocaleDateString('pt-BR')}
@@ -468,44 +437,44 @@ export default function FinancialPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-0 print:pt-4">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/10 print:bg-transparent">
-                        <tr className="border-b print:border-gray-300">
-                          <th className="py-3 px-4 text-left font-medium text-muted-foreground print:text-black print:px-0">
+                    <Table>
+                      <TableHeader className="bg-muted/10 print:bg-transparent">
+                        <TableRow className="border-b print:border-gray-300">
+                          <TableHead className="py-3 px-4 font-medium text-muted-foreground print:text-black print:px-0">
                             Paciente / OS
-                          </th>
-                          <th className="py-3 px-4 text-left font-medium text-muted-foreground print:text-black print:px-0">
+                          </TableHead>
+                          <TableHead className="py-3 px-4 font-medium text-muted-foreground print:text-black print:px-0">
                             Trabalho
-                          </th>
-                          <th className="py-3 px-4 text-right font-medium text-muted-foreground print:text-black print:px-0">
+                          </TableHead>
+                          <TableHead className="py-3 px-4 text-right font-medium text-muted-foreground print:text-black print:px-0">
                             Valor Cobrado
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {(settlement.orders_snapshot || []).map((s: any, idx: number) => (
-                          <tr
+                          <TableRow
                             key={idx}
                             className="border-b last:border-0 hover:bg-muted/5 print:border-b print:border-gray-200"
                           >
-                            <td className="py-3 px-4 print:px-0">
+                            <TableCell className="py-3 px-4 print:px-0">
                               <span className="font-medium text-foreground block">
                                 {s.patientName || 'N/A'}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {s.friendlyId || '-'}
                               </span>
-                            </td>
-                            <td className="py-3 px-4 text-muted-foreground print:px-0">
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-muted-foreground print:px-0">
                               {s.workType || 'N/A'}
-                            </td>
-                            <td className="py-3 px-4 text-right font-medium print:px-0">
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right font-medium print:px-0">
                               {formatBRL(s.clearedAmount || 0)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               ))}
