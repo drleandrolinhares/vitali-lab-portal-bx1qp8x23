@@ -7,14 +7,20 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
   if (error?.context && typeof error.context.clone === 'function') {
     try {
       const errBody = await error.context.clone().json()
-      if (errBody && errBody.error) return errBody.error
+      if (errBody && errBody.error) {
+        return typeof errBody.error === 'string' ? errBody.error : JSON.stringify(errBody.error)
+      }
     } catch (e) {
       try {
         const errText = await error.context.clone().text()
         if (errText) {
           try {
             const parsedText = JSON.parse(errText)
-            if (parsedText.error) return parsedText.error
+            if (parsedText.error) {
+              return typeof parsedText.error === 'string'
+                ? parsedText.error
+                : JSON.stringify(parsedText.error)
+            }
           } catch (pe) {
             return errText
           }
@@ -26,17 +32,31 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
   } else if (error?.context && typeof error.context.json === 'function') {
     try {
       const errBody = await error.context.json()
-      if (errBody && errBody.error) return errBody.error
+      if (errBody && errBody.error) {
+        return typeof errBody.error === 'string' ? errBody.error : JSON.stringify(errBody.error)
+      }
     } catch (e) {
       // ignore fallback error
     }
   } else if (error?.context && error.context.error) {
-    return error.context.error
+    return typeof error.context.error === 'string'
+      ? error.context.error
+      : JSON.stringify(error.context.error)
+  }
+
+  if (typeof extractedMsg !== 'string') {
+    try {
+      extractedMsg = JSON.stringify(extractedMsg)
+    } catch {
+      extractedMsg = String(extractedMsg)
+    }
   }
 
   try {
     const parsed = JSON.parse(extractedMsg)
-    if (parsed.error) return parsed.error
+    if (parsed.error) {
+      return typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error)
+    }
   } catch (e) {
     // ignore fallback error
   }

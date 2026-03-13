@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  Loader2,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -524,18 +525,23 @@ export function UsersManagement() {
 
       setModalOpen(false)
     } catch (err: any) {
+      const errorMsg =
+        typeof err === 'string'
+          ? err
+          : err?.message || 'Ocorreu um erro ao processar sua requisição.'
+
       if (
-        err?.message?.includes('Refresh Token') ||
-        err?.message?.includes('refresh token') ||
-        err?.message?.includes('Sessão expirada')
+        errorMsg.includes('Auth session missing') ||
+        errorMsg.includes('Invalid or expired token')
       ) {
         await supabase.auth.signOut()
         window.location.href = '/'
         return
       }
+
       toast({
         title: 'Atenção',
-        description: err.message || 'Ocorreu um erro ao processar sua requisição.',
+        description: errorMsg,
         variant: 'destructive',
       })
     } finally {
@@ -580,15 +586,6 @@ export function UsersManagement() {
         })
 
         if (error) {
-          if (
-            error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token') ||
-            error.message?.includes('Sessão expirada')
-          ) {
-            await supabase.auth.signOut()
-            window.location.href = '/'
-            return
-          }
           throw error
         }
 
@@ -606,9 +603,20 @@ export function UsersManagement() {
         )
         setEditingUser(updatedUser)
       } catch (err: any) {
+        const errorMsg = typeof err === 'string' ? err : err?.message || 'Ocorreu um erro.'
+
+        if (
+          errorMsg.includes('Auth session missing') ||
+          errorMsg.includes('Invalid or expired token')
+        ) {
+          await supabase.auth.signOut()
+          window.location.href = '/'
+          return
+        }
+
         toast({
           title: 'Atenção',
-          description: err.message,
+          description: errorMsg,
           variant: 'destructive',
         })
       } finally {
@@ -969,7 +977,7 @@ export function UsersManagement() {
               <Switch
                 checked={formData.is_active}
                 onCheckedChange={(c) => setFormData({ ...formData, is_active: c })}
-                disabled={!isMasterOrAdmin}
+                disabled={!isMasterOrAdmin || saving}
               />
               <span className="text-sm font-semibold uppercase w-16">
                 {formData.is_active ? 'Ativo' : 'Inativo'}
@@ -1584,7 +1592,13 @@ export function UsersManagement() {
                 disabled={saving}
                 className="bg-[#e76f51] hover:bg-[#d95f43] text-white min-w-[120px]"
               >
-                {saving ? 'Salvando...' : 'Salvar Alterações'}
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
+                  </>
+                ) : (
+                  'Salvar Alterações'
+                )}
               </Button>
             )}
           </DialogFooter>
