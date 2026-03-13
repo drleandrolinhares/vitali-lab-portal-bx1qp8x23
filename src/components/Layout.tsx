@@ -212,6 +212,10 @@ function AppSidebar() {
       return checkPermission('individual_financial_dash')
     }
 
+    if (isClientRole && id === 'my_panel') {
+      return checkPermission('my_panel')
+    }
+
     if (id === 'dashboard') return checkPermission('dashboards', 'view_general')
     if (id === 'finances') return checkPermission('dashboards', 'view_financial')
     if (id === 'comparative-dashboard') return checkPermission('dashboards', 'view_operational')
@@ -241,7 +245,7 @@ function AppSidebar() {
   }
 
   const dentistNavItems = [
-    { id: 'inbox', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
+    { id: 'my_panel', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
     { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
     { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },

@@ -42,6 +42,12 @@ export const MODULES: Module[] = [
     ],
   },
   {
+    id: 'my_panel',
+    label: 'VISÃO MEU PAINEL',
+    actions: [],
+    roles: ['dentist', 'laboratory'],
+  },
+  {
     id: 'kanban',
     label: 'Evolução dos Trabalhos (Kanban)',
     actions: [
