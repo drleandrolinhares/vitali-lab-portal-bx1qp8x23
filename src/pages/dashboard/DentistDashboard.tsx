@@ -10,6 +10,7 @@ import { Logo } from '@/components/Logo'
 import { formatBRL, getOrderFinancials } from '@/lib/financial'
 import { useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -18,10 +19,12 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 export function DentistDashboard() {
-  const { orders, currentUser, appSettings, loading } = useAppStore()
+  const { orders, currentUser, appSettings, loading, checkPermission } = useAppStore()
   const activeOrders = orders.filter(
     (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
   )
+
+  const hasIndividualDash = checkPermission('individual_financial_dash')
 
   const financialData = useMemo(() => orders.map((o) => getOrderFinancials(o)), [orders])
   const pipelineTotal = financialData.reduce((acc, o) => acc + o.pipelineCost, 0)
@@ -128,52 +131,60 @@ export function DentistDashboard() {
         ))}
       </div>
 
-      <div className="mt-8 flex items-center gap-3 mb-6">
-        <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
-        <div className="h-px flex-1 bg-border/50 ml-4"></div>
-      </div>
+      {hasIndividualDash && (
+        <>
+          <div className="mt-8 flex items-center gap-3 mb-6 animate-fade-in">
+            <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
+            <div className="h-px flex-1 bg-border/50 ml-4"></div>
+          </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Financeiro Finalizado
-            </CardTitle>
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Soma de valores de trabalhos concluídos/entregues
-            </p>
-          </CardContent>
-        </Card>
+          <div className="grid gap-5 md:grid-cols-2 animate-fade-in">
+            <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Financeiro Finalizado
+                </CardTitle>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-9 w-32" />
+                ) : (
+                  <div className="text-3xl font-bold text-emerald-600">
+                    {formatBRL(completedTotal)}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground mt-1">
+                  Soma de valores de trabalhos concluídos/entregues
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Valores a Faturar
-            </CardTitle>
-            <Activity className="w-5 h-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Soma de valores em produção (pipeline)
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Valores a Faturar
+                </CardTitle>
+                <Activity className="w-5 h-5 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-9 w-32" />
+                ) : (
+                  <div className="text-3xl font-bold text-amber-600">
+                    {formatBRL(pipelineTotal)}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground mt-1">
+                  Soma de valores em produção (pipeline)
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
-      <Card className="shadow-subtle border-muted/60 mt-8">
+      <Card className={cn('shadow-subtle border-muted/60', !hasIndividualDash ? 'mt-8' : 'mt-8')}>
         <CardHeader className="bg-muted/10">
           <CardTitle>Casos Ativos</CardTitle>
           <CardDescription>

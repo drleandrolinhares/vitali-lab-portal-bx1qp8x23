@@ -16,7 +16,6 @@ export default function Index() {
 
   const showGlobalInbox = checkPermission('inbox', 'view_all')
   const canCreateOrder = checkPermission('inbox', 'create_order')
-  const hasIndividualDash = checkPermission('individual_financial_dash')
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -29,7 +28,7 @@ export default function Index() {
   }
 
   if (!showGlobalInbox) {
-    if (currentUser?.role === 'dentist' && hasIndividualDash) {
+    if (currentUser?.role === 'dentist' || currentUser?.role === 'laboratory') {
       return <DentistDashboard />
     }
 

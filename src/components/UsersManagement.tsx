@@ -98,7 +98,7 @@ const ROLES_INFO = [
 ]
 
 export function UsersManagement() {
-  const { currentUser, logAudit } = useAppStore()
+  const { currentUser, logAudit, appSettings } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -145,7 +145,17 @@ export function UsersManagement() {
     assigned_dentists: [] as string[],
   })
 
-  const [selectedPerms, setSelectedPerms] = useState<Record<string, any>>({})
+  const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
+
+  const effectivePerms = useMemo(() => {
+    if (selectedPerms !== null) return selectedPerms
+    try {
+      const defaults = JSON.parse(appSettings['role_permissions_v2'] || '{}')
+      return defaults[formData.role] || {}
+    } catch {
+      return {}
+    }
+  }, [selectedPerms, appSettings, formData.role])
 
   useEffect(() => {
     let isMounted = true
@@ -277,7 +287,9 @@ export function UsersManagement() {
         is_active: user.is_active !== false,
         assigned_dentists: user.assigned_dentists || [],
       })
-      setSelectedPerms(user.permissions || {})
+      setSelectedPerms(
+        user.permissions && Object.keys(user.permissions).length > 0 ? user.permissions : null,
+      )
     } else {
       setEditingUser(null)
       setFormData({
@@ -303,7 +315,7 @@ export function UsersManagement() {
         is_active: true,
         assigned_dentists: [],
       })
-      setSelectedPerms({})
+      setSelectedPerms(null)
     }
     setModalOpen(true)
   }
@@ -386,8 +398,14 @@ export function UsersManagement() {
           payload.can_move_kanban_cards = formData.can_move_kanban_cards
         if (formData.is_active !== (editingUser.is_active !== false))
           payload.is_active = formData.is_active
-        if (JSON.stringify(selectedPerms) !== JSON.stringify(editingUser.permissions || {}))
+
+        if (
+          selectedPerms !== null &&
+          JSON.stringify(selectedPerms) !== JSON.stringify(editingUser.permissions || {})
+        ) {
           payload.permissions = selectedPerms
+        }
+
         if (
           JSON.stringify(formData.assigned_dentists) !==
           JSON.stringify(editingUser.assigned_dentists || [])
@@ -428,7 +446,7 @@ export function UsersManagement() {
           has_access_schedule: formData.has_access_schedule,
           can_move_kanban_cards: formData.can_move_kanban_cards,
           is_active: formData.is_active,
-          permissions: selectedPerms,
+          permissions: selectedPerms || {},
           assigned_dentists: formData.assigned_dentists,
           password: formData.password,
         }
@@ -438,7 +456,7 @@ export function UsersManagement() {
         const dashboardsChanged =
           payload.permissions &&
           JSON.stringify(editingUser.permissions?.dashboards) !==
-            JSON.stringify(selectedPerms.dashboards)
+            JSON.stringify(selectedPerms?.dashboards)
 
         const { error } = await updateUser(payload)
 
@@ -453,7 +471,7 @@ export function UsersManagement() {
             await logAudit('UPDATE_PERMISSIONS', 'profiles', editingUser.id, {
               reason: 'Dashboard permissions changed',
               target_user: formData.name,
-              dashboards: selectedPerms.dashboards,
+              dashboards: selectedPerms?.dashboards,
             })
           }
 
@@ -504,7 +522,7 @@ export function UsersManagement() {
   const updateAccess = (moduleId: string, checked: boolean) => {
     if (!isMasterOrAdmin) return
     setSelectedPerms((prev) => {
-      const newPerms = { ...prev }
+      const newPerms = { ...(prev ?? effectivePerms) }
       if (!newPerms[moduleId]) newPerms[moduleId] = { access: false, actions: {} }
       newPerms[moduleId].access = checked
       return newPerms
@@ -514,7 +532,7 @@ export function UsersManagement() {
   const updateAction = (moduleId: string, actionId: string, checked: boolean) => {
     if (!isMasterOrAdmin) return
     setSelectedPerms((prev) => {
-      const newPerms = { ...prev }
+      const newPerms = { ...(prev ?? effectivePerms) }
       if (!newPerms[moduleId]) newPerms[moduleId] = { access: true, actions: {} }
       newPerms[moduleId].actions = { ...newPerms[moduleId].actions, [actionId]: checked }
       return newPerms
@@ -528,14 +546,14 @@ export function UsersManagement() {
 
   const isAllPermsSelected = useMemo(() => {
     return visibleModules.every((mod) => {
-      const modPerm = selectedPerms[mod.id]
+      const modPerm = effectivePerms[mod.id]
       if (!modPerm?.access) return false
       if (mod.actions && mod.actions.length > 0) {
         return mod.actions.every((act) => modPerm.actions?.[act.id])
       }
       return true
     })
-  }, [selectedPerms, visibleModules])
+  }, [effectivePerms, visibleModules])
 
   const handleToggleAllPerms = (checked: boolean) => {
     if (!isMasterOrAdmin) return
@@ -1158,6 +1176,7 @@ export function UsersManagement() {
                             onClick={() => {
                               if (isMasterOrAdmin && !saving) {
                                 setFormData({ ...formData, role: role.id })
+                                setSelectedPerms(null)
                               }
                             }}
                           >
@@ -1324,7 +1343,7 @@ export function UsersManagement() {
                   <div className="space-y-4">
                     {visibleModules.map((mod) => {
                       const hasAccess =
-                        formData.role === 'master' ? true : selectedPerms[mod.id]?.access || false
+                        formData.role === 'master' ? true : effectivePerms[mod.id]?.access || false
                       return (
                         <Card key={mod.id} className="shadow-none">
                           <CardContent className="p-4">
@@ -1355,13 +1374,13 @@ export function UsersManagement() {
                                         formData.role === 'master'
                                           ? true
                                           : mod.actions.every(
-                                              (act) => selectedPerms[mod.id]?.actions?.[act.id],
+                                              (act) => effectivePerms[mod.id]?.actions?.[act.id],
                                             )
                                       }
                                       onCheckedChange={(c) => {
                                         if (!isMasterOrAdmin) return
                                         setSelectedPerms((prev) => {
-                                          const newPerms = { ...prev }
+                                          const newPerms = { ...(prev ?? effectivePerms) }
                                           if (!newPerms[mod.id])
                                             newPerms[mod.id] = { access: true, actions: {} }
                                           mod.actions.forEach((act) => {
@@ -1388,7 +1407,7 @@ export function UsersManagement() {
                                       checked={
                                         formData.role === 'master'
                                           ? true
-                                          : selectedPerms[mod.id]?.actions?.[act.id] || false
+                                          : effectivePerms[mod.id]?.actions?.[act.id] || false
                                       }
                                       onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
                                       disabled={
