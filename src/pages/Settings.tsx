@@ -49,6 +49,21 @@ function ResetPasswordTab() {
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     if (error) {
+      if (
+        error.message?.includes('Session from session_id claim in JWT does not exist') ||
+        error.message?.includes('session_not_found') ||
+        (error as any).code === 'session_not_found'
+      ) {
+        toast({
+          title: 'SESSÃO EXPIRADA',
+          description: 'SUA SESSÃO EXPIROU. POR FAVOR, FAÇA LOGIN NOVAMENTE.',
+          variant: 'destructive',
+        })
+        await supabase.auth.signOut()
+        window.location.href = '/'
+        return
+      }
+
       toast({
         title: 'ERRO AO ATUALIZAR SENHA',
         description: error.message,

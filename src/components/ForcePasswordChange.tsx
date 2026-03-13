@@ -33,6 +33,21 @@ export default function ForcePasswordChange() {
     })
 
     if (error) {
+      if (
+        error.message?.includes('Session from session_id claim in JWT does not exist') ||
+        error.message?.includes('session_not_found') ||
+        (error as any).code === 'session_not_found'
+      ) {
+        toast({
+          title: 'Sessão Expirada',
+          description: 'Sua sessão expirou. Por favor, faça login novamente.',
+          variant: 'destructive',
+        })
+        await supabase.auth.signOut()
+        window.location.href = '/'
+        return
+      }
+
       toast({
         title: 'Erro ao atualizar senha',
         description: error.message,
@@ -104,7 +119,7 @@ export default function ForcePasswordChange() {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              Atualizar Senha
+              {loading ? 'Atualizando...' : 'Atualizar Senha'}
             </Button>
           </form>
         </CardContent>
