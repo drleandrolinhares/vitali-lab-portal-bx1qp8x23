@@ -21,15 +21,16 @@ Deno.serve(async (req: Request) => {
       throw new Error('Auth session missing! No authorization header provided.')
     }
 
+    const token = authHeader.replace('Bearer ', '').trim()
+
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     })
 
     const {
       data: { user: callerUser },
       error: callerError,
-    } = await authClient.auth.getUser()
+    } = await authClient.auth.getUser(token)
 
     if (callerError || !callerUser) {
       throw new Error(
@@ -38,7 +39,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     })
 
     const { data: callerProfile, error: profileError } = await supabaseAdmin

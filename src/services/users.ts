@@ -64,8 +64,31 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
   return extractedMsg
 }
 
+const ensureValidSession = async () => {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+  if (error) {
+    throw new Error('Erro ao validar sessão. Por favor, faça login novamente.')
+  }
+  if (!session) {
+    throw new Error('Sessão expirada. Por favor, faça login novamente.')
+  }
+
+  // Refresh if expiring in less than 2 minutes (120 seconds)
+  const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+  if (expiresAt > 0 && expiresAt - Date.now() < 120000) {
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError || !refreshData.session) {
+      throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.')
+    }
+  }
+}
+
 export const createUser = async (payload: any) => {
   try {
+    await ensureValidSession()
     const { data, error } = await supabase.functions.invoke('create-user', {
       body: payload,
     })
@@ -84,6 +107,7 @@ export const createUser = async (payload: any) => {
 
 export const updateUser = async (payload: any) => {
   try {
+    await ensureValidSession()
     const { data, error } = await supabase.functions.invoke('update-user', {
       body: payload,
     })
