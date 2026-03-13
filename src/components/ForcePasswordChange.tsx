@@ -35,6 +35,19 @@ export default function ForcePasswordChange() {
 
       if (error) {
         if (
+          (error as any).code === 'same_password' ||
+          error.message?.toLowerCase().includes('different from the old') ||
+          error.message?.toLowerCase().includes('same password')
+        ) {
+          toast({
+            title: 'Aviso',
+            description: 'A nova senha deve ser diferente da senha atual.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        if (
           error.message?.includes('Session from session_id claim in JWT does not exist') ||
           error.message?.includes('session_not_found') ||
           (error as any).code === 'session_not_found' ||
@@ -61,6 +74,19 @@ export default function ForcePasswordChange() {
         toast({ title: 'Senha atualizada com sucesso!' })
       }
     } catch (err: any) {
+      if (
+        err?.code === 'same_password' ||
+        err?.message?.toLowerCase().includes('different from the old') ||
+        err?.message?.toLowerCase().includes('same password')
+      ) {
+        toast({
+          title: 'Aviso',
+          description: 'A nova senha deve ser diferente da senha atual.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       if (
         err?.message?.includes('Session from session_id claim in JWT does not exist') ||
         err?.message?.includes('session_not_found') ||
