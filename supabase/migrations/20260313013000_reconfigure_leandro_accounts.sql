@@ -34,7 +34,8 @@ BEGIN
     );
     
     INSERT INTO public.profiles (id, email, name, role, is_approved, is_active, requires_password_change)
-    VALUES (v_dentist_id, 'mosby.ls@gmail.com', 'Leandro de Souza', 'dentist', true, true, true);
+    VALUES (v_dentist_id, 'mosby.ls@gmail.com', 'Leandro de Souza', 'dentist', true, true, true)
+    ON CONFLICT (id) DO NOTHING;
   END IF;
 
   -- Handle potential email conflict if we picked an ID that doesn't have the target email yet
@@ -56,14 +57,15 @@ BEGIN
       phone_change_token = '', reauthentication_token = ''
   WHERE id = v_dentist_id;
 
-  UPDATE public.profiles
+  INSERT INTO public.profiles (id, email, name, role, is_approved, is_active, requires_password_change)
+  VALUES (v_dentist_id, 'mosby.ls@gmail.com', 'Leandro de Souza', 'dentist', true, true, true)
+  ON CONFLICT (id) DO UPDATE
   SET email = 'mosby.ls@gmail.com',
       name = 'Leandro de Souza',
       role = 'dentist',
       requires_password_change = true,
       is_approved = true,
-      is_active = true
-  WHERE id = v_dentist_id;
+      is_active = true;
 
 
   -- ==========================================
@@ -96,7 +98,8 @@ BEGIN
     );
     
     INSERT INTO public.profiles (id, email, name, role, is_approved, is_active, requires_password_change)
-    VALUES (v_master_id, 'drleandrolinhares@gmail.com', 'Leandro de Souza', 'master', true, true, true);
+    VALUES (v_master_id, 'drleandrolinhares@gmail.com', 'Leandro de Souza', 'master', true, true, true)
+    ON CONFLICT (id) DO NOTHING;
   END IF;
 
   -- Handle potential email conflict
@@ -118,13 +121,14 @@ BEGIN
       phone_change_token = '', reauthentication_token = ''
   WHERE id = v_master_id;
 
-  UPDATE public.profiles
+  INSERT INTO public.profiles (id, email, name, role, is_approved, is_active, requires_password_change)
+  VALUES (v_master_id, 'drleandrolinhares@gmail.com', 'Leandro de Souza', 'master', true, true, true)
+  ON CONFLICT (id) DO UPDATE
   SET email = 'drleandrolinhares@gmail.com',
       name = 'Leandro de Souza',
       role = 'master',
       requires_password_change = true,
       is_approved = true,
-      is_active = true
-  WHERE id = v_master_id;
+      is_active = true;
 
 END $$;
