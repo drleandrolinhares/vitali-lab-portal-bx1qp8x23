@@ -19,13 +19,17 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
             return errText
           }
         }
-      } catch (e2) {}
+      } catch (e2) {
+        // ignore fallback error
+      }
     }
   } else if (error?.context && typeof error.context.json === 'function') {
     try {
       const errBody = await error.context.json()
       if (errBody && errBody.error) return errBody.error
-    } catch (e) {}
+    } catch (e) {
+      // ignore fallback error
+    }
   } else if (error?.context && error.context.error) {
     return error.context.error
   }
@@ -33,7 +37,9 @@ const extractErrorMessage = async (error: any, defaultMsg: string): Promise<stri
   try {
     const parsed = JSON.parse(extractedMsg)
     if (parsed.error) return parsed.error
-  } catch (e) {}
+  } catch (e) {
+    // ignore fallback error
+  }
 
   return extractedMsg
 }
