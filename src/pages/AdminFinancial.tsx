@@ -43,7 +43,6 @@ import {
   CalendarDays,
   Send,
   Download,
-  FileText,
   Eye,
   AlertCircle,
   Clock,
@@ -205,6 +204,15 @@ export default function AdminFinancial() {
       .sort((a, b) => a.day - b.day)
   }, [dentists, filteredOrders, selectedMonth, billingControls, priceList, currentUser])
 
+  const closedFaturas = useMemo(() => {
+    return timelineData
+      .map((group) => ({
+        day: group.day,
+        items: group.items.filter((item) => !item.isOpen),
+      }))
+      .filter((group) => group.items.length > 0)
+  }, [timelineData])
+
   const producaoData = useMemo(() => {
     if (!dentists.length || !filteredOrders.length)
       return { list: [], totalFinalized: 0, totalPipeline: 0 }
@@ -219,49 +227,21 @@ export default function AdminFinancial() {
     const list = dentists
       .filter((d) => (currentUser?.role === 'dentist' ? d.id === currentUser.id : true))
       .map((d) => {
-        const dueDay = d.payment_due_date || 5
-        const closeDay = d.closing_date || 30
-
-        let closeYear = year
-        let closeMonth = month
-
-        if (closeDay >= dueDay) {
-          closeMonth -= 1
-          if (closeMonth < 0) {
-            closeMonth = 11
-            closeYear -= 1
-          }
-        }
-
-        const closeDate = getSafeDate(closeYear, closeMonth, closeDay)
-        closeDate.setHours(23, 59, 59, 999)
-
-        let startMonth = closeMonth - 1
-        let startYear = closeYear
-        if (startMonth < 0) {
-          startMonth = 11
-          startYear -= 1
-        }
-        const cycleStart = getSafeDate(startYear, startMonth, closeDay)
-        cycleStart.setDate(cycleStart.getDate() + 1)
-        cycleStart.setHours(0, 0, 0, 0)
-
         const dOrders = filteredOrders.filter((o) => o.dentistId === d.id)
         const financials = dOrders.map((o) => getOrderFinancials(o, priceList))
 
-        const cycleOrders = financials.filter((o) => {
+        const calendarMonthOrders = financials.filter((o) => {
           if (o.status !== 'completed' && o.status !== 'delivered') return false
           const compDate = getOrderCompletionDate(o)
-          return compDate && compDate >= cycleStart && compDate <= closeDate
+          return compDate && compDate.getFullYear() === year && compDate.getMonth() === month
         })
 
         const pendingOrders = financials.filter(
           (o) => o.status === 'pending' || o.status === 'in_production',
         )
 
-        const finalized = cycleOrders.reduce((acc, o) => acc + o.completedCost, 0)
+        const finalized = calendarMonthOrders.reduce((acc, o) => acc + o.completedCost, 0)
         const pipeline = pendingOrders.reduce((acc, o) => acc + o.pipelineCost, 0)
-        const isOpen = new Date() < closeDate
 
         totalFinalized += finalized
         totalPipeline += pipeline
@@ -270,7 +250,6 @@ export default function AdminFinancial() {
           dentist: d,
           finalized,
           pipeline,
-          isOpen,
         }
       })
       .filter((item) => item.finalized > 0 || item.pipeline > 0)
@@ -603,11 +582,91 @@ export default function AdminFinancial() {
         )}
       </div>
 
-      <Tabs defaultValue="faturas" className="w-full mt-8">
+      <Tabs defaultValue="producao" className="w-full mt-8">
         <TabsList className="mb-6">
-          <TabsTrigger value="faturas">FATURAS FECHADAS</TabsTrigger>
           <TabsTrigger value="producao">PRODUÇÃO EM R$</TabsTrigger>
+          <TabsTrigger value="faturas">FATURAS FECHADAS</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="producao" className="mt-0">
+          <Card className="shadow-subtle border-0 bg-transparent sm:bg-card sm:border">
+            <CardHeader className="px-0 sm:px-6 pb-2 pt-0 sm:pt-6">
+              <CardTitle className="hidden sm:block">Painel de Produção Operacional</CardTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                    <p className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
+                      Trabalhos Finalizados no Mês
+                    </p>
+                  </div>
+                  <p className="text-3xl font-extrabold text-emerald-700">
+                    {formatBRL(producaoData.totalFinalized)}
+                  </p>
+                  <p className="text-xs text-emerald-600 mt-1 font-medium">
+                    Trabalhos finalizados no mês calendário selecionado
+                  </p>
+                </div>
+                <div className="p-5 bg-amber-50 border border-amber-100 rounded-xl shadow-sm flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-5 h-5 text-amber-600" />
+                    <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">
+                      Total de Trabalhos em Pipeline
+                    </p>
+                  </div>
+                  <p className="text-3xl font-extrabold text-amber-700">
+                    {formatBRL(producaoData.totalPipeline)}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1 font-medium">
+                    Trabalhos pendentes ou em produção no momento
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-6 mt-4 sm:mt-0">
+              <div className="border rounded-lg bg-background shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="py-3 px-4">Dentista / Clínica</TableHead>
+                      <TableHead className="py-3 px-4 text-right">Finalizados no Mês</TableHead>
+                      <TableHead className="py-3 px-4 text-right">Em Produção (Pipeline)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {producaoData.list.map((item) => (
+                      <TableRow
+                        key={item.dentist.id}
+                        className="hover:bg-muted/10 transition-colors"
+                      >
+                        <TableCell className="py-3 px-4">
+                          <div className="font-semibold text-foreground">{item.dentist.name}</div>
+                          <div className="text-xs text-muted-foreground font-medium">
+                            {item.dentist.clinic || 'Clínica não informada'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-bold text-emerald-600">
+                          {formatBRL(item.finalized)}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-semibold text-amber-600">
+                          {formatBRL(item.pipeline)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {producaoData.list.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          Nenhum registro de produção encontrado para este período.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="faturas" className="mt-0">
           <Card className="shadow-subtle border-0 bg-transparent sm:bg-card sm:border">
             <CardContent className="p-0 sm:p-6">
@@ -620,13 +679,13 @@ export default function AdminFinancial() {
               </div>
 
               <div className="mt-4 sm:mt-0 space-y-0">
-                {timelineData.length === 0 ? (
+                {closedFaturas.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground bg-background rounded-lg border sm:border-0 sm:bg-transparent">
-                    Nenhum faturamento esperado para este período.
+                    Nenhuma fatura fechada apurada para este período.
                   </div>
                 ) : (
-                  timelineData.map(({ day, items }, groupIdx) => {
-                    const isLastGroup = groupIdx === timelineData.length - 1
+                  closedFaturas.map(({ day, items }, groupIdx) => {
+                    const isLastGroup = groupIdx === closedFaturas.length - 1
                     return (
                       <div key={day} className="flex relative">
                         {/* Timeline Date Column */}
@@ -759,102 +818,6 @@ export default function AdminFinancial() {
                     )
                   })
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="producao" className="mt-0">
-          <Card className="shadow-subtle border-0 bg-transparent sm:bg-card sm:border">
-            <CardHeader className="px-0 sm:px-6 pb-2 pt-0 sm:pt-6">
-              <CardTitle className="hidden sm:block">Painel de Produção</CardTitle>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                    <p className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
-                      Trabalhos Finalizados no Ciclo
-                    </p>
-                  </div>
-                  <p className="text-3xl font-extrabold text-emerald-700">
-                    {formatBRL(producaoData.totalFinalized)}
-                  </p>
-                  <p className="text-xs text-emerald-600 mt-1 font-medium">
-                    Trabalhos prontos, aguardando fechamento
-                  </p>
-                </div>
-                <div className="p-5 bg-amber-50 border border-amber-100 rounded-xl shadow-sm flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-5 h-5 text-amber-600" />
-                    <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">
-                      Total de Trabalhos em Pipeline
-                    </p>
-                  </div>
-                  <p className="text-3xl font-extrabold text-amber-700">
-                    {formatBRL(producaoData.totalPipeline)}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1 font-medium">
-                    Trabalhos atualmente em produção
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 sm:p-6 mt-4 sm:mt-0">
-              <div className="border rounded-lg bg-background shadow-sm overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="py-3 px-4">Dentista / Clínica</TableHead>
-                      <TableHead className="py-3 px-4 text-center">Status do Ciclo</TableHead>
-                      <TableHead className="py-3 px-4 text-right">Finalizados no Ciclo</TableHead>
-                      <TableHead className="py-3 px-4 text-right">Em Produção (Pipeline)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {producaoData.list.map((item) => (
-                      <TableRow
-                        key={item.dentist.id}
-                        className="hover:bg-muted/10 transition-colors"
-                      >
-                        <TableCell className="py-3 px-4">
-                          <div className="font-semibold text-foreground">{item.dentist.name}</div>
-                          <div className="text-xs text-muted-foreground font-medium">
-                            {item.dentist.clinic || 'Clínica não informada'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-center">
-                          {item.isOpen ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-amber-50 text-amber-700 border-amber-200 uppercase text-[10px] font-bold tracking-wider"
-                            >
-                              Ciclo Aberto
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-emerald-50 text-emerald-700 border-emerald-200 uppercase text-[10px] font-bold tracking-wider"
-                            >
-                              Ciclo Fechado
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-right font-bold text-emerald-600">
-                          {formatBRL(item.finalized)}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-right font-semibold text-amber-600">
-                          {formatBRL(item.pipeline)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {producaoData.list.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Nenhum registro de produção encontrado para este período.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
               </div>
             </CardContent>
           </Card>
