@@ -376,20 +376,6 @@ export function UsersManagement() {
     setSaving(true)
 
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-      if (
-        sessionError &&
-        (sessionError.message?.includes('Refresh Token') ||
-          sessionError.message?.includes('refresh token'))
-      ) {
-        await supabase.auth.signOut()
-        window.location.href = '/'
-        return
-      }
-
       let payload: any = {}
 
       if (editingUser) {
@@ -538,7 +524,11 @@ export function UsersManagement() {
 
       setModalOpen(false)
     } catch (err: any) {
-      if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh token')) {
+      if (
+        err?.message?.includes('Refresh Token') ||
+        err?.message?.includes('refresh token') ||
+        err?.message?.includes('Sessão expirada')
+      ) {
         await supabase.auth.signOut()
         window.location.href = '/'
         return
@@ -592,7 +582,8 @@ export function UsersManagement() {
         if (error) {
           if (
             error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token')
+            error.message?.includes('refresh token') ||
+            error.message?.includes('Sessão expirada')
           ) {
             await supabase.auth.signOut()
             window.location.href = '/'

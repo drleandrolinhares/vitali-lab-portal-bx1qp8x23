@@ -72,13 +72,18 @@ export const createUser = async (payload: any) => {
     })
 
     if (error) {
-      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+      const extractedMsg = await extractErrorMessage(error, error.message)
+
+      if (
+        extractedMsg.includes('Auth session missing') ||
+        extractedMsg.includes('Invalid or expired token') ||
+        extractedMsg.includes('Refresh Token')
+      ) {
         await supabase.auth.signOut()
         window.location.href = '/'
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
 
-      const extractedMsg = await extractErrorMessage(error, error.message)
       return { data: null, error: new Error(extractedMsg) }
     }
 
@@ -122,13 +127,18 @@ export const updateUser = async (payload: any) => {
     })
 
     if (error) {
-      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+      const extractedMsg = await extractErrorMessage(error, error.message)
+
+      if (
+        extractedMsg.includes('Auth session missing') ||
+        extractedMsg.includes('Invalid or expired token') ||
+        extractedMsg.includes('Refresh Token')
+      ) {
         await supabase.auth.signOut()
         window.location.href = '/'
         return { data: null, error: new Error('Sessão expirada. Redirecionando...') }
       }
 
-      const extractedMsg = await extractErrorMessage(error, error.message)
       return { data: null, error: new Error(extractedMsg) }
     }
 

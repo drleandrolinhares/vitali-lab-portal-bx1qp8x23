@@ -17,9 +17,9 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error('Missing authorization header')
-
-    const token = authHeader.replace('Bearer ', '')
+    if (!authHeader) {
+      throw new Error('Auth session missing! No authorization header provided.')
+    }
 
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -29,9 +29,13 @@ Deno.serve(async (req: Request) => {
     const {
       data: { user: callerUser },
       error: callerError,
-    } = await authClient.auth.getUser(token)
-    if (callerError || !callerUser)
-      throw new Error(`Invalid or expired token: ${callerError?.message || 'User not found'}`)
+    } = await authClient.auth.getUser()
+
+    if (callerError || !callerUser) {
+      throw new Error(
+        `Auth session missing! Invalid or expired token: ${callerError?.message || 'User not found'}`,
+      )
+    }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },
@@ -43,8 +47,9 @@ Deno.serve(async (req: Request) => {
       .eq('id', callerUser.id)
       .single()
 
-    if (profileError || !callerProfile)
-      throw new Error(`Caller profile not found: ${profileError?.message}`)
+    if (profileError || !callerProfile) {
+      throw new Error(`Caller profile not found: ${profileError?.message || 'Unknown error'}`)
+    }
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
     const isMaster = callerProfile.role === 'master'
@@ -87,7 +92,7 @@ Deno.serve(async (req: Request) => {
       commercial_agreement,
     } = body
 
-    if (!userId) throw new Error('UserId is required')
+    if (!userId) throw new Error('UserId is required in payload')
 
     const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
       .from('profiles')
@@ -267,7 +272,6 @@ Deno.serve(async (req: Request) => {
         console.error('Profile update error:', dbProfileError)
         let errorMsg = dbProfileError.message
         if (dbProfileError.code === '23505') {
-          // unique violation
           if (dbProfileError.message.includes('cpf'))
             errorMsg = 'O CPF informado já está cadastrado em outro perfil.'
           else if (dbProfileError.message.includes('rg'))
@@ -287,7 +291,9 @@ Deno.serve(async (req: Request) => {
     let status = 400
     let errorMsg = error.message || 'Erro interno no servidor.'
 
-    if (
+    if (errorMsg.includes('Auth session missing!')) {
+      status = 401
+    } else if (
       errorMsg.includes('users_phone_key') ||
       errorMsg.includes('telefone já está vinculado') ||
       errorMsg.includes('phone')
