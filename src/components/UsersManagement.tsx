@@ -109,7 +109,7 @@ const ROLES_INFO = [
 ]
 
 export function UsersManagement() {
-  const { currentUser, logAudit } = useAppStore()
+  const { currentUser, realUser, simulatedUser, setSimulatedUser, logAudit } = useAppStore()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -128,8 +128,10 @@ export function UsersManagement() {
 
   const partnerPricesRef = useRef<PartnerPricesPanelRef>(null)
 
-  const isCurrentUserMaster = currentUser?.role === 'master'
-  const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin'
+  // O "isMasterOrAdmin" real para validar permissões de edição na interface
+  const actualUserRole = realUser?.role || currentUser?.role
+  const isCurrentUserMaster = actualUserRole === 'master'
+  const isMasterOrAdmin = actualUserRole === 'master' || actualUserRole === 'admin'
 
   const [formData, setFormData] = useState({
     name: '',
@@ -205,6 +207,35 @@ export function UsersManagement() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  const handleSimulateDentist = (checked: boolean) => {
+    if (checked) {
+      const referenceUser = users.find(
+        (u) =>
+          u.email?.toLowerCase() === 'dr.leandro@studiovitalilab.com.br' ||
+          u.name?.toLowerCase().includes('leandro de souza'),
+      )
+      if (referenceUser) {
+        setSimulatedUser(referenceUser)
+        toast({
+          title: 'Modo Visão Dentista Ativado',
+          description: `Você agora está navegando como ${referenceUser.name}.`,
+        })
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Usuário referência "Leandro de Souza" não encontrado.',
+          variant: 'destructive',
+        })
+      }
+    } else {
+      setSimulatedUser(null)
+      toast({
+        title: 'Modo Visão Restaurado',
+        description: 'Você voltou para sua visão original.',
+      })
+    }
+  }
 
   const baseFilteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -655,8 +686,8 @@ export function UsersManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
-          <div className="relative flex-1 sm:max-w-md">
+        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto flex-wrap">
+          <div className="relative flex-1 min-w-[200px] sm:max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Pesquisar Usuário"
@@ -672,14 +703,29 @@ export function UsersManagement() {
               onCheckedChange={(c) => setActiveOnly(!!c)}
             />
             <Label htmlFor="active-only" className="text-sm cursor-pointer">
-              Mostrar apenas usuários ativos
+              Mostrar apenas ativos
             </Label>
           </div>
+          {isMasterOrAdmin && (
+            <div className="flex items-center space-x-2 shrink-0 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
+              <Checkbox
+                id="simulate-dentist"
+                checked={!!simulatedUser}
+                onCheckedChange={(c) => handleSimulateDentist(!!c)}
+              />
+              <Label
+                htmlFor="simulate-dentist"
+                className="text-sm cursor-pointer text-blue-800 dark:text-blue-300 font-bold"
+              >
+                Perfil Modo Visão Dentista
+              </Label>
+            </div>
+          )}
         </div>
         {isMasterOrAdmin && (
           <Button
             onClick={() => openModal()}
-            className="bg-[#e76f51] hover:bg-[#d95f43] text-white"
+            className="bg-[#e76f51] hover:bg-[#d95f43] text-white shrink-0"
           >
             <Plus className="w-4 h-4 mr-2" /> Novo Usuário
           </Button>
@@ -787,7 +833,7 @@ export function UsersManagement() {
                     'border-[#e76f51] shadow-sm shadow-[#e76f51]/20 ring-1 ring-[#e76f51]/50',
                 )}
                 onClick={() => {
-                  if (isMaster && currentUser?.role !== 'master') {
+                  if (isMaster && actualUserRole !== 'master') {
                     toast({
                       title: 'Acesso Negado',
                       description:
@@ -841,7 +887,7 @@ export function UsersManagement() {
                       className="h-6 w-6 -mr-2 -mt-2 relative z-10"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (isMaster && currentUser?.role !== 'master') {
+                        if (isMaster && actualUserRole !== 'master') {
                           toast({
                             title: 'Acesso Negado',
                             description:
@@ -987,7 +1033,7 @@ export function UsersManagement() {
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -996,7 +1042,7 @@ export function UsersManagement() {
                           value={formData.username}
                           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1007,7 +1053,7 @@ export function UsersManagement() {
                             setFormData({ ...formData, personal_phone: e.target.value })
                           }
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1016,7 +1062,7 @@ export function UsersManagement() {
                           value={formData.clinic}
                           onChange={(e) => setFormData({ ...formData, clinic: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1028,7 +1074,7 @@ export function UsersManagement() {
                             setFormData({ ...formData, commercial_agreement: e.target.value })
                           }
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                     </div>
@@ -1046,7 +1092,7 @@ export function UsersManagement() {
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1060,7 +1106,7 @@ export function UsersManagement() {
                               editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
                             }
                             className="h-9 pr-10 normal-case"
-                            disabled={!isMasterOrAdmin}
+                            disabled={!isMasterOrAdmin || saving}
                           />
                           <Button
                             type="button"
@@ -1068,7 +1114,7 @@ export function UsersManagement() {
                             size="icon"
                             className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
-                            disabled={!isMasterOrAdmin}
+                            disabled={!isMasterOrAdmin || saving}
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4" />
@@ -1093,7 +1139,7 @@ export function UsersManagement() {
                           value={formData.birth_date}
                           onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1102,7 +1148,7 @@ export function UsersManagement() {
                           value={formData.rg}
                           onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1111,7 +1157,7 @@ export function UsersManagement() {
                           value={formData.cpf}
                           onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                     </div>
@@ -1128,7 +1174,7 @@ export function UsersManagement() {
                           value={formData.cep}
                           onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1 md:col-span-3">
@@ -1137,7 +1183,7 @@ export function UsersManagement() {
                           value={formData.address}
                           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1 md:col-span-1">
@@ -1148,7 +1194,7 @@ export function UsersManagement() {
                             setFormData({ ...formData, address_number: e.target.value })
                           }
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1 md:col-span-2">
@@ -1159,7 +1205,7 @@ export function UsersManagement() {
                             setFormData({ ...formData, address_complement: e.target.value })
                           }
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1 md:col-span-3">
@@ -1168,7 +1214,7 @@ export function UsersManagement() {
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                       <div className="space-y-1 md:col-span-1">
@@ -1177,7 +1223,7 @@ export function UsersManagement() {
                           value={formData.state}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                           className="h-9"
-                          disabled={!isMasterOrAdmin}
+                          disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
                     </div>
@@ -1194,7 +1240,7 @@ export function UsersManagement() {
                         onCheckedChange={(c) =>
                           setFormData({ ...formData, has_access_schedule: c })
                         }
-                        disabled={!isMasterOrAdmin}
+                        disabled={!isMasterOrAdmin || saving}
                       />
                       <Label className="text-sm cursor-pointer">
                         Definir horário de acesso ao sistema
@@ -1224,10 +1270,12 @@ export function UsersManagement() {
                               isSelected
                                 ? 'border-[#e76f51] bg-[#e76f51]/5 ring-1 ring-[#e76f51]/20'
                                 : 'hover:border-primary/40 bg-background',
-                              isMasterOrAdmin ? 'cursor-pointer' : 'opacity-80 cursor-not-allowed',
+                              isMasterOrAdmin && !saving
+                                ? 'cursor-pointer'
+                                : 'opacity-80 cursor-not-allowed',
                             )}
                             onClick={() => {
-                              if (isMasterOrAdmin) {
+                              if (isMasterOrAdmin && !saving) {
                                 setFormData({ ...formData, role: role.id })
                               }
                             }}
@@ -1297,7 +1345,7 @@ export function UsersManagement() {
                             <Switch
                               checked={isAllDentistsSelected}
                               onCheckedChange={handleToggleAllDentists}
-                              disabled={!isMasterOrAdmin}
+                              disabled={!isMasterOrAdmin || saving}
                             />
                           </div>
                         </div>
@@ -1307,10 +1355,10 @@ export function UsersManagement() {
                               key={dentist.id}
                               className={cn(
                                 'flex items-center gap-3 p-2 hover:bg-muted/10 rounded-lg',
-                                isMasterOrAdmin ? 'cursor-pointer' : 'opacity-80',
+                                isMasterOrAdmin && !saving ? 'cursor-pointer' : 'opacity-80',
                               )}
                               onClick={() => {
-                                if (isMasterOrAdmin) {
+                                if (isMasterOrAdmin && !saving) {
                                   toggleDentist(
                                     dentist.id,
                                     !formData.assigned_dentists.includes(dentist.id),
@@ -1322,7 +1370,7 @@ export function UsersManagement() {
                                 checked={formData.assigned_dentists.includes(dentist.id)}
                                 onCheckedChange={(c) => toggleDentist(dentist.id, !!c)}
                                 onClick={(e) => e.stopPropagation()}
-                                disabled={!isMasterOrAdmin}
+                                disabled={!isMasterOrAdmin || saving}
                               />
                               <Avatar className="w-8 h-8">
                                 <AvatarImage src={dentist.avatar_url} />
@@ -1391,7 +1439,7 @@ export function UsersManagement() {
                             disabled={saving}
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] sm:text-xs tracking-wider shrink-0"
                           >
-                            PERFIL MODO VISÃO DENTISTA
+                            REPLICAR PERMISSÕES
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -1404,8 +1452,8 @@ export function UsersManagement() {
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={applyDentistVisionMode}>
+                            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction disabled={saving} onClick={applyDentistVisionMode}>
                               Continuar
                             </AlertDialogAction>
                           </AlertDialogFooter>
@@ -1428,7 +1476,7 @@ export function UsersManagement() {
                       <Switch
                         checked={formData.role === 'master' ? true : isAllPermsSelected}
                         onCheckedChange={handleToggleAllPerms}
-                        disabled={!isMasterOrAdmin || formData.role === 'master'}
+                        disabled={!isMasterOrAdmin || formData.role === 'master' || saving}
                       />
                     </div>
                   </div>
@@ -1449,7 +1497,9 @@ export function UsersManagement() {
                                 <Switch
                                   checked={hasAccess}
                                   onCheckedChange={(c) => updateAccess(mod.id, c)}
-                                  disabled={!isMasterOrAdmin || formData.role === 'master'}
+                                  disabled={
+                                    !isMasterOrAdmin || formData.role === 'master' || saving
+                                  }
                                 />
                               </div>
                             </div>
@@ -1482,7 +1532,9 @@ export function UsersManagement() {
                                           return newPerms
                                         })
                                       }}
-                                      disabled={!isMasterOrAdmin || formData.role === 'master'}
+                                      disabled={
+                                        !isMasterOrAdmin || formData.role === 'master' || saving
+                                      }
                                     />
                                   </div>
                                 )}
@@ -1499,7 +1551,9 @@ export function UsersManagement() {
                                           : selectedPerms[mod.id]?.actions?.[act.id] || false
                                       }
                                       onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
-                                      disabled={!isMasterOrAdmin || formData.role === 'master'}
+                                      disabled={
+                                        !isMasterOrAdmin || formData.role === 'master' || saving
+                                      }
                                     />
                                   </div>
                                 ))}
@@ -1535,7 +1589,7 @@ export function UsersManagement() {
           </div>
 
           <DialogFooter className="p-4 border-t shrink-0 bg-background">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>
               {isMasterOrAdmin ? 'Cancelar' : 'Fechar'}
             </Button>
             {isMasterOrAdmin && (

@@ -83,14 +83,18 @@ const ensureValidSession = async () => {
     if (refreshError || !refreshData.session) {
       throw new Error('Não foi possível renovar a sessão. Por favor, faça login novamente.')
     }
+    return refreshData.session.access_token
   }
+
+  return session.access_token
 }
 
 export const createUser = async (payload: any) => {
   try {
-    await ensureValidSession()
+    const token = await ensureValidSession()
     const { data, error } = await supabase.functions.invoke('create-user', {
       body: payload,
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (error) {
@@ -107,9 +111,10 @@ export const createUser = async (payload: any) => {
 
 export const updateUser = async (payload: any) => {
   try {
-    await ensureValidSession()
+    const token = await ensureValidSession()
     const { data, error } = await supabase.functions.invoke('update-user', {
       body: payload,
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (error) {

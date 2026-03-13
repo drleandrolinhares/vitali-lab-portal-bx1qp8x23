@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { toast } from '@/hooks/use-toast'
 
 interface AuthContextType {
   user: User | null
@@ -40,8 +41,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           error.message?.includes('Session from session_id claim in JWT does not exist') ||
           error.message?.includes('session_not_found')
         ) {
-          await supabase.auth.signOut()
-          window.location.href = '/'
+          toast({
+            title: 'Aviso de Sessão',
+            description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+            variant: 'destructive'
+          })
           return
         }
         throw error
@@ -72,8 +76,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         e?.message?.includes('Session from session_id claim in JWT does not exist') ||
         e?.message?.includes('session_not_found')
       ) {
-        supabase.auth.signOut().then(() => {
-          window.location.href = '/'
+        toast({
+          title: 'Aviso de Sessão',
+          description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+          variant: 'destructive'
         })
       }
     }
@@ -122,14 +128,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             error.message?.includes('session_not_found') ||
             error.name === 'AuthApiError'
           ) {
-            supabase.auth
-              .signOut()
-              .then(() => {
-                window.location.href = '/'
-              })
-              .catch(() => {
-                window.location.href = '/'
-              })
+            toast({
+              title: 'Aviso de Sessão',
+              description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+              variant: 'destructive'
+            })
+            setLoading(false)
             return
           }
         }
@@ -149,15 +153,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           err?.message?.includes('Session from session_id claim in JWT does not exist') ||
           err?.message?.includes('session_not_found')
         ) {
-          supabase.auth
-            .signOut()
-            .then(() => {
-              window.location.href = '/'
-            })
-            .catch(() => {
-              window.location.href = '/'
-            })
+          toast({
+            title: 'Aviso de Sessão',
+            description: 'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
+            variant: 'destructive'
+          })
         }
+        setLoading(false)
       })
 
     return () => subscription.unsubscribe()
@@ -180,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error }
     } catch (err: any) {
-      return { error: err }
+      return { error err }
     }
   }
 
@@ -251,3 +253,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   )
 }
+
