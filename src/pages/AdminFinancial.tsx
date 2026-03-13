@@ -6,6 +6,7 @@ import {
   formatBRL,
   generateMonthOptions,
   filterOrdersForFinancials,
+  getOrderCompletionDate,
 } from '@/lib/financial'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -117,12 +118,24 @@ export default function AdminFinancial() {
     return monthFilteredOrders.map((o) => getOrderFinancials(o, priceList))
   }, [monthFilteredOrders, priceList])
 
-  const monthlyRevenue = useMemo(
+  const monthlyActualRevenue = useMemo(
     () =>
       financials.reduce((acc, o) => {
         if (o.status === 'completed' || o.status === 'delivered') {
           if (currentUser?.role === 'dentist' && o.dentistId !== currentUser.id) return acc
-          return acc + o.totalCost
+          return acc + o.clearedBalance
+        }
+        return acc
+      }, 0),
+    [financials, currentUser],
+  )
+
+  const monthlyForecastedRevenue = useMemo(
+    () =>
+      financials.reduce((acc, o) => {
+        if (o.status === 'completed' || o.status === 'delivered') {
+          if (currentUser?.role === 'dentist' && o.dentistId !== currentUser.id) return acc
+          return acc + o.outstandingCost
         }
         return acc
       }, 0),
@@ -154,8 +167,8 @@ export default function AdminFinancial() {
     [filteredExpenses, selectedMonth, revenueCategories],
   )
 
-  const monthlyProfit = monthlyRevenue - monthlyExpenses
-  const profitability = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0
+  const monthlyProfit = monthlyActualRevenue - monthlyExpenses
+  const profitability = monthlyActualRevenue > 0 ? (monthlyProfit / monthlyActualRevenue) * 100 : 0
 
   const dentistStats = dentists
     .filter((d) => (currentUser?.role === 'dentist' ? d.id === currentUser.id : true))
@@ -166,7 +179,7 @@ export default function AdminFinancial() {
       const invoiceSent = billingControls.some((b) => b.dentist_id === d.id)
       return { ...d, outstandingBalance, pipelineBalance, dentistOrders, invoiceSent }
     })
-    .filter((d) => d.outstandingBalance > 0 || d.pipelineBalance > 0)
+    .filter((d) => d.outstandingBalance > 0)
     .sort((a, b) => {
       const aDue = a.payment_due_date || 999
       const bDue = b.payment_due_date || 999
@@ -257,6 +270,49 @@ export default function AdminFinancial() {
   }
 
   const selectedMonthLabel = monthOptions.find((m) => m.value === selectedMonth)?.label
+
+  const handleExportAllClosed = () => {
+    const closedOrders = monthFilteredOrders.filter(
+      (o) => o.status === 'completed' || o.status === 'delivered',
+    )
+
+    const headers = [
+      'Pedido',
+      'Paciente',
+      'Dentista',
+      'Trabalho',
+      'Valor Base',
+      'Valor Efetivo',
+      'Data de Conclusão',
+      'Status Pagamento',
+    ]
+    const rows = closedOrders.map((o) => {
+      const compDate = getOrderCompletionDate(o)
+      const isPaid = o.outstandingCost === 0 ? 'Pago' : 'Pendente'
+      return [
+        o.friendlyId,
+        o.patientName,
+        o.dentistName || 'Desconhecido',
+        o.workType,
+        formatBRL(o.basePrice),
+        formatBRL(o.completedCost),
+        compDate ? format(compDate, 'dd/MM/yyyy') : '-',
+        isPaid,
+      ]
+    })
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((r) => r.map((c) => `"${c}"`).join(',')),
+    ].join('\n')
+
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf])
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `Casos_Fechados_${selectedMonthLabel?.replace(/\s/g, '_') || selectedMonth}.csv`
+    link.click()
+  }
 
   const handleExportExcel = () => {
     if (!detailsDialog) return
@@ -444,6 +500,16 @@ export default function AdminFinancial() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          {currentUser?.role !== 'dentist' && (
+            <Button
+              variant="outline"
+              onClick={handleExportAllClosed}
+              className="hidden sm:flex bg-background border-border"
+            >
+              <Download className="w-4 h-4 mr-2" /> Exportar Casos Fechados
+            </Button>
+          )}
+
           <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm flex-1 sm:flex-initial">
             <CalendarDays className="w-4 h-4 text-muted-foreground ml-2" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -472,18 +538,32 @@ export default function AdminFinancial() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              {currentUser?.role === 'dentist'
-                ? 'Total Faturado'
-                : `Receitas (${selectedMonthLabel})`}
+              {currentUser?.role === 'dentist' ? 'Total Pago' : `Receitas (${selectedMonthLabel})`}
             </CardTitle>
             <DollarSign className="w-4 h-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatBRL(monthlyRevenue)}</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {formatBRL(monthlyActualRevenue)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle border-l-4 border-l-amber-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              {currentUser?.role === 'dentist' ? 'A Pagar' : `Previsão (${selectedMonthLabel})`}
+            </CardTitle>
+            <Activity className="w-4 h-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">
+              {formatBRL(monthlyForecastedRevenue)}
+            </div>
           </CardContent>
         </Card>
 
@@ -565,7 +645,6 @@ export default function AdminFinancial() {
                   <TableRow>
                     <TableHead className="h-10 py-2">Dentista / Clínica</TableHead>
                     <TableHead className="h-10 py-2 text-center">Vencimento</TableHead>
-                    <TableHead className="h-10 py-2 text-right">Pipeline no Mês</TableHead>
                     <TableHead className="h-10 py-2 text-right">Saldo Devedor (Faturado)</TableHead>
                     <TableHead className="h-10 py-2 text-center">Ações</TableHead>
                   </TableRow>
@@ -573,7 +652,7 @@ export default function AdminFinancial() {
                 <TableBody>
                   {displayedDentists.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         {searchQuery
                           ? 'Nenhum dentista encontrado para a busca.'
                           : 'Nenhum faturamento pendente para este mês.'}
@@ -582,17 +661,19 @@ export default function AdminFinancial() {
                   )}
                   {displayedDentists.map((d) => (
                     <TableRow key={d.id}>
-                      <TableCell className="py-2.5 font-medium">
-                        {d.name}
+                      <TableCell
+                        className="py-2.5 font-medium cursor-pointer group"
+                        onClick={() => setDetailsDialog(d)}
+                      >
+                        <span className="group-hover:underline text-primary transition-all">
+                          {d.name}
+                        </span>
                         <div className="text-xs text-muted-foreground font-normal mt-0.5">
                           {d.clinic || 'Clínica não informada'}
                         </div>
                       </TableCell>
                       <TableCell className="py-2.5 text-center text-muted-foreground">
                         {d.payment_due_date ? `Dia ${d.payment_due_date}` : '-'}
-                      </TableCell>
-                      <TableCell className="py-2.5 text-right font-medium text-amber-600">
-                        {formatBRL(d.pipelineBalance)}
                       </TableCell>
                       <TableCell className="py-2.5 text-right font-bold text-red-600">
                         {formatBRL(d.outstandingBalance)}
