@@ -1,7 +1,7 @@
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Check, Clock, Activity, FileText, Inbox } from 'lucide-react'
+import { Check, Clock, Activity, FileText, Inbox, ArrowRight } from 'lucide-react'
 import { StatusBadge } from '@/components/StatusBadge'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -28,41 +28,88 @@ export default function Index() {
 
   if (!showGlobalInbox) {
     const myOrders = orders.filter((o) => o.dentistId === currentUser?.id)
-    const recentOrders = myOrders.slice(0, 5)
+
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Meu Painel</h2>
-          <p className="text-muted-foreground">Bem-vindo(a), {currentUser?.name}!</p>
+        <div className="flex justify-between items-end">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Meu Painel</h2>
+            <p className="text-muted-foreground">Bem-vindo(a), {currentUser?.name}!</p>
+          </div>
+          {canCreateOrder && (
+            <Button asChild className="hidden sm:flex">
+              <Link to="/new-request">Novo Pedido</Link>
+            </Button>
+          )}
         </div>
+
         <div className="grid gap-6 md:grid-cols-3">
-          <Card className="md:col-span-2 shadow-sm border-slate-200 dark:border-border">
+          <Card className="md:col-span-2 shadow-sm border-slate-200 dark:border-border h-fit">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" /> Trabalhos Recentes
+                <Activity className="w-5 h-5 text-primary" /> Meus Trabalhos
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {recentOrders.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">Nenhum pedido recente.</div>
+              {myOrders.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                    <FileText className="w-6 h-6 opacity-50" />
+                  </div>
+                  <p className="font-medium">Nenhum trabalho encontrado.</p>
+                </div>
               ) : (
-                <div className="divide-y">
-                  {recentOrders.map((o) => (
+                <div className="divide-y max-h-[800px] overflow-y-auto">
+                  {myOrders.map((o) => (
                     <div
                       key={o.id}
-                      className="p-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors flex items-center justify-between"
+                      className="p-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
+                      onClick={() => {
+                        setSelectedOrderId(o.id)
+                        setObsText(o.observations || '')
+                      }}
                     >
-                      <div>
-                        <p className="font-semibold">{o.patientName}</p>
-                        <p className="text-sm text-muted-foreground">{o.workType}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider">
+                            {o.friendlyId}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(o.createdAt), "dd/MM/yyyy 'às' HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-lg text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">
+                          {o.patientName}
+                        </p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5 flex items-center flex-wrap gap-x-1.5">
+                          <span className="font-medium text-foreground/80">{o.workType}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>{o.material}</span>
+                        </p>
                       </div>
-                      <StatusBadge status={o.status} />
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                        <StatusBadge
+                          status={o.status}
+                          className="scale-90 sm:scale-100 origin-left"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 rounded-full group-hover:bg-primary/10 group-hover:text-primary transition-colors"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
+
           <Card className="shadow-sm border-slate-200 dark:border-border h-fit">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -83,6 +130,15 @@ export default function Index() {
             </CardContent>
           </Card>
         </div>
+
+        <OrderDetailsSheet
+          order={selectedOrder}
+          isOpen={!!selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+          obsText={obsText}
+          setObsText={setObsText}
+          onSaveObs={handleSaveObs}
+        />
       </div>
     )
   }
