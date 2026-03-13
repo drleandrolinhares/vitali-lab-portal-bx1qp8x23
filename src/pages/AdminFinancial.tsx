@@ -54,8 +54,15 @@ import { format } from 'date-fns'
 import { DentistBillingTab } from '@/components/financial/DentistBillingTab'
 
 export default function AdminFinancial() {
-  const { currentUser, orders, refreshOrders, selectedLab, priceList, dreCategories } =
-    useAppStore()
+  const {
+    currentUser,
+    orders,
+    refreshOrders,
+    selectedLab,
+    priceList,
+    dreCategories,
+    checkPermission,
+  } = useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [billingControls, setBillingControls] = useState<any[]>([])
@@ -74,13 +81,15 @@ export default function AdminFinancial() {
       .then(({ data }) => {
         if (data) setDentists(data)
       })
-    supabase
-      .from('expenses')
-      .select('*')
-      .then(({ data }) => {
-        if (data) setExpenses(data)
-      })
-  }, [])
+    if (currentUser && currentUser.role !== 'dentist') {
+      supabase
+        .from('expenses')
+        .select('*')
+        .then(({ data }) => {
+          if (data) setExpenses(data)
+        })
+    }
+  }, [currentUser])
 
   useEffect(() => {
     supabase
@@ -112,11 +121,12 @@ export default function AdminFinancial() {
     () =>
       financials.reduce((acc, o) => {
         if (o.status === 'completed' || o.status === 'delivered') {
+          if (currentUser?.role === 'dentist' && o.dentistId !== currentUser.id) return acc
           return acc + o.totalCost
         }
         return acc
       }, 0),
-    [financials],
+    [financials, currentUser],
   )
 
   const filteredExpenses = useMemo(() => {
@@ -148,6 +158,7 @@ export default function AdminFinancial() {
   const profitability = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0
 
   const dentistStats = dentists
+    .filter((d) => (currentUser?.role === 'dentist' ? d.id === currentUser.id : true))
     .map((d) => {
       const dentistOrders = financials.filter((o) => o.dentistId === d.id)
       const outstandingBalance = dentistOrders.reduce((acc, o) => acc + o.outstandingCost, 0)
@@ -175,8 +186,15 @@ export default function AdminFinancial() {
     return !d.invoiceSent
   })
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist')
-    return <Navigate to="/" replace />
+  const canView =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'master' ||
+    currentUser?.role === 'receptionist' ||
+    currentUser?.role === 'financial' ||
+    currentUser?.role === 'dentist' ||
+    checkPermission('finances')
+
+  if (currentUser && !canView) return <Navigate to="/" replace />
 
   const handleInvoiceSent = async (dentistId: string) => {
     const { error } = await supabase.from('billing_controls' as any).insert({
@@ -420,7 +438,7 @@ export default function AdminFinancial() {
               Contas a Receber
             </h2>
             <p className="text-muted-foreground text-sm">
-              Gerenciamento de faturamento e recebimentos do laboratório.
+              Gerenciamento de faturamento e recebimentos.
             </p>
           </div>
         </div>
@@ -442,11 +460,15 @@ export default function AdminFinancial() {
             </Select>
           </div>
 
-          <Button asChild variant="outline" className="hidden sm:flex">
-            <Link to="/dre">
-              <BarChart3 className="w-4 h-4 mr-2" /> Relatório DRE
-            </Link>
-          </Button>
+          {(currentUser?.role === 'admin' ||
+            currentUser?.role === 'master' ||
+            currentUser?.role === 'financial') && (
+            <Button asChild variant="outline" className="hidden sm:flex">
+              <Link to="/dre">
+                <BarChart3 className="w-4 h-4 mr-2" /> Relatório DRE
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -454,7 +476,9 @@ export default function AdminFinancial() {
         <Card className="shadow-subtle border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Receitas ({selectedMonthLabel})
+              {currentUser?.role === 'dentist'
+                ? 'Total Faturado'
+                : `Receitas (${selectedMonthLabel})`}
             </CardTitle>
             <DollarSign className="w-4 h-4 text-emerald-500" />
           </CardHeader>
@@ -462,45 +486,54 @@ export default function AdminFinancial() {
             <div className="text-2xl font-bold text-emerald-600">{formatBRL(monthlyRevenue)}</div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle border-l-4 border-l-red-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Despesas ({selectedMonthLabel})
-            </CardTitle>
-            <TrendingDown className="w-4 h-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatBRL(monthlyExpenses)}</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Lucro Operacional
-            </CardTitle>
-            <Wallet className="w-4 h-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatBRL(monthlyProfit)}</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Rentabilidade (%)
-            </CardTitle>
-            <TrendingUp className="w-4 h-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{profitability.toFixed(1)}%</div>
-          </CardContent>
-        </Card>
+
+        {currentUser?.role !== 'dentist' && (
+          <>
+            <Card className="shadow-subtle border-l-4 border-l-red-500">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Despesas ({selectedMonthLabel})
+                </CardTitle>
+                <TrendingDown className="w-4 h-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{formatBRL(monthlyExpenses)}</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-subtle border-l-4 border-l-blue-500">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Lucro Operacional
+                </CardTitle>
+                <Wallet className="w-4 h-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{formatBRL(monthlyProfit)}</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-subtle border-l-4 border-l-purple-500">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Rentabilidade (%)
+                </CardTitle>
+                <TrendingUp className="w-4 h-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {profitability.toFixed(1)}%
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <Tabs defaultValue="geral" className="w-full mt-8">
         <TabsList className="mb-2">
           <TabsTrigger value="geral">Visão Consolidada</TabsTrigger>
-          <TabsTrigger value="faturamento">Faturamento Dentistas</TabsTrigger>
+          {currentUser?.role !== 'dentist' && (
+            <TabsTrigger value="faturamento">Faturamento Dentistas</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="geral" className="mt-0">
           <Card className="shadow-subtle">
@@ -514,15 +547,17 @@ export default function AdminFinancial() {
                   </div>
                 )}
               </CardTitle>
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar dentista (exibe faturas enviadas)..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              {currentUser?.role !== 'dentist' && (
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar dentista (exibe faturas enviadas)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
@@ -567,29 +602,33 @@ export default function AdminFinancial() {
                           <Button size="sm" variant="ghost" onClick={() => setDetailsDialog(d)}>
                             <List className="w-4 h-4 mr-1.5" /> Detalhes
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                            disabled={d.invoiceSent}
-                            onClick={() => handleInvoiceSent(d.id)}
-                          >
-                            {d.invoiceSent ? (
-                              <CheckCircle className="w-4 h-4 mr-1.5" />
-                            ) : (
-                              <Send className="w-4 h-4 mr-1.5" />
-                            )}
-                            {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                            disabled={d.outstandingBalance <= 0}
-                            onClick={() => setSettleDialog(d)}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
-                          </Button>
+                          {currentUser?.role !== 'dentist' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                                disabled={d.invoiceSent}
+                                onClick={() => handleInvoiceSent(d.id)}
+                              >
+                                {d.invoiceSent ? (
+                                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                                ) : (
+                                  <Send className="w-4 h-4 mr-1.5" />
+                                )}
+                                {d.invoiceSent ? 'Fatura Enviada' : 'FATURA ENVIADA'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                                disabled={d.outstandingBalance <= 0}
+                                onClick={() => setSettleDialog(d)}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1.5" /> Liquidar Mês
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -599,13 +638,15 @@ export default function AdminFinancial() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="faturamento" className="mt-0">
-          <DentistBillingTab
-            selectedMonth={selectedMonth}
-            dentists={dentists}
-            selectedMonthLabel={selectedMonthLabel}
-          />
-        </TabsContent>
+        {currentUser?.role !== 'dentist' && (
+          <TabsContent value="faturamento" className="mt-0">
+            <DentistBillingTab
+              selectedMonth={selectedMonth}
+              dentists={dentists}
+              selectedMonthLabel={selectedMonthLabel}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={!!detailsDialog} onOpenChange={(open) => !open && setDetailsDialog(null)}>
