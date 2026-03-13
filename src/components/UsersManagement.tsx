@@ -521,26 +521,33 @@ export function UsersManagement() {
     })
   }
 
+  const visibleModules = useMemo(
+    () => MODULES.filter((mod) => !mod.roles || mod.roles.includes(formData.role)),
+    [formData.role],
+  )
+
   const isAllPermsSelected = useMemo(() => {
-    return MODULES.every((mod) => {
+    return visibleModules.every((mod) => {
       const modPerm = selectedPerms[mod.id]
       if (!modPerm?.access) return false
-      if (mod.actions.length > 0) {
+      if (mod.actions && mod.actions.length > 0) {
         return mod.actions.every((act) => modPerm.actions?.[act.id])
       }
       return true
     })
-  }, [selectedPerms])
+  }, [selectedPerms, visibleModules])
 
   const handleToggleAllPerms = (checked: boolean) => {
     if (!isMasterOrAdmin) return
     if (checked) {
       const allPerms: Record<string, any> = {}
-      MODULES.forEach((mod) => {
+      visibleModules.forEach((mod) => {
         allPerms[mod.id] = { access: true, actions: {} }
-        mod.actions.forEach((act) => {
-          allPerms[mod.id].actions[act.id] = true
-        })
+        if (mod.actions) {
+          mod.actions.forEach((act) => {
+            allPerms[mod.id].actions[act.id] = true
+          })
+        }
       })
       setSelectedPerms(allPerms)
     } else {
@@ -1315,7 +1322,7 @@ export function UsersManagement() {
                   </div>
 
                   <div className="space-y-4">
-                    {MODULES.map((mod) => {
+                    {visibleModules.map((mod) => {
                       const hasAccess =
                         formData.role === 'master' ? true : selectedPerms[mod.id]?.access || false
                       return (
@@ -1336,7 +1343,7 @@ export function UsersManagement() {
                                 />
                               </div>
                             </div>
-                            {mod.actions.length > 0 && hasAccess && (
+                            {mod.actions && mod.actions.length > 0 && hasAccess && (
                               <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-[#e76f51]/30 ml-1">
                                 {mod.actions.length > 1 && (
                                   <div className="flex justify-between items-center pb-2 border-b border-muted/30">

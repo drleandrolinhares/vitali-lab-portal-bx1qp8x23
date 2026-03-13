@@ -22,7 +22,16 @@ import { toast } from '@/hooks/use-toast'
 import { ShieldCheck, Loader2, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export const MODULES = [
+export type ModuleAction = { id: string; label: string }
+
+export type Module = {
+  id: string
+  label: string
+  actions: ModuleAction[]
+  roles?: string[]
+}
+
+export const MODULES: Module[] = [
   {
     id: 'inbox',
     label: 'Caixa de Entrada / Início',
@@ -73,6 +82,12 @@ export const MODULES = [
     id: 'settings',
     label: 'Configurações / Usuários',
     actions: [],
+  },
+  {
+    id: 'individual_financial_dash',
+    label: 'DASH FINANCEIRO INDIVIDUAL DO DENTISTA',
+    actions: [],
+    roles: ['dentist', 'laboratory'],
   },
 ]
 
@@ -166,10 +181,11 @@ export function RolePermissionsPanel() {
   const isAllActiveRolePermsSelected = useMemo(() => {
     if (activeTab === 'master') return true
     const activeRolePerms = perms[activeTab] || {}
-    return MODULES.every((mod) => {
+    const visibleMods = MODULES.filter((m) => !m.roles || m.roles.includes(activeTab))
+    return visibleMods.every((mod) => {
       const modPerm = activeRolePerms[mod.id]
       if (!modPerm?.access) return false
-      if (mod.actions.length > 0) {
+      if (mod.actions && mod.actions.length > 0) {
         return mod.actions.every((act) => modPerm.actions?.[act.id])
       }
       return true
@@ -182,11 +198,14 @@ export function RolePermissionsPanel() {
       const newPerms = { ...prev }
       if (checked) {
         const allForRole: Record<string, any> = {}
-        MODULES.forEach((mod) => {
+        const visibleMods = MODULES.filter((m) => !m.roles || m.roles.includes(activeTab))
+        visibleMods.forEach((mod) => {
           allForRole[mod.id] = { access: true, actions: {} }
-          mod.actions.forEach((act) => {
-            allForRole[mod.id].actions[act.id] = true
-          })
+          if (mod.actions) {
+            mod.actions.forEach((act) => {
+              allForRole[mod.id].actions[act.id] = true
+            })
+          }
         })
         newPerms[activeTab] = allForRole
       } else {
@@ -265,7 +284,7 @@ export function RolePermissionsPanel() {
                 type="multiple"
                 className="w-full space-y-2 border rounded-xl bg-muted/10 p-2"
               >
-                {MODULES.map((mod) => (
+                {MODULES.filter((mod) => !mod.roles || mod.roles.includes(r.id)).map((mod) => (
                   <AccordionItem
                     value={mod.id}
                     key={mod.id}
