@@ -612,6 +612,8 @@ function MainHeader() {
 }
 
 export default function Layout() {
+  const { fetchError } = useAppStore()
+
   return (
     <SidebarProvider>
       <div className="print:hidden h-full flex">
@@ -619,7 +621,23 @@ export default function Layout() {
       </div>
       <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen">
         <MainHeader />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible relative">
+          {fetchError && (
+            <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border border-red-200 gap-4">
+              <div className="flex items-center gap-3">
+                <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
+                <span className="font-medium text-sm">{fetchError}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.reload()}
+                className="bg-white hover:bg-red-50 border-red-200 text-red-600 hover:text-red-700 w-full sm:w-auto"
+              >
+                Recarregar a Página
+              </Button>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

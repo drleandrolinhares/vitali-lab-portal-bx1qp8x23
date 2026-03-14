@@ -100,6 +100,8 @@ export default function NewRequest() {
           .from('profiles')
           .select('id, name, clinic')
           .in('role', ['dentist', 'laboratory'])
+          .eq('is_active', true)
+          .eq('is_approved', true)
         if (data) {
           const sorted = data
             .map((d: any) => ({

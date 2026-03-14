@@ -30,6 +30,7 @@ interface AppState {
   priceList: any[]
   dreCategories: DRECategory[]
   loading: boolean
+  fetchError: string | null
   selectedLab: string
   setSelectedLab: (lab: string) => void
   switchRole: (role: UserRole) => void
@@ -101,6 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [priceList, setPriceList] = useState<any[]>([])
   const [dreCategories, setDreCategories] = useState<DRECategory[]>([])
   const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
   const hasFetchedOrders = useRef(false)
@@ -340,8 +342,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const { data: fallbackOrders } = await fallbackQuery
+      const { data: fallbackOrders, error: fallbackError } = await fallbackQuery
+      if (fallbackError) {
+        setFetchError(
+          'Problema de comunicação com o servidor ao carregar os pedidos. Verifique sua conexão e tente novamente.',
+        )
+      } else {
+        setFetchError(null)
+      }
       finalOrders = fallbackOrders
+    } else {
+      setFetchError(null)
     }
 
     if (finalOrders) {
@@ -928,6 +939,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         priceList,
         dreCategories,
         loading,
+        fetchError,
         selectedLab,
         setSelectedLab,
         switchRole,

@@ -77,7 +77,7 @@ export default function HistoryPage() {
   const availableDentists = useMemo(() => {
     const map = new Map<string, string>()
     orders.forEach((o) => {
-      if (o.dentistId && o.dentistName) {
+      if (o.dentistId && o.dentistName && o.dentistRole !== 'master') {
         map.set(o.dentistId, o.dentistName)
       }
     })
@@ -100,6 +100,8 @@ export default function HistoryPage() {
   }, [orders, selectedSectors])
 
   const filtered = sectorFilteredOrders.filter((o) => {
+    if (o.dentistRole === 'master') return false
+
     if (canSearch && search.trim()) {
       const matchesSearch =
         o.patientName.toLowerCase().includes(search.toLowerCase()) ||
@@ -118,19 +120,21 @@ export default function HistoryPage() {
 
   // Chart Data
   const kpis = useMemo(() => {
-    const total = sectorFilteredOrders.length
-    const completed = sectorFilteredOrders.filter((o) =>
+    const validOrders = sectorFilteredOrders.filter((o) => o.dentistRole !== 'master')
+    const total = validOrders.length
+    const completed = validOrders.filter((o) =>
       ['completed', 'delivered'].includes(o.status),
     ).length
-    const pending = sectorFilteredOrders.filter((o) =>
+    const pending = validOrders.filter((o) =>
       ['pending', 'in_production'].includes(o.status),
     ).length
     return { total, completed, pending }
   }, [sectorFilteredOrders])
 
   const statusChartData = useMemo(() => {
+    const validOrders = sectorFilteredOrders.filter((o) => o.dentistRole !== 'master')
     const counts = { pending: 0, in_production: 0, completed: 0, delivered: 0 }
-    sectorFilteredOrders.forEach((o) => {
+    validOrders.forEach((o) => {
       if (counts[o.status as keyof typeof counts] !== undefined)
         counts[o.status as keyof typeof counts]++
     })
@@ -143,8 +147,9 @@ export default function HistoryPage() {
   }, [sectorFilteredOrders])
 
   const timeChartData = useMemo(() => {
+    const validOrders = sectorFilteredOrders.filter((o) => o.dentistRole !== 'master')
     const map = new Map<string, number>()
-    sectorFilteredOrders.forEach((o) => {
+    validOrders.forEach((o) => {
       const d = new Date(o.createdAt)
       if (isNaN(d.getTime())) return
       const monthYear = format(d, 'MMM/yy', { locale: ptBR })
@@ -277,10 +282,10 @@ export default function HistoryPage() {
             {canSelectDentist && showDentistCol && (
               <Select value={dentistFilter} onValueChange={setDentistFilter}>
                 <SelectTrigger className="w-full sm:w-[220px] h-10 bg-background shadow-sm border-border">
-                  <SelectValue placeholder="SELECIONAR DENTISTA" />
+                  <SelectValue placeholder="SELECIONAR CLIENTE" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">TODOS OS DENTISTAS</SelectItem>
+                  <SelectItem value="all">TODOS OS CLIENTES</SelectItem>
                   {availableDentists.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
                       {d.name}

@@ -21,6 +21,8 @@ import {
   Paperclip,
   ExternalLink,
   QrCode,
+  Loader2,
+  RefreshCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,6 +59,7 @@ export default function KanbanPage() {
     deleteKanbanStage,
     reorderKanbanStages,
     checkPermission,
+    fetchError: storeFetchError,
   } = useAppStore()
 
   const navigate = useNavigate()
@@ -92,6 +95,7 @@ export default function KanbanPage() {
 
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [isLoadingDentists, setIsLoadingDentists] = useState(false)
+  const [dentistFetchError, setDentistFetchError] = useState<string | null>(null)
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = useMemo(
@@ -125,23 +129,32 @@ export default function KanbanPage() {
 
   const savingRef = useRef(false)
 
+  const fetchDentists = async () => {
+    setIsLoadingDentists(true)
+    setDentistFetchError(null)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('role', ['dentist', 'laboratory'])
+        .eq('is_active', true)
+        .eq('is_approved', true)
+        .order('name')
+
+      if (error) throw error
+      if (data) {
+        setDentistsList(data)
+      }
+    } catch (err: any) {
+      console.error('Error fetching dentists:', err)
+      setDentistFetchError('Erro ao carregar dentistas.')
+    } finally {
+      setIsLoadingDentists(false)
+    }
+  }
+
   useEffect(() => {
     if (showDentistFilter && currentUser) {
-      const fetchDentists = async () => {
-        setIsLoadingDentists(true)
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .eq('role', 'dentist')
-          .eq('is_approved', true)
-          .order('name')
-
-        if (data && !error) {
-          setDentistsList(data)
-        }
-        setIsLoadingDentists(false)
-      }
-
       fetchDentists()
     }
   }, [showDentistFilter, currentUser])
@@ -265,7 +278,13 @@ export default function KanbanPage() {
               >
                 <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
                   <SelectValue
-                    placeholder={isLoadingDentists ? 'CARREGANDO...' : 'SELECIONE O DENTISTA'}
+                    placeholder={
+                      isLoadingDentists
+                        ? 'CARREGANDO...'
+                        : dentistFetchError
+                          ? 'ERRO AO CARREGAR'
+                          : 'SELECIONE O CLIENTE'
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,6 +293,21 @@ export default function KanbanPage() {
                       {d.name}
                     </SelectItem>
                   ))}
+                  {dentistFetchError && (
+                    <div className="p-2 text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fetchDentists()
+                        }}
+                        className="h-8 text-xs"
+                      >
+                        Tentar Novamente
+                      </Button>
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -287,11 +321,20 @@ export default function KanbanPage() {
               )}
               onClick={() => setSelectedDentistId('all')}
             >
-              TODOS OS DENTISTAS
+              TODOS OS CLIENTES
             </Button>
           </div>
         )}
       </div>
+
+      {storeFetchError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-center justify-between text-sm shrink-0">
+          <span className="font-medium">
+            Ocorreu um erro ao carregar todos os dados. Algumas informações podem estar
+            desatualizadas.
+          </span>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto space-y-10 pb-6 pr-2">
         {SECTORS.map((sector) => (

@@ -14,6 +14,8 @@ import {
   Tag,
   Plus,
   Search,
+  Loader2,
+  RefreshCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +35,7 @@ export default function DentistsPage() {
   const { currentUser } = useAppStore()
   const [dentists, setDentists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [editingDentist, setEditingDentist] = useState<any>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -58,6 +61,8 @@ export default function DentistsPage() {
     currentUser?.role === 'admin' ||
     currentUser?.role === ('master' as any) ||
     currentUser?.role === 'receptionist' ||
+    currentUser?.role === 'financial' ||
+    currentUser?.role === 'relationship_manager' ||
     (currentUser?.permissions || []).includes('dentists')
 
   const canAddDentist =
@@ -67,38 +72,54 @@ export default function DentistsPage() {
 
   const fetchDentists = async () => {
     setLoading(true)
-    const { data: profiles } = await supabase
-      .from('profiles' as any)
-      .select('*')
-      .eq('role', 'dentist')
-    const { data: orders } = await supabase
-      .from('orders' as any)
-      .select('dentist_id')
-      .neq('status', 'delivered')
+    setFetchError(null)
 
-    if (profiles) {
-      const mapped = profiles.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        clinic: p.clinic || 'CLÍNICA NÃO INFORMADA',
-        email: p.email,
-        avatar_url: p.avatar_url,
-        closing_date: p.closing_date,
-        payment_due_date: p.payment_due_date,
-        personal_phone: p.personal_phone,
-        clinic_contact_name: p.clinic_contact_name,
-        clinic_contact_role: p.clinic_contact_role,
-        clinic_contact_phone: p.clinic_contact_phone,
-        whatsapp_group_link: p.whatsapp_group_link,
-        commercial_agreement: p.commercial_agreement || 0,
-        activeCases: orders ? orders.filter((o: any) => o.dentist_id === p.id).length : 0,
-      }))
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles' as any)
+        .select('*')
+        .in('role', ['dentist', 'laboratory'])
+        .eq('is_active', true)
+        .eq('is_approved', true)
 
-      mapped.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+      if (profilesError) throw profilesError
 
-      setDentists(mapped)
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders' as any)
+        .select('dentist_id')
+        .neq('status', 'delivered')
+
+      if (ordersError) throw ordersError
+
+      if (profiles) {
+        const mapped = profiles.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          clinic: p.clinic || 'CLÍNICA NÃO INFORMADA',
+          email: p.email,
+          avatar_url: p.avatar_url,
+          closing_date: p.closing_date,
+          payment_due_date: p.payment_due_date,
+          personal_phone: p.personal_phone,
+          clinic_contact_name: p.clinic_contact_name,
+          clinic_contact_role: p.clinic_contact_role,
+          clinic_contact_phone: p.clinic_contact_phone,
+          whatsapp_group_link: p.whatsapp_group_link,
+          commercial_agreement: p.commercial_agreement || 0,
+          activeCases: orders ? orders.filter((o: any) => o.dentist_id === p.id).length : 0,
+        }))
+
+        mapped.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+
+        setDentists(mapped)
+      }
+    } catch (err: any) {
+      console.error('Error fetching dentists:', err)
+      setFetchError(err.message || 'Falha na conexão ao carregar a lista de clientes.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -215,13 +236,7 @@ export default function DentistsPage() {
   if (!hasAccess)
     return (
       <div className="p-8 text-center text-destructive font-medium uppercase">
-        ACESSO NEGADO. APENAS RECEPÇÃO E ADMINISTRAÇÃO.
-      </div>
-    )
-  if (loading && dentists.length === 0)
-    return (
-      <div className="p-8 text-center text-muted-foreground uppercase text-xs font-bold">
-        CARREGANDO DIRETÓRIO DE DENTISTAS...
+        ACESSO NEGADO. APENAS EQUIPE DO LABORATÓRIO PODE ACESSAR ESTA PÁGINA.
       </div>
     )
 
@@ -229,7 +244,7 @@ export default function DentistsPage() {
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight uppercase">DIRETÓRIO DE DENTISTAS</h2>
+          <h2 className="text-2xl font-bold tracking-tight uppercase">CLIENTES E PARCEIROS</h2>
           <p className="text-muted-foreground uppercase text-xs font-bold mt-1">
             GERENCIE SEUS CLIENTES, CLÍNICAS PARCEIRAS E INFORMAÇÕES DE CONTATO.
           </p>
@@ -249,18 +264,37 @@ export default function DentistsPage() {
               onClick={() => setIsCreating(true)}
               className="gap-2 uppercase text-xs font-bold w-full sm:w-auto"
             >
-              <Plus className="w-4 h-4" /> NOVO DENTISTA
+              <Plus className="w-4 h-4" /> NOVO CLIENTE
             </Button>
           )}
         </div>
       </div>
 
-      {filteredDentists.length === 0 ? (
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-center justify-between">
+          <span className="font-medium text-sm">{fetchError}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchDentists}
+            className="gap-2 bg-white text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <RefreshCcw className="w-4 h-4" /> Tentar Novamente
+          </Button>
+        </div>
+      )}
+
+      {loading && dentists.length === 0 ? (
+        <div className="p-16 flex flex-col items-center justify-center gap-4 text-muted-foreground border rounded-lg bg-muted/10">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="uppercase text-xs font-bold">CARREGANDO DIRETÓRIO DE CLIENTES...</p>
+        </div>
+      ) : filteredDentists.length === 0 && !fetchError ? (
         <div className="p-12 text-center border rounded-lg bg-muted/20">
           <p className="text-muted-foreground uppercase text-xs font-bold">
             {searchQuery
-              ? 'NENHUM DENTISTA ENCONTRADO PARA A BUSCA.'
-              : 'NENHUM DENTISTA CADASTRADO NO SISTEMA AINDA.'}
+              ? 'NENHUM CLIENTE ENCONTRADO PARA A BUSCA.'
+              : 'NENHUM CLIENTE ATIVO CADASTRADO NO SISTEMA AINDA.'}
           </p>
         </div>
       ) : (
@@ -278,7 +312,10 @@ export default function DentistsPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col flex-1 overflow-hidden">
-                  <CardTitle className="text-lg truncate uppercase" title={dentist.name}>
+                  <CardTitle
+                    className="text-lg truncate uppercase flex items-center gap-2"
+                    title={dentist.name}
+                  >
                     {dentist.name}
                   </CardTitle>
                   <CardDescription
@@ -362,7 +399,7 @@ export default function DentistsPage() {
 
                 <div className="pt-4 flex items-center justify-between border-t mt-4">
                   <span className="font-medium text-foreground uppercase text-xs font-bold">
-                    CASOS: <span className="text-primary">{dentist.activeCases}</span>
+                    CASOS ATIVOS: <span className="text-primary">{dentist.activeCases}</span>
                   </span>
                   <div className="flex items-center gap-1">
                     {currentUser?.role === 'admin' && (
@@ -371,7 +408,7 @@ export default function DentistsPage() {
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => handleDeleteDentist(dentist.id)}
-                        title="EXCLUIR DENTISTA"
+                        title="EXCLUIR CLIENTE"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -395,7 +432,7 @@ export default function DentistsPage() {
       <Dialog open={!!editingDentist} onOpenChange={(open) => !open && setEditingDentist(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="uppercase">PERFIL DO DENTISTA</DialogTitle>
+            <DialogTitle className="uppercase">PERFIL DO CLIENTE</DialogTitle>
             <DialogDescription className="uppercase text-xs font-semibold">
               ATUALIZE AS INFORMAÇÕES DE CONTATO, FATURAMENTO E INTEGRAÇÕES DE{' '}
               {editingDentist?.name}.
@@ -534,9 +571,10 @@ export default function DentistsPage() {
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="uppercase">NOVO DENTISTA</DialogTitle>
+            <DialogTitle className="uppercase">NOVO CLIENTE (DENTISTA)</DialogTitle>
             <DialogDescription className="uppercase text-xs font-semibold">
-              CRIE UMA CONTA PARA UM NOVO DENTISTA. UMA SENHA TEMPORÁRIA SERÁ DEFINIDA.
+              CRIE UMA CONTA PARA UM NOVO CLIENTE. UMA SENHA TEMPORÁRIA SERÁ DEFINIDA E EXIGIDA A
+              TROCA.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -555,6 +593,7 @@ export default function DentistsPage() {
                 value={createData.email}
                 onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
                 placeholder="EMAIL@EXEMPLO.COM"
+                className="normal-case"
               />
             </div>
             <div className="space-y-2">
@@ -580,6 +619,7 @@ export default function DentistsPage() {
                 value={createData.password}
                 onChange={(e) => setCreateData({ ...createData, password: e.target.value })}
                 placeholder="MÍNIMO DE 6 CARACTERES"
+                className="normal-case"
               />
               <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                 O DENTISTA SERÁ OBRIGADO A TROCAR ESTA SENHA NO PRIMEIRO LOGIN.
