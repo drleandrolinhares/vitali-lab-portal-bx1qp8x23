@@ -15,12 +15,11 @@ import {
   Loader2,
   MessageCircle,
   Filter,
-  Check,
   ListChecks,
   CheckCircle2,
   Clock,
 } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
@@ -35,17 +34,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@/components/ui/command'
-import { cn } from '@/lib/utils'
 import {
   ChartContainer,
   ChartTooltip,
@@ -59,7 +47,14 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const [dentistFilter, setDentistFilter] = useState<string>('all')
-  const [selectedSectors, setSelectedSectors] = useState<string[]>([])
+
+  const [historySector, setHistorySector] = useState<string>(
+    () => sessionStorage.getItem('vitali_history_lab') || 'ALL',
+  )
+
+  useEffect(() => {
+    sessionStorage.setItem('vitali_history_lab', historySector)
+  }, [historySector])
 
   const isCollaboratorOrAdmin = [
     'admin',
@@ -86,18 +81,10 @@ export default function HistoryPage() {
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [orders])
 
-  const availableSectors = useMemo(() => {
-    const sectors = new Set<string>()
-    orders.forEach((o) => {
-      if (o.sector) sectors.add(o.sector.toUpperCase().trim())
-    })
-    return Array.from(sectors).sort()
-  }, [orders])
-
   const sectorFilteredOrders = useMemo(() => {
-    if (selectedSectors.length === 0) return orders
-    return orders.filter((o) => o.sector && selectedSectors.includes(o.sector.toUpperCase().trim()))
-  }, [orders, selectedSectors])
+    if (historySector === 'ALL') return orders
+    return orders.filter((o) => o.sector && o.sector.toUpperCase().trim() === historySector)
+  }, [orders, historySector])
 
   const filtered = sectorFilteredOrders.filter((o) => {
     if (o.dentistRole === 'master') return false
@@ -198,70 +185,23 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border"
-            >
-              <Filter className="mr-2 h-4 w-4 opacity-50" />
-              <span className="truncate">
-                {selectedSectors.length === 0
-                  ? 'TODOS OS LABORATÓRIOS'
-                  : selectedSectors.length === 1
-                    ? selectedSectors[0]
-                    : `${selectedSectors.length} SELECIONADOS`}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[280px] p-0" align="end">
-            <Command>
-              <CommandInput placeholder="Buscar laboratório..." />
-              <CommandList>
-                <CommandEmpty>Nenhum laboratório encontrado.</CommandEmpty>
-                <CommandGroup>
-                  {availableSectors.map((sector) => (
-                    <CommandItem
-                      key={sector}
-                      onSelect={() => {
-                        setSelectedSectors((prev) =>
-                          prev.includes(sector)
-                            ? prev.filter((s) => s !== sector)
-                            : [...prev, sector],
-                        )
-                      }}
-                    >
-                      <div
-                        className={cn(
-                          'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                          selectedSectors.includes(sector)
-                            ? 'bg-primary text-primary-foreground'
-                            : 'opacity-50 [&_svg]:invisible',
-                        )}
-                      >
-                        <Check className="h-4 w-4" />
-                      </div>
-                      {sector}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-              {selectedSectors.length > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => setSelectedSectors([])}
-                      className="justify-center text-center text-sm font-medium text-muted-foreground cursor-pointer"
-                    >
-                      Limpar Filtros
-                    </CommandItem>
-                  </CommandGroup>
-                </>
-              )}
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <Select value={historySector} onValueChange={setHistorySector}>
+          <SelectTrigger className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border uppercase text-xs font-bold">
+            <Filter className="mr-2 h-4 w-4 opacity-50" />
+            <SelectValue placeholder="SELECIONAR LABORATÓRIO" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL" className="uppercase text-xs font-bold">
+              TODOS OS LABORATÓRIOS
+            </SelectItem>
+            <SelectItem value="SOLUÇÕES CERÂMICAS" className="uppercase text-xs font-bold">
+              SOLUÇÕES CERÂMICAS
+            </SelectItem>
+            <SelectItem value="STÚDIO ACRÍLICO" className="uppercase text-xs font-bold">
+              STÚDIO ACRÍLICO
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs defaultValue="history" className="w-full space-y-6">

@@ -1476,7 +1476,16 @@ export const Constants = {
 //   CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id)
 // Table: billing_controls
 //   CREATE UNIQUE INDEX billing_controls_dentist_id_month_key ON public.billing_controls USING btree (dentist_id, month)
+// Table: expenses
+//   CREATE INDEX idx_expenses_status_due_date ON public.expenses USING btree (status, due_date)
 // Table: kanban_stages
 //   CREATE UNIQUE INDEX kanban_stages_name_key ON public.kanban_stages USING btree (name)
+// Table: orders
+//   CREATE INDEX idx_orders_dentist_id ON public.orders USING btree (dentist_id)
+//   CREATE INDEX idx_orders_kanban_stage ON public.orders USING btree (kanban_stage)
+//   CREATE INDEX idx_orders_status ON public.orders USING btree (status)
 // Table: partner_prices
 //   CREATE UNIQUE INDEX partner_prices_partner_id_price_list_id_key ON public.partner_prices USING btree (partner_id, price_list_id)
+// Table: profiles
+//   CREATE INDEX idx_profiles_active_approved ON public.profiles USING btree (is_active, is_approved)
+//   CREATE INDEX idx_profiles_role ON public.profiles USING btree (role)

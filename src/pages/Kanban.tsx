@@ -60,11 +60,17 @@ export default function KanbanPage() {
     reorderKanbanStages,
     checkPermission,
     fetchError: storeFetchError,
+    selectedLab,
+    setSelectedLab,
   } = useAppStore()
 
   const navigate = useNavigate()
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const isDentist = currentUser?.role === 'dentist'
+
+  const activeLab = SECTORS.includes((selectedLab || '').toUpperCase())
+    ? (selectedLab || '').toUpperCase()
+    : SECTORS[0]
 
   const canDragCards =
     !isDentist &&
@@ -198,7 +204,9 @@ export default function KanbanPage() {
     const cardId = e.dataTransfer.getData('card-id') || e.dataTransfer.getData('text/plain')
     if (cardId) {
       const o = orders.find((x) => x.id === cardId)
-      if (o && o.sector === sector && o.kanbanStage !== stage) updateOrderKanbanStage(cardId, stage)
+      if (o && (o.sector || '').toUpperCase() === sector.toUpperCase() && o.kanbanStage !== stage) {
+        updateOrderKanbanStage(cardId, stage)
+      }
     }
     setDraggedCardId(null)
     setDraggedCardSector(null)
@@ -262,7 +270,9 @@ export default function KanbanPage() {
     <div className="space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Evolução dos Trabalhos</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-pink-600 uppercase">
+            Evolução dos Trabalhos
+          </h2>
           <p className="text-slate-500 dark:text-muted-foreground">
             Acompanhe o progresso do fluxo de produção.
           </p>
@@ -327,6 +337,29 @@ export default function KanbanPage() {
         )}
       </div>
 
+      <div className="bg-slate-50 dark:bg-muted/30 p-4 rounded-xl border border-slate-200 dark:border-border/50 shrink-0">
+        <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 block tracking-wider uppercase">
+          ESCOLHA O LABORATÓRIO
+        </Label>
+        <div className="flex flex-wrap gap-3">
+          {SECTORS.map((s) => (
+            <Button
+              key={s}
+              variant={activeLab === s ? 'default' : 'outline'}
+              onClick={() => setSelectedLab(s)}
+              className={cn(
+                'h-10 px-6 text-xs font-bold transition-all uppercase tracking-wide',
+                activeLab === s
+                  ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-md border-pink-600'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200 dark:bg-background dark:text-muted-foreground dark:hover:bg-muted',
+              )}
+            >
+              {s}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {storeFetchError && (
         <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg flex items-center justify-between text-sm shrink-0">
           <span className="font-medium">
@@ -337,391 +370,389 @@ export default function KanbanPage() {
       )}
 
       <div className="flex-1 overflow-y-auto space-y-10 pb-6 pr-2">
-        {SECTORS.map((sector) => (
-          <div key={sector} className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
-              <div className="w-2 h-6 bg-primary rounded-full" /> {sector}
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-start">
-              {kanbanStages.map((stage) => {
-                const cols = visibleOrders.filter(
-                  (o) => o.sector === sector && o.kanbanStage === stage.name,
-                )
-                const isExpanded = expandedCols.has(`${sector}-${stage.id}`)
-                const displayCols = isExpanded ? cols : cols.slice(0, 4)
-                const hasMore = cols.length > 4
-                const isPendingCard = stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-foreground flex items-center gap-2">
+            <div className="w-2 h-6 bg-pink-600 rounded-full" /> {activeLab}
+          </h3>
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-start">
+            {kanbanStages.map((stage) => {
+              const cols = visibleOrders.filter(
+                (o) => (o.sector || '').toUpperCase() === activeLab && o.kanbanStage === stage.name,
+              )
+              const isExpanded = expandedCols.has(`${activeLab}-${stage.id}`)
+              const displayCols = isExpanded ? cols : cols.slice(0, 4)
+              const hasMore = cols.length > 4
+              const isPendingCard = stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
 
-                return (
-                  <div
-                    key={stage.id}
-                    draggable={isAdmin && !editingStageId}
-                    onDragStart={(e) => {
-                      if (!isAdmin) return
-                      e.dataTransfer.setData('column-id', stage.id)
-                      setTimeout(() => setDraggedStageId(stage.id), 0)
-                    }}
-                    onDragEnd={() => {
-                      setDraggedStageId(null)
-                      setDragOverStageId(null)
-                    }}
-                    onDragOver={(e) => {
-                      if (draggedStageId && draggedStageId !== stage.id) {
-                        e.preventDefault()
-                        setDragOverStageId(`${sector}-${stage.id}`)
-                      } else if (draggedCardId && draggedCardSector === sector) {
-                        e.preventDefault()
-                        setDragOverStageId(`${sector}-${stage.id}`)
-                      }
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverStageId === `${sector}-${stage.id}`) setDragOverStageId(null)
-                    }}
-                    onDrop={(e) => {
+              return (
+                <div
+                  key={stage.id}
+                  draggable={isAdmin && !editingStageId}
+                  onDragStart={(e) => {
+                    if (!isAdmin) return
+                    e.dataTransfer.setData('column-id', stage.id)
+                    setTimeout(() => setDraggedStageId(stage.id), 0)
+                  }}
+                  onDragEnd={() => {
+                    setDraggedStageId(null)
+                    setDragOverStageId(null)
+                  }}
+                  onDragOver={(e) => {
+                    if (draggedStageId && draggedStageId !== stage.id) {
                       e.preventDefault()
-                      setDragOverStageId(null)
-                      const columnId = e.dataTransfer.getData('column-id')
-                      if (columnId) {
-                        if (isAdmin) handleColumnDrop(e, stage.id)
-                      } else {
-                        handleDrop(e, stage.name, sector)
-                      }
-                    }}
-                    className={cn(
-                      'w-[300px] shrink-0 rounded-xl p-3 flex flex-col gap-3 border snap-start transition-all duration-200',
-                      'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
-                      draggedStageId === stage.id &&
-                        'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
-                      dragOverStageId === `${sector}-${stage.id}` &&
-                        (draggedStageId || draggedCardId) &&
-                        'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
-                    )}
-                  >
-                    <div className="flex items-center justify-between px-1 mb-1 group">
-                      {editingStageId === stage.id ? (
-                        <Input
-                          autoFocus
-                          value={editStageName}
-                          onChange={(e) => setEditStageName(e.target.value)}
-                          onBlur={() => handleSaveStageName(stage.id, stage.name)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleSaveStageName(stage.id, stage.name)
+                      setDragOverStageId(`${activeLab}-${stage.id}`)
+                    } else if (draggedCardId && draggedCardSector?.toUpperCase() === activeLab) {
+                      e.preventDefault()
+                      setDragOverStageId(`${activeLab}-${stage.id}`)
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverStageId === `${activeLab}-${stage.id}`) setDragOverStageId(null)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDragOverStageId(null)
+                    const columnId = e.dataTransfer.getData('column-id')
+                    if (columnId) {
+                      if (isAdmin) handleColumnDrop(e, stage.id)
+                    } else {
+                      handleDrop(e, stage.name, activeLab)
+                    }
+                  }}
+                  className={cn(
+                    'w-[300px] shrink-0 rounded-xl p-3 flex flex-col gap-3 border snap-start transition-all duration-200',
+                    'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
+                    draggedStageId === stage.id &&
+                      'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
+                    dragOverStageId === `${activeLab}-${stage.id}` &&
+                      (draggedStageId || draggedCardId) &&
+                      'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
+                  )}
+                >
+                  <div className="flex items-center justify-between px-1 mb-1 group">
+                    {editingStageId === stage.id ? (
+                      <Input
+                        autoFocus
+                        value={editStageName}
+                        onChange={(e) => setEditStageName(e.target.value)}
+                        onBlur={() => handleSaveStageName(stage.id, stage.name)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleSaveStageName(stage.id, stage.name)
+                          }
+                          if (e.key === 'Escape') setEditingStageId(null)
+                        }}
+                        className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
+                        {isAdmin && (
+                          <GripHorizontal
+                            className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
+                            title="Arraste para reordenar"
+                          />
+                        )}
+                        <h4
+                          onClick={() => {
+                            if (isAdmin) {
+                              setEditingStageId(stage.id)
+                              setEditStageName(stage.name)
                             }
-                            if (e.key === 'Escape') setEditingStageId(null)
                           }}
-                          className="h-7 text-xs font-semibold uppercase px-2 py-1 flex-1 min-w-0 bg-white dark:bg-background shadow-sm border-primary/50 focus-visible:ring-primary/30"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-                          {isAdmin && (
-                            <GripHorizontal
-                              className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
-                              title="Arraste para reordenar"
-                            />
+                          className={cn(
+                            'font-semibold text-xs tracking-wide uppercase truncate flex items-center gap-1.5',
+                            'text-slate-600 dark:text-muted-foreground',
+                            isAdmin && 'cursor-pointer',
+                            isAdmin && 'hover:text-primary transition-colors',
                           )}
-                          <h4
+                          title={isAdmin ? 'Clique para renomear' : ''}
+                        >
+                          {stage.name}
+                          {isAdmin && (
+                            <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
+                        </h4>
+                        {(stage.description || isAdmin) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  'h-5 w-5 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-800',
+                                  !stage.description && 'opacity-30 hover:opacity-100',
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (isAdmin) {
+                                    setEditingDescStage(stage)
+                                    setEditDescText(stage.description || '')
+                                  }
+                                }}
+                              >
+                                <Info className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="bg-primary text-primary-foreground border-primary shadow-xl max-w-xs text-center z-50"
+                            >
+                              {stage.description ? (
+                                <p className="text-sm font-medium leading-relaxed">
+                                  {stage.description}
+                                </p>
+                              ) : (
+                                <p className="text-sm italic opacity-80">
+                                  Sem descrição. Clique para adicionar.
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0 ml-auto"
                             onClick={() => {
-                              if (isAdmin) {
-                                setEditingStageId(stage.id)
-                                setEditStageName(stage.name)
-                              }
+                              setDeleteStageData(stage)
+                              setFallbackStageName(
+                                kanbanStages.find((s) => s.id !== stage.id)?.name || '',
+                              )
                             }}
-                            className={cn(
-                              'font-semibold text-xs tracking-wide uppercase truncate flex items-center gap-1.5',
-                              'text-slate-600 dark:text-muted-foreground',
-                              isAdmin && 'cursor-pointer',
-                              isAdmin && 'hover:text-primary transition-colors',
-                            )}
-                            title={isAdmin ? 'Clique para renomear' : ''}
                           >
-                            {stage.name}
-                            {isAdmin && (
-                              <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 rounded text-xs font-bold border shrink-0',
+                        'bg-white dark:bg-background border-slate-200 dark:border-border text-primary',
+                      )}
+                    >
+                      {cols.length}
+                    </span>
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
+                    {displayCols.map((o) => (
+                      <Tooltip key={o.id} delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <div
+                            draggable={canDragCards}
+                            onDragStart={(e) => {
+                              if (!canDragCards) return
+                              e.stopPropagation()
+                              e.dataTransfer.setData('card-id', o.id)
+                              e.dataTransfer.setData('card-sector', o.sector)
+                              e.dataTransfer.setData('text/plain', o.id)
+                              setTimeout(() => {
+                                setDraggedCardId(o.id)
+                                setDraggedCardSector(o.sector)
+                              }, 0)
+                            }}
+                            onDragEnd={() => {
+                              setDraggedCardId(null)
+                              setDraggedCardSector(null)
+                              setDragOverStageId(null)
+                            }}
+                            onClick={() => setSelectedOrderId(o.id)}
+                            className={cn(
+                              'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                              canDragCards &&
+                                'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                              draggedCardId === o.id &&
+                                'opacity-50 scale-[0.98] border-dashed shadow-none',
                             )}
-                          </h4>
-                          {(stage.description || isAdmin) && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={cn(
-                                    'h-5 w-5 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-800',
-                                    !stage.description && 'opacity-30 hover:opacity-100',
+                          >
+                            <div
+                              className={cn(
+                                'absolute left-0 top-0 bottom-0 w-1',
+                                isPendingCard
+                                  ? 'bg-red-500/80 dark:bg-red-600/80'
+                                  : 'bg-primary/20 dark:bg-primary/40',
+                              )}
+                            />
+                            <div className="flex justify-between items-start mb-2 pl-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-slate-500">
+                                  {o.friendlyId}
+                                </span>
+                                {o.fileUrls && o.fileUrls.length > 0 && (
+                                  <Paperclip className="w-3 h-3 text-primary opacity-70" />
+                                )}
+                              </div>
+                              <StatusBadge
+                                status={o.status}
+                                className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
+                              />
+                            </div>
+                            <p className="font-medium text-sm truncate pl-1">{o.patientName}</p>
+                            <p className="text-xs text-slate-500 mt-1 truncate pl-1">
+                              {o.workType}
+                            </p>
+
+                            {isPendingCard && (
+                              <div className="mt-2.5 mb-0.5 bg-red-600 dark:bg-red-700 text-white text-[10px] font-bold px-2 py-1.5 rounded text-center uppercase tracking-wider shadow-sm w-full leading-tight">
+                                Aguardando Retorno do Dentista
+                              </div>
+                            )}
+
+                            <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
+                              <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
+                                {currentUser?.role !== 'dentist' && o.dentistName}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {currentUser?.role !== 'dentist' &&
+                                  !stage.name.toUpperCase().includes('FINALIZADO') &&
+                                  !stage.name.toUpperCase().includes('ENTREGUE') && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={finishingOrderId === o.id}
+                                      className="h-[22px] px-2 py-0 text-[10px] font-bold border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleQuickFinish(o.id)
+                                      }}
+                                      title="Mover para Finalizados e Entregues"
+                                    >
+                                      {finishingOrderId === o.id ? (
+                                        <div className="w-3 h-3 mr-1 border-[1.5px] border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                      ) : (
+                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                      )}
+                                      Finalizar
+                                    </Button>
                                   )}
+                                <KanbanCardTimer order={o} currentStage={stage.name} />
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1.5 mt-3 w-full">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/order/${o.id}`)
+                                }}
+                              >
+                                <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
+                                <span className="truncate">ABRIR REQUISIÇÃO</span>
+                              </Button>
+                              <div className="flex gap-1.5 w-full">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    if (isAdmin) {
-                                      setEditingDescStage(stage)
-                                      setEditDescText(stage.description || '')
-                                    }
+                                    setSelectedFullQrOrder(o)
                                   }}
                                 >
-                                  <Info className="w-3.5 h-3.5" />
+                                  <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
+                                  <span className="truncate">QR PEDIDO</span>
                                 </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                className="bg-primary text-primary-foreground border-primary shadow-xl max-w-xs text-center z-50"
-                              >
-                                {stage.description ? (
-                                  <p className="text-sm font-medium leading-relaxed">
-                                    {stage.description}
-                                  </p>
-                                ) : (
-                                  <p className="text-sm italic opacity-80">
-                                    Sem descrição. Clique para adicionar.
-                                  </p>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive shrink-0 ml-auto"
-                              onClick={() => {
-                                setDeleteStageData(stage)
-                                setFallbackStageName(
-                                  kanbanStages.find((s) => s.id !== stage.id)?.name || '',
-                                )
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      <span
-                        className={cn(
-                          'px-2 py-0.5 rounded text-xs font-bold border shrink-0',
-                          'bg-white dark:bg-background border-slate-200 dark:border-border text-primary',
-                        )}
-                      >
-                        {cols.length}
-                      </span>
-                    </div>
-                    <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
-                      {displayCols.map((o) => (
-                        <Tooltip key={o.id} delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <div
-                              draggable={canDragCards}
-                              onDragStart={(e) => {
-                                if (!canDragCards) return
-                                e.stopPropagation()
-                                e.dataTransfer.setData('card-id', o.id)
-                                e.dataTransfer.setData('card-sector', o.sector)
-                                e.dataTransfer.setData('text/plain', o.id)
-                                setTimeout(() => {
-                                  setDraggedCardId(o.id)
-                                  setDraggedCardSector(o.sector)
-                                }, 0)
-                              }}
-                              onDragEnd={() => {
-                                setDraggedCardId(null)
-                                setDraggedCardSector(null)
-                                setDragOverStageId(null)
-                              }}
-                              onClick={() => setSelectedOrderId(o.id)}
-                              className={cn(
-                                'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden cursor-pointer',
-                                canDragCards &&
-                                  'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
-                                draggedCardId === o.id &&
-                                  'opacity-50 scale-[0.98] border-dashed shadow-none',
-                              )}
-                            >
-                              <div
-                                className={cn(
-                                  'absolute left-0 top-0 bottom-0 w-1',
-                                  isPendingCard
-                                    ? 'bg-red-500/80 dark:bg-red-600/80'
-                                    : 'bg-primary/20 dark:bg-primary/40',
-                                )}
-                              />
-                              <div className="flex justify-between items-start mb-2 pl-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-slate-500">
-                                    {o.friendlyId}
-                                  </span>
-                                  {o.fileUrls && o.fileUrls.length > 0 && (
-                                    <Paperclip className="w-3 h-3 text-primary opacity-70" />
-                                  )}
-                                </div>
-                                <StatusBadge
-                                  status={o.status}
-                                  className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
-                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedPrintQrOrder(o)
+                                  }}
+                                >
+                                  <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
+                                  <span className="truncate">QR IMPRESSÃO</span>
+                                </Button>
                               </div>
-                              <p className="font-medium text-sm truncate pl-1">{o.patientName}</p>
-                              <p className="text-xs text-slate-500 mt-1 truncate pl-1">
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="right"
+                          sideOffset={8}
+                          className={cn(
+                            'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
+                            'bg-primary',
+                          )}
+                        >
+                          <div className="space-y-2">
+                            <div>
+                              <p className="font-bold text-sm leading-tight">{o.patientName}</p>
+                              <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
+                                {o.friendlyId}
+                              </p>
+                            </div>
+                            <div className="text-xs space-y-1 opacity-90">
+                              {currentUser?.role !== 'dentist' && (
+                                <p>
+                                  <span className="font-semibold opacity-100">Dr(a):</span>{' '}
+                                  {o.dentistName}
+                                </p>
+                              )}
+                              <p>
+                                <span className="font-semibold opacity-100">Trabalho:</span>{' '}
                                 {o.workType}
                               </p>
-
-                              {isPendingCard && (
-                                <div className="mt-2.5 mb-0.5 bg-red-600 dark:bg-red-700 text-white text-[10px] font-bold px-2 py-1.5 rounded text-center uppercase tracking-wider shadow-sm w-full leading-tight">
-                                  Aguardando Retorno do Dentista
-                                </div>
-                              )}
-
-                              <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
-                                <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
-                                  {currentUser?.role !== 'dentist' && o.dentistName}
-                                </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  {currentUser?.role !== 'dentist' &&
-                                    !stage.name.toUpperCase().includes('FINALIZADO') &&
-                                    !stage.name.toUpperCase().includes('ENTREGUE') && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={finishingOrderId === o.id}
-                                        className="h-[22px] px-2 py-0 text-[10px] font-bold border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleQuickFinish(o.id)
-                                        }}
-                                        title="Mover para Finalizados e Entregues"
-                                      >
-                                        {finishingOrderId === o.id ? (
-                                          <div className="w-3 h-3 mr-1 border-[1.5px] border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                                        ) : (
-                                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                                        )}
-                                        Finalizar
-                                      </Button>
-                                    )}
-                                  <KanbanCardTimer order={o} currentStage={stage.name} />
-                                </div>
-                              </div>
-                              <div className="flex flex-col gap-1.5 mt-3 w-full">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    navigate(`/order/${o.id}`)
-                                  }}
-                                >
-                                  <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
-                                  <span className="truncate">ABRIR REQUISIÇÃO</span>
-                                </Button>
-                                <div className="flex gap-1.5 w-full">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedFullQrOrder(o)
-                                    }}
-                                  >
-                                    <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
-                                    <span className="truncate">QR PEDIDO</span>
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedPrintQrOrder(o)
-                                    }}
-                                  >
-                                    <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
-                                    <span className="truncate">QR IMPRESSÃO</span>
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="right"
-                            sideOffset={8}
-                            className={cn(
-                              'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
-                              'bg-primary',
-                            )}
-                          >
-                            <div className="space-y-2">
-                              <div>
-                                <p className="font-bold text-sm leading-tight">{o.patientName}</p>
-                                <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
-                                  {o.friendlyId}
-                                </p>
-                              </div>
-                              <div className="text-xs space-y-1 opacity-90">
-                                {currentUser?.role !== 'dentist' && (
-                                  <p>
-                                    <span className="font-semibold opacity-100">Dr(a):</span>{' '}
-                                    {o.dentistName}
-                                  </p>
-                                )}
+                              {o.material && (
                                 <p>
-                                  <span className="font-semibold opacity-100">Trabalho:</span>{' '}
-                                  {o.workType}
+                                  <span className="font-semibold opacity-100">Material:</span>{' '}
+                                  {o.material}
                                 </p>
-                                {o.material && (
-                                  <p>
-                                    <span className="font-semibold opacity-100">Material:</span>{' '}
-                                    {o.material}
-                                  </p>
-                                )}
-                                {o.fileUrls && o.fileUrls.length > 0 && (
-                                  <p className="flex items-center gap-1 mt-1 text-primary-foreground/90">
-                                    <Paperclip className="w-3 h-3" /> {o.fileUrls.length} arquivo(s)
-                                    anexo(s)
-                                  </p>
-                                )}
-                              </div>
-                              {o.observations && (
-                                <div className="mt-2 pt-2 border-t border-primary-foreground/20 text-xs">
-                                  <p className="font-semibold mb-1">Observações:</p>
-                                  <p className="opacity-90 line-clamp-4 leading-relaxed">
-                                    {o.observations}
-                                  </p>
-                                </div>
+                              )}
+                              {o.fileUrls && o.fileUrls.length > 0 && (
+                                <p className="flex items-center gap-1 mt-1 text-primary-foreground/90">
+                                  <Paperclip className="w-3 h-3" /> {o.fileUrls.length} arquivo(s)
+                                  anexo(s)
+                                </p>
                               )}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                      {hasMore && (
-                        <Button
-                          variant="ghost"
-                          className="w-full text-xs font-semibold mt-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border"
-                          onClick={() => {
-                            const newSet = new Set(expandedCols)
-                            if (isExpanded) newSet.delete(`${sector}-${stage.id}`)
-                            else newSet.add(`${sector}-${stage.id}`)
-                            setExpandedCols(newSet)
-                          }}
-                        >
-                          {isExpanded ? 'Ver Menos' : `Ver mais (${cols.length - 4})`}
-                        </Button>
-                      )}
-                    </div>
+                            {o.observations && (
+                              <div className="mt-2 pt-2 border-t border-primary-foreground/20 text-xs">
+                                <p className="font-semibold mb-1">Observações:</p>
+                                <p className="opacity-90 line-clamp-4 leading-relaxed">
+                                  {o.observations}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                    {hasMore && (
+                      <Button
+                        variant="ghost"
+                        className="w-full text-xs font-bold mt-1 text-pink-600 hover:text-pink-700 hover:bg-pink-50 border border-transparent hover:border-pink-200 uppercase tracking-wide transition-colors dark:hover:bg-pink-950/30"
+                        onClick={() => {
+                          const newSet = new Set(expandedCols)
+                          if (isExpanded) newSet.delete(`${activeLab}-${stage.id}`)
+                          else newSet.add(`${activeLab}-${stage.id}`)
+                          setExpandedCols(newSet)
+                        }}
+                      >
+                        {isExpanded ? 'Ver Menos' : `Ver Mais (+${cols.length - 4})`}
+                      </Button>
+                    )}
                   </div>
-                )
-              })}
-              {isAdmin && (
-                <Button
-                  variant="outline"
-                  className="w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30"
-                  onClick={() => setIsAddColumnOpen(true)}
-                >
-                  <Plus className="w-6 h-6 mb-2" />
-                  <span className="font-medium text-sm">Adicionar Coluna</span>
-                </Button>
-              )}
-            </div>
+                </div>
+              )
+            })}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                className="w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30"
+                onClick={() => setIsAddColumnOpen(true)}
+              >
+                <Plus className="w-6 h-6 mb-2" />
+                <span className="font-medium text-sm">Adicionar Coluna</span>
+              </Button>
+            )}
           </div>
-        ))}
+        </div>
       </div>
 
       <OrderDetailsSheet
