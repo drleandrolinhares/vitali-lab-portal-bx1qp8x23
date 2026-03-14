@@ -34,6 +34,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Key,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -467,6 +468,7 @@ export function UsersManagement() {
           permissions: selectedPerms || {},
           assigned_dentists: formData.assigned_dentists,
           password: formData.password,
+          requires_password_change: true,
         }
       }
 
@@ -533,6 +535,37 @@ export function UsersManagement() {
       toast({
         title: 'Atenção',
         description: errorMsg,
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!editingUser) return
+    if (
+      !confirm(
+        'Deseja redefinir a senha deste usuário para "123456"? O usuário será forçado a trocar a senha no próximo login.',
+      )
+    )
+      return
+
+    setSaving(true)
+    try {
+      const { error } = await updateUser({
+        userId: editingUser.id,
+        password: '123456',
+        requires_password_change: true,
+      })
+
+      if (error) throw error
+
+      toast({ title: 'Senha redefinida para 123456 com sucesso!' })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao redefinir senha',
+        description: err.message,
         variant: 'destructive',
       })
     } finally {
@@ -1053,6 +1086,17 @@ export function UsersManagement() {
                             )}
                           </Button>
                         </div>
+                        {editingUser && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="mt-3 w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                            onClick={handleResetPassword}
+                            disabled={saving}
+                          >
+                            <Key className="w-4 h-4 mr-2" /> Redefinir Senha (123456)
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </section>

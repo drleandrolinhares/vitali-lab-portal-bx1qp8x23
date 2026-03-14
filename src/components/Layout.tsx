@@ -82,7 +82,6 @@ const ADMIN_MENUS = [
       { id: 'dentists', title: 'CLIENTES E PARCEIROS', icon: Users, path: '/dentists' },
       { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
       { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
-      { id: 'pending-users', title: 'CADASTROS PENDENTES', icon: UserPlus, path: '/pending-users' },
     ],
   },
   {
@@ -188,7 +187,7 @@ function useAdminBadges(currentUser: any) {
 }
 
 function AppSidebar() {
-  const { currentUser, appSettings, orders, pendingUsers, checkPermission } = useAppStore()
+  const { currentUser, appSettings, orders, checkPermission } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -232,7 +231,6 @@ function AppSidebar() {
       'dre-categories': 'settings',
       audit: 'settings',
       users: 'settings',
-      'pending-users': 'settings',
       dentists: 'settings',
       patients: 'settings',
     }
@@ -328,12 +326,6 @@ function AppSidebar() {
           ADMIN_MENUS.map((group) => {
             const visibleItems = group.items
               .map((item) => {
-                if (
-                  item.id === 'pending-users' &&
-                  currentUser.role !== 'admin' &&
-                  currentUser.role !== 'master'
-                )
-                  return null
                 if (!hasPerm(item.id)) return null
                 return item
               })
@@ -347,10 +339,6 @@ function AppSidebar() {
                   let badgeCount = 0
                   let badgeColor = 'bg-primary'
 
-                  if (item.id === 'pending-users') {
-                    badgeCount = pendingUsers?.length || 0
-                    badgeColor = 'bg-amber-500'
-                  }
                   if (item.id === 'inventory') {
                     badgeCount = lowStock
                     badgeColor = 'bg-red-500'

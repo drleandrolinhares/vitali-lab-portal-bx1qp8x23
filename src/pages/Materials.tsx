@@ -56,7 +56,11 @@ export default function MaterialsPage() {
     toast({ title: 'Sucesso', description: 'Material removido com sucesso!' })
   }
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist') {
+  if (
+    currentUser?.role !== 'admin' &&
+    currentUser?.role !== 'receptionist' &&
+    currentUser?.role !== 'master'
+  ) {
     return (
       <div className="p-8 text-center text-muted-foreground">
         Acesso restrito. Você não tem permissão para acessar esta página.

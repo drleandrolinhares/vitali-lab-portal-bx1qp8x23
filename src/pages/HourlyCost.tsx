@@ -101,7 +101,11 @@ export default function HourlyCost() {
   const totalHourlyCost = monthlyHours > 0 ? totalFixedCosts / monthlyHours : 0
   const costPerMinute = totalHourlyCost / 60
 
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'receptionist') {
+  if (
+    currentUser?.role !== 'admin' &&
+    currentUser?.role !== 'receptionist' &&
+    currentUser?.role !== 'master'
+  ) {
     return <Navigate to="/" replace />
   }
 

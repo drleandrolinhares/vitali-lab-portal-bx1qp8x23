@@ -28,7 +28,6 @@ import AccountsPayable from './pages/AccountsPayable'
 import Inventory from './pages/Inventory'
 import ComparativeDashboard from './pages/ComparativeDashboard'
 import PendingApproval from './pages/PendingApproval'
-import PendingUsersPage from './pages/PendingUsers'
 import DREPage from './pages/DRE'
 import DRECategories from './pages/DRECategories'
 import HourlyCost from './pages/HourlyCost'
@@ -128,7 +127,6 @@ const App = () => (
               <Route path="/audit-logs" element={<AuditTrail />} />
               <Route path="/accounts-payable" element={<AccountsPayable />} />
               <Route path="/inventory" element={<Inventory />} />
-              <Route path="/pending-users" element={<PendingUsersPage />} />
               <Route path="/hourly-cost" element={<HourlyCost />} />
               <Route path="/materials" element={<MaterialsPage />} />
             </Route>

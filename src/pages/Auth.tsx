@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ShieldAlert, Eye, EyeOff } from 'lucide-react'
 
-type AuthView = 'login' | 'register' | 'forgot_password'
+type AuthView = 'login' | 'forgot_password'
 
 const PasswordInput = ({
   id,
@@ -48,7 +47,7 @@ const PasswordInput = ({
 )
 
 export default function AuthPage() {
-  const { signIn, signUp, resetPassword } = useAuth()
+  const { signIn, resetPassword } = useAuth()
   const { toast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
@@ -57,20 +56,12 @@ export default function AuthPage() {
   const [view, setView] = useState<AuthView>('login')
   const [loginId, setLoginId] = useState('')
   const [forgotId, setForgotId] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [clinic, setClinic] = useState('')
-  const [phone, setPhone] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    if (isAdminView && view === 'register') setView('login')
-  }, [isAdminView, view])
 
   const handleAction = async (e: React.FormEvent, action: () => Promise<{ error: any }>) => {
     e.preventDefault()
@@ -113,47 +104,6 @@ export default function AuthPage() {
       })
       setLoading(false)
     }
-  }
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '')
-    if (val.length > 11) val = val.slice(0, 11)
-
-    if (val.length === 0) {
-      setPhone('')
-      return
-    }
-    if (val.length <= 2) {
-      setPhone(`(${val}`)
-      return
-    }
-    if (val.length <= 6) {
-      setPhone(`(${val.slice(0, 2)}) ${val.slice(2)}`)
-      return
-    }
-    if (val.length <= 10) {
-      setPhone(`(${val.slice(0, 2)}) ${val.slice(2, 6)}-${val.slice(6)}`)
-      return
-    }
-    setPhone(`(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`)
-  }
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault()
-    const rawPhone = phone.replace(/\D/g, '')
-    if (rawPhone.length < 10) {
-      setError('Telefone inválido. Inclua o DDD e número correto.')
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Telefone inválido. Inclua o DDD e número correto.',
-      })
-      return
-    }
-    handleAction(
-      e,
-      async () => await signUp(email, password, { name, clinic, role: 'dentist', phone: rawPhone }),
-    )
   }
 
   return (
@@ -254,134 +204,67 @@ export default function AuthPage() {
               </Button>
             </form>
           ) : (
-            <Tabs
-              value={view}
-              onValueChange={(v) => {
-                setView(v as AuthView)
-                setError('')
-                setMessage('')
-              }}
-              className="w-full"
-            >
-              {!isAdminView && (
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Entrar</TabsTrigger>
-                  <TabsTrigger value="register">Cadastro</TabsTrigger>
-                </TabsList>
-              )}
-              <TabsContent value="login" className="animate-fade-in">
-                <form
-                  onSubmit={(e) =>
-                    handleAction(e, async () => {
-                      if (!loginId.includes('@')) {
-                        return { error: new Error('Formato de email inválido.') }
-                      }
-                      return await signIn(loginId, password, rememberMe)
-                    })
+            <form
+              onSubmit={(e) =>
+                handleAction(e, async () => {
+                  if (!loginId.includes('@')) {
+                    return { error: new Error('Formato de email inválido.') }
                   }
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      placeholder="Ex: joao@email.com"
-                      value={loginId}
-                      onChange={(e) => setLoginId(e.target.value)}
-                      required
-                      className="normal-case"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label>Senha</Label>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="p-0 h-auto text-xs"
-                        onClick={() => setView('forgot_password')}
-                      >
-                        Esqueci minha senha
-                      </Button>
-                    </div>
-                    <PasswordInput
-                      id="login-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      showPassword={showPassword}
-                      onToggle={() => setShowPassword(!showPassword)}
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2 py-2">
-                    <Checkbox
-                      id="remember"
-                      checked={rememberMe}
-                      onCheckedChange={(c) => setRememberMe(c as boolean)}
-                    />
-                    <Label
-                      htmlFor="remember"
-                      className="text-sm font-normal cursor-pointer text-muted-foreground"
-                    >
-                      Permanecer conectado
-                    </Label>
-                  </div>
-                  {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-                  {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Entrando...' : 'Entrar'}
+                  return await signIn(loginId, password, rememberMe)
+                })
+              }
+              className="space-y-4 animate-fade-in"
+            >
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="Ex: joao@email.com"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  required
+                  className="normal-case"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label>Senha</Label>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="p-0 h-auto text-xs"
+                    onClick={() => setView('forgot_password')}
+                  >
+                    Esqueci minha senha
                   </Button>
-                </form>
-              </TabsContent>
-              {!isAdminView && (
-                <TabsContent value="register" className="animate-fade-in">
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Nome Completo</Label>
-                      <Input value={name} onChange={(e) => setName(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Clínica</Label>
-                      <Input value={clinic} onChange={(e) => setClinic(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Telefone (com DDD)</Label>
-                      <Input
-                        type="tel"
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        placeholder="(11) 99999-9999"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="normal-case"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Senha</Label>
-                      <PasswordInput
-                        id="reg-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        showPassword={showPassword}
-                        onToggle={() => setShowPassword(!showPassword)}
-                      />
-                    </div>
-                    {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-                    {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? 'Processando...' : 'Criar Conta'}
-                    </Button>
-                  </form>
-                </TabsContent>
-              )}
-            </Tabs>
+                </div>
+                <PasswordInput
+                  id="login-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  showPassword={showPassword}
+                  onToggle={() => setShowPassword(!showPassword)}
+                />
+              </div>
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(c) => setRememberMe(c as boolean)}
+                />
+                <Label
+                  htmlFor="remember"
+                  className="text-sm font-normal cursor-pointer text-muted-foreground"
+                >
+                  Permanecer conectado
+                </Label>
+              </div>
+              {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+              {message && <p className="text-sm text-green-600 font-medium">{message}</p>}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Entrando...' : 'Entrar'}
+              </Button>
+            </form>
           )}
           <div className="mt-8 border-t pt-6 flex flex-col items-center gap-3">
             <Button
