@@ -67,7 +67,7 @@ export function InvoicePreviewDialog({
             .container { max-width: 800px; margin: 0 auto; position: relative; }
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; z-index: -1; width: 80%; max-width: 600px; filter: grayscale(100%); pointer-events: none; }
             .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 24px; }
-            .logo { height: 120px; max-width: 300px; object-fit: contain; margin-bottom: 20px; }
+            .logo { width: 80%; height: auto; max-width: none; object-fit: contain; margin-bottom: 20px; }
             .title { font-size: 26px; font-weight: 900; margin: 0 0 8px 0; letter-spacing: -0.02em; text-transform: uppercase; }
             .subtitle { font-size: 14px; font-weight: 700; color: #64748b; letter-spacing: 0.15em; text-transform: uppercase; }
             .info-box { display: flex; gap: 40px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin-bottom: 40px; }
@@ -170,7 +170,11 @@ export function InvoicePreviewDialog({
               <div className="relative z-10 space-y-12">
                 {/* Header: Logo and Title */}
                 <div className="flex flex-col items-center space-y-8 border-b-2 border-slate-100 pb-8">
-                  <img src={logoUrl} alt="Vitali Lab" className="h-24 md:h-32 object-contain" />
+                  <img
+                    src={logoUrl}
+                    alt="Vitali Lab"
+                    className="w-[80%] h-auto max-w-none object-contain"
+                  />
                   <div className="text-center space-y-1.5">
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 uppercase">
                       RECIBO DE PRESTAÇÃO DE SERVIÇOS
