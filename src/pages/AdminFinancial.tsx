@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -663,6 +664,9 @@ export default function AdminFinancial() {
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-6">
             <DialogTitle>Detalhes da Produção: {detailsDialog?.dentist?.name}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Visualização de pedidos finalizados e em andamento para o cliente selecionado.
+            </DialogDescription>
             {detailsDialog?.aFaturarTotal > 0 && (
               <Button
                 variant="outline"
@@ -798,6 +802,9 @@ export default function AdminFinancial() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Emitir Fatura</DialogTitle>
+            <DialogDescription className="sr-only">
+              Confirme a emissão e liquidação da fatura para o cliente selecionado.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

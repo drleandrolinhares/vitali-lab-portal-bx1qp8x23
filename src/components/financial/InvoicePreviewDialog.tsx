@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { formatBRL } from '@/lib/financial'
@@ -120,6 +120,11 @@ export function InvoicePreviewDialog({ open, onOpenChange, data }: any) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl p-0 bg-[#f8fafc] border-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogTitle className="sr-only">Prévia de Faturamento - {dentist.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Visualização da fatura do cliente com os pedidos a faturar e o valor total.
+        </DialogDescription>
+
         {/* Toolbar */}
         <div className="bg-slate-900 px-4 py-3 flex items-center justify-between text-white sticky top-0 z-10 shadow-md">
           <div className="font-semibold text-sm tracking-wide">VISUALIZADOR DE FATURA</div>
