@@ -63,11 +63,11 @@ export function InvoicePreviewDialog({
           <title>Prévia de Faturamento - ${dentistName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #0f172a; margin: 0; background: #fff; }
+            body { font-family: 'Inter', sans-serif; padding: 20px 40px 40px; color: #0f172a; margin: 0; background: #fff; }
             .container { max-width: 800px; margin: 0 auto; position: relative; }
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; z-index: -1; width: 80%; max-width: 600px; filter: grayscale(100%); pointer-events: none; }
-            .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 24px; }
-            .logo { width: 80%; height: auto; max-width: none; object-fit: contain; margin-bottom: 20px; }
+            .header { text-align: center; margin-bottom: 32px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+            .logo { width: 80%; height: auto; max-width: none; object-fit: contain; margin-bottom: 8px; }
             .title { font-size: 26px; font-weight: 900; margin: 0 0 8px 0; letter-spacing: -0.02em; text-transform: uppercase; }
             .subtitle { font-size: 14px; font-weight: 700; color: #64748b; letter-spacing: 0.15em; text-transform: uppercase; }
             .info-box { display: flex; gap: 40px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin-bottom: 40px; }
@@ -155,9 +155,9 @@ export function InvoicePreviewDialog({
         </div>
 
         <ScrollArea className="max-h-[90vh] w-full">
-          <div className="p-6 md:p-12 flex justify-center min-h-full">
+          <div className="p-6 md:py-8 md:px-12 flex justify-center min-h-full">
             {/* A4 Document Container */}
-            <div className="relative w-full max-w-[850px] bg-white shadow-sm border border-slate-200 rounded-sm p-8 md:p-16 overflow-hidden min-h-[800px]">
+            <div className="relative w-full max-w-[850px] bg-white shadow-sm border border-slate-200 rounded-sm px-8 py-6 md:px-16 md:py-10 overflow-hidden min-h-[800px]">
               {/* Watermark */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] z-0 select-none">
                 <img
@@ -167,15 +167,15 @@ export function InvoicePreviewDialog({
                 />
               </div>
 
-              <div className="relative z-10 space-y-12">
+              <div className="relative z-10 space-y-8">
                 {/* Header: Logo and Title */}
-                <div className="flex flex-col items-center space-y-8 border-b-2 border-slate-100 pb-8">
+                <div className="flex flex-col items-center space-y-2 border-b-2 border-slate-100 pb-6">
                   <img
                     src={logoUrl}
                     alt="Vitali Lab"
                     className="w-[80%] h-auto max-w-none object-contain"
                   />
-                  <div className="text-center space-y-1.5">
+                  <div className="text-center space-y-1.5 mt-2">
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 uppercase">
                       RECIBO DE PRESTAÇÃO DE SERVIÇOS
                     </h1>
