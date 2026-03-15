@@ -77,6 +77,11 @@ Deno.serve(async (req: Request) => {
       state,
       has_access_schedule,
       commercial_agreement,
+      closing_date,
+      payment_due_date,
+      clinic_contact_name,
+      clinic_contact_role,
+      clinic_contact_phone,
     } = await req.json()
 
     const isAdmin = callerProfile.role === 'admin' || callerProfile.role === 'master'
@@ -185,6 +190,16 @@ Deno.serve(async (req: Request) => {
       const caVal = parseFloat(commercial_agreement)
       updateData.commercial_agreement = isNaN(caVal) ? 0 : caVal
     }
+    if (closing_date !== undefined)
+      updateData.closing_date = closing_date === '' ? null : parseInt(closing_date, 10)
+    if (payment_due_date !== undefined)
+      updateData.payment_due_date = payment_due_date === '' ? null : parseInt(payment_due_date, 10)
+    if (clinic_contact_name !== undefined)
+      updateData.clinic_contact_name = clinic_contact_name === '' ? null : clinic_contact_name
+    if (clinic_contact_role !== undefined)
+      updateData.clinic_contact_role = clinic_contact_role === '' ? null : clinic_contact_role
+    if (clinic_contact_phone !== undefined)
+      updateData.clinic_contact_phone = clinic_contact_phone === '' ? null : clinic_contact_phone
 
     if (Object.keys(updateData).length > 0) {
       const { error: dbError } = await supabaseAdmin

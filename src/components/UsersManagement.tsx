@@ -158,6 +158,12 @@ export function UsersManagement() {
     role: 'dentist',
     is_active: true,
     assigned_dentists: [] as string[],
+    closing_date: '',
+    payment_due_date: '',
+    clinic_contact_name: '',
+    clinic_contact_role: '',
+    clinic_contact_phone: '',
+    whatsapp_group_link: '',
   })
 
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
@@ -301,6 +307,12 @@ export function UsersManagement() {
         role: user.role || 'dentist',
         is_active: user.is_active !== false,
         assigned_dentists: user.assigned_dentists || [],
+        closing_date: user.closing_date?.toString() || '',
+        payment_due_date: user.payment_due_date?.toString() || '',
+        clinic_contact_name: user.clinic_contact_name || '',
+        clinic_contact_role: user.clinic_contact_role || '',
+        clinic_contact_phone: user.clinic_contact_phone || '',
+        whatsapp_group_link: user.whatsapp_group_link || '',
       })
       let initialPerms = user.permissions
       if (Array.isArray(initialPerms) || !initialPerms || Object.keys(initialPerms).length === 0) {
@@ -331,6 +343,12 @@ export function UsersManagement() {
         role: 'dentist',
         is_active: true,
         assigned_dentists: [],
+        closing_date: '',
+        payment_due_date: '',
+        clinic_contact_name: '',
+        clinic_contact_role: '',
+        clinic_contact_phone: '',
+        whatsapp_group_link: '',
       })
       setSelectedPerms(null)
     }
@@ -402,6 +420,32 @@ export function UsersManagement() {
         )
         checkField('city', formData.city, editingUser.city)
         checkField('state', formData.state, editingUser.state)
+        checkField(
+          'whatsapp_group_link',
+          formData.whatsapp_group_link,
+          editingUser.whatsapp_group_link,
+        )
+        checkField(
+          'clinic_contact_name',
+          formData.clinic_contact_name,
+          editingUser.clinic_contact_name,
+        )
+        checkField(
+          'clinic_contact_role',
+          formData.clinic_contact_role,
+          editingUser.clinic_contact_role,
+        )
+        checkField(
+          'clinic_contact_phone',
+          formData.clinic_contact_phone,
+          editingUser.clinic_contact_phone,
+        )
+        checkField('closing_date', formData.closing_date, editingUser.closing_date?.toString())
+        checkField(
+          'payment_due_date',
+          formData.payment_due_date,
+          editingUser.payment_due_date?.toString(),
+        )
 
         const currentBD = sanitizeString(formData.birth_date)
         const oldBD = sanitizeString(editingUser.birth_date)
@@ -469,6 +513,12 @@ export function UsersManagement() {
           assigned_dentists: formData.assigned_dentists,
           password: formData.password,
           requires_password_change: true,
+          closing_date: sanitizeString(formData.closing_date),
+          payment_due_date: sanitizeString(formData.payment_due_date),
+          clinic_contact_name: sanitizeString(formData.clinic_contact_name),
+          clinic_contact_role: sanitizeString(formData.clinic_contact_role),
+          clinic_contact_phone: sanitizeString(formData.clinic_contact_phone),
+          whatsapp_group_link: sanitizeString(formData.whatsapp_group_link),
         }
       }
 
@@ -881,6 +931,12 @@ export function UsersManagement() {
                       <Briefcase className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{roleObj?.title || user.role}</span>
                     </div>
+                    {(user.role === 'dentist' || user.role === 'laboratory') && user.clinic && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Building className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{user.clinic}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Mail className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{user.email || 'Não encontrado'}</span>
@@ -1040,8 +1096,112 @@ export function UsersManagement() {
                           disabled={!isMasterOrAdmin || saving}
                         />
                       </div>
+                      <div className="space-y-1 sm:col-span-3">
+                        <Label className="text-xs text-muted-foreground">
+                          Grupo WhatsApp (Link)
+                        </Label>
+                        <Input
+                          value={formData.whatsapp_group_link}
+                          onChange={(e) =>
+                            setFormData({ ...formData, whatsapp_group_link: e.target.value })
+                          }
+                          className="h-9"
+                          disabled={!isMasterOrAdmin || saving}
+                        />
+                      </div>
                     </div>
                   </section>
+
+                  {(formData.role === 'dentist' || formData.role === 'laboratory') && (
+                    <>
+                      <section className="space-y-4">
+                        <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                          <Building className="w-4 h-4 text-[#e76f51]" /> Informações da Clínica
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Nome do Contato Secundário
+                            </Label>
+                            <Input
+                              value={formData.clinic_contact_name}
+                              onChange={(e) =>
+                                setFormData({ ...formData, clinic_contact_name: e.target.value })
+                              }
+                              className="h-9"
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Cargo do Contato
+                            </Label>
+                            <Input
+                              value={formData.clinic_contact_role}
+                              onChange={(e) =>
+                                setFormData({ ...formData, clinic_contact_role: e.target.value })
+                              }
+                              className="h-9"
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Telefone da Clínica / Contato
+                            </Label>
+                            <Input
+                              value={formData.clinic_contact_phone}
+                              onChange={(e) =>
+                                setFormData({ ...formData, clinic_contact_phone: e.target.value })
+                              }
+                              className="h-9"
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="space-y-4">
+                        <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
+                          <CreditCard className="w-4 h-4 text-[#e76f51]" /> Faturamento & Condições
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-xl bg-background">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Dia de Fechamento
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="31"
+                              value={formData.closing_date}
+                              onChange={(e) =>
+                                setFormData({ ...formData, closing_date: e.target.value })
+                              }
+                              className="h-9"
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Dia de Vencimento
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="31"
+                              value={formData.payment_due_date}
+                              onChange={(e) =>
+                                setFormData({ ...formData, payment_due_date: e.target.value })
+                              }
+                              className="h-9"
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                          </div>
+                        </div>
+                      </section>
+                    </>
+                  )}
 
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">

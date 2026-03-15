@@ -14,7 +14,6 @@ import Layout from './components/Layout'
 import NewRequest from './pages/NewRequest'
 import OrderDetails from './pages/OrderDetails'
 import HistoryPage from './pages/History'
-import DentistsPage from './pages/Dentists'
 import PatientsPage from './pages/Patients'
 import AuthPage from './pages/Auth'
 import AdminDashboard from './pages/AdminDashboard'
@@ -113,7 +112,7 @@ const App = () => (
               <Route path="/order/:id" element={<OrderDetails />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/kanban" element={<KanbanPage />} />
-              <Route path="/dentists" element={<DentistsPage />} />
+              <Route path="/dentists" element={<Navigate to="/users" replace />} />
               <Route path="/patients" element={<PatientsPage />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
               <Route path="/comparative-dashboard" element={<ComparativeDashboard />} />

@@ -16,7 +16,6 @@ import {
   LayoutDashboard,
   PlusCircle,
   History,
-  Users,
   LogOut,
   FileText,
   BarChart3,
@@ -79,9 +78,8 @@ const ADMIN_MENUS = [
   {
     group: 'ADMINISTRATIVO',
     items: [
-      { id: 'dentists', title: 'CLIENTES E PARCEIROS', icon: Users, path: '/dentists' },
-      { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
       { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
+      { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
     ],
   },
   {
@@ -231,7 +229,6 @@ function AppSidebar() {
       'dre-categories': 'settings',
       audit: 'settings',
       users: 'settings',
-      dentists: 'settings',
       patients: 'settings',
     }
 
