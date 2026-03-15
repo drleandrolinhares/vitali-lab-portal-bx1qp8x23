@@ -32,6 +32,7 @@ import {
   Wallet,
   User,
   Building,
+  ChevronRight,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -48,6 +49,9 @@ import {
   SidebarGroupContent,
   SidebarMenuBadge,
   useSidebar,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -57,6 +61,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useAuth } from '@/hooks/use-auth'
 import { NewOrderNotification } from '@/components/NewOrderNotification'
 import { cn } from '@/lib/utils'
@@ -67,54 +72,68 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-const ADMIN_MENUS = [
+type MenuItem = {
+  id: string
+  title: string
+  icon: any
+  path?: string
+  isCTA?: boolean
+  isAccordion?: boolean
+  subItems?: { id: string; title: string; path: string }[]
+}
+
+const ADMIN_MENUS: { group: string; items: MenuItem[] }[] = [
   {
     group: 'OPERACIONAL',
     items: [
+      {
+        id: 'new-request',
+        title: 'NOVO PEDIDO',
+        icon: PlusCircle,
+        path: '/new-request',
+        isCTA: true,
+      },
       { id: 'inbox', title: 'CAIXA DE ENTRADA', icon: FileText, path: '/app' },
-      { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
       { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
       { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
+      { id: 'inventory', title: 'ESTOQUE', icon: Package, path: '/inventory' },
     ],
   },
   {
     group: 'ADMINISTRATIVO',
     items: [
-      { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
       { id: 'patients', title: 'PACIENTES', icon: Contact, path: '/patients' },
+      { id: 'users', title: 'USUÁRIOS', icon: UserPlus, path: '/users' },
+      { id: 'prices', title: 'TABELA DE PREÇOS', icon: DollarSign, path: '/prices' },
     ],
   },
   {
     group: 'FINANCEIRO',
     items: [
-      { id: 'dashboard', title: 'DASHBOARD GERENCIAL', icon: BarChart3, path: '/dashboard' },
-      { id: 'finances', title: 'DASHBOARD FINANCEIRO', icon: TrendingUp, path: '/dre' },
       {
-        id: 'comparative-dashboard',
-        title: 'DASHBOARD COMPARATIVO INTERNO',
-        icon: PieChart,
-        path: '/comparative-dashboard',
+        id: 'dashboards-group',
+        title: 'DASHBOARDS',
+        icon: BarChart3,
+        isAccordion: true,
+        subItems: [
+          { id: 'dashboard', title: 'GERENCIAL', path: '/dashboard' },
+          { id: 'finances', title: 'FINANCEIRO', path: '/dre' },
+          { id: 'comparative-dashboard', title: 'COMPARATIVO', path: '/comparative-dashboard' },
+        ],
       },
+      { id: 'admin-financial', title: 'CONTAS A RECEBER', icon: Wallet, path: '/admin-financial' },
       {
         id: 'accounts-payable',
         title: 'CONTAS A PAGAR',
         icon: DollarSign,
         path: '/accounts-payable',
       },
-      { id: 'admin-financial', title: 'CONTAS A RECEBER', icon: Wallet, path: '/admin-financial' },
-      { id: 'prices', title: 'TABELA DE PREÇOS', icon: DollarSign, path: '/prices' },
-      { id: 'inventory', title: 'ESTOQUE', icon: Package, path: '/inventory' },
     ],
   },
   {
     group: 'CONFIGURAÇÕES',
     items: [
-      {
-        id: 'settings',
-        title: 'CONFIGURAÇÕES GERAIS',
-        icon: Settings,
-        path: '/settings',
-      },
+      { id: 'settings', title: 'CONFIGURAÇÕES GERAIS', icon: Settings, path: '/settings' },
       { id: 'lab-profile', title: 'PERFIL VITALI LAB', icon: Building, path: '/lab-profile' },
       { id: 'dre-categories', title: 'CATEGORIAS DE DRE', icon: Tags, path: '/dre-categories' },
       { id: 'audit', title: 'LOG DE AUDITORIA', icon: ShieldAlert, path: '/audit-logs' },
@@ -332,16 +351,65 @@ function AppSidebar() {
           ADMIN_MENUS.map((group) => {
             const visibleItems = group.items
               .map((item) => {
+                if (item.isAccordion) {
+                  const hasVisibleSub = item.subItems?.some((sub) => hasPerm(sub.id))
+                  if (!hasVisibleSub) return null
+                  return item
+                }
                 if (!hasPerm(item.id)) return null
                 return item
               })
-              .filter(Boolean) as typeof group.items
+              .filter(Boolean)
 
             if (visibleItems.length === 0) return null
 
             const renderItems = () => (
               <SidebarMenu>
                 {visibleItems.map((item) => {
+                  if (item.isAccordion) {
+                    const visibleSubItems = item.subItems?.filter((sub) => hasPerm(sub.id))
+                    if (!visibleSubItems?.length) return null
+
+                    const isSubActive = visibleSubItems.some(
+                      (sub) => location.pathname === sub.path,
+                    )
+
+                    return (
+                      <Collapsible
+                        key={item.title}
+                        asChild
+                        defaultOpen={isSubActive}
+                        className="group/collapsible"
+                      >
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip={item.title}>
+                              <item.icon />
+                              <span>{item.title}</span>
+                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {visibleSubItems.map((sub) => (
+                                <SidebarMenuSubItem key={sub.path}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={location.pathname === sub.path}
+                                  >
+                                    <Link to={sub.path}>
+                                      <span>{sub.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    )
+                  }
+
                   let badgeCount = 0
                   let badgeColor = 'bg-primary'
 
@@ -358,15 +426,21 @@ function AppSidebar() {
                     badgeColor = 'bg-emerald-500'
                   }
 
+                  const isCTA = item.isCTA
+                  const isActive =
+                    location.pathname === item.path ||
+                    location.pathname + location.search === item.path
+
                   return (
                     <SidebarMenuItem key={item.path}>
                       <SidebarMenuButton
                         asChild
-                        isActive={
-                          location.pathname === item.path ||
-                          location.pathname + location.search === item.path
-                        }
+                        isActive={isActive}
                         tooltip={item.title}
+                        className={cn(
+                          isCTA &&
+                            'bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary font-semibold border border-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:hover:bg-primary/90 data-[active=true]:hover:text-primary-foreground',
+                        )}
                       >
                         <Link to={item.path!}>
                           <item.icon />
