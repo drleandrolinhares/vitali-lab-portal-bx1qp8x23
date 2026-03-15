@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import { parseISO } from 'date-fns'
 import { toast } from '@/hooks/use-toast'
+import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -70,16 +71,21 @@ export default function AdminFinancial() {
   const [manualInvoiceDentist, setManualInvoiceDentist] = useState<string | null>(null)
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
     try {
       const [profilesRes, ordersRes, settlementsRes] = await Promise.all([
-        supabase.from('profiles').select('id, name, clinic').eq('role', 'dentist').order('name'),
+        supabase
+          .from('profiles')
+          .select('id, name, clinic, closing_date, payment_due_date')
+          .eq('role', 'dentist')
+          .order('name'),
         supabase
           .from('orders')
           .select(
-            'id, friendly_id, base_price, status, kanban_stage, created_at, dentist_id, settlement_id',
+            'id, friendly_id, base_price, status, kanban_stage, created_at, dentist_id, settlement_id, patient_name, work_type, order_history(status, created_at, note)',
           ),
         supabase.from('settlements').select('id, amount, created_at, dentist_id'),
       ])
@@ -99,6 +105,32 @@ export default function AdminFinancial() {
     fetchData()
   }, [])
 
+  const getCompletionDate = (o: any) => {
+    const isFinishedStatus = o.status === 'completed' || o.status === 'delivered'
+    const isFinishedStage =
+      o.kanban_stage?.toUpperCase().includes('FINALIZADO') ||
+      o.kanban_stage?.toUpperCase().includes('ENTREGUE')
+
+    if (!isFinishedStatus && !isFinishedStage) return null
+
+    if (o.order_history && o.order_history.length > 0) {
+      const completions = o.order_history.filter(
+        (h: any) =>
+          h.status === 'completed' ||
+          h.status === 'delivered' ||
+          h.note?.toUpperCase().includes('FINALIZADO') ||
+          h.note?.toUpperCase().includes('ENTREGUE'),
+      )
+      if (completions.length > 0) {
+        completions.sort(
+          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
+        return new Date(completions[0].created_at)
+      }
+    }
+    return new Date(o.created_at)
+  }
+
   const { summary, tableData } = useMemo(() => {
     let faturar = 0
     let pipeline = 0
@@ -112,15 +144,17 @@ export default function AdminFinancial() {
         id: p.id,
         name: p.name,
         clinic: p.clinic,
+        closing_date: p.closing_date,
+        payment_due_date: p.payment_due_date,
         finalizadosMes: 0,
         emProducao: 0,
         readyToInvoiceCount: 0,
       })
     })
 
-    const isSamePeriod = (dateStr: string) => {
-      if (!dateStr) return false
-      const d = parseISO(dateStr)
+    const isSamePeriod = (dateVal: Date | string | null) => {
+      if (!dateVal) return false
+      const d = typeof dateVal === 'string' ? new Date(dateVal) : dateVal
       return (
         d.getMonth().toString() === selectedMonth && d.getFullYear().toString() === selectedYear
       )
@@ -133,14 +167,20 @@ export default function AdminFinancial() {
         o.kanban_stage?.toUpperCase().includes('FINALIZADO') ||
         o.kanban_stage?.toUpperCase().includes('ENTREGUE')
       const isCancelled = o.status === 'cancelled'
-      const inPeriod = isSamePeriod(o.created_at)
+
+      let compDate = null
+      if (isCompleted) compDate = getCompletionDate(o)
+
+      const inPeriodForCompletion = isSamePeriod(compDate)
 
       if (selectedDentist !== 'all' && o.dentist_id !== selectedDentist) return
 
-      if (inPeriod && isCompleted && !o.settlement_id) {
+      // faturar (Trabalhos Concluídos) uses COMPLETION date within the selected month
+      if (inPeriodForCompletion && isCompleted && !o.settlement_id) {
         faturar += Number(o.base_price || 0)
       }
 
+      // pipeline (Em Produção) = Active orders (not completed, not cancelled)
       if (!isCompleted && !isCancelled) {
         pipeline += Number(o.base_price || 0)
       }
@@ -148,7 +188,7 @@ export default function AdminFinancial() {
       if (!o.dentist_id || !map.has(o.dentist_id)) return
       const dentistData = map.get(o.dentist_id)
 
-      if (inPeriod && isCompleted && !o.settlement_id) {
+      if (inPeriodForCompletion && isCompleted && !o.settlement_id) {
         dentistData.finalizadosMes += Number(o.base_price || 0)
       }
 
@@ -202,9 +242,10 @@ export default function AdminFinancial() {
   }, [manualInvoiceDentist, modalOrders])
 
   const handleExport = () => {
-    let csv = 'Dentista / Clínica,Finalizados no Mês (R$),Em Produção (Pipeline) (R$)\n'
+    let csv =
+      'Dentista / Clínica,Fechamento,Vencimento,Finalizados no Mês (R$),Em Produção (Pipeline) (R$)\n'
     tableData.forEach((d) => {
-      csv += `"${d.name} ${d.clinic ? `/ ${d.clinic}` : ''}",${d.finalizadosMes},${d.emProducao}\n`
+      csv += `"${d.name} ${d.clinic ? `/ ${d.clinic}` : ''}",${d.closing_date || ''},${d.payment_due_date || ''},${d.finalizadosMes},${d.emProducao}\n`
     })
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -451,6 +492,12 @@ export default function AdminFinancial() {
                         <TableHead className="font-semibold text-slate-700 pl-6">
                           Dentista / Clínica
                         </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
+                          Fechamento
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
+                          Vencimento
+                        </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-right">
                           Finalizados no Mês (R$)
                         </TableHead>
@@ -466,7 +513,7 @@ export default function AdminFinancial() {
                       {tableData.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={4}
+                            colSpan={6}
                             className="text-center py-12 text-muted-foreground"
                           >
                             Nenhum dado encontrado para o período e filtros selecionados.
@@ -480,6 +527,12 @@ export default function AdminFinancial() {
                               {row.clinic && (
                                 <p className="text-xs text-muted-foreground">{row.clinic}</p>
                               )}
+                            </TableCell>
+                            <TableCell className="text-center font-medium text-slate-600">
+                              {row.closing_date ? `Dia ${row.closing_date}` : '-'}
+                            </TableCell>
+                            <TableCell className="text-center font-medium text-slate-600">
+                              {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
                             </TableCell>
                             <TableCell className="text-right font-medium text-blue-600">
                               {formatCurrency(row.finalizadosMes)}
@@ -609,7 +662,15 @@ export default function AdminFinancial() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setManualInvoiceDentist(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setPreviewOpen(true)}
+                disabled={selectedOrderIds.length === 0}
+                className="bg-white"
+              >
+                Prévia da Fatura
+              </Button>
+              <Button variant="ghost" onClick={() => setManualInvoiceDentist(null)}>
                 Cancelar
               </Button>
               <Button
@@ -624,6 +685,20 @@ export default function AdminFinancial() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* INVOICE PREVIEW / PDF MODAL */}
+      {manualInvoiceDentist && (
+        <InvoicePreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          dentistName={profiles.find((p) => p.id === manualInvoiceDentist)?.name || ''}
+          clinicName={profiles.find((p) => p.id === manualInvoiceDentist)?.clinic || ''}
+          orders={modalOrders.filter((o) => selectedOrderIds.includes(o.id))}
+          totalAmount={modalOrders
+            .filter((o) => selectedOrderIds.includes(o.id))
+            .reduce((sum, o) => sum + Number(o.base_price || 0), 0)}
+        />
+      )}
     </div>
   )
 }

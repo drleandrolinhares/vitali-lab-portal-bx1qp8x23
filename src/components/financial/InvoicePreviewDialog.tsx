@@ -6,7 +6,9 @@ import {
   DialogHeader,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { Printer } from 'lucide-react'
 import logoUrl from '@/assets/vitalli-02-9f298.png'
 
 export interface InvoicePreviewDialogProps {
@@ -29,6 +31,112 @@ export function InvoicePreviewDialog({
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
+  const handlePrint = () => {
+    const absoluteLogoUrl = new URL(logoUrl, window.location.origin).href
+    const printWindow = window.open('', '_blank')
+
+    if (!printWindow) {
+      alert('Por favor, permita popups no seu navegador para visualizar a impressão.')
+      return
+    }
+
+    const orderRows = orders
+      .map(
+        (order) => `
+      <tr>
+        <td>${order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy') : '-'}</td>
+        <td><b>${order.friendly_id || order.id?.substring(0, 8) || '-'}</b></td>
+        <td>${order.patient_name || order.patientName || '-'}</td>
+        <td>${order.work_type || order.workType || order.service || '-'}</td>
+        <td class="right"><b>${formatCurrency(
+          order.base_price ?? order.basePrice ?? order.price ?? 0,
+        )}</b></td>
+      </tr>
+    `,
+      )
+      .join('')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Prévia de Faturamento - ${dentistName}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #0f172a; margin: 0; background: #fff; }
+            .container { max-width: 800px; margin: 0 auto; position: relative; }
+            .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; z-index: -1; width: 80%; max-width: 600px; filter: grayscale(100%); pointer-events: none; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { height: 80px; object-fit: contain; margin-bottom: 20px; }
+            .title { font-size: 28px; font-weight: 900; margin: 0 0 8px 0; letter-spacing: -0.05em; }
+            .subtitle { font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 0.2em; text-transform: uppercase; }
+            .info-box { display: flex; gap: 40px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin-bottom: 40px; }
+            .info-item { flex: 1; }
+            .info-item label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 6px; }
+            .info-item span { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px; }
+            th { text-align: left; padding-bottom: 16px; border-bottom: 3px solid #e2e8f0; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; }
+            th.right, td.right { text-align: right; }
+            td { padding: 16px 0; border-bottom: 1px solid #f1f5f9; font-weight: 500; text-transform: uppercase; }
+            .total-box { border-top: 4px solid #0f172a; padding-top: 24px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+            .total-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+            .total-value { font-size: 42px; font-weight: 900; letter-spacing: -0.05em; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <img src="${absoluteLogoUrl}" class="watermark" />
+            <div class="header">
+              <img src="${absoluteLogoUrl}" class="logo" />
+              <h1 class="title">PRÉVIA DE FATURAMENTO</h1>
+              <div class="subtitle">Prévia para Conferência</div>
+            </div>
+            <div class="info-box">
+              <div class="info-item">
+                <label>Cliente</label>
+                <span>${dentistName}</span>
+              </div>
+              <div class="info-item">
+                <label>Clínica</label>
+                <span>${clinicName || 'NÃO INFORMADA'}</span>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Pedido</th>
+                  <th>Paciente</th>
+                  <th>Serviço</th>
+                  <th class="right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orderRows || `<tr><td colspan="5" style="text-align:center; padding: 40px 0; color: #64748b;">Nenhum pedido selecionado.</td></tr>`}
+              </tbody>
+            </table>
+            <div class="total-box">
+              <div class="total-label">Total Selecionado</div>
+              <div class="total-value">${formatCurrency(totalAmount)}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `)
+
+    printWindow.document.close()
+    printWindow.focus()
+
+    // Wait a brief moment for styles/images to load
+    setTimeout(() => {
+      printWindow.print()
+      // Optional: printWindow.close() - Usually it's better to leave it open so the user can see it or save as PDF
+    }, 500)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden bg-slate-100/60 border-none shadow-2xl backdrop-blur-sm">
@@ -38,6 +146,14 @@ export function InvoicePreviewDialog({
             Documento de prévia para conferência de faturamento do dentista.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="absolute top-4 right-14 z-50">
+          <Button onClick={handlePrint} className="gap-2 shadow-md">
+            <Printer className="w-4 h-4" />
+            Imprimir / Salvar PDF
+          </Button>
+        </div>
+
         <ScrollArea className="max-h-[90vh] w-full">
           <div className="p-6 md:p-12 flex justify-center min-h-full">
             {/* A4 Document Container */}
@@ -137,7 +253,7 @@ export function InvoicePreviewDialog({
                       {orders.length === 0 && (
                         <tr>
                           <td colSpan={5} className="py-12 text-center text-slate-500 font-medium">
-                            Nenhum pedido encontrado.
+                            Nenhum pedido selecionado.
                           </td>
                         </tr>
                       )}
@@ -148,7 +264,7 @@ export function InvoicePreviewDialog({
                 {/* Footer / Total */}
                 <div className="pt-6 border-t-[4px] border-slate-900 flex flex-col items-end space-y-2 mt-8">
                   <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                    Total a Faturar
+                    Total Selecionado
                   </p>
                   <p className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">
                     {formatCurrency(totalAmount)}
