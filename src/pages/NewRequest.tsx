@@ -67,7 +67,13 @@ export default function NewRequest() {
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
-  const isAdminOrReception = currentUser?.role === 'admin' || currentUser?.role === 'receptionist'
+  const isInternalUser =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'master' ||
+    currentUser?.role === 'receptionist' ||
+    currentUser?.role === 'technical_assistant' ||
+    currentUser?.role === 'financial' ||
+    currentUser?.role === 'relationship_manager'
 
   const availableScales = useMemo(() => {
     if (appSettings['shade_scales']) {
@@ -94,19 +100,18 @@ export default function NewRequest() {
   }, [appSettings])
 
   useEffect(() => {
-    if (isAdminOrReception) {
+    if (isInternalUser) {
       const fetchDentists = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('id, name, clinic')
-          .in('role', ['dentist', 'laboratory'])
+          .select('id, name')
+          .eq('role', 'dentist')
           .eq('is_active', true)
-          .eq('is_approved', true)
         if (data) {
           const sorted = data
             .map((d: any) => ({
               id: d.id,
-              name: `${d.name} ${d.clinic ? `(${d.clinic})` : ''}`,
+              name: d.name,
             }))
             .sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'))
           setDentistsList(sorted)
@@ -114,7 +119,7 @@ export default function NewRequest() {
       }
       fetchDentists()
     }
-  }, [isAdminOrReception])
+  }, [isInternalUser])
 
   useEffect(() => {
     if (formData.sector) {
@@ -185,10 +190,10 @@ export default function NewRequest() {
     e.preventDefault()
     if (!formData.patientName || !formData.workType || !formData.sector) return
 
-    if (isAdminOrReception && !formData.dentistId) {
+    if (isInternalUser && !formData.dentistId) {
       toast({
         title: 'Atenção',
-        description: 'Selecione um dentista ou laboratório parceiro para este pedido.',
+        description: 'Selecione um dentista para este pedido.',
         variant: 'destructive',
       })
       return
@@ -278,10 +283,10 @@ export default function NewRequest() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
-            {isAdminOrReception && (
+            {isInternalUser && (
               <div className="space-y-2 p-5 border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl">
                 <Label className="uppercase font-bold text-xs text-emerald-800 dark:text-emerald-300">
-                  Selecione o Cliente (Modo Lab) *
+                  Dentistas *
                 </Label>
                 <Select
                   value={formData.dentistId}
@@ -289,7 +294,7 @@ export default function NewRequest() {
                   required
                 >
                   <SelectTrigger className="h-11 bg-background">
-                    <SelectValue placeholder="Escolha um dentista ou laboratório parceiro..." />
+                    <SelectValue placeholder="Selecione um dentista..." />
                   </SelectTrigger>
                   <SelectContent>
                     {dentistsList.map((d) => (
