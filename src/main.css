@@ -93,3 +93,50 @@
     animation: fade-in 0.4s ease-out;
   }
 }
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background-color: white !important;
+  }
+
+  #root {
+    display: none !important;
+  }
+
+  [data-radix-dialog-overlay] {
+    display: none !important;
+  }
+
+  [data-radix-dialog-content] {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  [data-radix-dialog-content] > button {
+    display: none !important;
+  }
+
+  [data-radix-scroll-area-viewport] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+}
