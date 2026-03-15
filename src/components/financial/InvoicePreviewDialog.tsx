@@ -9,7 +9,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { Printer } from 'lucide-react'
-import logoUrl from '@/assets/vitalli-03-4bb8e.png'
 import { useAppStore } from '@/stores/main'
 
 export interface InvoicePreviewDialogProps {
@@ -39,7 +38,6 @@ export function InvoicePreviewDialog({
   const labSite = appSettings['lab_website'] || ''
   const labInstagram = appSettings['lab_instagram'] || ''
   const labPix = appSettings['lab_pix_key'] || ''
-  const labLogoUrl = appSettings['lab_logo_url'] || ''
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
@@ -76,28 +74,11 @@ export function InvoicePreviewDialog({
         <ScrollArea className="max-h-[90vh] w-full print:max-h-none print:overflow-visible">
           <div className="p-6 md:py-8 md:px-12 flex justify-center min-h-full print:p-0 print:block">
             <div className="relative w-full max-w-[800px] bg-white print:shadow-none print:border-none shadow-sm border border-slate-200 px-8 md:px-12 pb-12 pt-[2cm] print:pt-[2cm] print:px-[2cm] print:pb-[2cm] flex flex-col font-sans text-slate-900 mx-auto">
-              {/* Header */}
-              <div className="text-center mb-[1cm] print:mb-[1cm]">
-                {labLogoUrl ? (
-                  <img
-                    src={labLogoUrl}
-                    alt="Logo do Laboratório"
-                    className="max-h-[80px] w-auto object-contain mx-auto print:max-h-[80px]"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center gap-3">
-                    <img
-                      src={logoUrl}
-                      alt="Vitali Lab Icon"
-                      className="w-12 h-12 object-contain print:w-12 print:h-12"
-                    />
-                    <div className="text-4xl tracking-tight flex items-center print:text-4xl">
-                      <span className="font-extrabold text-slate-900 uppercase">Vitali</span>
-                      <span className="font-light text-slate-900 lowercase">lab.</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Header Blank Space */}
+              <div
+                className="w-full h-[80px] bg-transparent mb-[1cm] print:mb-[1cm]"
+                aria-hidden="true"
+              ></div>
 
               {/* Title */}
               <div className="text-center mb-12 print:mb-12">
