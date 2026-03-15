@@ -69,6 +69,7 @@ export default function AdminFinancial() {
   } = useAppStore()
 
   const [dentists, setDentists] = useState<any[]>([])
+  const [allProfiles, setAllProfiles] = useState<any[]>([])
   const [settlements, setSettlements] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
@@ -79,12 +80,27 @@ export default function AdminFinancial() {
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
 
   useEffect(() => {
+    // Fetch all profiles for historical matching (Faturas Fechadas)
     supabase
       .from('profiles')
-      .select('id, name, clinic, is_billing_paused')
-      .eq('role', 'dentist')
+      .select('id, name, clinic')
       .then(({ data }) => {
-        if (data) setDentists(data.sort((a, b) => a.name.localeCompare(b.name)))
+        if (data) setAllProfiles(data)
+      })
+
+    // Strict fetch for the active dentists list and filter
+    supabase
+      .from('profiles')
+      .select('id, name, clinic, is_billing_paused, is_active, is_approved')
+      .eq('role', 'dentist')
+      .eq('is_active', true)
+      .eq('is_approved', true)
+      .then(({ data }) => {
+        if (data) {
+          // Deduplicate by ID to prevent any visual duplicates
+          const uniqueDentists = Array.from(new Map(data.map((item) => [item.id, item])).values())
+          setDentists(uniqueDentists.sort((a, b) => a.name.localeCompare(b.name)))
+        }
       })
   }, [currentUser])
 
@@ -149,11 +165,13 @@ export default function AdminFinancial() {
         return true
       })
       .map((s) => {
-        const dentist = dentists.find((d) => d.id === s.dentist_id)
+        const dentist =
+          dentists.find((d) => d.id === s.dentist_id) ||
+          allProfiles.find((d) => d.id === s.dentist_id)
         return { ...s, dentist }
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [settlements, selectedMonth, selectedDentist, dentists])
+  }, [settlements, selectedMonth, selectedDentist, dentists, allProfiles])
 
   const topCardsData = useMemo(() => {
     const faturadoNoMes = faturasFechadasData.reduce((acc, s) => acc + Number(s.amount), 0)
@@ -388,7 +406,7 @@ export default function AdminFinancial() {
           <div className="flex items-center gap-2 bg-background p-1.5 rounded-lg border shadow-sm flex-1 sm:flex-initial">
             <Users className="w-4 h-4 text-muted-foreground ml-2" />
             <Select value={selectedDentist} onValueChange={setSelectedDentist}>
-              <SelectTrigger className="w-full sm:w-[200px] border-0 bg-transparent shadow-none focus:ring-0 uppercase text-xs font-bold">
+              <SelectTrigger className="w-full sm:w-[280px] border-0 bg-transparent shadow-none focus:ring-0 uppercase text-xs font-bold">
                 <SelectValue placeholder="Todos os Dentistas" />
               </SelectTrigger>
               <SelectContent>
@@ -397,7 +415,7 @@ export default function AdminFinancial() {
                 </SelectItem>
                 {dentists.map((d) => (
                   <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
-                    {d.name}
+                    {d.name} {d.clinic ? `(${d.clinic})` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
