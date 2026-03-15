@@ -21,6 +21,7 @@ export interface User {
   permissions?: any
   assigned_dentists?: string[] | null
   can_move_kanban_cards?: boolean
+  is_billing_paused?: boolean
 }
 
 export interface Stage {

@@ -35,6 +35,7 @@ import ForcePasswordChange from './components/ForcePasswordChange'
 import UsersPage from './pages/Users'
 import PublicGuide from './pages/PublicGuide'
 import PublicOrderFull from './pages/PublicOrderFull'
+import LabProfile from './pages/LabProfile'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -122,6 +123,7 @@ const App = () => (
               <Route path="/prices" element={<PriceList />} />
               <Route path="/financial" element={<FinancialPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/lab-profile" element={<LabProfile />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/audit-logs" element={<AuditTrail />} />
               <Route path="/accounts-payable" element={<AccountsPayable />} />

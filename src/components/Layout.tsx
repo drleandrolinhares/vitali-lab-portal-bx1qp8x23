@@ -31,6 +31,7 @@ import {
   Tags,
   Wallet,
   User,
+  Building,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -46,6 +47,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenuBadge,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -113,6 +115,7 @@ const ADMIN_MENUS = [
         icon: Settings,
         path: '/settings',
       },
+      { id: 'lab-profile', title: 'PERFIL VITALI LAB', icon: Building, path: '/lab-profile' },
       { id: 'dre-categories', title: 'CATEGORIAS DE DRE', icon: Tags, path: '/dre-categories' },
       { id: 'audit', title: 'LOG DE AUDITORIA', icon: ShieldAlert, path: '/audit-logs' },
     ],
@@ -200,6 +203,7 @@ function AppSidebar() {
   const hasPerm = (id: string) => {
     if (isMaster) return true
     if (id === 'profile' || id === 'my-profile') return true
+    if (id === 'lab-profile') return isMaster
 
     if (id === 'new-request') {
       return checkPermission('inbox', 'create_order')
@@ -285,14 +289,19 @@ function AppSidebar() {
       ]
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader className="py-6 flex flex-col items-center justify-center">
+    <Sidebar variant="inset" collapsible="icon">
+      <SidebarHeader className="py-6 flex flex-col items-center justify-center min-h-[80px]">
         <Link
           to={isClientRole ? '/app' : '/dashboard'}
-          className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98] w-full flex justify-center overflow-hidden"
           title="Ir para o Dashboard"
         >
-          <Logo variant="square" size="lg" className="mb-2" />
+          <div className="group-data-[collapsible=icon]:hidden flex w-full justify-center">
+            <Logo variant="default" size="lg" className="mb-2" />
+          </div>
+          <div className="hidden group-data-[collapsible=icon]:flex w-full justify-center">
+            <Logo variant="square" size="sm" className="w-8 h-8 rounded-lg" />
+          </div>
         </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
@@ -382,7 +391,7 @@ function AppSidebar() {
 
             return (
               <SidebarGroup key={group.group} className="px-0 py-0 mb-4">
-                <SidebarGroupLabel className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-2">
+                <SidebarGroupLabel className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-2 group-data-[collapsible=icon]:hidden">
                   {group.group}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>{renderItems()}</SidebarGroupContent>
@@ -392,7 +401,7 @@ function AppSidebar() {
         )}
 
         <SidebarMenu className="mt-4">
-          <SidebarMenuItem className="mb-1 px-2">
+          <SidebarMenuItem className="mb-1 px-2 group-data-[collapsible=icon]:hidden">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               COMUNICAÇÃO
             </span>
@@ -419,7 +428,7 @@ function AppSidebar() {
                     }}
                   >
                     <item.icon />
-                    <span className="truncate">{item.title}</span>
+                    <span>{item.title}</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -434,7 +443,7 @@ function AppSidebar() {
               <Avatar className="w-6 h-6">
                 <AvatarFallback>{currentUser.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col items-start text-xs truncate flex-1">
+              <div className="flex flex-col items-start text-xs truncate flex-1 group-data-[collapsible=icon]:hidden">
                 <span className="font-medium truncate">{currentUser.name}</span>
                 <span className="text-muted-foreground truncate text-[10px] uppercase tracking-wider">
                   {isClientRole
@@ -601,12 +610,12 @@ export default function Layout() {
 
   return (
     <SidebarProvider>
-      <div className="print:hidden h-full flex">
+      <div className="print:hidden h-full flex z-20">
         <AppSidebar />
       </div>
       <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen">
         <MainHeader />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible relative">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible relative z-0">
           {fetchError && (
             <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border border-red-200 gap-4">
               <div className="flex items-center gap-3">
