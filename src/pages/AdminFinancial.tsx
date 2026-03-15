@@ -18,15 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import {
   Loader2,
   Download,
@@ -36,7 +30,6 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from 'lucide-react'
-import { parseISO } from 'date-fns'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 
@@ -77,6 +70,7 @@ export default function AdminFinancial() {
     setLoading(true)
     try {
       const [profilesRes, ordersRes, settlementsRes] = await Promise.all([
+        // Strict role filtering for 'dentist' only
         supabase
           .from('profiles')
           .select('id, name, clinic, closing_date, payment_due_date')
@@ -135,7 +129,7 @@ export default function AdminFinancial() {
     let faturar = 0
     let pipeline = 0
     let recebido = 0
-    let inadimplencia = 0 // Maintained as 0 due to lack of distinct overdue/unpaid status for settlements
+    const inadimplencia = 0 // Maintained as 0 due to lack of distinct overdue/unpaid status for settlements
 
     const map = new Map<string, any>()
     profiles.forEach((p) => {
@@ -175,7 +169,7 @@ export default function AdminFinancial() {
 
       if (selectedDentist !== 'all' && o.dentist_id !== selectedDentist) return
 
-      // faturar (Trabalhos Concluídos) uses COMPLETION date within the selected month
+      // faturar (Trabalhos Concluídos) uses COMPLETION date within the selected month and not settled
       if (inPeriodForCompletion && isCompleted && !o.settlement_id) {
         faturar += Number(o.base_price || 0)
       }
@@ -243,7 +237,7 @@ export default function AdminFinancial() {
 
   const handleExport = () => {
     let csv =
-      'Dentista / Clínica,Fechamento,Vencimento,Finalizados no Mês (R$),Em Produção (Pipeline) (R$)\n'
+      'Dentista / Clínica,Data de Fechamento,Data de Pagamento,Finalizados no Mês (R$),Em Produção (Pipeline) (R$)\n'
     tableData.forEach((d) => {
       csv += `"${d.name} ${d.clinic ? `/ ${d.clinic}` : ''}",${d.closing_date || ''},${d.payment_due_date || ''},${d.finalizadosMes},${d.emProducao}\n`
     })
@@ -493,10 +487,10 @@ export default function AdminFinancial() {
                           Dentista / Clínica
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-center">
-                          Fechamento
+                          Data de Fechamento
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-center">
-                          Vencimento
+                          Data de Pagamento
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-right">
                           Finalizados no Mês (R$)
@@ -663,12 +657,12 @@ export default function AdminFinancial() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="default"
                 onClick={() => setPreviewOpen(true)}
                 disabled={selectedOrderIds.length === 0}
-                className="bg-white"
+                className="gap-2"
               >
-                Prévia da Fatura
+                PRÉVIA DA FATURA
               </Button>
               <Button variant="ghost" onClick={() => setManualInvoiceDentist(null)}>
                 Cancelar
