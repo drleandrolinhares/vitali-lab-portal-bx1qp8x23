@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { Printer } from 'lucide-react'
 import logoUrl from '@/assets/vitalli-02-9f298.png'
+import { useAppStore } from '@/stores/main'
 
 export interface InvoicePreviewDialogProps {
   open: boolean
@@ -28,6 +29,16 @@ export function InvoicePreviewDialog({
   orders,
   totalAmount,
 }: InvoicePreviewDialogProps) {
+  const { appSettings } = useAppStore()
+
+  const labRazao = appSettings['lab_razao_social'] || ''
+  const labCnpj = appSettings['lab_cnpj'] || ''
+  const labEndereco = appSettings['lab_address'] || ''
+  const labTelefone = appSettings['lab_phone'] || ''
+  const labSite = appSettings['lab_website'] || ''
+  const labInstagram = appSettings['lab_instagram'] || ''
+  const labPix = appSettings['lab_pix_key'] || ''
+
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
@@ -56,6 +67,27 @@ export function InvoicePreviewDialog({
       )
       .join('')
 
+    const footerHtml = `
+      <div class="footer">
+        ${
+          labRazao || labCnpj
+            ? `<div><strong>${labRazao}</strong>${labRazao && labCnpj ? ' | ' : ''}${labCnpj ? `CNPJ: ${labCnpj}` : ''}</div>`
+            : ''
+        }
+        ${labEndereco ? `<div>${labEndereco}</div>` : ''}
+        ${
+          labTelefone || labSite || labInstagram
+            ? `<div>
+            ${labTelefone}${labTelefone && (labSite || labInstagram) ? ' | ' : ''}
+            ${labSite}${labSite && labInstagram ? ' | ' : ''}
+            ${labInstagram}
+          </div>`
+            : ''
+        }
+        ${labPix ? `<div class="pix">CHAVE PIX: ${labPix}</div>` : ''}
+      </div>
+    `
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -63,11 +95,12 @@ export function InvoicePreviewDialog({
           <title>Prévia de Faturamento - ${dentistName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 20px 40px 40px; color: #0f172a; margin: 0; background: #fff; }
+            @page { margin: 0; }
+            body { font-family: 'Inter', sans-serif; padding: 2cm 40px 40px; color: #0f172a; margin: 0; background: #fff; box-sizing: border-box; }
             .container { max-width: 800px; margin: 0 auto; position: relative; }
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; z-index: -1; width: 80%; max-width: 600px; filter: grayscale(100%); pointer-events: none; }
             .header { text-align: center; margin-bottom: 32px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
-            .logo { width: 80%; height: auto; max-width: none; object-fit: contain; margin-bottom: 8px; }
+            .logo { width: 80%; height: auto; max-width: none; object-fit: contain; margin-bottom: 1cm; }
             .title { font-size: 26px; font-weight: 900; margin: 0 0 8px 0; letter-spacing: -0.02em; text-transform: uppercase; }
             .subtitle { font-size: 14px; font-weight: 700; color: #64748b; letter-spacing: 0.15em; text-transform: uppercase; }
             .info-box { display: flex; gap: 40px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin-bottom: 40px; }
@@ -81,8 +114,11 @@ export function InvoicePreviewDialog({
             .total-box { border-top: 4px solid #0f172a; padding-top: 24px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
             .total-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
             .total-value { font-size: 42px; font-weight: 900; letter-spacing: -0.05em; }
+            .footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6; }
+            .footer div { margin-bottom: 4px; }
+            .footer .pix { margin-top: 12px; font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; background: #f1f5f9; display: inline-block; padding: 10px 20px; border-radius: 8px; letter-spacing: 0.05em; border: 1px solid #e2e8f0; }
             @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
           </style>
         </head>
@@ -122,6 +158,7 @@ export function InvoicePreviewDialog({
               <div class="total-label">Total Selecionado</div>
               <div class="total-value">${formatCurrency(totalAmount)}</div>
             </div>
+            ${footerHtml}
           </div>
         </body>
       </html>
@@ -130,10 +167,8 @@ export function InvoicePreviewDialog({
     printWindow.document.close()
     printWindow.focus()
 
-    // Wait a brief moment for styles/images to load
     setTimeout(() => {
       printWindow.print()
-      // Optional: printWindow.close() - Usually it's better to leave it open so the user can see it or save as PDF
     }, 500)
   }
 
@@ -156,9 +191,7 @@ export function InvoicePreviewDialog({
 
         <ScrollArea className="max-h-[90vh] w-full">
           <div className="p-6 md:py-8 md:px-12 flex justify-center min-h-full">
-            {/* A4 Document Container */}
-            <div className="relative w-full max-w-[850px] bg-white shadow-sm border border-slate-200 rounded-sm px-8 py-6 md:px-16 md:py-10 overflow-hidden min-h-[800px]">
-              {/* Watermark */}
+            <div className="relative w-full max-w-[850px] bg-white shadow-sm border border-slate-200 rounded-sm px-8 md:px-16 pb-6 md:pb-10 pt-[2cm] overflow-hidden min-h-[800px] flex flex-col">
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] z-0 select-none">
                 <img
                   src={logoUrl}
@@ -167,15 +200,14 @@ export function InvoicePreviewDialog({
                 />
               </div>
 
-              <div className="relative z-10 space-y-8">
-                {/* Header: Logo and Title */}
-                <div className="flex flex-col items-center space-y-2 border-b-2 border-slate-100 pb-6">
+              <div className="relative z-10 flex-1 flex flex-col">
+                <div className="flex flex-col items-center border-b-2 border-slate-100 pb-6">
                   <img
                     src={logoUrl}
                     alt="Vitali Lab"
-                    className="w-[80%] h-auto max-w-none object-contain"
+                    className="w-[80%] h-auto max-w-none object-contain mb-[1cm]"
                   />
-                  <div className="text-center space-y-1.5 mt-2">
+                  <div className="text-center space-y-1.5">
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 uppercase">
                       RECIBO DE PRESTAÇÃO DE SERVIÇOS
                     </h1>
@@ -185,9 +217,8 @@ export function InvoicePreviewDialog({
                   </div>
                 </div>
 
-                {/* Customer Info Box */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 md:p-8 rounded-xl border border-slate-200 bg-slate-50/50">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8">
+                  <div className="p-6 md:p-8 rounded-xl border border-slate-200 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                       Cliente
                     </p>
@@ -195,7 +226,7 @@ export function InvoicePreviewDialog({
                       {dentistName}
                     </p>
                   </div>
-                  <div>
+                  <div className="p-6 md:p-8 rounded-xl border border-slate-200 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                       Clínica
                     </p>
@@ -205,8 +236,7 @@ export function InvoicePreviewDialog({
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="pt-2">
+                <div className="flex-1">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead>
                       <tr className="border-b-[3px] border-slate-200">
@@ -268,7 +298,6 @@ export function InvoicePreviewDialog({
                   </table>
                 </div>
 
-                {/* Footer / Total */}
                 <div className="pt-6 border-t-[4px] border-slate-900 flex flex-col items-end space-y-2 mt-8">
                   <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
                     Total Selecionado
@@ -276,6 +305,34 @@ export function InvoicePreviewDialog({
                   <p className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">
                     {formatCurrency(totalAmount)}
                   </p>
+                </div>
+
+                {/* Footer Section */}
+                <div className="mt-16 pt-6 border-t border-slate-200 text-center text-[11px] text-slate-500 space-y-1.5 leading-relaxed">
+                  {(labRazao || labCnpj) && (
+                    <p>
+                      <strong className="text-slate-700">{labRazao}</strong>
+                      {labRazao && labCnpj && ' | '}
+                      {labCnpj && `CNPJ: ${labCnpj}`}
+                    </p>
+                  )}
+                  {labEndereco && <p>{labEndereco}</p>}
+                  {(labTelefone || labSite || labInstagram) && (
+                    <p>
+                      {labTelefone}
+                      {labTelefone && (labSite || labInstagram) && ' | '}
+                      {labSite}
+                      {labSite && labInstagram && ' | '}
+                      {labInstagram}
+                    </p>
+                  )}
+                  {labPix && (
+                    <div className="mt-4 inline-block bg-slate-50 border border-slate-200 py-2.5 px-5 rounded-lg shadow-sm">
+                      <p className="text-slate-900 font-black text-[13px] tracking-wide uppercase">
+                        CHAVE PIX: {labPix}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

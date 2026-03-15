@@ -26,6 +26,9 @@ export default function LabProfile() {
     lab_address: '',
     lab_phone: '',
     lab_email: '',
+    lab_website: '',
+    lab_instagram: '',
+    lab_pix_key: '',
   })
 
   const [logoUrl, setLogoUrl] = useState('')
@@ -39,6 +42,9 @@ export default function LabProfile() {
       lab_address: appSettings['lab_address'] || '',
       lab_phone: appSettings['lab_phone'] || '',
       lab_email: appSettings['lab_email'] || '',
+      lab_website: appSettings['lab_website'] || '',
+      lab_instagram: appSettings['lab_instagram'] || '',
+      lab_pix_key: appSettings['lab_pix_key'] || '',
     })
     setLogoUrl(appSettings['lab_logo_url'] || '')
   }, [appSettings])
@@ -113,7 +119,7 @@ export default function LabProfile() {
         <CardHeader className="bg-muted/10 border-b pb-6">
           <CardTitle className="uppercase text-lg">Dados Cadastrais do Laboratório</CardTitle>
           <CardDescription className="uppercase text-xs font-semibold">
-            ESTES DADOS SERÃO EXIBIDOS NOS CABEÇALHOS DOS DOCUMENTOS IMPRESSOS.
+            ESTES DADOS SERÃO EXIBIDOS NOS CABEÇALHOS E RODAPÉS DOS DOCUMENTOS IMPRESSOS.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8 pt-8">
@@ -196,6 +202,26 @@ export default function LabProfile() {
                     className="normal-case"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="uppercase text-xs font-bold">Site / Website</Label>
+                  <Input
+                    name="lab_website"
+                    value={formData.lab_website}
+                    onChange={handleChange}
+                    placeholder="www.vitalilab.com.br"
+                    className="normal-case"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="uppercase text-xs font-bold">Instagram</Label>
+                  <Input
+                    name="lab_instagram"
+                    value={formData.lab_instagram}
+                    onChange={handleChange}
+                    placeholder="@vitalilab"
+                    className="normal-case"
+                  />
+                </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label className="uppercase text-xs font-bold">Endereço Completo</Label>
                   <Input
@@ -203,6 +229,18 @@ export default function LabProfile() {
                     value={formData.lab_address}
                     onChange={handleChange}
                     placeholder="Rua Exemplo, 123 - Bairro - Cidade/UF - CEP"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2 pt-2">
+                  <Label className="uppercase text-xs font-bold text-emerald-600">
+                    Chave PIX (Para Pagamento)
+                  </Label>
+                  <Input
+                    name="lab_pix_key"
+                    value={formData.lab_pix_key}
+                    onChange={handleChange}
+                    placeholder="CNPJ, Celular, E-mail ou Aleatória"
+                    className="border-emerald-200 focus-visible:ring-emerald-500 normal-case"
                   />
                 </div>
               </div>
