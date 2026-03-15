@@ -650,6 +650,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_approved: boolean
+          is_billing_paused: boolean
           job_function: string | null
           last_access_at: string | null
           lunch_end: string | null
@@ -690,6 +691,7 @@ export type Database = {
           id: string
           is_active?: boolean
           is_approved?: boolean
+          is_billing_paused?: boolean
           job_function?: string | null
           last_access_at?: string | null
           lunch_end?: string | null
@@ -730,6 +732,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_approved?: boolean
+          is_billing_paused?: boolean
           job_function?: string | null
           last_access_at?: string | null
           lunch_end?: string | null
@@ -1117,6 +1120,7 @@ export const Constants = {
 //   state: text (nullable)
 //   has_access_schedule: boolean (nullable, default: false)
 //   last_access_at: timestamp with time zone (nullable)
+//   is_billing_paused: boolean (not null, default: false)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

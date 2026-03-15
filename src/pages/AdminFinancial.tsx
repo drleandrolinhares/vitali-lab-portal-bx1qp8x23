@@ -82,7 +82,7 @@ export default function AdminFinancial() {
     supabase
       .from('profiles')
       .select('id, name, clinic, is_billing_paused')
-      .in('role', ['dentist', 'laboratory'])
+      .eq('role', 'dentist')
       .then(({ data }) => {
         if (data) setDentists(data.sort((a, b) => a.name.localeCompare(b.name)))
       })
