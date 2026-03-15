@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DentistBillingTab } from '@/components/financial/DentistBillingTab'
+import { FinancialOverviewCards } from '@/components/financial/FinancialOverviewCards'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CircleDollarSign, Receipt } from 'lucide-react'
 
@@ -9,19 +10,21 @@ export default function AdminFinancial() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          Gerencie faturamentos, conferências e pagamentos do laboratório.
+          Gerencie faturamentos, conferências e acompanhe o fluxo de recebíveis.
         </p>
       </div>
+
+      <FinancialOverviewCards />
 
       <Tabs defaultValue="billing" className="w-full">
         <TabsList className="mb-6 h-12 px-1 bg-slate-100/80">
           <TabsTrigger value="billing" className="gap-2 h-10 px-6 font-medium">
             <Receipt className="w-4 h-4" />
-            Faturamento
+            Faturamento de Dentistas
           </TabsTrigger>
           <TabsTrigger value="overview" className="gap-2 h-10 px-6 font-medium">
             <CircleDollarSign className="w-4 h-4" />
-            Visão Geral
+            Visão Geral Histórica
           </TabsTrigger>
         </TabsList>
 

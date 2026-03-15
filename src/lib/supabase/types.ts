@@ -413,6 +413,7 @@ export type Database = {
           patient_name: string
           scale_used: string | null
           sector: string
+          settlement_id: string | null
           shipping_details: string | null
           shipping_method: string
           status: string
@@ -442,6 +443,7 @@ export type Database = {
           patient_name: string
           scale_used?: string | null
           sector?: string
+          settlement_id?: string | null
           shipping_details?: string | null
           shipping_method: string
           status?: string
@@ -471,6 +473,7 @@ export type Database = {
           patient_name?: string
           scale_used?: string | null
           sector?: string
+          settlement_id?: string | null
           shipping_details?: string | null
           shipping_method?: string
           status?: string
@@ -498,6 +501,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: 'dre_categories'
             referencedColumns: ['name']
+          },
+          {
+            foreignKeyName: 'orders_settlement_id_fkey'
+            columns: ['settlement_id']
+            isOneToOne: false
+            referencedRelation: 'settlements'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1053,6 +1063,7 @@ export const Constants = {
 //   implant_type: text (nullable)
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 //   created_by: uuid (nullable)
+//   settlement_id: uuid (nullable)
 // Table: partner_prices
 //   id: uuid (not null, default: gen_random_uuid())
 //   partner_id: uuid (not null)
@@ -1164,6 +1175,7 @@ export const Constants = {
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   FOREIGN KEY orders_dre_category_fkey: FOREIGN KEY (dre_category) REFERENCES dre_categories(name) ON UPDATE CASCADE
 //   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY orders_settlement_id_fkey: FOREIGN KEY (settlement_id) REFERENCES settlements(id) ON DELETE SET NULL
 // Table: partner_prices
 //   FOREIGN KEY partner_prices_partner_id_fkey: FOREIGN KEY (partner_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   UNIQUE partner_prices_partner_id_price_list_id_key: UNIQUE (partner_id, price_list_id)
@@ -1487,6 +1499,7 @@ export const Constants = {
 // Table: orders
 //   CREATE INDEX idx_orders_dentist_id ON public.orders USING btree (dentist_id)
 //   CREATE INDEX idx_orders_kanban_stage ON public.orders USING btree (kanban_stage)
+//   CREATE INDEX idx_orders_settlement_id ON public.orders USING btree (settlement_id)
 //   CREATE INDEX idx_orders_status ON public.orders USING btree (status)
 // Table: partner_prices
 //   CREATE UNIQUE INDEX partner_prices_partner_id_price_list_id_key ON public.partner_prices USING btree (partner_id, price_list_id)
