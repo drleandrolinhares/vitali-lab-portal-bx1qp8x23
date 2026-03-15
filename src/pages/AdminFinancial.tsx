@@ -50,11 +50,13 @@ import {
   Printer,
   PauseCircle,
   CheckCircle2,
+  FileText,
 } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 
 export default function AdminFinancial() {
   const {
@@ -73,6 +75,7 @@ export default function AdminFinancial() {
   const [settlements, setSettlements] = useState<any[]>([])
   const [settleDialog, setSettleDialog] = useState<any>(null)
   const [detailsDialog, setDetailsDialog] = useState<any>(null)
+  const [previewInvoiceData, setPreviewInvoiceData] = useState<any>(null)
 
   const [selectedDentist, setSelectedDentist] = useState<string>('all')
 
@@ -91,7 +94,7 @@ export default function AdminFinancial() {
     // Strict fetch for the active dentists list and filter
     supabase
       .from('profiles')
-      .select('id, name, clinic, is_billing_paused, is_active, is_approved')
+      .select('id, name, clinic, is_billing_paused, is_active, is_approved, cpf')
       .eq('role', 'dentist')
       .eq('is_active', true)
       .eq('is_approved', true)
@@ -658,8 +661,18 @@ export default function AdminFinancial() {
       {/* Details Dialog */}
       <Dialog open={!!detailsDialog} onOpenChange={(o) => !o && setDetailsDialog(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-6">
             <DialogTitle>Detalhes da Produção: {detailsDialog?.dentist?.name}</DialogTitle>
+            {detailsDialog?.aFaturarTotal > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm"
+                onClick={() => setPreviewInvoiceData({ ...detailsDialog, appSettings })}
+              >
+                <FileText className="w-4 h-4 mr-2" /> Visualizar Fatura do Dentista
+              </Button>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 py-4 space-y-6">
             <div>
@@ -770,6 +783,15 @@ export default function AdminFinancial() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Preview Dialog */}
+      {previewInvoiceData && (
+        <InvoicePreviewDialog
+          open={!!previewInvoiceData}
+          onOpenChange={(open: boolean) => !open && setPreviewInvoiceData(null)}
+          data={previewInvoiceData}
+        />
+      )}
 
       {/* Settlement Dialog */}
       <Dialog open={!!settleDialog} onOpenChange={(o) => !o && setSettleDialog(null)}>
