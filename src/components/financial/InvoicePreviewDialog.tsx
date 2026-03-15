@@ -44,8 +44,8 @@ export function InvoicePreviewDialog({
       .map(
         (order) => `
       <tr>
-        <td>${order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy') : '-'}</td>
-        <td><b>${order.friendly_id || order.id?.substring(0, 8) || '-'}</b></td>
+        <td>${order.created_at || order.createdAt ? format(new Date(order.created_at || order.createdAt), 'dd/MM/yyyy') : '-'}</td>
+        <td><b>${order.friendly_id || order.friendlyId || order.id?.substring(0, 8) || '-'}</b></td>
         <td>${order.patient_name || order.patientName || '-'}</td>
         <td>${order.work_type || order.workType || order.service || '-'}</td>
         <td class="right"><b>${formatCurrency(
@@ -230,12 +230,15 @@ export function InvoicePreviewDialog({
                           className="bg-white hover:bg-slate-50/80 transition-colors"
                         >
                           <td className="py-4 text-slate-600 font-medium whitespace-nowrap pr-4">
-                            {order.created_at
-                              ? format(new Date(order.created_at), 'dd/MM/yyyy')
+                            {order.created_at || order.createdAt
+                              ? format(new Date(order.created_at || order.createdAt), 'dd/MM/yyyy')
                               : '-'}
                           </td>
                           <td className="py-4 text-slate-900 font-bold whitespace-nowrap pr-4">
-                            {order.friendly_id || order.id?.substring(0, 8) || '-'}
+                            {order.friendly_id ||
+                              order.friendlyId ||
+                              order.id?.substring(0, 8) ||
+                              '-'}
                           </td>
                           <td className="py-4 text-slate-700 uppercase pr-4 font-medium">
                             {order.patient_name || order.patientName || '-'}

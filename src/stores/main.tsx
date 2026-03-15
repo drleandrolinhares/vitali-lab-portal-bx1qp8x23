@@ -401,6 +401,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             implantBrand: o.implant_brand,
             implantType: o.implant_type,
             estruturaFixacao: o.estrutura_fixacao || 'SOBRE DENTE',
+            settlementId: o.settlement_id,
             createdBy: o.creator
               ? { id: o.created_by, name: o.creator.name, role: o.creator.role }
               : undefined,

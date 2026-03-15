@@ -80,6 +80,7 @@ export interface Order {
   implantBrand?: string
   implantType?: string
   estruturaFixacao?: string
+  settlementId?: string | null
   createdBy?: {
     id: string
     name: string

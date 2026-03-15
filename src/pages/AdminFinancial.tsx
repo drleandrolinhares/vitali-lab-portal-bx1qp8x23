@@ -32,6 +32,8 @@ import {
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
+import { useAppStore } from '@/stores/main'
+import { filterOrdersForFinancials, getOrderFinancials } from '@/lib/financial'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -51,13 +53,20 @@ const MONTHS = [
 const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
 export default function AdminFinancial() {
+  const {
+    orders: storeOrders,
+    priceList,
+    kanbanStages,
+    loading: storeLoading,
+    refreshOrders,
+  } = useAppStore()
+
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedDentist, setSelectedDentist] = useState<string>('all')
 
-  const [loading, setLoading] = useState(true)
+  const [loadingSettlements, setLoadingSettlements] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
-  const [orders, setOrders] = useState<any[]>([])
   const [settlements, setSettlements] = useState<any[]>([])
 
   // Modal State
@@ -67,31 +76,24 @@ export default function AdminFinancial() {
   const [previewOpen, setPreviewOpen] = useState(false)
 
   const fetchData = async () => {
-    setLoading(true)
+    setLoadingSettlements(true)
     try {
-      const [profilesRes, ordersRes, settlementsRes] = await Promise.all([
-        // Strict role filtering for 'dentist' only
+      const [profilesRes, settlementsRes] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, name, clinic, closing_date, payment_due_date')
           .eq('role', 'dentist')
           .order('name'),
-        supabase
-          .from('orders')
-          .select(
-            'id, friendly_id, base_price, status, kanban_stage, created_at, dentist_id, settlement_id, patient_name, work_type, order_history(status, created_at, note)',
-          ),
         supabase.from('settlements').select('id, amount, created_at, dentist_id'),
       ])
 
       if (profilesRes.data) setProfiles(profilesRes.data)
-      if (ordersRes.data) setOrders(ordersRes.data)
       if (settlementsRes.data) setSettlements(settlementsRes.data)
     } catch (error) {
       console.error('Error fetching financial data:', error)
       toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
     } finally {
-      setLoading(false)
+      setLoadingSettlements(false)
     }
   }
 
@@ -99,37 +101,14 @@ export default function AdminFinancial() {
     fetchData()
   }, [])
 
-  const getCompletionDate = (o: any) => {
-    const isFinishedStatus = o.status === 'completed' || o.status === 'delivered'
-    const isFinishedStage =
-      o.kanban_stage?.toUpperCase().includes('FINALIZADO') ||
-      o.kanban_stage?.toUpperCase().includes('ENTREGUE')
-
-    if (!isFinishedStatus && !isFinishedStage) return null
-
-    if (o.order_history && o.order_history.length > 0) {
-      const completions = o.order_history.filter(
-        (h: any) =>
-          h.status === 'completed' ||
-          h.status === 'delivered' ||
-          h.note?.toUpperCase().includes('FINALIZADO') ||
-          h.note?.toUpperCase().includes('ENTREGUE'),
-      )
-      if (completions.length > 0) {
-        completions.sort(
-          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        )
-        return new Date(completions[0].created_at)
-      }
-    }
-    return new Date(o.created_at)
-  }
+  const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
+  const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
 
   const { summary, tableData } = useMemo(() => {
     let faturar = 0
     let pipeline = 0
     let recebido = 0
-    const inadimplencia = 0 // Maintained as 0 due to lack of distinct overdue/unpaid status for settlements
+    const inadimplencia = 0
 
     const map = new Map<string, any>()
     profiles.forEach((p) => {
@@ -143,61 +122,68 @@ export default function AdminFinancial() {
         finalizadosMes: 0,
         emProducao: 0,
         readyToInvoiceCount: 0,
+        unsettledOrders: [],
       })
     })
 
-    const isSamePeriod = (dateVal: Date | string | null) => {
+    const safeOrders = Array.isArray(storeOrders) ? storeOrders : []
+    const safePriceList = Array.isArray(priceList) ? priceList : []
+    const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
+
+    const monthFilteredOrders = filterOrdersForFinancials(safeOrders, formattedSelectedMonthYear)
+    const displayOrders = monthFilteredOrders.map((o) =>
+      getOrderFinancials(o, safePriceList, safeKanbanStages),
+    )
+
+    const verifiedDisplayOrders = displayOrders.map((order) => {
+      const discount = order.dentistDiscount || 0
+      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
+      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
+      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
+      return {
+        ...order,
+        basePrice: finalBasePrice,
+      }
+    })
+
+    verifiedDisplayOrders.forEach((o) => {
+      if (selectedDentist !== 'all' && o.dentistId !== selectedDentist) return
+
+      const isCompleted = o.status === 'completed' || o.status === 'delivered'
+      const isCancelled = o.status === 'cancelled'
+
+      if (isCompleted && !o.settlementId) {
+        faturar += o.basePrice || 0
+      }
+
+      if (!isCompleted && !isCancelled) {
+        pipeline += o.basePrice || 0
+      }
+
+      if (!o.dentistId || !map.has(o.dentistId)) return
+      const dentistData = map.get(o.dentistId)
+
+      if (isCompleted && !o.settlementId) {
+        dentistData.finalizadosMes += o.basePrice || 0
+        dentistData.readyToInvoiceCount += 1
+        dentistData.unsettledOrders.push(o)
+      }
+
+      if (!isCompleted && !isCancelled) {
+        dentistData.emProducao += o.basePrice || 0
+      }
+    })
+
+    const isSamePeriod = (dateVal: string | null) => {
       if (!dateVal) return false
-      const d = typeof dateVal === 'string' ? new Date(dateVal) : dateVal
+      const d = new Date(dateVal)
       return (
         d.getMonth().toString() === selectedMonth && d.getFullYear().toString() === selectedYear
       )
     }
 
-    orders.forEach((o) => {
-      const isCompleted =
-        o.status === 'completed' ||
-        o.status === 'delivered' ||
-        o.kanban_stage?.toUpperCase().includes('FINALIZADO') ||
-        o.kanban_stage?.toUpperCase().includes('ENTREGUE')
-      const isCancelled = o.status === 'cancelled'
-
-      let compDate = null
-      if (isCompleted) compDate = getCompletionDate(o)
-
-      const inPeriodForCompletion = isSamePeriod(compDate)
-
-      if (selectedDentist !== 'all' && o.dentist_id !== selectedDentist) return
-
-      // faturar (Trabalhos Concluídos) uses COMPLETION date within the selected month and not settled
-      if (inPeriodForCompletion && isCompleted && !o.settlement_id) {
-        faturar += Number(o.base_price || 0)
-      }
-
-      // pipeline (Em Produção) = Active orders (not completed, not cancelled)
-      if (!isCompleted && !isCancelled) {
-        pipeline += Number(o.base_price || 0)
-      }
-
-      if (!o.dentist_id || !map.has(o.dentist_id)) return
-      const dentistData = map.get(o.dentist_id)
-
-      if (inPeriodForCompletion && isCompleted && !o.settlement_id) {
-        dentistData.finalizadosMes += Number(o.base_price || 0)
-      }
-
-      if (!isCompleted && !isCancelled) {
-        dentistData.emProducao += Number(o.base_price || 0)
-      }
-
-      if (isCompleted && !o.settlement_id) {
-        dentistData.readyToInvoiceCount += 1
-      }
-    })
-
     settlements.forEach((s) => {
       if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
-
       if (isSamePeriod(s.created_at)) {
         recebido += Number(s.amount || 0)
       }
@@ -211,25 +197,30 @@ export default function AdminFinancial() {
       summary: { faturar, pipeline, recebido, inadimplencia },
       tableData: activeTableData,
     }
-  }, [profiles, orders, settlements, selectedMonth, selectedYear, selectedDentist])
+  }, [
+    profiles,
+    storeOrders,
+    settlements,
+    selectedMonth,
+    selectedYear,
+    selectedDentist,
+    priceList,
+    kanbanStages,
+    formattedSelectedMonthYear,
+  ])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
-    return orders
-      .filter((o) => {
-        const isCompleted =
-          o.status === 'completed' ||
-          o.status === 'delivered' ||
-          o.kanban_stage?.toUpperCase().includes('FINALIZADO') ||
-          o.kanban_stage?.toUpperCase().includes('ENTREGUE')
-        return o.dentist_id === manualInvoiceDentist && isCompleted && !o.settlement_id
-      })
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-  }, [orders, manualInvoiceDentist])
+    const dentistData = tableData.find((d) => d.id === manualInvoiceDentist)
+    if (!dentistData) return []
+    return dentistData.unsettledOrders.sort(
+      (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+  }, [manualInvoiceDentist, tableData])
 
   useEffect(() => {
     if (manualInvoiceDentist) {
-      setSelectedOrderIds(modalOrders.map((o) => o.id))
+      setSelectedOrderIds(modalOrders.map((o: any) => o.id))
     } else {
       setSelectedOrderIds([])
     }
@@ -250,7 +241,7 @@ export default function AdminFinancial() {
   }
 
   const handleToggleAllOrders = (checked: boolean) => {
-    if (checked) setSelectedOrderIds(modalOrders.map((o) => o.id))
+    if (checked) setSelectedOrderIds(modalOrders.map((o: any) => o.id))
     else setSelectedOrderIds([])
   }
 
@@ -263,15 +254,26 @@ export default function AdminFinancial() {
     if (selectedOrderIds.length === 0) return
     setIsSubmitting(true)
     try {
-      const ordersToSettle = modalOrders.filter((o) => selectedOrderIds.includes(o.id))
-      const totalAmount = ordersToSettle.reduce((sum, o) => sum + Number(o.base_price || 0), 0)
+      const ordersToSettle = modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))
+      const totalAmount = ordersToSettle.reduce(
+        (sum: number, o: any) => sum + (o.basePrice || 0),
+        0,
+      )
+
+      const snapshot = ordersToSettle.map((o: any) => ({
+        id: o.id,
+        friendlyId: o.friendlyId,
+        patientName: o.patientName,
+        workType: o.workType,
+        clearedAmount: o.basePrice,
+      }))
 
       const { data, error } = await supabase
         .from('settlements')
         .insert({
           dentist_id: manualInvoiceDentist,
           amount: totalAmount,
-          orders_snapshot: ordersToSettle,
+          orders_snapshot: snapshot,
         })
         .select('id')
         .single()
@@ -287,6 +289,7 @@ export default function AdminFinancial() {
 
       toast({ title: 'Fatura fechada com sucesso!' })
       fetchData()
+      refreshOrders()
       setManualInvoiceDentist(null)
     } catch (err) {
       console.error(err)
@@ -296,7 +299,7 @@ export default function AdminFinancial() {
     }
   }
 
-  if (loading) {
+  if (storeLoading || loadingSettlements) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -613,7 +616,7 @@ export default function AdminFinancial() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {modalOrders.map((o) => (
+                  {modalOrders.map((o: any) => (
                     <TableRow key={o.id}>
                       <TableCell className="text-center">
                         <Checkbox
@@ -622,11 +625,11 @@ export default function AdminFinancial() {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {o.friendly_id || o.id.substring(0, 8)}
+                        {o.friendlyId || o.id.substring(0, 8)}
                       </TableCell>
-                      <TableCell>{new Date(o.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(o.base_price || 0)}
+                        {formatCurrency(o.basePrice || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -650,8 +653,8 @@ export default function AdminFinancial() {
               <span className="text-2xl font-bold text-slate-900">
                 {formatCurrency(
                   modalOrders
-                    .filter((o) => selectedOrderIds.includes(o.id))
-                    .reduce((sum, o) => sum + Number(o.base_price || 0), 0),
+                    .filter((o: any) => selectedOrderIds.includes(o.id))
+                    .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0),
                 )}
               </span>
             </div>
@@ -687,10 +690,10 @@ export default function AdminFinancial() {
           onOpenChange={setPreviewOpen}
           dentistName={profiles.find((p) => p.id === manualInvoiceDentist)?.name || ''}
           clinicName={profiles.find((p) => p.id === manualInvoiceDentist)?.clinic || ''}
-          orders={modalOrders.filter((o) => selectedOrderIds.includes(o.id))}
+          orders={modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))}
           totalAmount={modalOrders
-            .filter((o) => selectedOrderIds.includes(o.id))
-            .reduce((sum, o) => sum + Number(o.base_price || 0), 0)}
+            .filter((o: any) => selectedOrderIds.includes(o.id))
+            .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0)}
         />
       )}
     </div>
