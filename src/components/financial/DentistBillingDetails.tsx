@@ -32,7 +32,7 @@ interface DentistBillingDetailsProps {
 
 export function DentistBillingDetails({ dentistId, onBack }: DentistBillingDetailsProps) {
   const [orders, setOrders] = useState<Order[]>([])
-  const [dentist, setDentist] = useState<{ name: string; clinic_name: string } | null>(null)
+  const [dentist, setDentist] = useState<{ name: string; clinic: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [installmentOpen, setInstallmentOpen] = useState(false)
@@ -47,7 +47,7 @@ export function DentistBillingDetails({ dentistId, onBack }: DentistBillingDetai
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('name, clinic_name')
+          .select('name, clinic')
           .eq('id', dentistId)
           .single()
 
@@ -97,7 +97,7 @@ export function DentistBillingDetails({ dentistId, onBack }: DentistBillingDetai
             <h2 className="text-2xl font-bold tracking-tight">{dentist?.name || 'Dentista'}</h2>
           </div>
           <p className="text-muted-foreground pl-10 md:pl-0">
-            {dentist?.clinic_name || 'Clínica não informada'}
+            {dentist?.clinic || 'Clínica não informada'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 pl-10 md:pl-0">
@@ -186,7 +186,7 @@ export function DentistBillingDetails({ dentistId, onBack }: DentistBillingDetai
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         dentistName={dentist?.name || 'Dentista'}
-        clinicName={dentist?.clinic_name || ''}
+        clinicName={dentist?.clinic || ''}
         orders={orders}
         totalAmount={totalAmount}
       />

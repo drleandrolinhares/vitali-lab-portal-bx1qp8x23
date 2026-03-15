@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 interface DentistBillingSummary {
   dentist_id: string
   name: string
-  clinic_name: string
+  clinic: string
   unbilled_count: number
   unbilled_total: number
 }
@@ -32,7 +32,7 @@ export function DentistBillingTab() {
   const fetchSummaries = async () => {
     setLoading(true)
     try {
-      const { data: profiles } = await supabase.from('profiles').select('id, name, clinic_name')
+      const { data: profiles } = await supabase.from('profiles').select('id, name, clinic')
       const { data: orders } = await supabase
         .from('orders')
         .select('dentist_id, base_price')
@@ -53,7 +53,7 @@ export function DentistBillingTab() {
             summaryMap.set(order.dentist_id, {
               dentist_id: order.dentist_id,
               name: profile?.name || 'Dentista Desconhecido',
-              clinic_name: profile?.clinic_name || 'Sem clínica',
+              clinic: profile?.clinic || 'Sem clínica',
               unbilled_count: 1,
               unbilled_total: order.base_price || 0,
             })
@@ -131,7 +131,7 @@ export function DentistBillingTab() {
                     className="hover:bg-slate-50/50 transition-colors"
                   >
                     <TableCell className="font-semibold text-slate-900">{summary.name}</TableCell>
-                    <TableCell className="text-slate-600">{summary.clinic_name}</TableCell>
+                    <TableCell className="text-slate-600">{summary.clinic}</TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full text-xs border border-slate-200">
                         {summary.unbilled_count}
