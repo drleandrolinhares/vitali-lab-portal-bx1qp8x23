@@ -1,94 +1,79 @@
-import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { toast } from '@/hooks/use-toast'
-import { formatBRL } from '@/lib/financial'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
-export function CreateInstallmentDialog({ open, onOpenChange, dentistData, onSuccess }: any) {
-  const [installments, setInstallments] = useState(2)
-  const [saving, setSaving] = useState(false)
+export function CreateInstallmentDialog({
+  open,
+  onOpenChange,
+  dentistId,
+  orders,
+  totalAmount,
+  onSuccess,
+}: any) {
+  const [loading, setLoading] = useState(false)
+
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
   const handleCreate = async () => {
-    setSaving(true)
+    setLoading(true)
     try {
-      const totalAmount = dentistData.ordersTotal
-      const installmentValue = totalAmount / installments
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'billed' })
+        .in(
+          'id',
+          orders.map((o: any) => o.id),
+        )
 
-      const { error } = await supabase.from('billing_installments').insert({
-        dentist_id: dentistData.id,
-        total_amount: totalAmount,
-        installment_value: installmentValue,
-        total_installments: installments,
-        remaining_installments: installments,
-        status: 'active',
-      })
       if (error) throw error
 
-      if (dentistData.outstandingOrders.length > 0) {
-        const updates = dentistData.outstandingOrders.map((o: any) =>
-          supabase.from('orders').update({ cleared_balance: o.completedCost }).eq('id', o.id),
-        )
-        await Promise.all(updates)
-      }
-
-      toast({ title: 'Parcelamento criado com sucesso!' })
+      toast.success('Faturamento gerado com sucesso!')
       onSuccess()
-    } catch (e: any) {
-      toast({ title: 'Erro ao parcelar', description: e.message, variant: 'destructive' })
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao gerar faturamento')
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Parcelar Fatura do Mês</DialogTitle>
+          <DialogTitle>Confirmar Faturamento</DialogTitle>
+          <DialogDescription>
+            Você está prestes a faturar {orders.length} pedidos. Esta ação não poderá ser desfeita.
+          </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Você está parcelando o valor total de trabalhos deste mês. O saldo dos pedidos será
-            marcado como liquidado e substituído pelas parcelas do plano.
-          </p>
-          <div className="p-3 bg-muted rounded-md flex justify-between items-center border border-border">
-            <span className="font-semibold">Valor a Parcelar:</span>
-            <span className="font-bold text-lg text-primary">
-              {formatBRL(dentistData.ordersTotal)}
+        <div className="py-4">
+          <div className="bg-slate-50 p-5 rounded-lg border border-slate-100 flex justify-between items-center shadow-inner">
+            <span className="text-sm font-medium text-slate-600 uppercase tracking-wider">
+              Valor Total
+            </span>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              {formatCurrency(totalAmount)}
             </span>
           </div>
-          <div className="space-y-2">
-            <Label>Número de Parcelas</Label>
-            <Input
-              type="number"
-              min="2"
-              max="24"
-              value={installments}
-              onChange={(e) => setInstallments(Number(e.target.value))}
-            />
-          </div>
-          <p className="text-sm">
-            Valor de cada parcela:{' '}
-            <strong className="text-emerald-600">
-              {formatBRL(dentistData.ordersTotal / installments)}
-            </strong>
-          </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleCreate} disabled={saving || installments < 2}>
-            {saving ? 'Processando...' : 'Confirmar Parcelamento'}
+          <Button onClick={handleCreate} disabled={loading} className="gap-2">
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Confirmar Faturamento
           </Button>
         </DialogFooter>
       </DialogContent>

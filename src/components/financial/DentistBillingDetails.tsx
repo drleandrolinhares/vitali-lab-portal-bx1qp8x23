@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { supabase } from '@/lib/supabase/client'
+import { InvoicePreviewDialog } from './InvoicePreviewDialog'
+import { format } from 'date-fns'
+import { Loader2, FileText, CheckCircle, ArrowLeft } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -10,317 +12,198 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatBRL } from '@/lib/financial'
-import { supabase } from '@/lib/supabase/client'
-import { toast } from '@/hooks/use-toast'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { CreateInstallmentDialog } from './CreateInstallmentDialog'
-import { format } from 'date-fns'
 
-export function DentistBillingDetails({
-  open,
-  onOpenChange,
-  dentistData,
-  selectedMonthLabel,
-  onRefresh,
-}: any) {
-  const [parcelarOpen, setParcelarOpen] = useState(false)
-  const [settling, setSettling] = useState(false)
-  const [totalPaid, setTotalPaid] = useState(0)
+interface Order {
+  id: string
+  friendly_id: string
+  created_at: string
+  patient_name: string
+  work_type: string
+  base_price: number
+  status: string
+}
+
+interface DentistBillingDetailsProps {
+  dentistId: string
+  onBack?: () => void
+}
+
+export function DentistBillingDetails({ dentistId, onBack }: DentistBillingDetailsProps) {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [dentist, setDentist] = useState<{ name: string; clinic_name: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [installmentOpen, setInstallmentOpen] = useState(false)
+
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
   useEffect(() => {
-    if (open && dentistData) {
-      supabase
-        .from('settlements')
-        .select('amount')
-        .eq('dentist_id', dentistData.id)
-        .then(({ data }) => {
-          if (data) setTotalPaid(data.reduce((acc, s) => acc + Number(s.amount), 0))
-        })
+    if (!dentistId) return
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, clinic_name')
+          .eq('id', dentistId)
+          .single()
+
+        if (profile) setDentist(profile as any)
+
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('id, friendly_id, created_at, patient_name, work_type, base_price, status')
+          .eq('dentist_id', dentistId)
+          .eq('status', 'completed')
+          .is('settlement_id', null)
+          .order('created_at', { ascending: false })
+
+        if (ordersData) {
+          setOrders(ordersData as Order[])
+        }
+      } catch (error) {
+        console.error('Error fetching billing details:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [open, dentistData])
 
-  const handleSettle = async () => {
-    setSettling(true)
-    try {
-      const { currentMonthTotal, outstandingOrders, activePlans, id } = dentistData
-      if (currentMonthTotal <= 0) {
-        toast({ title: 'Nenhum valor pendente para liquidar' })
-        setSettling(false)
-        return
-      }
+    fetchData()
+  }, [dentistId])
 
-      if (outstandingOrders.length > 0) {
-        const updates = outstandingOrders.map((o: any) =>
-          supabase.from('orders').update({ cleared_balance: o.completedCost }).eq('id', o.id),
-        )
-        await Promise.all(updates)
-      }
+  const totalAmount = orders.reduce((sum, order) => sum + (order.base_price || 0), 0)
 
-      if (activePlans.length > 0) {
-        const planUpdates = activePlans.map((p: any) => {
-          const newRemaining = p.remaining_installments - 1
-          return supabase
-            .from('billing_installments')
-            .update({
-              remaining_installments: newRemaining,
-              status: newRemaining === 0 ? 'completed' : 'active',
-            })
-            .eq('id', p.id)
-        })
-        await Promise.all(planUpdates)
-      }
-
-      const snapshot = [
-        ...outstandingOrders.map((o: any) => ({
-          orderId: o.id,
-          friendlyId: o.friendlyId,
-          patientName: o.patientName,
-          workType: o.workType,
-          clearedAmount: o.outstandingCost,
-        })),
-        ...activePlans.map((p: any) => ({
-          planId: p.id,
-          description: `Parcela ${p.total_installments - p.remaining_installments + 1}/${p.total_installments}`,
-          clearedAmount: p.installment_value,
-        })),
-      ]
-
-      await supabase
-        .from('settlements')
-        .insert({ dentist_id: id, amount: currentMonthTotal, orders_snapshot: snapshot })
-      toast({ title: 'Fatura liquidada com sucesso!' })
-      onRefresh()
-      onOpenChange(false)
-    } catch (e: any) {
-      toast({ title: 'Erro', description: e.message, variant: 'destructive' })
-    } finally {
-      setSettling(false)
-    }
-  }
-
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
-
-    const html = `
-      <html>
-        <head>
-          <title>Faturamento - ${dentistData.name}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #333; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; }
-            th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; font-size: 13px; }
-            th { background-color: #f9fafb; font-weight: 600; }
-            .text-right { text-align: right; }
-            .text-center { text-align: center; }
-          </style>
-        </head>
-        <body>
-          <h2>Faturamento Mensal: ${dentistData.name}</h2>
-          <p><strong>Mês de Referência:</strong> ${selectedMonthLabel}</p>
-          <p><strong>Período Apurado:</strong> ${format(dentistData.cycle.start, 'dd/MM/yyyy')} a ${format(dentistData.cycle.end, 'dd/MM/yyyy')}</p>
-          
-          <h3>Trabalhos Realizados (Mês Atual)</h3>
-          <table>
-             <thead>
-               <tr>
-                 <th>Pedido</th>
-                 <th>Paciente</th>
-                 <th>Trabalho</th>
-                 <th class="text-right">Valor</th>
-               </tr>
-             </thead>
-             <tbody>
-               ${dentistData.outstandingOrders.length === 0 ? '<tr><td colspan="4" class="text-center">Nenhum pedido pendente neste ciclo</td></tr>' : ''}
-               ${dentistData.outstandingOrders
-                 .map(
-                   (o: any) =>
-                     `<tr><td>${o.friendlyId}</td><td>${o.patientName}</td><td>${o.workType}</td><td class="text-right">${formatBRL(o.outstandingCost)}</td></tr>`,
-                 )
-                 .join('')}
-             </tbody>
-          </table>
-
-          <h3>Parcelamentos (Planos Ativos)</h3>
-          <table>
-             <thead>
-               <tr>
-                 <th>Descrição do Parcelamento</th>
-                 <th class="text-right">Valor da Parcela</th>
-               </tr>
-             </thead>
-             <tbody>
-               ${dentistData.activePlans.length === 0 ? '<tr><td colspan="2" class="text-center">Nenhum parcelamento ativo</td></tr>' : ''}
-               ${dentistData.activePlans
-                 .map(
-                   (p: any) =>
-                     `<tr><td>Parcela ${p.total_installments - p.remaining_installments + 1} de ${p.total_installments} (Ref. Total: ${formatBRL(p.total_amount)})</td><td class="text-right">${formatBRL(p.installment_value)}</td></tr>`,
-                 )
-                 .join('')}
-             </tbody>
-          </table>
-
-          <h3 class="text-right" style="margin-top: 30px;">Total da Fatura: ${formatBRL(dentistData.currentMonthTotal)}</h3>
-          
-          <div style="margin-top: 50px; text-align: center; font-size: 11px; color: #6b7280;">
-            <p>Relatório gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-          </div>
-        </body>
-      </html>
-    `
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
-    }, 250)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-6 gap-4">
-          <DialogTitle>Faturamento: {dentistData?.name}</DialogTitle>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setParcelarOpen(true)}
-              disabled={dentistData?.ordersTotal <= 0}
-            >
-              Parcelar Fatura
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              disabled={dentistData?.currentMonthTotal <= 0}
-            >
-              Gerar Relatório
-            </Button>
-            <Button
-              onClick={handleSettle}
-              disabled={settling || dentistData?.currentMonthTotal <= 0}
-            >
-              Liquidar Mês
-            </Button>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            {onBack && (
+              <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 -ml-2">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h2 className="text-2xl font-bold tracking-tight">{dentist?.name || 'Dentista'}</h2>
           </div>
-        </DialogHeader>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-4">
-              <p className="text-xs font-semibold text-red-600 uppercase">Fatura Atual (Mês)</p>
-              <p className="text-2xl font-bold text-red-700">
-                {formatBRL(dentistData?.currentMonthTotal || 0)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-emerald-50 border-emerald-200">
-            <CardContent className="p-4">
-              <p className="text-xs font-semibold text-emerald-600 uppercase">
-                Total Histórico Pago
-              </p>
-              <p className="text-2xl font-bold text-emerald-700">{formatBRL(totalPaid)}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <p className="text-xs font-semibold text-blue-600 uppercase">Planos Ativos</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {dentistData?.activePlans?.length || 0}
-              </p>
-            </CardContent>
-          </Card>
+          <p className="text-muted-foreground pl-10 md:pl-0">
+            {dentist?.clinic_name || 'Clínica não informada'}
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3 pl-10 md:pl-0">
+          <Button
+            variant="secondary"
+            onClick={() => setPreviewOpen(true)}
+            className="gap-2"
+            disabled={orders.length === 0}
+          >
+            <FileText className="w-4 h-4" />
+            VISUALIZAR FATURA DO DENTISTA
+          </Button>
+          <Button
+            onClick={() => setInstallmentOpen(true)}
+            className="gap-2"
+            disabled={orders.length === 0}
+          >
+            <CheckCircle className="w-4 h-4" />
+            Gerar Faturamento
+          </Button>
+        </div>
+      </div>
 
-        <div className="space-y-6">
-          <div>
-            <h3 className="font-semibold text-sm mb-2 text-muted-foreground uppercase">
-              Trabalhos do Mês ({dentistData?.outstandingOrders?.length})
-            </h3>
-            <div className="border rounded-md">
+      <Card>
+        <CardHeader>
+          <CardTitle>Pedidos Pendentes de Faturamento</CardTitle>
+          <CardDescription>
+            Estes pedidos foram concluídos mas ainda não foram faturados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {orders.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+              Nenhum pedido pendente de faturamento para este dentista.
+            </div>
+          ) : (
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Data</TableHead>
                     <TableHead>Pedido</TableHead>
-                    <TableHead>Trabalho</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Serviço</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dentistData?.outstandingOrders.map((o: any) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-medium">
-                        {o.friendlyId}{' '}
-                        <span className="text-xs font-normal text-muted-foreground block">
-                          {o.patientName}
-                        </span>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        {order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy') : '-'}
                       </TableCell>
-                      <TableCell>{o.workType}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatBRL(o.outstandingCost)}
+                      <TableCell className="font-medium">{order.friendly_id || '-'}</TableCell>
+                      <TableCell className="uppercase">{order.patient_name || '-'}</TableCell>
+                      <TableCell className="uppercase">{order.work_type || '-'}</TableCell>
+                      <TableCell className="text-right font-medium text-slate-900">
+                        {formatCurrency(order.base_price || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {dentistData?.outstandingOrders.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                        Nenhum pedido pendente apurado neste mês.
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </div>
-          </div>
-          {dentistData?.activePlans?.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-sm mb-2 text-muted-foreground uppercase">
-                Parcelamentos em Andamento
-              </h3>
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Descrição do Plano</TableHead>
-                      <TableHead className="text-right">Valor da Parcela</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dentistData?.activePlans.map((p: any) => (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          Parcela {p.total_installments - p.remaining_installments + 1}/
-                          {p.total_installments}
-                          <span className="text-xs text-muted-foreground block">
-                            De um total consolidado de {formatBRL(p.total_amount)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-amber-600">
-                          {formatBRL(p.installment_value)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          )}
+
+          {orders.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl min-w-[320px] space-y-3 shadow-sm">
+                <div className="flex justify-between items-center text-sm text-slate-500">
+                  <span>Total de Pedidos:</span>
+                  <span className="font-medium text-slate-900">{orders.length}</span>
+                </div>
+                <div className="h-px bg-slate-200 w-full" />
+                <div className="flex justify-between items-center text-lg">
+                  <span className="font-semibold text-slate-700">Total a Faturar:</span>
+                  <span className="font-black text-slate-900">{formatCurrency(totalAmount)}</span>
+                </div>
               </div>
             </div>
           )}
-        </div>
-      </DialogContent>
-      {parcelarOpen && (
+        </CardContent>
+      </Card>
+
+      <InvoicePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        dentistName={dentist?.name || 'Dentista'}
+        clinicName={dentist?.clinic_name || ''}
+        orders={orders}
+        totalAmount={totalAmount}
+      />
+
+      {installmentOpen && (
         <CreateInstallmentDialog
-          open={parcelarOpen}
-          onOpenChange={setParcelarOpen}
-          dentistData={dentistData}
+          open={installmentOpen}
+          onOpenChange={setInstallmentOpen}
+          dentistId={dentistId}
+          orders={orders}
+          totalAmount={totalAmount}
           onSuccess={() => {
-            onRefresh()
-            onOpenChange(false)
+            setInstallmentOpen(false)
+            if (onBack) onBack()
           }}
         />
       )}
-    </Dialog>
+    </div>
   )
 }

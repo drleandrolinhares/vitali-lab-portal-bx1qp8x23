@@ -1,12 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useAppStore } from '@/stores/main'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import {
-  getBillingCycleDates,
-  formatBRL,
-  getOrderFinancials,
-  getOrderCompletionDate,
-} from '@/lib/financial'
 import {
   Table,
   TableBody,
@@ -15,145 +8,154 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { isWithinInterval } from 'date-fns'
 import { DentistBillingDetails } from './DentistBillingDetails'
+import { Loader2, Receipt } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export function DentistBillingTab({
-  selectedMonth,
-  dentists,
-  selectedMonthLabel,
-}: {
-  selectedMonth: string
-  dentists: any[]
-  selectedMonthLabel?: string
-}) {
-  const { orders, priceList, kanbanStages, refreshOrders } = useAppStore()
-  const [installments, setInstallments] = useState<any[]>([])
-  const [selectedDentist, setSelectedDentist] = useState<any>(null)
+interface DentistBillingSummary {
+  dentist_id: string
+  name: string
+  clinic_name: string
+  unbilled_count: number
+  unbilled_total: number
+}
 
-  const fetchInstallments = async () => {
-    const { data } = await supabase.from('billing_installments').select('*').eq('status', 'active')
-    if (data) setInstallments(data)
-    refreshOrders()
+export function DentistBillingTab() {
+  const [summaries, setSummaries] = useState<DentistBillingSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedDentistId, setSelectedDentistId] = useState<string | null>(null)
+
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+
+  const fetchSummaries = async () => {
+    setLoading(true)
+    try {
+      const { data: profiles } = await supabase.from('profiles').select('id, name, clinic_name')
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('dentist_id, base_price')
+        .eq('status', 'completed')
+        .is('settlement_id', null)
+
+      if (profiles && orders) {
+        const summaryMap = new Map<string, DentistBillingSummary>()
+
+        orders.forEach((order) => {
+          if (!order.dentist_id) return
+          const existing = summaryMap.get(order.dentist_id)
+          if (existing) {
+            existing.unbilled_count += 1
+            existing.unbilled_total += order.base_price || 0
+          } else {
+            const profile = profiles.find((p) => p.id === order.dentist_id)
+            summaryMap.set(order.dentist_id, {
+              dentist_id: order.dentist_id,
+              name: profile?.name || 'Dentista Desconhecido',
+              clinic_name: profile?.clinic_name || 'Sem clínica',
+              unbilled_count: 1,
+              unbilled_total: order.base_price || 0,
+            })
+          }
+        })
+
+        setSummaries(
+          Array.from(summaryMap.values()).sort((a, b) => b.unbilled_total - a.unbilled_total),
+        )
+      }
+    } catch (error) {
+      console.error('Error fetching billing summaries:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    fetchInstallments()
-  }, [])
+    if (!selectedDentistId) {
+      fetchSummaries()
+    }
+  }, [selectedDentistId])
 
-  const billingData = useMemo(() => {
-    return dentists
-      .map((d) => {
-        const closingDay = d.closing_date || 30
-        const cycle = getBillingCycleDates(selectedMonth, closingDay)
+  if (selectedDentistId) {
+    return (
+      <DentistBillingDetails
+        dentistId={selectedDentistId}
+        onBack={() => setSelectedDentistId(null)}
+      />
+    )
+  }
 
-        const cycleOrders = orders
-          .filter((o) => {
-            if (o.dentistId !== d.id) return false
-            if (o.status !== 'completed' && o.status !== 'delivered') return false
-            const compDate = getOrderCompletionDate(o)
-            return compDate && isWithinInterval(compDate, { start: cycle.start, end: cycle.end })
-          })
-          .map((o) => getOrderFinancials(o, priceList, kanbanStages))
-
-        const outstandingOrders = cycleOrders.filter((o) => o.outstandingCost > 0)
-        const ordersTotal = outstandingOrders.reduce((sum, o) => sum + o.outstandingCost, 0)
-
-        const activePlans = installments.filter((i) => i.dentist_id === d.id)
-        const installmentsTotal = activePlans.reduce(
-          (sum, i) => sum + Number(i.installment_value),
-          0,
-        )
-
-        const currentMonthTotal = ordersTotal + installmentsTotal
-
-        return {
-          ...d,
-          cycle,
-          outstandingOrders,
-          ordersTotal,
-          activePlans,
-          installmentsTotal,
-          currentMonthTotal,
-        }
-      })
-      .sort((a, b) => b.currentMonthTotal - a.currentMonthTotal)
-  }, [dentists, orders, selectedMonth, installments, priceList, kanbanStages])
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="animate-spin w-8 h-8 text-primary" />
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4 animate-fade-in mt-4">
-      <div className="border rounded-lg bg-background shadow-subtle overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Dentista</TableHead>
-              <TableHead className="text-center">Fechamento</TableHead>
-              <TableHead className="text-center">Vencimento</TableHead>
-              <TableHead className="text-right">Pedidos (Mês)</TableHead>
-              <TableHead className="text-right">Parcelas (Mês)</TableHead>
-              <TableHead className="text-right">Total Fatura</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {billingData.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell className="font-medium">{d.name}</TableCell>
-                <TableCell className="text-center">Dia {d.closing_date || 30}</TableCell>
-                <TableCell className="text-center">Dia {d.payment_due_date || 5}</TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {formatBRL(d.ordersTotal)}
-                </TableCell>
-                <TableCell className="text-right text-amber-600">
-                  {formatBRL(d.installmentsTotal)}
-                </TableCell>
-                <TableCell className="text-right font-bold text-red-600">
-                  {formatBRL(d.currentMonthTotal)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {d.currentMonthTotal > 0 ? (
-                    <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">
-                      Pendente
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="text-emerald-600 border-emerald-200 bg-emerald-50"
-                    >
-                      Fechado
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedDentist(d)}>
-                    Ver Detalhes
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {billingData.length === 0 && (
+    <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500 border-none shadow-none bg-transparent">
+      <CardHeader className="px-0 pt-0">
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <Receipt className="w-5 h-5 text-primary" />
+          Faturamento por Dentista
+        </CardTitle>
+        <CardDescription>
+          Selecione um dentista para visualizar os pedidos pendentes e gerar o faturamento.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-0">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  Nenhum dentista encontrado.
-                </TableCell>
+                <TableHead>Dentista</TableHead>
+                <TableHead>Clínica</TableHead>
+                <TableHead className="text-center">Pedidos Pendentes</TableHead>
+                <TableHead className="text-right">Valor Total</TableHead>
+                <TableHead className="text-right">Ação</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {selectedDentist && (
-        <DentistBillingDetails
-          open={!!selectedDentist}
-          onOpenChange={(op: boolean) => !op && setSelectedDentist(null)}
-          dentistData={selectedDentist}
-          selectedMonthLabel={selectedMonthLabel}
-          onRefresh={fetchInstallments}
-        />
-      )}
-    </div>
+            </TableHeader>
+            <TableBody>
+              {summaries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-16 text-muted-foreground">
+                    Nenhum pedido pendente de faturamento encontrado no sistema.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                summaries.map((summary) => (
+                  <TableRow
+                    key={summary.dentist_id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <TableCell className="font-semibold text-slate-900">{summary.name}</TableCell>
+                    <TableCell className="text-slate-600">{summary.clinic_name}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full text-xs border border-slate-200">
+                        {summary.unbilled_count}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-slate-900">
+                      {formatCurrency(summary.unbilled_total)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedDentistId(summary.dentist_id)}
+                      >
+                        Ver Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
