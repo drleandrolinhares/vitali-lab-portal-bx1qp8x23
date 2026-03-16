@@ -54,6 +54,7 @@ export function GlobalSearch() {
         { title: 'Estoque', path: '/inventory' },
         { title: 'Pacientes', path: '/patients' },
         { title: 'Usuários e Equipe', path: '/users' },
+        { title: 'Laboratórios Parceiros', path: '/users?tab=laboratories' },
         { title: 'Tabela de Preços', path: '/prices' },
         { title: 'Dashboard Gerencial', path: '/dashboard' },
         { title: 'Dashboard Financeiro', path: '/dre' },
