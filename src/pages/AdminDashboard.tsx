@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Clock,
   RefreshCw,
+  Inbox,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'

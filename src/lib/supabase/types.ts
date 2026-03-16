@@ -405,6 +405,7 @@ export type Database = {
           implant_brand: string | null
           implant_type: string | null
           is_acknowledged: boolean
+          is_adjustment_return: boolean | null
           kanban_stage: string
           material: string
           observations: string | null
@@ -435,6 +436,7 @@ export type Database = {
           implant_brand?: string | null
           implant_type?: string | null
           is_acknowledged?: boolean
+          is_adjustment_return?: boolean | null
           kanban_stage?: string
           material: string
           observations?: string | null
@@ -465,6 +467,7 @@ export type Database = {
           implant_brand?: string | null
           implant_type?: string | null
           is_acknowledged?: boolean
+          is_adjustment_return?: boolean | null
           kanban_stage?: string
           material?: string
           observations?: string | null
@@ -768,6 +771,33 @@ export type Database = {
           whatsapp_group_link?: string | null
           work_end?: string | null
           work_start?: string | null
+        }
+        Relationships: []
+      }
+      scan_service_blocks: {
+        Row: {
+          block_date: string | null
+          created_at: string | null
+          end_time: string
+          id: string
+          recurrence: string
+          start_time: string
+        }
+        Insert: {
+          block_date?: string | null
+          created_at?: string | null
+          end_time: string
+          id?: string
+          recurrence: string
+          start_time: string
+        }
+        Update: {
+          block_date?: string | null
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          recurrence?: string
+          start_time?: string
         }
         Relationships: []
       }
@@ -1144,6 +1174,7 @@ export const Constants = {
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 //   created_by: uuid (nullable)
 //   settlement_id: uuid (nullable)
+//   is_adjustment_return: boolean (nullable, default: false)
 // Table: partner_prices
 //   id: uuid (not null, default: gen_random_uuid())
 //   partner_id: uuid (not null)
@@ -1215,6 +1246,13 @@ export const Constants = {
 //   pix_key: text (nullable)
 //   pix_type: text (nullable)
 //   bank_name: text (nullable)
+// Table: scan_service_blocks
+//   id: uuid (not null, default: gen_random_uuid())
+//   start_time: time without time zone (not null)
+//   end_time: time without time zone (not null)
+//   block_date: date (nullable)
+//   recurrence: text (not null)
+//   created_at: timestamp with time zone (nullable, default: now())
 // Table: scan_service_bookings
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -1289,6 +1327,9 @@ export const Constants = {
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+// Table: scan_service_blocks
+//   PRIMARY KEY scan_service_blocks_pkey: PRIMARY KEY (id)
+//   CHECK scan_service_blocks_recurrence_check: CHECK ((recurrence = ANY (ARRAY['unique'::text, 'daily'::text, 'weekly'::text, 'monthly'::text])))
 // Table: scan_service_bookings
 //   FOREIGN KEY scan_service_bookings_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id)
 //   PRIMARY KEY scan_service_bookings_pkey: PRIMARY KEY (id)
@@ -1399,6 +1440,11 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() = id)
 //   Policy "Users can update own profile." (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = id)
+// Table: scan_service_blocks
+//   Policy "Admin manage blocks" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
+//   Policy "Auth read blocks" (SELECT, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
 // Table: scan_service_bookings
 //   Policy "Admin and staff can do all on scan bookings" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
