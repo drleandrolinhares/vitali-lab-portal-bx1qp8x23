@@ -78,6 +78,16 @@ export default function AdminFinancial() {
   const fetchData = async () => {
     setLoadingSettlements(true)
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        // Redirection and cleanup is handled by useAuth
+        return
+      }
+
       const [profilesRes, settlementsRes] = await Promise.all([
         supabase
           .from('profiles')
@@ -87,11 +97,25 @@ export default function AdminFinancial() {
         supabase.from('settlements').select('id, amount, created_at, dentist_id'),
       ])
 
+      if (profilesRes.error) throw profilesRes.error
+      if (settlementsRes.error) throw settlementsRes.error
+
       if (profilesRes.data) setProfiles(profilesRes.data)
       if (settlementsRes.data) setSettlements(settlementsRes.data)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching financial data:', error)
-      toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
+      if (
+        error?.message?.toLowerCase().includes('refresh token') ||
+        error?.message?.includes('session_not_found') ||
+        error?.message?.includes('refresh_token_not_found') ||
+        error?.code === 'PGRST301' || // JWT expired
+        error?.code === '401'
+      ) {
+        // App handleSessionExpiration will be invoked elsewhere, we just abort quietly
+        console.warn('Session expired during AdminFinancial fetch')
+      } else {
+        toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
+      }
     } finally {
       setLoadingSettlements(false)
     }
@@ -291,9 +315,9 @@ export default function AdminFinancial() {
       fetchData()
       refreshOrders()
       setManualInvoiceDentist(null)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast({ title: 'Erro ao fechar fatura', variant: 'destructive' })
+      toast({ title: 'Erro ao fechar fatura', description: err.message, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
     }

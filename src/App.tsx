@@ -47,7 +47,12 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     return (
       <div className="min-h-screen flex items-center justify-center font-medium">Carregando...</div>
     )
-  if (!session) return <AuthPage />
+  if (!session) {
+    if (location.pathname !== '/login') {
+      return <Navigate to="/login" replace />
+    }
+    return <AuthPage />
+  }
 
   const justLoggedIn = sessionStorage.getItem('vitali_just_logged_in') === 'true'
   if (justLoggedIn && currentUser) {
@@ -100,6 +105,7 @@ const App = () => (
           <Sonner />
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<AuthPage />} />
             <Route path="/public/guide/:id" element={<PublicGuide />} />
             <Route path="/public/order/:id/full" element={<PublicOrderFull />} />
             <Route

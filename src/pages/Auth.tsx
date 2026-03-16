@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ShieldAlert, Eye, EyeOff } from 'lucide-react'
+import { useAppStore } from '@/stores/main'
 
 type AuthView = 'login' | 'forgot_password'
 
@@ -47,11 +48,22 @@ const PasswordInput = ({
 )
 
 export default function AuthPage() {
-  const { signIn, resetPassword } = useAuth()
+  const { signIn, resetPassword, session } = useAuth()
+  const { currentUser } = useAppStore()
   const { toast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
   const isAdminView = location.pathname === '/dashboard'
+
+  useEffect(() => {
+    if (session && currentUser) {
+      if (currentUser.role === 'admin' || currentUser.role === 'master') {
+        navigate('/dashboard', { replace: true })
+      } else {
+        navigate('/app', { replace: true })
+      }
+    }
+  }, [session, currentUser, navigate])
 
   const [view, setView] = useState<AuthView>('login')
   const [loginId, setLoginId] = useState('')

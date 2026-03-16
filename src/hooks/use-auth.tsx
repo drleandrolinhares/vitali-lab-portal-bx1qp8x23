@@ -26,6 +26,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const handleSessionError = () => {
+    supabase.auth.signOut().catch(() => {})
+    setSession(null)
+    setUser(null)
+    localStorage.removeItem('vitali_remember_me')
+    sessionStorage.removeItem('vitali_session')
+
+    toast({
+      title: 'Sessão Expirada',
+      description: 'Sua sessão expirou ou é inválida. Por favor, faça login novamente.',
+      variant: 'destructive',
+    })
+
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      window.location.href = '/login'
+    }
+  }
+
   const reconcileProfile = async (currentUser: User) => {
     try {
       const { data, error } = await supabase
@@ -36,17 +54,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         if (
-          error.message?.includes('Refresh Token') ||
-          error.message?.includes('refresh token') ||
+          error.message?.toLowerCase().includes('refresh token') ||
           error.message?.includes('Session from session_id claim in JWT does not exist') ||
-          error.message?.includes('session_not_found')
+          error.message?.includes('session_not_found') ||
+          error.message?.includes('refresh_token_not_found') ||
+          error.code === 'PGRST301'
         ) {
-          toast({
-            title: 'Aviso de Sessão',
-            description:
-              'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-            variant: 'destructive',
-          })
+          handleSessionError()
           return
         }
         throw error
@@ -72,17 +86,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e: any) {
       console.error('Failed to reconcile profile:', e)
       if (
-        e?.message?.includes('Refresh Token') ||
-        e?.message?.includes('refresh token') ||
+        e?.message?.toLowerCase().includes('refresh token') ||
         e?.message?.includes('Session from session_id claim in JWT does not exist') ||
-        e?.message?.includes('session_not_found')
+        e?.message?.includes('session_not_found') ||
+        e?.message?.includes('refresh_token_not_found') ||
+        e?.code === 'PGRST301'
       ) {
-        toast({
-          title: 'Aviso de Sessão',
-          description:
-            'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-          variant: 'destructive',
-        })
+        handleSessionError()
       }
     }
   }
@@ -124,18 +134,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .then(({ data: { session }, error }) => {
         if (error) {
           if (
-            error.message?.includes('Refresh Token') ||
-            error.message?.includes('refresh token') ||
+            error.message?.toLowerCase().includes('refresh token') ||
             error.message?.includes('Session from session_id claim in JWT does not exist') ||
             error.message?.includes('session_not_found') ||
+            error.message?.includes('refresh_token_not_found') ||
             error.name === 'AuthApiError'
           ) {
-            toast({
-              title: 'Aviso de Sessão',
-              description:
-                'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-              variant: 'destructive',
-            })
+            handleSessionError()
             setLoading(false)
             return
           }
@@ -151,17 +156,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .catch((err) => {
         console.error('getSession error', err)
         if (
-          err?.message?.includes('Refresh Token') ||
-          err?.message?.includes('refresh token') ||
+          err?.message?.toLowerCase().includes('refresh token') ||
           err?.message?.includes('Session from session_id claim in JWT does not exist') ||
-          err?.message?.includes('session_not_found')
+          err?.message?.includes('session_not_found') ||
+          err?.message?.includes('refresh_token_not_found')
         ) {
-          toast({
-            title: 'Aviso de Sessão',
-            description:
-              'Sua sessão expirou ou perdeu a sincronia. Caso perceba instabilidades, faça login novamente.',
-            variant: 'destructive',
-          })
+          handleSessionError()
         }
         setLoading(false)
       })
