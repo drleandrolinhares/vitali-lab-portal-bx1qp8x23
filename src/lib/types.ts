@@ -22,6 +22,9 @@ export interface User {
   assigned_dentists?: string[] | null
   can_move_kanban_cards?: boolean
   is_billing_paused?: boolean
+  pix_key?: string
+  pix_type?: string
+  bank_name?: string
 }
 
 export interface Stage {

@@ -35,6 +35,7 @@ import {
   EyeOff,
   Loader2,
   Key,
+  Copy,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -46,6 +47,13 @@ import { MODULES } from './RolePermissionsPanel'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { PartnerPricesPanel, PartnerPricesPanelRef } from './PartnerPricesPanel'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const ROLES_INFO = [
   {
@@ -118,7 +126,7 @@ export function UsersManagement() {
   const [loading, setLoading] = useState(true)
 
   const [search, setSearch] = useState('')
-  const [activeOnly, setActiveOnly] = useState(true)
+  const [filterStatus, setFilterStatus] = useState('ativos')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -232,27 +240,23 @@ export function UsersManagement() {
       const matchSearch =
         u.name?.toLowerCase().includes(search.toLowerCase()) ||
         u.email?.toLowerCase().includes(search.toLowerCase())
-      const matchActive = activeOnly ? u.is_active !== false : true
-      return matchSearch && matchActive
-    })
-  }, [users, search, activeOnly])
 
-  const counts = useMemo(() => {
-    return {
-      all: baseFilteredUsers.length,
-      staff: baseFilteredUsers.filter((u) =>
-        ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
-          u.role,
-        ),
-      ).length,
-      dentists: baseFilteredUsers.filter((u) => u.role === 'dentist').length,
-      laboratories: baseFilteredUsers.filter((u) => u.role === 'laboratory').length,
-      admins: baseFilteredUsers.filter((u) => ['admin', 'master'].includes(u.role)).length,
-    }
-  }, [baseFilteredUsers])
+      let matchStatus = true
+      if (filterStatus === 'ativos') matchStatus = u.is_active !== false
+      else if (filterStatus === 'inativos') matchStatus = u.is_active === false
+
+      return matchSearch && matchStatus
+    })
+  }, [users, search, filterStatus])
 
   const filteredUsers = useMemo(() => {
     return baseFilteredUsers.filter((u) => {
+      if (selectedCategory === 'socios') {
+        return ['master', 'admin'].includes(u.role)
+      }
+      if (selectedCategory === 'dentists') {
+        return ['dentist', 'laboratory'].includes(u.role)
+      }
       if (selectedCategory === 'staff') {
         return [
           'receptionist',
@@ -260,15 +264,6 @@ export function UsersManagement() {
           'financial',
           'relationship_manager',
         ].includes(u.role)
-      }
-      if (selectedCategory === 'dentists') {
-        return u.role === 'dentist'
-      }
-      if (selectedCategory === 'laboratories') {
-        return u.role === 'laboratory'
-      }
-      if (selectedCategory === 'admins') {
-        return ['admin', 'master'].includes(u.role)
       }
       return true
     })
@@ -711,261 +706,348 @@ export function UsersManagement() {
     })
   }
 
+  const handleLocalFinancialChange = (id: string, field: string, value: string) => {
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, [field]: value } : u)))
+  }
+
+  const handleSaveFinancial = async (id: string, field: string, value: string | null) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [field]: value })
+      .eq('id', id)
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' })
+    }
+  }
+
+  const copyPix = (pix?: string) => {
+    if (!pix) return
+    navigator.clipboard.writeText(pix)
+    toast({ title: 'Chave PIX copiada para a área de transferência!' })
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4 flex-1 w-full sm:w-auto flex-wrap">
-          <div className="relative flex-1 min-w-[200px] sm:max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar Usuário"
-              className="pl-9 h-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+      <div className="border rounded-xl bg-background p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div>
+            <h3 className="text-lg font-bold uppercase">QUADRO DE FUNCIONÁRIOS</h3>
+            <p className="text-xs text-muted-foreground uppercase mt-1">
+              GERENCIE A EQUIPE ATUAL DA CLÍNICA E ADICIONE NOVOS COLABORADORES.
+            </p>
           </div>
-          <div className="flex items-center space-x-2 shrink-0">
-            <Checkbox
-              id="active-only"
-              checked={activeOnly}
-              onCheckedChange={(c) => setActiveOnly(!!c)}
-            />
-            <Label htmlFor="active-only" className="text-sm cursor-pointer">
-              Mostrar apenas ativos
-            </Label>
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[180px] uppercase font-semibold text-xs border-border shadow-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativos">Somente Ativos</SelectItem>
+                <SelectItem value="inativos">Somente Inativos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+            {isMasterOrAdmin && (
+              <Button
+                onClick={() => openModal()}
+                className="bg-[#0f172a] hover:bg-[#1e293b] text-white shrink-0 uppercase text-xs font-bold tracking-wider"
+              >
+                <Plus className="w-4 h-4 mr-2" /> ADICIONAR COLABORADOR
+              </Button>
+            )}
           </div>
         </div>
-        {isMasterOrAdmin && (
-          <Button
-            onClick={() => openModal()}
-            className="bg-[#e76f51] hover:bg-[#d95f43] text-white shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-2" /> Novo Usuário
-          </Button>
-        )}
+
+        {/* Global Search inside the section */}
+        <div className="relative mb-6 max-w-md">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar Colaborador"
+            className="pl-9 h-10 shadow-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+          <TabsList className="bg-muted/40 p-1 rounded-lg h-auto flex flex-wrap justify-start gap-1 overflow-x-auto scrollbar-hide">
+            <TabsTrigger
+              value="all"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              TIME TOTAL
+            </TabsTrigger>
+            <TabsTrigger
+              value="socios"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              SÓCIOS
+            </TabsTrigger>
+            <TabsTrigger
+              value="dentists"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              DENTISTAS
+            </TabsTrigger>
+            <TabsTrigger
+              value="staff"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              COLABORADORES
+            </TabsTrigger>
+            <TabsTrigger
+              value="financeiro"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              DADOS FINANCEIROS
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 flex gap-6 overflow-x-auto scrollbar-hide">
-          <TabsTrigger
-            value="all"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
-          >
-            Todos
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                selectedCategory === 'all'
-                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {counts.all}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="staff"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
-          >
-            Colaboradores
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                selectedCategory === 'staff'
-                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {counts.staff}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="dentists"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
-          >
-            Dentistas
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                selectedCategory === 'dentists'
-                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {counts.dentists}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="laboratories"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
-          >
-            Laboratórios
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                selectedCategory === 'laboratories'
-                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {counts.laboratories}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="admins"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-1 py-3 font-semibold text-muted-foreground flex items-center gap-2"
-          >
-            Administradores
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-bold',
-                selectedCategory === 'admins'
-                  ? 'bg-[#e76f51]/10 text-[#e76f51]'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {counts.admins}
-            </span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {selectedCategory === 'financeiro' ? (
+        <div className="border rounded-xl bg-background overflow-hidden shadow-sm">
+          <div className="flex items-center px-6 py-4 border-b bg-muted/20 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="w-[35%]">COLABORADOR</div>
+            <div className="w-[25%]">PIX NÚMERO</div>
+            <div className="w-[20%]">PIX TIPO</div>
+            <div className="w-[20%]">BANCO</div>
+          </div>
 
-      {filteredUsers.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredUsers.map((user) => {
-            const roleObj = ROLES_INFO.find((r) => r.id === user.role)
-            const isMaster = user.role === 'master'
-
-            return (
-              <Card
-                key={user.id}
-                className={cn(
-                  'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow',
-                  user.is_active === false && 'opacity-60 grayscale-[0.5]',
-                  isMaster &&
-                    'border-[#e76f51] shadow-sm shadow-[#e76f51]/20 ring-1 ring-[#e76f51]/50',
-                )}
-                onClick={() => {
-                  if (isMaster && actualUserRole !== 'master') {
-                    toast({
-                      title: 'Acesso Negado',
-                      description:
-                        'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
-                      variant: 'destructive',
-                    })
-                    return
-                  }
-                  openModal(user)
-                }}
-              >
-                <CardContent className="p-0">
-                  <div className="flex items-start justify-between p-4 pb-0">
-                    <div className="flex flex-wrap gap-2">
-                      {isMaster && (
-                        <Badge className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#e76f51] hover:bg-[#d95f43] text-white border-transparent shadow-none">
-                          MASTER
-                        </Badge>
-                      )}
-                      {user.role === 'dentist' && (
-                        <Badge
-                          variant="secondary"
-                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border-transparent shadow-none"
-                        >
-                          DENTISTA
-                        </Badge>
-                      )}
-                      {user.role === 'laboratory' && (
-                        <Badge
-                          variant="secondary"
-                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 border-transparent shadow-none"
-                        >
-                          LABORATÓRIO
-                        </Badge>
-                      )}
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shadow-none',
-                          user.is_active !== false
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800'
-                            : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:border-red-800',
-                        )}
-                      >
-                        {user.is_active !== false ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </div>
+          <div className="p-4 space-y-4 bg-muted/5">
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <Card
+                  key={user.id}
+                  className="shadow-none rounded-xl border flex flex-col md:flex-row items-start md:items-center p-4 bg-background gap-4 md:gap-0"
+                >
+                  <div className="w-full md:w-[35%] font-bold uppercase text-sm truncate pr-4 text-foreground">
+                    {user.name}
+                  </div>
+                  <div className="w-full md:w-[25%] flex items-center gap-2 md:pr-4">
+                    <Input
+                      value={user.pix_key || ''}
+                      onChange={(e) =>
+                        handleLocalFinancialChange(user.id, 'pix_key', e.target.value)
+                      }
+                      onBlur={(e) => handleSaveFinancial(user.id, 'pix_key', e.target.value)}
+                      placeholder="NÚMERO DO PIX"
+                      className="border-none shadow-none bg-transparent px-0 uppercase text-sm focus-visible:ring-0 placeholder:text-muted-foreground/40 font-medium h-auto py-1"
+                    />
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 -mr-2 -mt-2 relative z-10"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (isMaster && actualUserRole !== 'master') {
-                          toast({
-                            title: 'Acesso Negado',
-                            description:
-                              'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
-                            variant: 'destructive',
-                          })
-                          return
-                        }
-                        openModal(user)
-                      }}
+                      onClick={() => copyPix(user.pix_key)}
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0 rounded-md"
                     >
-                      <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                      <Copy className="w-4 h-4" />
                     </Button>
                   </div>
-
-                  <div className="flex flex-col items-center p-4 pt-2">
-                    <Avatar className="w-16 h-16 border-2 border-muted/50 mb-3">
-                      <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
-                        {user.name?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <h3 className="font-bold text-base text-center line-clamp-1">{user.name}</h3>
+                  <div className="w-full md:w-[20%] md:pr-4">
+                    <Select
+                      value={user.pix_type || 'none'}
+                      onValueChange={(val) =>
+                        handleSaveFinancial(user.id, 'pix_type', val === 'none' ? null : val)
+                      }
+                    >
+                      <SelectTrigger className="border-none shadow-none bg-transparent px-0 uppercase text-sm focus:ring-0 text-muted-foreground font-medium h-auto py-1">
+                        <SelectValue placeholder="TIPO PIX" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="none"
+                          className="uppercase text-xs font-semibold text-muted-foreground"
+                        >
+                          Selecionar...
+                        </SelectItem>
+                        <SelectItem value="cpf" className="uppercase text-xs font-semibold">
+                          CPF
+                        </SelectItem>
+                        <SelectItem value="cnpj" className="uppercase text-xs font-semibold">
+                          CNPJ
+                        </SelectItem>
+                        <SelectItem value="email" className="uppercase text-xs font-semibold">
+                          E-mail
+                        </SelectItem>
+                        <SelectItem value="celular" className="uppercase text-xs font-semibold">
+                          Celular
+                        </SelectItem>
+                        <SelectItem value="aleatoria" className="uppercase text-xs font-semibold">
+                          Chave Aleatória
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  <div className="bg-muted/30 p-4 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Briefcase className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{roleObj?.title || user.role}</span>
-                    </div>
-                    {(user.role === 'dentist' || user.role === 'laboratory') && user.clinic && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Building className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{user.clinic}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{user.email || 'Não encontrado'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{user.personal_phone || 'Não encontrado'}</span>
-                    </div>
+                  <div className="w-full md:w-[20%]">
+                    <Input
+                      value={user.bank_name || ''}
+                      onChange={(e) =>
+                        handleLocalFinancialChange(user.id, 'bank_name', e.target.value)
+                      }
+                      onBlur={(e) => handleSaveFinancial(user.id, 'bank_name', e.target.value)}
+                      placeholder="NOME DO BANCO"
+                      className="border-none shadow-none bg-transparent px-0 uppercase text-sm focus-visible:ring-0 placeholder:text-muted-foreground/40 font-medium h-auto py-1 text-muted-foreground"
+                    />
                   </div>
-
-                  <div className="p-3 border-t text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 bg-muted/10">
-                    <Clock className="w-3.5 h-3.5" />
-                    {user.last_access_at
-                      ? `Último acesso em: ${format(new Date(user.last_access_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`
-                      : 'Último acesso em: não registrado'}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-12 px-4 border border-dashed rounded-xl bg-background">
+                <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-foreground">
+                  Nenhum colaborador encontrado
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Verifique os filtros aplicados e tente novamente.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
-        <div className="text-center py-16 px-4 border rounded-xl bg-muted/10 border-dashed animate-fade-in">
-          <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold mb-1">Nenhum usuário encontrado</h3>
-          <p className="text-sm text-muted-foreground">
-            Nenhum usuário encontrado nesta categoria.
-          </p>
-        </div>
+        <>
+          {filteredUsers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredUsers.map((user) => {
+                const roleObj = ROLES_INFO.find((r) => r.id === user.role)
+                const isMaster = user.role === 'master'
+
+                return (
+                  <Card
+                    key={user.id}
+                    className={cn(
+                      'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow shadow-sm',
+                      user.is_active === false && 'opacity-60 grayscale-[0.5]',
+                      isMaster &&
+                        'border-[#e76f51] shadow-sm shadow-[#e76f51]/20 ring-1 ring-[#e76f51]/50',
+                    )}
+                    onClick={() => {
+                      if (isMaster && actualUserRole !== 'master') {
+                        toast({
+                          title: 'Acesso Negado',
+                          description:
+                            'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                          variant: 'destructive',
+                        })
+                        return
+                      }
+                      openModal(user)
+                    }}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex items-start justify-between p-4 pb-0">
+                        <div className="flex flex-wrap gap-2">
+                          {isMaster && (
+                            <Badge className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#e76f51] hover:bg-[#d95f43] text-white border-transparent shadow-none">
+                              MASTER
+                            </Badge>
+                          )}
+                          {user.role === 'dentist' && (
+                            <Badge
+                              variant="secondary"
+                              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border-transparent shadow-none"
+                            >
+                              DENTISTA
+                            </Badge>
+                          )}
+                          {user.role === 'laboratory' && (
+                            <Badge
+                              variant="secondary"
+                              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 border-transparent shadow-none"
+                            >
+                              LABORATÓRIO
+                            </Badge>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shadow-none',
+                              user.is_active !== false
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800'
+                                : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:border-red-800',
+                            )}
+                          >
+                            {user.is_active !== false ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 -mr-2 -mt-2 relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (isMaster && actualUserRole !== 'master') {
+                              toast({
+                                title: 'Acesso Negado',
+                                description:
+                                  'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                                variant: 'destructive',
+                              })
+                              return
+                            }
+                            openModal(user)
+                          }}
+                        >
+                          <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+
+                      <div className="flex flex-col items-center p-4 pt-2">
+                        <Avatar className="w-16 h-16 border-2 border-muted/50 mb-3">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
+                            {user.name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <h3 className="font-bold text-base text-center line-clamp-1">
+                          {user.name}
+                        </h3>
+                      </div>
+
+                      <div className="bg-muted/30 p-4 space-y-2 text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{roleObj?.title || user.role}</span>
+                        </div>
+                        {(user.role === 'dentist' || user.role === 'laboratory') && user.clinic && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Building className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{user.clinic}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Mail className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{user.email || 'Não encontrado'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            {user.personal_phone || 'Não encontrado'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 border-t text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 bg-muted/10">
+                        <Clock className="w-3.5 h-3.5" />
+                        {user.last_access_at
+                          ? `Último acesso em: ${format(new Date(user.last_access_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`
+                          : 'Último acesso em: não registrado'}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16 px-4 border rounded-xl bg-background shadow-sm border-dashed animate-fade-in">
+              <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold mb-1">Nenhum usuário encontrado</h3>
+              <p className="text-sm text-muted-foreground">
+                Verifique os filtros aplicados e tente novamente.
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -1012,26 +1094,26 @@ export function UsersManagement() {
                 <TabsList className="bg-transparent h-auto p-0 flex gap-6 min-w-max">
                   <TabsTrigger
                     value="pessoais"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
                   >
                     Dados Pessoais
                   </TabsTrigger>
                   <TabsTrigger
                     value="perfil"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
                   >
                     Perfil de Usuário
                   </TabsTrigger>
                   <TabsTrigger
                     value="permissoes"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
                   >
                     Configurações de permissão
                   </TabsTrigger>
                   {formData.role === 'laboratory' && isCurrentUserMaster && (
                     <TabsTrigger
                       value="precos"
-                      className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#e76f51] data-[state=active]:text-[#e76f51] rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                      className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
                     >
                       Tabela de Preços
                     </TabsTrigger>
@@ -1043,7 +1125,7 @@ export function UsersManagement() {
                 <TabsContent value="pessoais" className="mt-0 space-y-8">
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                      <User className="w-4 h-4 text-[#e76f51]" /> Informações Básicas
+                      <User className="w-4 h-4 text-primary" /> Informações Básicas
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
@@ -1116,7 +1198,7 @@ export function UsersManagement() {
                     <>
                       <section className="space-y-4">
                         <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                          <Building className="w-4 h-4 text-[#e76f51]" /> Informações da Clínica
+                          <Building className="w-4 h-4 text-primary" /> Informações da Clínica
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
                           <div className="space-y-1">
@@ -1163,7 +1245,7 @@ export function UsersManagement() {
 
                       <section className="space-y-4">
                         <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                          <CreditCard className="w-4 h-4 text-[#e76f51]" /> Faturamento & Condições
+                          <CreditCard className="w-4 h-4 text-primary" /> Faturamento & Condições
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-xl bg-background">
                           <div className="space-y-1">
@@ -1205,7 +1287,7 @@ export function UsersManagement() {
 
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                      <ShieldCheck className="w-4 h-4 text-[#e76f51]" /> Acesso e Segurança
+                      <ShieldCheck className="w-4 h-4 text-primary" /> Acesso e Segurança
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
@@ -1263,7 +1345,7 @@ export function UsersManagement() {
 
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                      <Briefcase className="w-4 h-4 text-[#e76f51]" /> Informações Pessoais
+                      <Briefcase className="w-4 h-4 text-primary" /> Informações Pessoais
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
@@ -1299,7 +1381,7 @@ export function UsersManagement() {
 
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                      <MapPin className="w-4 h-4 text-[#e76f51]" /> Endereço
+                      <MapPin className="w-4 h-4 text-primary" /> Endereço
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1 md:col-span-2">
@@ -1365,8 +1447,8 @@ export function UsersManagement() {
 
                   <section className="space-y-4">
                     <h3 className="text-sm font-bold flex items-center gap-2 text-foreground/80">
-                      <Calendar className="w-4 h-4 text-[#e76f51]" /> Controle de Horário de Acesso
-                      no Sistema
+                      <Calendar className="w-4 h-4 text-primary" /> Controle de Horário de Acesso no
+                      Sistema
                     </h3>
                     <div className="p-4 border rounded-xl bg-background flex items-center gap-3">
                       <Switch
@@ -1402,7 +1484,7 @@ export function UsersManagement() {
                             className={cn(
                               'p-5 border rounded-xl transition-all flex gap-4',
                               isSelected
-                                ? 'border-[#e76f51] bg-[#e76f51]/5 ring-1 ring-[#e76f51]/20'
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                                 : 'hover:border-primary/40 bg-background',
                               isMasterOrAdmin && !saving
                                 ? 'cursor-pointer'
@@ -1420,7 +1502,7 @@ export function UsersManagement() {
                                 className={cn(
                                   'w-10 h-10 rounded-full flex items-center justify-center',
                                   isSelected
-                                    ? 'bg-[#e76f51]/10 text-[#e76f51]'
+                                    ? 'bg-primary/10 text-primary'
                                     : 'bg-muted text-muted-foreground',
                                 )}
                               >
@@ -1432,7 +1514,7 @@ export function UsersManagement() {
                               <p className="text-xs text-muted-foreground leading-relaxed mb-3">
                                 {role.desc}
                               </p>
-                              <span className="text-[11px] font-bold text-[#e76f51] flex items-center gap-1">
+                              <span className="text-[11px] font-bold text-primary flex items-center gap-1">
                                 Permissões padrão do sistema
                               </span>
                             </div>
@@ -1441,7 +1523,7 @@ export function UsersManagement() {
                                 className={cn(
                                   'w-5 h-5 rounded border flex items-center justify-center',
                                   isSelected
-                                    ? 'bg-[#e76f51] border-[#e76f51]'
+                                    ? 'bg-primary border-primary'
                                     : 'border-muted-foreground/30',
                                 )}
                               >
@@ -1534,13 +1616,13 @@ export function UsersManagement() {
 
                 <TabsContent value="permissoes" className="mt-0">
                   {formData.role === 'master' && (
-                    <div className="mb-6 p-4 bg-[#e76f51]/10 border border-[#e76f51]/20 rounded-xl flex items-start gap-3">
-                      <ShieldCheck className="w-5 h-5 text-[#e76f51] mt-0.5" />
+                    <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-3">
+                      <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
                       <div>
-                        <h4 className="text-sm font-bold text-[#e76f51]">
+                        <h4 className="text-sm font-bold text-primary">
                           Acesso Total e Irrestrito
                         </h4>
-                        <p className="text-xs text-[#e76f51]/80 mt-1">
+                        <p className="text-xs text-primary/80 mt-1">
                           Este usuário possui acesso MASTER. Todas as funções e visualizações estão
                           liberadas de forma irrestrita.
                         </p>
@@ -1598,7 +1680,7 @@ export function UsersManagement() {
                               </div>
                             </div>
                             {mod.actions && mod.actions.length > 0 && hasAccess && (
-                              <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-[#e76f51]/30 ml-1">
+                              <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-primary/30 ml-1">
                                 {mod.actions.length > 1 && (
                                   <div className="flex justify-between items-center pb-2 border-b border-muted/30">
                                     <span className="text-xs font-bold uppercase text-muted-foreground">
@@ -1691,7 +1773,7 @@ export function UsersManagement() {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-[#e76f51] hover:bg-[#d95f43] text-white min-w-[120px]"
+                className="bg-primary hover:bg-primary/90 text-white min-w-[120px]"
               >
                 {saving ? (
                   <>
