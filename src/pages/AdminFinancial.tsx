@@ -624,8 +624,13 @@ export default function AdminFinancial() {
                           onCheckedChange={(c) => handleToggleOrder(o.id, !!c)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium whitespace-nowrap">
                         {o.friendlyId || o.id.substring(0, 8)}
+                        {o.patientName && (
+                          <span className="text-muted-foreground font-normal ml-2">
+                            - {o.patientName}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-right font-medium">

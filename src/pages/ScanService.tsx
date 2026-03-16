@@ -378,6 +378,7 @@ export default function ScanService() {
       .delete()
       .eq('id', id)
     fetchAgenda()
+    toast({ title: 'Bloqueio removido com sucesso!' })
   }
 
   const recurrenceLabels: Record<string, string> = {
@@ -819,11 +820,18 @@ export default function ScanService() {
                             <span className="text-muted-foreground font-normal">•</span>
                             {b.start_time.substring(0, 5)} às {b.end_time.substring(0, 5)}
                           </p>
-                          {b.block_date && (
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Data Ref: {format(new Date(b.block_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                          {b.recurrence === 'daily' ? (
+                            <p className="text-xs text-slate-500 mt-0.5">Todos os dias</p>
+                          ) : b.block_date ? (
+                            <p className="text-xs text-slate-500 mt-0.5 capitalize">
+                              {b.recurrence === 'unique' &&
+                                format(new Date(b.block_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                              {b.recurrence === 'weekly' &&
+                                `Toda ${format(new Date(b.block_date + 'T00:00:00'), 'EEEE', { locale: ptBR })}`}
+                              {b.recurrence === 'monthly' &&
+                                `Todo dia ${format(new Date(b.block_date + 'T00:00:00'), 'dd')}`}
                             </p>
-                          )}
+                          ) : null}
                         </div>
                         <Button
                           variant="ghost"
