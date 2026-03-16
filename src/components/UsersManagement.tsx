@@ -68,48 +68,56 @@ const ROLES_INFO = [
     title: 'Master',
     desc: 'Este perfil possui acesso total e irrestrito a todas as funções e visualizações do sistema.',
     icon: ShieldCheck,
+    category: 'SÓCIO',
   },
   {
     id: 'admin',
     title: 'Administrador',
     desc: 'Este perfil é responsável por coordenar as operações, organizando a equipe e configurando o sistema. Possui acesso estendido baseado em permissões.',
     icon: Building,
+    category: 'SÓCIO',
   },
   {
     id: 'technical_assistant',
     title: 'Auxiliar Técnico',
     desc: 'Este perfil é voltado para apoiar os profissionais durante os atendimentos, organizar materiais e gerenciar o estoque.',
     icon: Briefcase,
+    category: 'COLABORADOR',
   },
   {
     id: 'financial',
     title: 'Financeiro',
     desc: 'Este perfil é responsável por controlar as receitas, despesas e o faturamento do laboratório. Foco nas operações financeiras.',
     icon: CreditCard,
+    category: 'COLABORADOR',
   },
   {
     id: 'relationship_manager',
     title: 'Gestor de Relacionamento',
     desc: 'Este perfil é responsável por monitorar a experiência dos dentistas, promovendo ações de engajamento e fidelização.',
     icon: User,
+    category: 'COLABORADOR',
   },
   {
     id: 'dentist',
     title: 'Profissional (Dentista)',
     desc: 'Este perfil é voltado para os dentistas responsáveis pelos casos. Possui acesso estritamente aos seus próprios pedidos e pacientes.',
     icon: User,
+    category: 'DENTISTA',
   },
   {
     id: 'laboratory',
     title: 'Laboratório Parceiro',
     desc: 'Perfil B2B para laboratórios parceiros. Visualiza apenas seus pedidos com tabela de preços customizada.',
     icon: Building,
+    category: 'LABORATÓRIO PARCEIRO',
   },
   {
     id: 'receptionist',
     title: 'Recepcionista / Produção',
     desc: 'Este perfil é responsável por recepcionar pedidos e organizar o andamento do laboratório. Acesso operacional e de triagem.',
     icon: Mail,
+    category: 'COLABORADOR',
   },
 ]
 
@@ -262,7 +270,7 @@ export function UsersManagement() {
         return ['master', 'admin'].includes(u.role)
       }
       if (selectedCategory === 'dentists') {
-        return ['dentist', 'laboratory'].includes(u.role)
+        return ['dentist'].includes(u.role)
       }
       if (selectedCategory === 'staff') {
         return [
@@ -271,6 +279,9 @@ export function UsersManagement() {
           'financial',
           'relationship_manager',
         ].includes(u.role)
+      }
+      if (selectedCategory === 'laboratorio') {
+        return u.role === 'laboratory'
       }
       return true
     })
@@ -805,6 +816,12 @@ export function UsersManagement() {
               className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
             >
               COLABORADORES
+            </TabsTrigger>
+            <TabsTrigger
+              value="laboratorio"
+              className="rounded-md px-4 py-2 font-semibold uppercase text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              LABORATÓRIO PARCEIRO
             </TabsTrigger>
             <TabsTrigger
               value="financeiro"
@@ -1515,7 +1532,7 @@ export function UsersManagement() {
                           <div
                             key={role.id}
                             className={cn(
-                              'p-5 border rounded-xl transition-all flex gap-4',
+                              'relative p-5 border rounded-xl transition-all flex gap-4 mt-3',
                               isSelected
                                 ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                                 : 'hover:border-primary/40 bg-background',
@@ -1530,6 +1547,9 @@ export function UsersManagement() {
                               }
                             }}
                           >
+                            <div className="bg-[#0f172a] text-[#eab308] border-none font-bold text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full absolute -top-2.5 left-4 shadow-sm z-10">
+                              {role.category}
+                            </div>
                             <div className="mt-1">
                               <div
                                 className={cn(

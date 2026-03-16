@@ -12,7 +12,7 @@ export default function UsersPage() {
       <div className="flex flex-col gap-1 mb-2">
         <h2 className="text-3xl font-extrabold tracking-tight text-foreground uppercase">RH</h2>
         <p className="text-muted-foreground uppercase text-sm font-semibold mt-1">
-          GESTÃO CONSOLIDADA DE EQUIPE, INTEGRAÇÕES DE ONBOARDING E ROTINAS OPERACIONAIS.
+          GESTÃO CONSOLIDADA DE EQUIPE E USUÁRIOS DO SISTEMA.
         </p>
       </div>
 
@@ -22,7 +22,7 @@ export default function UsersPage() {
             value="equipe"
             className="data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md px-6 py-2.5 font-semibold text-sm transition-all"
           >
-            EQUIPE NUVIA
+            SISTEMA E USUÁRIOS
           </TabsTrigger>
           <TabsTrigger
             value="onboarding"

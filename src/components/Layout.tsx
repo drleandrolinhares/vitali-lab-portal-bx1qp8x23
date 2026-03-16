@@ -5,6 +5,7 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase/client'
+import { GlobalSearch } from '@/components/GlobalSearch'
 import {
   Select,
   SelectContent,
@@ -602,20 +603,26 @@ function MainHeader() {
   const hasLabLink = Boolean(labLink && labLink.trim() !== '')
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
       <SidebarTrigger />
-      <div className="flex flex-1 items-center justify-between">
-        <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
-          PORTAL DIGITAL •{' '}
-          <span className="text-foreground">{currentUser.clinic || 'GESTÃO LAB'}</span>
-        </h1>
-        <div className="flex items-center gap-3 ml-auto">
+      <div className="flex flex-1 items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <h1 className="text-sm font-semibold text-muted-foreground hidden xl:block whitespace-nowrap">
+            PORTAL DIGITAL •{' '}
+            <span className="text-foreground">{currentUser.clinic || 'GESTÃO LAB'}</span>
+          </h1>
+          <div className="w-full max-w-sm flex-1">
+            <GlobalSearch />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3 ml-auto shrink-0">
           <div className="flex items-center gap-2">
             {hasClinicLink ? (
               <Button
                 variant="outline"
                 size="sm"
-                className="hidden lg:flex text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-900/50 dark:hover:bg-emerald-900/20"
+                className="hidden md:flex text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-900/50 dark:hover:bg-emerald-900/20"
                 asChild
               >
                 <a href={clinicLink} target="_blank" rel="noopener noreferrer">
@@ -627,7 +634,7 @@ function MainHeader() {
               <Button
                 variant="outline"
                 size="sm"
-                className="hidden lg:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
+                className="hidden md:flex text-emerald-600/50 border-emerald-200/50 dark:border-emerald-900/30 cursor-not-allowed"
               >
                 <WhatsAppIcon className="w-4 h-4 mr-2 opacity-50" />
                 {viewingClient ? 'GRUPO DO CLIENTE' : 'GRUPO DA CLÍNICA'}
@@ -675,7 +682,8 @@ function MainHeader() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            LABORATÓRIO ONLINE
+            <span className="hidden sm:inline">LABORATÓRIO ONLINE</span>
+            <span className="inline sm:hidden">ONLINE</span>
           </div>
         </div>
       </div>
