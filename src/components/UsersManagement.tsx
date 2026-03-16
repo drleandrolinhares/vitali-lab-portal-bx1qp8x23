@@ -36,6 +36,7 @@ import {
   Loader2,
   Key,
   Copy,
+  Edit,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -54,6 +55,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const ROLES_INFO = [
   {
@@ -587,11 +594,10 @@ export function UsersManagement() {
     }
   }
 
-  const handleResetPassword = async () => {
-    if (!editingUser) return
+  const confirmAndResetPassword = async (user: any) => {
     if (
       !confirm(
-        'Deseja redefinir a senha deste usuário para "123456"? O usuário será forçado a trocar a senha no próximo login.',
+        `Deseja redefinir a senha do usuário ${user.name} para "123456"? O usuário será forçado a trocar a senha no próximo login.`,
       )
     )
       return
@@ -599,7 +605,7 @@ export function UsersManagement() {
     setSaving(true)
     try {
       const { error } = await updateUser({
-        userId: editingUser.id,
+        userId: user.id,
         password: '123456',
         requires_password_change: true,
       })
@@ -616,6 +622,11 @@ export function UsersManagement() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleResetPassword = async () => {
+    if (!editingUser) return
+    await confirmAndResetPassword(editingUser)
   }
 
   const updateAccess = (moduleId: string, checked: boolean) => {
@@ -970,26 +981,48 @@ export function UsersManagement() {
                             {user.is_active !== false ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 -mr-2 -mt-2 relative z-10"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (isMaster && actualUserRole !== 'master') {
-                              toast({
-                                title: 'Acesso Negado',
-                                description:
-                                  'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
-                                variant: 'destructive',
-                              })
-                              return
-                            }
-                            openModal(user)
-                          }}
-                        >
-                          <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 -mr-2 -mt-2 relative z-10"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (isMaster && actualUserRole !== 'master') {
+                                  toast({
+                                    title: 'Acesso Negado',
+                                    description:
+                                      'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                                    variant: 'destructive',
+                                  })
+                                  return
+                                }
+                                openModal(user)
+                              }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" /> Editar Perfil
+                            </DropdownMenuItem>
+                            {isMasterOrAdmin && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  confirmAndResetPassword(user)
+                                }}
+                                className="text-amber-600 focus:text-amber-700"
+                              >
+                                <Key className="w-4 h-4 mr-2" /> Redefinir Senha
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
 
                       <div className="flex flex-col items-center p-4 pt-2">

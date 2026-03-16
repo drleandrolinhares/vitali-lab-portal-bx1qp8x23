@@ -115,7 +115,7 @@ export function OrderDetailsSheet({
                   {order.patientName} - {order.dentistName}
                 </SheetDescription>
               </div>
-              {currentUser?.role === 'admin' && (
+              {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -253,10 +253,7 @@ export function OrderDetailsSheet({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o pedido <strong>{order.friendlyId}</strong> do
-              paciente <strong>{order.patientName}</strong>? Esta ação removerá permanentemente o
-              registro, seu histórico e todos os lançamentos financeiros associados.
-              <strong> Esta ação não pode ser desfeita.</strong>
+              Tem certeza que deseja excluir este caso? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

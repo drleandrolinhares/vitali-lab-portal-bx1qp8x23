@@ -96,6 +96,7 @@ Deno.serve(async (req: Request) => {
       clinic_contact_name,
       clinic_contact_role,
       clinic_contact_phone,
+      requires_password_change,
     } = body
 
     if (!userId) throw new Error('UserId is required in payload')
@@ -266,7 +267,9 @@ Deno.serve(async (req: Request) => {
     if (clinic_contact_phone !== undefined)
       updateData.clinic_contact_phone = clinic_contact_phone === '' ? null : clinic_contact_phone
 
-    if (password && password.trim() !== '' && callerUser.id !== userId) {
+    if (requires_password_change !== undefined) {
+      updateData.requires_password_change = requires_password_change
+    } else if (password && password.trim() !== '' && callerUser.id !== userId) {
       updateData.requires_password_change = true
     }
 

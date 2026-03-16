@@ -22,19 +22,23 @@ import { MoreHorizontal, Eye, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function LabDashboard() {
   const { orders, deleteOrder, currentUser } = useAppStore()
-  const activeOrders = orders.filter((o) => o.status === 'pending')
+  const activeOrders = orders.filter(
+    (o) => o.status !== 'completed' && o.status !== 'delivered' && o.status !== 'cancelled',
+  )
 
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
   const [deleteReason, setDeleteReason] = useState('')
@@ -119,7 +123,7 @@ export function LabDashboard() {
                             <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
                           </Link>
                         </DropdownMenuItem>
-                        {currentUser?.role === 'admin' && (
+                        {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
                           <DropdownMenuItem
                             onClick={() => {
                               setDeleteOrderId(order.id)
@@ -147,15 +151,14 @@ export function LabDashboard() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!deleteOrderId} onOpenChange={(o) => !o && setDeleteOrderId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão de Pedido</DialogTitle>
-            <DialogDescription>
-              Esta ação removerá o pedido permanentemente e excluirá seus dados de todas as métricas
-              do sistema. Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
+      <AlertDialog open={!!deleteOrderId} onOpenChange={(o) => !o && setDeleteOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este caso? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <div className="py-4 space-y-3">
             <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
               Motivo da Exclusão <span className="text-destructive">*</span>
@@ -168,20 +171,18 @@ export function LabDashboard() {
               autoFocus
             />
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteOrderId(null)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteOrderId(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={!deleteReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir Pedido
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
