@@ -643,6 +643,7 @@ export type Database = {
           address_number: string | null
           assigned_dentists: Json | null
           avatar_url: string | null
+          bank_name: string | null
           birth_date: string | null
           can_move_kanban_cards: boolean | null
           cep: string | null
@@ -669,6 +670,8 @@ export type Database = {
           payment_due_date: number | null
           permissions: Json | null
           personal_phone: string | null
+          pix_key: string | null
+          pix_type: string | null
           requires_password_change: boolean
           rg: string | null
           role: string
@@ -684,6 +687,7 @@ export type Database = {
           address_number?: string | null
           assigned_dentists?: Json | null
           avatar_url?: string | null
+          bank_name?: string | null
           birth_date?: string | null
           can_move_kanban_cards?: boolean | null
           cep?: string | null
@@ -710,6 +714,8 @@ export type Database = {
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
+          pix_key?: string | null
+          pix_type?: string | null
           requires_password_change?: boolean
           rg?: string | null
           role?: string
@@ -725,6 +731,7 @@ export type Database = {
           address_number?: string | null
           assigned_dentists?: Json | null
           avatar_url?: string | null
+          bank_name?: string | null
           birth_date?: string | null
           can_move_kanban_cards?: boolean | null
           cep?: string | null
@@ -751,6 +758,8 @@ export type Database = {
           payment_due_date?: number | null
           permissions?: Json | null
           personal_phone?: string | null
+          pix_key?: string | null
+          pix_type?: string | null
           requires_password_change?: boolean
           rg?: string | null
           role?: string
@@ -1132,6 +1141,9 @@ export const Constants = {
 //   has_access_schedule: boolean (nullable, default: false)
 //   last_access_at: timestamp with time zone (nullable)
 //   is_billing_paused: boolean (not null, default: false)
+//   pix_key: text (nullable)
+//   pix_type: text (nullable)
+//   bank_name: text (nullable)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

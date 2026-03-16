@@ -33,6 +33,7 @@ import {
   User,
   Building,
   ChevronRight,
+  ScanLine,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -93,6 +94,7 @@ const ADMIN_MENUS: { group: string; items: MenuItem[] }[] = [
         path: '/new-request',
         isCTA: true,
       },
+      { id: 'scan-service', title: 'SCAN SERVICE', icon: ScanLine, path: '/scan-service' },
       { id: 'inbox', title: 'CAIXA DE ENTRADA', icon: FileText, path: '/app' },
       { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
       { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
@@ -223,6 +225,7 @@ function AppSidebar() {
     if (isMaster) return true
     if (id === 'profile' || id === 'my-profile') return true
     if (id === 'lab-profile') return isMaster
+    if (id === 'scan-service') return true
 
     if (id === 'new-request') {
       return checkPermission('inbox', 'create_order')
@@ -265,6 +268,7 @@ function AppSidebar() {
   const dentistNavItems = [
     { id: 'my_panel', title: 'MEU PAINEL', icon: LayoutDashboard, path: '/app' },
     { id: 'new-request', title: 'NOVO PEDIDO', icon: PlusCircle, path: '/new-request' },
+    { id: 'scan-service', title: 'SCAN SERVICE', icon: ScanLine, path: '/scan-service' },
     { id: 'kanban', title: 'EVOLUÇÃO DOS TRABALHOS', icon: KanbanSquare, path: '/kanban' },
     { id: 'history', title: 'HISTÓRICO GLOBAL', icon: History, path: '/history' },
     { id: 'finances', title: 'DASH FINANCEIRO', icon: DollarSign, path: '/financial' },

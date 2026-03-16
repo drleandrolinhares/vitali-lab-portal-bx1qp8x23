@@ -36,6 +36,7 @@ import UsersPage from './pages/Users'
 import PublicGuide from './pages/PublicGuide'
 import PublicOrderFull from './pages/PublicOrderFull'
 import LabProfile from './pages/LabProfile'
+import ScanService from './pages/ScanService'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
@@ -130,6 +131,7 @@ const App = () => (
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/hourly-cost" element={<HourlyCost />} />
               <Route path="/materials" element={<MaterialsPage />} />
+              <Route path="/scan-service" element={<ScanService />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
