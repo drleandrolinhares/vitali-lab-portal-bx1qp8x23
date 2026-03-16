@@ -47,6 +47,10 @@ export default function NewRequest() {
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [scaleOpen, setScaleOpen] = useState(false)
 
+  const [patientSearch, setPatientSearch] = useState('')
+  const [patientList, setPatientList] = useState<string[]>([])
+  const [patientOpen, setPatientOpen] = useState(false)
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const [formData, setFormData] = useState({
@@ -124,6 +128,36 @@ export default function NewRequest() {
   }, [isInternalUser])
 
   useEffect(() => {
+    if (isAdjustment && patientSearch.length >= 3) {
+      const dentistIdToUse = isInternalUser ? formData.dentistId : currentUser?.id
+      if (!dentistIdToUse) return
+
+      const fetchP = async () => {
+        const { data } = await supabase
+          .from('orders')
+          .select('patient_name')
+          .eq('dentist_id', dentistIdToUse)
+          .ilike('patient_name', `%${patientSearch}%`)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (data) {
+          const uniqueNames = Array.from(new Set(data.map((d) => d.patient_name)))
+          setPatientList(uniqueNames)
+        }
+      }
+
+      const timeout = setTimeout(() => {
+        fetchP()
+      }, 300)
+
+      return () => clearTimeout(timeout)
+    } else {
+      setPatientList([])
+    }
+  }, [isAdjustment, patientSearch, isInternalUser, formData.dentistId, currentUser?.id])
+
+  useEffect(() => {
     if (formData.sector) {
       const normalize = (str: string) =>
         str
@@ -156,7 +190,7 @@ export default function NewRequest() {
   }, [formData.sector, priceList])
 
   useEffect(() => {
-    if (formData.workType && formData.sector) {
+    if (formData.workType && formData.sector && !isAdjustment) {
       const priceItem =
         priceList.find((p) => p.work_type === formData.workType && p.sector === formData.sector) ||
         priceList.find((p) => p.work_type === formData.workType)
@@ -167,7 +201,7 @@ export default function NewRequest() {
         setFormData((prev) => ({ ...prev, material: '' }))
       }
     }
-  }, [formData.workType, formData.sector, priceList])
+  }, [formData.workType, formData.sector, priceList, isAdjustment])
 
   const isSobreImplante = formData.estruturaFixacao === 'SOBRE IMPLANTE'
 
@@ -190,7 +224,7 @@ export default function NewRequest() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.patientName || !formData.workType || !formData.sector) return
+    if (!formData.patientName) return
 
     if (isInternalUser && !formData.dentistId) {
       toast({
@@ -201,29 +235,42 @@ export default function NewRequest() {
       return
     }
 
-    if (!formData.material) {
-      toast({
-        title: 'Atenção',
-        description:
-          'O material não foi definido automaticamente. Verifique o tipo de trabalho selecionado.',
-        variant: 'destructive',
-      })
-      return
-    }
+    if (!isAdjustment) {
+      if (!formData.workType || !formData.sector) return
 
-    if (isSobreImplante) {
-      if (!formData.implantBrand) {
+      if (!formData.material) {
         toast({
           title: 'Atenção',
-          description: 'A Marca do Componente é obrigatória para este procedimento.',
+          description:
+            'O material não foi definido automaticamente. Verifique o tipo de trabalho selecionado.',
           variant: 'destructive',
         })
         return
       }
-      if (!formData.implantType) {
+
+      if (isSobreImplante) {
+        if (!formData.implantBrand) {
+          toast({
+            title: 'Atenção',
+            description: 'A Marca do Componente é obrigatória para este procedimento.',
+            variant: 'destructive',
+          })
+          return
+        }
+        if (!formData.implantType) {
+          toast({
+            title: 'Atenção',
+            description: 'O Tipo do Componente é obrigatório para este procedimento.',
+            variant: 'destructive',
+          })
+          return
+        }
+      }
+    } else {
+      if (!formData.observations) {
         toast({
           title: 'Atenção',
-          description: 'O Tipo do Componente é obrigatório para este procedimento.',
+          description: 'Por favor, descreva qual o ajuste necessário.',
           variant: 'destructive',
         })
         return
@@ -259,11 +306,13 @@ export default function NewRequest() {
     const success = await addOrder({
       ...formData,
       isAdjustmentReturn: isAdjustment,
-      material: formData.material,
+      workType: isAdjustment ? 'AJUSTE' : formData.workType,
+      sector: isAdjustment ? 'SOLUÇÕES CERÂMICAS' : formData.sector,
+      material: isAdjustment ? 'N/A' : formData.material,
       stlDeliveryMethod:
         formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
-      teeth: selectedTeeth,
-      arches: selectedArches,
+      teeth: isAdjustment ? [] : selectedTeeth,
+      arches: isAdjustment ? [] : selectedArches,
       fileUrls,
     })
     setSubmitting(false)
@@ -314,7 +363,10 @@ export default function NewRequest() {
                 </Label>
                 <Select
                   value={formData.dentistId}
-                  onValueChange={(v) => setFormData({ ...formData, dentistId: v })}
+                  onValueChange={(v) => {
+                    setFormData({ ...formData, dentistId: v, patientName: '' })
+                    setPatientSearch('')
+                  }}
                   required
                 >
                   <SelectTrigger className="h-11 bg-background">
@@ -331,257 +383,360 @@ export default function NewRequest() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label className="uppercase font-semibold text-xs text-muted-foreground">
-                NOME COMPLETO DO PACIENTE *
-              </Label>
-              <Input
-                required
-                placeholder="Ex: João da Silva"
-                value={formData.patientName}
-                onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                className="h-12 text-lg font-medium"
-              />
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2">
+            {isAdjustment ? (
+              <div className="space-y-2">
+                <Label className="uppercase font-semibold text-xs text-yellow-700 dark:text-yellow-500">
+                  NOME DO PACIENTE *
+                </Label>
+                <Popover open={patientOpen} onOpenChange={setPatientOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={patientOpen}
+                      className={cn(
+                        'w-full justify-between h-12 text-lg font-medium border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
+                        !formData.patientName && 'text-muted-foreground',
+                      )}
+                      disabled={isInternalUser && !formData.dentistId}
+                    >
+                      <span className="truncate">
+                        {formData.patientName || 'Selecione o paciente do histórico...'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Buscar paciente (digite 3 ou mais letras)..."
+                        value={patientSearch}
+                        onValueChange={setPatientSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {patientSearch.length < 3
+                            ? 'Digite pelo menos 3 caracteres para buscar.'
+                            : 'Nenhum paciente encontrado.'}
+                        </CommandEmpty>
+                        {patientSearch.length >= 3 && patientList.length > 0 && (
+                          <CommandGroup>
+                            {patientList.map((p) => (
+                              <CommandItem
+                                key={p}
+                                value={p}
+                                onSelect={() => {
+                                  setFormData((prev) => ({ ...prev, patientName: p }))
+                                  setPatientOpen(false)
+                                  setPatientSearch('')
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    formData.patientName === p ? 'opacity-100' : 'opacity-0',
+                                  )}
+                                />
+                                {p}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {isInternalUser && !formData.dentistId && (
+                  <p className="text-xs text-yellow-600 font-medium mt-1">
+                    Selecione um dentista primeiro para buscar os pacientes.
+                  </p>
+                )}
+              </div>
+            ) : (
               <div className="space-y-2">
                 <Label className="uppercase font-semibold text-xs text-muted-foreground">
-                  CPF do Paciente (Opcional)
+                  NOME COMPLETO DO PACIENTE *
                 </Label>
                 <Input
-                  placeholder="000.000.000-00"
-                  value={formData.patientCpf}
-                  onChange={(e) => setFormData({ ...formData, patientCpf: e.target.value })}
-                  className="h-11"
+                  required
+                  placeholder="Ex: João da Silva"
+                  value={formData.patientName}
+                  onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
+                  className="h-12 text-lg font-medium"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs text-muted-foreground">
-                  Data de Nascimento (Opcional)
-                </Label>
-                <Input
-                  type="date"
-                  value={formData.patientBirthDate}
-                  onChange={(e) => setFormData({ ...formData, patientBirthDate: e.target.value })}
-                  className="h-11"
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Setor do Laboratório *</Label>
-                <Select
-                  value={formData.sector}
-                  onValueChange={(v) => setFormData({ ...formData, sector: v })}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SOLUÇÕES CERÂMICAS">Soluções Cerâmicas</SelectItem>
-                    <SelectItem value="STÚDIO ACRÍLICO">Stúdio Acrílico</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs">Tipo de Trabalho *</Label>
-                <Select
-                  value={formData.workType}
-                  onValueChange={(v) => setFormData({ ...formData, workType: v })}
-                  required
-                  disabled={!formData.sector || availableWorkTypes.length === 0}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue
-                      placeholder={
-                        !formData.sector
-                          ? 'Selecione o setor...'
-                          : availableWorkTypes.length === 0
-                            ? 'Nenhum trabalho cadastrado'
-                            : 'Selecione...'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableWorkTypes.map((wt) => (
-                      <SelectItem key={wt} value={wt}>
-                        {wt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
-              <Label className="uppercase font-semibold text-xs text-muted-foreground">
-                Seleção de Elementos (Odontograma)
-              </Label>
-              <TeethSelector
-                value={selectedTeeth}
-                onChange={setSelectedTeeth}
-                arches={selectedArches}
-                onArchesChange={setSelectedArches}
-              />
-            </div>
-
-            <div className="space-y-6 bg-muted/10 p-5 rounded-xl border">
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">Estrutura de Fixação *</Label>
-                  <Select
-                    value={formData.estruturaFixacao}
-                    onValueChange={(v) => setFormData({ ...formData, estruturaFixacao: v })}
-                    required
-                  >
-                    <SelectTrigger className="h-11 bg-background">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
-                      <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">Material *</Label>
-                  <Input
-                    value={formData.material}
-                    readOnly
-                    className="h-11 bg-muted cursor-not-allowed font-medium text-muted-foreground"
-                    placeholder="Auto-preenchido..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">COR BASE</Label>
-                  <Input
-                    placeholder="Ex: A2, BL1..."
-                    value={formData.shade}
-                    onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
-                    className="h-11 bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
-                  {availableScales.length > 0 ? (
-                    <Popover open={scaleOpen} onOpenChange={setScaleOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={scaleOpen}
-                          className="w-full justify-between h-11 font-normal bg-background"
-                        >
-                          {formData.shadeScale
-                            ? availableScales.find((s) => s === formData.shadeScale) ||
-                              formData.shadeScale
-                            : 'Selecione a escala...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar escala..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhuma escala encontrada.</CommandEmpty>
-                            <CommandGroup>
-                              {availableScales.map((scale) => (
-                                <CommandItem
-                                  key={scale}
-                                  value={scale}
-                                  onSelect={(currentValue) => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      shadeScale:
-                                        currentValue === formData.shadeScale ? '' : currentValue,
-                                    }))
-                                    setScaleOpen(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      formData.shadeScale === scale ? 'opacity-100' : 'opacity-0',
-                                    )}
-                                  />
-                                  {scale}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Input
-                      placeholder="Ex: VITA..."
-                      value={formData.shadeScale}
-                      onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
-                      className="h-11 bg-background"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {isSobreImplante && (
-                <div className="grid gap-6 sm:grid-cols-2 pt-4 border-t border-border/60 animate-fade-in-down">
+            {!isAdjustment && (
+              <>
+                <div className="grid gap-6 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="uppercase font-semibold text-xs text-primary">
-                      Marca do Componente *
+                    <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                      CPF do Paciente (Opcional)
+                    </Label>
+                    <Input
+                      placeholder="000.000.000-00"
+                      value={formData.patientCpf}
+                      onChange={(e) => setFormData({ ...formData, patientCpf: e.target.value })}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                      Data de Nascimento (Opcional)
+                    </Label>
+                    <Input
+                      type="date"
+                      value={formData.patientBirthDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, patientBirthDate: e.target.value })
+                      }
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="uppercase font-semibold text-xs">
+                      Setor do Laboratório *
                     </Label>
                     <Select
-                      value={formData.implantBrand}
-                      onValueChange={(v) => setFormData({ ...formData, implantBrand: v })}
-                      required={isSobreImplante}
+                      value={formData.sector}
+                      onValueChange={(v) => setFormData({ ...formData, sector: v })}
+                      required
                     >
-                      <SelectTrigger className="h-11 bg-background border-primary/30 focus:border-primary">
-                        <SelectValue
-                          placeholder={
-                            availableImplantBrands.length === 0
-                              ? 'Nenhuma marca cadastrada'
-                              : 'Selecione a marca...'
-                          }
-                        />
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
-                      {availableImplantBrands.length > 0 && (
-                        <SelectContent>
-                          {availableImplantBrands.map((b) => (
-                            <SelectItem key={b} value={b}>
-                              {b}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      )}
+                      <SelectContent>
+                        <SelectItem value="SOLUÇÕES CERÂMICAS">Soluções Cerâmicas</SelectItem>
+                        <SelectItem value="STÚDIO ACRÍLICO">Stúdio Acrílico</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="uppercase font-semibold text-xs text-primary">
-                      Tipo do Componente *
-                    </Label>
-                    <Input
-                      placeholder="Ex: Munhão Universal, Ucla..."
-                      value={formData.implantType}
-                      onChange={(e) => setFormData({ ...formData, implantType: e.target.value })}
-                      className="h-11 bg-background border-primary/30 focus:border-primary"
-                      required={isSobreImplante}
-                    />
+                    <Label className="uppercase font-semibold text-xs">Tipo de Trabalho *</Label>
+                    <Select
+                      value={formData.workType}
+                      onValueChange={(v) => setFormData({ ...formData, workType: v })}
+                      required
+                      disabled={!formData.sector || availableWorkTypes.length === 0}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue
+                          placeholder={
+                            !formData.sector
+                              ? 'Selecione o setor...'
+                              : availableWorkTypes.length === 0
+                                ? 'Nenhum trabalho cadastrado'
+                                : 'Selecione...'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableWorkTypes.map((wt) => (
+                          <SelectItem key={wt} value={wt}>
+                            {wt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-3 bg-muted/10 p-5 rounded-xl border">
+                  <Label className="uppercase font-semibold text-xs text-muted-foreground">
+                    Seleção de Elementos (Odontograma)
+                  </Label>
+                  <TeethSelector
+                    value={selectedTeeth}
+                    onChange={setSelectedTeeth}
+                    arches={selectedArches}
+                    onArchesChange={setSelectedArches}
+                  />
+                </div>
+
+                <div className="space-y-6 bg-muted/10 p-5 rounded-xl border">
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label className="uppercase font-semibold text-xs">
+                        Estrutura de Fixação *
+                      </Label>
+                      <Select
+                        value={formData.estruturaFixacao}
+                        onValueChange={(v) => setFormData({ ...formData, estruturaFixacao: v })}
+                        required
+                      >
+                        <SelectTrigger className="h-11 bg-background">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                          <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="uppercase font-semibold text-xs">Material *</Label>
+                      <Input
+                        value={formData.material}
+                        readOnly
+                        className="h-11 bg-muted cursor-not-allowed font-medium text-muted-foreground"
+                        placeholder="Auto-preenchido..."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="uppercase font-semibold text-xs">COR BASE</Label>
+                      <Input
+                        placeholder="Ex: A2, BL1..."
+                        value={formData.shade}
+                        onChange={(e) => setFormData({ ...formData, shade: e.target.value })}
+                        className="h-11 bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="uppercase font-semibold text-xs">Escala Usada</Label>
+                      {availableScales.length > 0 ? (
+                        <Popover open={scaleOpen} onOpenChange={setScaleOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={scaleOpen}
+                              className="w-full justify-between h-11 font-normal bg-background"
+                            >
+                              {formData.shadeScale
+                                ? availableScales.find((s) => s === formData.shadeScale) ||
+                                  formData.shadeScale
+                                : 'Selecione a escala...'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar escala..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhuma escala encontrada.</CommandEmpty>
+                                <CommandGroup>
+                                  {availableScales.map((scale) => (
+                                    <CommandItem
+                                      key={scale}
+                                      value={scale}
+                                      onSelect={(currentValue) => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          shadeScale:
+                                            currentValue === formData.shadeScale
+                                              ? ''
+                                              : currentValue,
+                                        }))
+                                        setScaleOpen(false)
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          formData.shadeScale === scale
+                                            ? 'opacity-100'
+                                            : 'opacity-0',
+                                        )}
+                                      />
+                                      {scale}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <Input
+                          placeholder="Ex: VITA..."
+                          value={formData.shadeScale}
+                          onChange={(e) => setFormData({ ...formData, shadeScale: e.target.value })}
+                          className="h-11 bg-background"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {isSobreImplante && (
+                    <div className="grid gap-6 sm:grid-cols-2 pt-4 border-t border-border/60 animate-fade-in-down">
+                      <div className="space-y-2">
+                        <Label className="uppercase font-semibold text-xs text-primary">
+                          Marca do Componente *
+                        </Label>
+                        <Select
+                          value={formData.implantBrand}
+                          onValueChange={(v) => setFormData({ ...formData, implantBrand: v })}
+                          required={isSobreImplante}
+                        >
+                          <SelectTrigger className="h-11 bg-background border-primary/30 focus:border-primary">
+                            <SelectValue
+                              placeholder={
+                                availableImplantBrands.length === 0
+                                  ? 'Nenhuma marca cadastrada'
+                                  : 'Selecione a marca...'
+                              }
+                            />
+                          </SelectTrigger>
+                          {availableImplantBrands.length > 0 && (
+                            <SelectContent>
+                              {availableImplantBrands.map((b) => (
+                                <SelectItem key={b} value={b}>
+                                  {b}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          )}
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="uppercase font-semibold text-xs text-primary">
+                          Tipo do Componente *
+                        </Label>
+                        <Input
+                          placeholder="Ex: Munhão Universal, Ucla..."
+                          value={formData.implantType}
+                          onChange={(e) =>
+                            setFormData({ ...formData, implantType: e.target.value })
+                          }
+                          className="h-11 bg-background border-primary/30 focus:border-primary"
+                          required={isSobreImplante}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
-              <Label className="uppercase font-semibold text-xs">Observações Adicionais</Label>
+              <Label
+                className={cn(
+                  'uppercase font-semibold',
+                  isAdjustment ? 'text-sm text-yellow-700 dark:text-yellow-500' : 'text-xs',
+                )}
+              >
+                {isAdjustment ? 'QUAL O AJUSTE NECESSÁRIO? *' : 'Observações Adicionais'}
+              </Label>
               <Textarea
-                placeholder="Instruções sobre textura, formato..."
-                className="min-h-[100px]"
+                placeholder={
+                  isAdjustment
+                    ? 'Descreva detalhadamente o ajuste que precisa ser feito...'
+                    : 'Instruções sobre textura, formato...'
+                }
+                className={cn(
+                  'min-h-[100px]',
+                  isAdjustment &&
+                    'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10',
+                )}
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+                required={isAdjustment}
               />
             </div>
 
