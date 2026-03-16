@@ -623,7 +623,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user_id: currentUser.id,
       action,
       entity_type: entityType,
-      entityId: entityId,
+      entity_id: entityId,
       details,
     } as any)
   }
