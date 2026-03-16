@@ -402,6 +402,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             implantType: o.implant_type,
             estruturaFixacao: o.estrutura_fixacao || 'SOBRE DENTE',
             settlementId: o.settlement_id,
+            isAdjustmentReturn: o.is_adjustment_return || false,
             createdBy: o.creator
               ? { id: o.created_by, name: o.creator.name, role: o.creator.role }
               : undefined,
@@ -516,7 +517,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let basePrice = o.basePrice || 0
       const discount = o.dentistDiscount || 0
 
-      if (o.dentistRole !== 'laboratory' && priceList && priceList.length > 0) {
+      if (
+        !o.isAdjustmentReturn &&
+        o.dentistRole !== 'laboratory' &&
+        priceList &&
+        priceList.length > 0
+      ) {
         const priceItem =
           priceList.find(
             (p) => p.work_type === o.workType && (!p.sector || p.sector === o.sector),
@@ -535,8 +541,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (unitPrice === 0 && o.quantity > 0) {
+      if (unitPrice === 0 && o.quantity > 0 && !o.isAdjustmentReturn) {
         unitPrice = discount < 100 ? basePrice / (1 - discount / 100) / o.quantity : 0
+      }
+
+      if (o.isAdjustmentReturn) {
+        unitPrice = 0
+        basePrice = 0
       }
 
       const effectiveUnitPrice = unitPrice * (1 - discount / 100)
@@ -683,7 +694,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const teethCount = orderData.teeth?.length || 0
     const archesCount = orderData.arches?.length || 0
     const quantity = Math.max(1, teethCount + archesCount)
-    const basePrice = unitPrice * quantity * (1 - discountPercent / 100)
+    const basePrice = orderData.isAdjustmentReturn
+      ? 0
+      : unitPrice * quantity * (1 - discountPercent / 100)
 
     const { data, error } = await supabase
       .from('orders')
@@ -709,6 +722,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         implant_brand: orderData.implantBrand || null,
         implant_type: orderData.implantType || null,
         estrutura_fixacao: orderData.estruturaFixacao || 'SOBRE DENTE',
+        is_adjustment_return: orderData.isAdjustmentReturn || false,
       } as any)
       .select()
       .single()
@@ -827,7 +841,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const updates: any = { kanban_stage: stage, status: newStatus }
     if (shouldAcknowledge) updates.is_acknowledged = true
-    if (order.basePrice === 0 && financials.basePrice > 0) {
+    if (order.basePrice === 0 && financials.basePrice > 0 && !order.isAdjustmentReturn) {
       updates.base_price = financials.basePrice
     }
 

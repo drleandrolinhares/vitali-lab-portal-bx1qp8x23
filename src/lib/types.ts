@@ -84,6 +84,7 @@ export interface Order {
   implantType?: string
   estruturaFixacao?: string
   settlementId?: string | null
+  isAdjustmentReturn?: boolean
   createdBy?: {
     id: string
     name: string

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -33,12 +33,14 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Check, ChevronsUpDown, UploadCloud, X, File as FileIcon } from 'lucide-react'
+import { Check, ChevronsUpDown, UploadCloud, X, File as FileIcon, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function NewRequest() {
   const { addOrder, currentUser, priceList, appSettings } = useAppStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isAdjustment = searchParams.get('type') === 'adjustment'
   const [submitting, setSubmitting] = useState(false)
 
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
@@ -256,6 +258,7 @@ export default function NewRequest() {
 
     const success = await addOrder({
       ...formData,
+      isAdjustmentReturn: isAdjustment,
       material: formData.material,
       stlDeliveryMethod:
         formData.shippingMethod === 'dentist_send' ? formData.stlDeliveryMethod : '',
@@ -274,15 +277,36 @@ export default function NewRequest() {
     <div className="max-w-4xl mx-auto py-6">
       <Card className="shadow-elevation border-muted/60">
         <CardHeader className="bg-muted/30 border-b pb-6">
-          <CardTitle className="text-2xl uppercase tracking-tight font-bold text-primary">
-            NOVO PEDIDO VITALI LAB
+          <CardTitle
+            className={cn(
+              'text-2xl uppercase tracking-tight font-bold',
+              isAdjustment ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary',
+            )}
+          >
+            {isAdjustment ? 'NOVO PEDIDO DE AJUSTE' : 'NOVO PEDIDO VITALI LAB'}
           </CardTitle>
           <CardDescription>
-            Preencha os detalhes clínicos do paciente e especificações.
+            {isAdjustment
+              ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
+              : 'Preencha os detalhes clínicos do paciente e especificações.'}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
+            {isAdjustment && (
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 p-4 rounded-xl flex items-start gap-3">
+                <RefreshCw className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-yellow-800 dark:text-yellow-400 font-semibold text-sm">
+                    Retorno para Ajustes
+                  </p>
+                  <p className="text-yellow-700 dark:text-yellow-500/80 text-xs mt-1">
+                    Este pedido será processado com custo R$ 0,00 e receberá prioridade na produção.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {isInternalUser && (
               <div className="space-y-2 p-5 border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl">
                 <Label className="uppercase font-bold text-xs text-emerald-800 dark:text-emerald-300">
@@ -667,8 +691,16 @@ export default function NewRequest() {
             >
               Cancelar
             </Button>
-            <Button type="submit" className="h-11 px-8 text-base" disabled={submitting}>
-              {submitting ? 'Enviando...' : 'Enviar Pedido'}
+            <Button
+              type="submit"
+              className={cn(
+                'h-11 px-8 text-base',
+                isAdjustment &&
+                  'bg-yellow-500 hover:bg-yellow-600 text-yellow-950 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:text-yellow-50',
+              )}
+              disabled={submitting}
+            >
+              {submitting ? 'Enviando...' : isAdjustment ? 'Enviar Retorno' : 'Enviar Pedido'}
             </Button>
           </CardFooter>
         </form>

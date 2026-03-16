@@ -1,342 +1,281 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { toast } from '@/hooks/use-toast'
+import { StatusBadge } from '@/components/StatusBadge'
 import {
+  PlusCircle,
+  ArrowRight,
   Activity,
-  Clock,
+  Users,
+  FileText,
   CheckCircle2,
-  PackageCheck,
-  BarChart3,
-  Trophy,
-  Wallet,
-  TrendingUp,
-  ChevronRight,
-  Medal,
-  Radio,
+  Clock,
+  RefreshCw,
 } from 'lucide-react'
-import { formatCurrency, cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { formatBRL, getOrderFinancials } from '@/lib/financial'
+import { useMemo } from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 
-function Top10List({
-  title,
-  icon: Icon,
-  description,
-  data,
-  metricKey,
-  formatValue,
-  colorClass,
-  maxVal,
-  emptyText,
-}: any) {
+export default function AdminDashboard() {
+  const { orders, currentUser, pendingUsers, loading } = useAppStore()
+
+  const activeOrders = orders.filter(
+    (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
+  )
+
+  const recentOrders = useMemo(() => {
+    return [...orders]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+  }, [orders])
+
+  const stats = [
+    {
+      label: 'Casos Ativos',
+      value: activeOrders.length,
+      icon: Activity,
+      color: 'text-primary',
+    },
+    {
+      label: 'Pendentes de Ciente',
+      value: orders.filter((o) => !o.isAcknowledged).length,
+      icon: Clock,
+      color: 'text-amber-500',
+    },
+    {
+      label: 'Concluídos (Mês)',
+      value: orders.filter(
+        (o) =>
+          (o.status === 'completed' || o.status === 'delivered') &&
+          new Date(o.createdAt).getMonth() === new Date().getMonth(),
+      ).length,
+      icon: CheckCircle2,
+      color: 'text-emerald-500',
+    },
+    {
+      label: 'Aprovações Pendentes',
+      value: pendingUsers.length,
+      icon: Users,
+      color: 'text-blue-500',
+    },
+  ]
+
+  const chartData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (6 - i))
+      return {
+        date: format(d, 'yyyy-MM-dd'),
+        label: format(d, 'dd/MM'),
+        count: 0,
+      }
+    })
+
+    orders.forEach((o) => {
+      const oDate = format(new Date(o.createdAt), 'yyyy-MM-dd')
+      const day = last7Days.find((d) => d.date === oDate)
+      if (day) day.count++
+    })
+
+    return last7Days
+  }, [orders])
+
   return (
-    <Card
-      className={cn('shadow-lg flex flex-col h-full overflow-hidden border-t-4', colorClass.border)}
-    >
-      <CardHeader className="pb-4 bg-muted/20">
-        <div className="flex items-center gap-3">
-          <div className={cn('p-2.5 rounded-xl', colorClass.bg)}>
-            <Icon className={cn('w-6 h-6', colorClass.text)} />
-          </div>
-          <div>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
+    <div className="space-y-8 max-w-6xl mx-auto py-2">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-6 border-b border-border/50">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Painel Administrativo</h2>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Visão geral do laboratório e métricas rápidas.
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 p-0">
-        {data.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-16">
-            <Icon className="w-12 h-12 mb-4 opacity-20" />
-            <span>{emptyText}</span>
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto h-11">
+          <Button
+            asChild
+            variant="outline"
+            className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+          >
+            <Link to="/new-request?type=adjustment">
+              <RefreshCw className="w-5 h-5" /> Retorno{' '}
+              <span className="hidden lg:inline">para Ajustes</span>
+            </Link>
+          </Button>
+          <Button asChild className="flex-1 sm:flex-none h-full gap-2 shadow-sm">
+            <Link to="/new-request">
+              <PlusCircle className="w-5 h-5" /> Novo Pedido
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s, i) => (
+          <Card key={i} className="shadow-subtle hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                {s.label}
+              </CardTitle>
+              <s.icon className={`h-5 w-5 ${s.color}`} />
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-10 w-16" />
+              ) : (
+                <div className="text-4xl font-bold">{s.value}</div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="shadow-subtle lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Entrada de Pedidos (Últimos 7 dias)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[250px] w-full" />
+            ) : (
+              <ChartContainer
+                config={{ count: { color: 'hsl(var(--primary))' } }}
+                className="h-[250px] w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle flex flex-col">
+          <CardHeader>
+            <CardTitle>Ações Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 flex-1">
+            <Button asChild variant="outline" className="w-full justify-start h-12">
+              <Link to="/kanban">
+                <Activity className="mr-3 h-5 w-5 text-primary" /> Kanban de Produção
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start h-12">
+              <Link to="/app">
+                <Inbox className="mr-3 h-5 w-5 text-primary" /> Caixa de Entrada
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start h-12">
+              <Link to="/financial">
+                <FileText className="mr-3 h-5 w-5 text-primary" /> Faturamento
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start h-12">
+              <Link to="/users">
+                <Users className="mr-3 h-5 w-5 text-primary" /> Gerenciar Clientes
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-subtle">
+        <CardHeader className="bg-muted/10 border-b">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Últimos Pedidos</CardTitle>
+              <CardDescription>
+                Os pedidos mais recentes que entraram no laboratório.
+              </CardDescription>
+            </div>
+            <Button variant="link" asChild>
+              <Link to="/history">Ver todos</Link>
+            </Button>
           </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border/50">
-            {data.map((dentist: any, index: number) => {
-              const value = dentist[metricKey]
-              const pct = maxVal > 0 ? (value / maxVal) * 100 : 0
-              let rankIcon = null
-              let rankClasses = 'text-muted-foreground bg-muted font-bold text-sm'
-
-              if (index === 0) {
-                rankIcon = <Trophy className="w-4 h-4 text-yellow-500 drop-shadow-sm" />
-                rankClasses =
-                  'text-yellow-700 bg-yellow-500/20 font-black shadow-sm ring-1 ring-yellow-500/50 dark:text-yellow-400'
-              } else if (index === 1) {
-                rankIcon = <Medal className="w-4 h-4 text-slate-400 drop-shadow-sm" />
-                rankClasses =
-                  'text-slate-700 bg-slate-400/20 font-bold shadow-sm ring-1 ring-slate-400/50 dark:text-slate-300'
-              } else if (index === 2) {
-                rankIcon = <Medal className="w-4 h-4 text-orange-700 drop-shadow-sm" />
-                rankClasses =
-                  'text-orange-800 bg-orange-700/20 font-bold shadow-sm ring-1 ring-orange-700/50 dark:text-orange-500'
-              }
-
-              return (
-                <Link
-                  key={dentist.id}
-                  to="/history"
-                  className="group block relative p-4 hover:bg-muted/50 transition-all bg-background"
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-5 space-y-4">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
+          ) : recentOrders.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado.</div>
+          ) : (
+            <div className="divide-y">
+              {recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className={cn(
+                    'flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 hover:bg-muted/30 transition-colors gap-4',
+                    order.isAdjustmentReturn ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : '',
+                  )}
                 >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={cn(
-                        'flex items-center justify-center w-9 h-9 rounded-full shrink-0 transition-transform group-hover:scale-110',
-                        rankClasses,
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      {order.isAdjustmentReturn ? (
+                        <RefreshCw className="w-5 h-5 text-yellow-600" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-primary" />
                       )}
-                    >
-                      {rankIcon ? rankIcon : index + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-semibold text-foreground truncate pr-2 group-hover:text-primary transition-colors">
-                          {dentist.name}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            order.isAdjustmentReturn ? 'text-yellow-950 dark:text-yellow-50' : '',
+                          )}
+                        >
+                          {order.patientName}
                         </span>
-                        <span className={cn('font-bold shrink-0 tabular-nums', colorClass.text)}>
-                          {formatValue(value)}
+                        <span
+                          className={cn(
+                            'text-[10px] font-mono px-2 py-0.5 rounded',
+                            order.isAdjustmentReturn
+                              ? 'bg-yellow-200 text-yellow-900'
+                              : 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          {order.friendlyId}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-1000 ease-out',
-                              colorClass.bar,
-                            )}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        {dentist.clinic && (
-                          <span className="text-xs text-muted-foreground truncate max-w-[120px] shrink-0">
-                            {dentist.clinic}
+                        {order.isAdjustmentReturn && (
+                          <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Ajuste
                           </span>
                         )}
                       </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        <span className="font-medium text-foreground/70">{order.dentistName}</span>{' '}
+                        • {order.workType} • {format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}
+                      </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 -ml-1 group-hover:translate-x-1 duration-200" />
                   </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-export default function AdminDashboard() {
-  const { orders, selectedLab, currentUser, checkPermission, updateSetting } = useAppStore()
-
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter(
-        (o) =>
-          selectedLab === 'Todos' ||
-          (o.sector || '').toLowerCase() === (selectedLab || '').toLowerCase(),
-      ),
-    [orders, selectedLab],
-  )
-
-  const metrics = useMemo(
-    () => ({
-      total: filteredOrders.length,
-      pending: filteredOrders.filter((o) => o.status === 'pending' || o.kanbanStage === 'TRIAGEM')
-        .length,
-      production: filteredOrders.filter((o) => o.status === 'in_production').length,
-      completed: filteredOrders.filter((o) => o.status === 'completed' || o.status === 'delivered')
-        .length,
-    }),
-    [filteredOrders],
-  )
-
-  const rankings = useMemo(() => {
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const map = new Map<string, any>()
-
-    filteredOrders.forEach((o) => {
-      if (!o.dentistId) return
-      if (!map.has(o.dentistId)) {
-        map.set(o.dentistId, {
-          id: o.dentistId,
-          name: o.dentistName || 'Desconhecido',
-          clinic: o.dentistClinic || '',
-          totalOrders: 0,
-          totalValue: 0,
-          recentOrders: 0,
-        })
-      }
-      const stat = map.get(o.dentistId)!
-      stat.totalOrders += 1
-      stat.totalValue += Number(o.basePrice) || 0
-      if (new Date(o.createdAt) >= thirtyDaysAgo) stat.recentOrders += 1
-    })
-
-    const arr = Array.from(map.values())
-    const byVolume = [...arr].sort((a, b) => b.totalOrders - a.totalOrders).slice(0, 10)
-    const byValue = [...arr].sort((a, b) => b.totalValue - a.totalValue).slice(0, 10)
-    const byFreq = [...arr].sort((a, b) => b.recentOrders - a.recentOrders).slice(0, 10)
-
-    return {
-      byVolume,
-      maxVolume: byVolume[0]?.totalOrders || 0,
-      byValue,
-      maxValue: byValue[0]?.totalValue || 0,
-      byFreq,
-      maxFreq: byFreq[0]?.recentOrders || 0,
-    }
-  }, [filteredOrders])
-
-  const canView =
-    currentUser?.role === 'admin' ||
-    currentUser?.role === ('master' as any) ||
-    checkPermission('dashboards', 'view_general')
-
-  if (!canView) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-        <h2 className="text-2xl font-bold text-destructive mb-2">Acesso Restrito</h2>
-        <p className="text-muted-foreground">Você não tem permissão para acessar o dashboard.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-8 max-w-screen-2xl mx-auto animate-fade-in pb-10">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-xl shadow-inner border border-primary/20">
-            <BarChart3 className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground uppercase">
-              Dashboard Gerencial
-            </h2>
-            <p className="text-muted-foreground">
-              Visão geral de desempenho e parceiros de destaque.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm w-full sm:w-auto justify-center">
-            <Radio className="w-4 h-4 animate-pulse" />
-            Sincronização em Tempo Real Ativa
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-subtle border-l-4 border-l-blue-500 hover:shadow-md transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Novos Pedidos (Total)
-            </CardTitle>
-            <Activity className="w-5 h-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-blue-600 dark:text-blue-500 transition-all duration-500">
-              {metrics.total}
+                  <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                    <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
+                    <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
+                      <Link to={`/order/${order.id}`}>
+                        <ArrowRight className="w-5 h-5" />
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Na Triagem
-            </CardTitle>
-            <Clock className="w-5 h-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-amber-600 dark:text-amber-500 transition-all duration-500">
-              {metrics.pending}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-indigo-500 hover:shadow-md transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Em Produção
-            </CardTitle>
-            <PackageCheck className="w-5 h-5 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 transition-all duration-500">
-              {metrics.production}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-              Finalizados
-            </CardTitle>
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 transition-all duration-500">
-              {metrics.completed}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-8 flex items-center gap-3 mb-6">
-        <h3 className="text-2xl font-bold tracking-tight">Top 10 Parceiros</h3>
-        <div className="h-px flex-1 bg-border/50 ml-4"></div>
-      </div>
-
-      <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
-        <Top10List
-          title="Volume Total"
-          description="Dentistas com mais pedidos"
-          icon={Activity}
-          data={rankings.byVolume}
-          metricKey="totalOrders"
-          formatValue={(v: number) => `${v} ped.`}
-          maxVal={rankings.maxVolume}
-          emptyText="Sem dados de volume"
-          colorClass={{
-            bg: 'bg-blue-500/10',
-            text: 'text-blue-500',
-            bar: 'bg-blue-500',
-            border: 'border-t-blue-500',
-          }}
-        />
-        <Top10List
-          title="Receita Bruta"
-          description="Maior valor em pedidos (c/ descontos)"
-          icon={Wallet}
-          data={rankings.byValue}
-          metricKey="totalValue"
-          formatValue={formatCurrency}
-          maxVal={rankings.maxValue}
-          emptyText="Sem dados financeiros"
-          colorClass={{
-            bg: 'bg-emerald-500/10',
-            text: 'text-emerald-500',
-            bar: 'bg-emerald-500',
-            border: 'border-t-emerald-500',
-          }}
-        />
-        <Top10List
-          title="Frequência Mensal"
-          description="Pedidos nos últimos 30 dias"
-          icon={TrendingUp}
-          data={rankings.byFreq}
-          metricKey="recentOrders"
-          formatValue={(v: number) => `${v} ped.`}
-          maxVal={rankings.maxFreq}
-          emptyText="Nenhum pedido recente"
-          colorClass={{
-            bg: 'bg-indigo-500/10',
-            text: 'text-indigo-500',
-            bar: 'bg-indigo-500',
-            border: 'border-t-indigo-500',
-          }}
-        />
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

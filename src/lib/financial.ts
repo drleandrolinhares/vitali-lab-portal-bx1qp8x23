@@ -48,11 +48,16 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
   const isCancelled = order.status === 'cancelled'
 
   const quantity = Math.max(1, (order.teeth?.length || 0) + (order.arches?.length || 0))
-  let basePrice = order.basePrice || 0
-  let unitPrice = order.unitPrice || 0
+  let basePrice = order.isAdjustmentReturn ? 0 : order.basePrice || 0
+  let unitPrice = order.isAdjustmentReturn ? 0 : order.unitPrice || 0
   const discount = order.dentistDiscount || 0
 
-  if (order.dentistRole !== 'laboratory' && priceList && priceList.length > 0) {
+  if (
+    !order.isAdjustmentReturn &&
+    order.dentistRole !== 'laboratory' &&
+    priceList &&
+    priceList.length > 0
+  ) {
     const priceItem =
       priceList.find(
         (p) => p.work_type === order.workType && (!p.sector || p.sector === order.sector),
@@ -71,7 +76,7 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
     }
   }
 
-  if (unitPrice === 0) {
+  if (unitPrice === 0 && !order.isAdjustmentReturn) {
     unitPrice = quantity > 0 && discount < 100 ? basePrice / (1 - discount / 100) / quantity : 0
   }
 

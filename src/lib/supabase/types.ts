@@ -771,6 +771,77 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_service_bookings: {
+        Row: {
+          booking_date: string
+          created_at: string | null
+          dentist_id: string
+          end_time: string
+          id: string
+          notes: string | null
+          patient_name: string
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          booking_date: string
+          created_at?: string | null
+          dentist_id: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          patient_name: string
+          start_time: string
+          status?: string | null
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string | null
+          dentist_id?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          patient_name?: string
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'scan_service_bookings_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      scan_service_settings: {
+        Row: {
+          day_of_week: number
+          end_time: string | null
+          id: string
+          is_available: boolean | null
+          slot_duration_minutes: number | null
+          start_time: string | null
+        }
+        Insert: {
+          day_of_week: number
+          end_time?: string | null
+          id?: string
+          is_available?: boolean | null
+          slot_duration_minutes?: number | null
+          start_time?: string | null
+        }
+        Update: {
+          day_of_week?: number
+          end_time?: string | null
+          id?: string
+          is_available?: boolean | null
+          slot_duration_minutes?: number | null
+          start_time?: string | null
+        }
+        Relationships: []
+      }
       settlements: {
         Row: {
           amount: number
@@ -1144,6 +1215,23 @@ export const Constants = {
 //   pix_key: text (nullable)
 //   pix_type: text (nullable)
 //   bank_name: text (nullable)
+// Table: scan_service_bookings
+//   id: uuid (not null, default: gen_random_uuid())
+//   dentist_id: uuid (not null)
+//   patient_name: text (not null)
+//   booking_date: date (not null)
+//   start_time: time without time zone (not null)
+//   end_time: time without time zone (not null)
+//   status: text (nullable, default: 'confirmed'::text)
+//   notes: text (nullable)
+//   created_at: timestamp with time zone (nullable, default: now())
+// Table: scan_service_settings
+//   id: uuid (not null, default: gen_random_uuid())
+//   day_of_week: integer (not null)
+//   is_available: boolean (nullable, default: true)
+//   start_time: time without time zone (nullable, default: '08:00:00'::time without time zone)
+//   end_time: time without time zone (nullable, default: '18:00:00'::time without time zone)
+//   slot_duration_minutes: integer (nullable, default: 60)
 // Table: settlements
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)
@@ -1201,6 +1289,12 @@ export const Constants = {
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+// Table: scan_service_bookings
+//   FOREIGN KEY scan_service_bookings_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id)
+//   PRIMARY KEY scan_service_bookings_pkey: PRIMARY KEY (id)
+// Table: scan_service_settings
+//   CHECK scan_service_settings_day_of_week_check: CHECK (((day_of_week >= 0) AND (day_of_week <= 6)))
+//   PRIMARY KEY scan_service_settings_pkey: PRIMARY KEY (id)
 // Table: settlements
 //   FOREIGN KEY settlements_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   PRIMARY KEY settlements_pkey: PRIMARY KEY (id)
@@ -1305,6 +1399,22 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() = id)
 //   Policy "Users can update own profile." (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = id)
+// Table: scan_service_bookings
+//   Policy "Admin and staff can do all on scan bookings" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
+//   Policy "Authenticated users can select all scan bookings" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+//   Policy "Dentists can delete their own bookings" (DELETE, PERMISSIVE) roles={public}
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text]))))))
+//   Policy "Dentists can insert their own bookings" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text]))))))
+//   Policy "Dentists can update their own bookings" (UPDATE, PERMISSIVE) roles={public}
+//     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text]))))))
+// Table: scan_service_settings
+//   Policy "Admin and master can update scan settings" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
+//   Policy "Authenticated users can select scan settings" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: settlements
 //   Policy "Admin insert settlements" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))

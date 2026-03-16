@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
+import { Link } from 'react-router-dom'
 import {
   format,
   startOfWeek,
@@ -42,8 +43,20 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from '@/hooks/use-toast'
-import { ChevronLeft, ChevronRight, Plus, ScanLine, Loader2, Trash2, Clock } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  ScanLine,
+  Loader2,
+  Trash2,
+  Clock,
+  CalendarIcon,
+  RefreshCw,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Booking {
@@ -67,11 +80,20 @@ interface ScanSetting {
   slot_duration_minutes: number
 }
 
+interface ScanBlock {
+  id: string
+  start_time: string
+  end_time: string
+  block_date: string | null
+  recurrence: 'unique' | 'daily' | 'weekly' | 'monthly'
+}
+
 export default function ScanService() {
   const { currentUser } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [settings, setSettings] = useState<ScanSetting[]>([])
+  const [blocks, setBlocks] = useState<ScanBlock[]>([])
   const [dentists, setDentists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -84,6 +106,8 @@ export default function ScanService() {
     'relationship_manager',
   ].includes(currentUser?.role || '')
 
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
+
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i))
 
@@ -92,7 +116,7 @@ export default function ScanService() {
     const start = format(days[0], 'yyyy-MM-dd')
     const end = format(days[6], 'yyyy-MM-dd')
 
-    const [bookRes, setRes, dentRes] = await Promise.all([
+    const [bookRes, setRes, dentRes, blockRes] = await Promise.all([
       supabase
         .from('scan_service_bookings' as any)
         .select('*, profiles(name)')
@@ -110,11 +134,13 @@ export default function ScanService() {
             .eq('is_active', true)
             .order('name')
         : Promise.resolve({ data: [] }),
+      supabase.from('scan_service_blocks' as any).select('*'),
     ])
 
     if (bookRes.data) setBookings(bookRes.data as Booking[])
     if (setRes.data) setSettings(setRes.data as ScanSetting[])
     if (dentRes.data) setDentists(dentRes.data)
+    if (blockRes.data) setBlocks(blockRes.data as ScanBlock[])
     setLoading(false)
   }
 
@@ -132,6 +158,28 @@ export default function ScanService() {
     notes: '',
   })
   const [saving, setSaving] = useState(false)
+
+  const checkBlockOverlap = (slotStart: string, slotEnd: string, dateStr: string) => {
+    return blocks.find((b) => {
+      const bStart = b.start_time.substring(0, 5)
+      const bEnd = b.end_time.substring(0, 5)
+      const timeOverlap = bStart < slotEnd && bEnd > slotStart
+
+      if (!timeOverlap) return false
+
+      if (b.recurrence === 'daily') return true
+      if (b.recurrence === 'unique' && b.block_date === dateStr) return true
+
+      if (b.block_date) {
+        const targetDate = new Date(dateStr + 'T00:00:00')
+        const blockDate = new Date(b.block_date + 'T00:00:00')
+
+        if (b.recurrence === 'weekly' && targetDate.getDay() === blockDate.getDay()) return true
+        if (b.recurrence === 'monthly' && targetDate.getDate() === blockDate.getDate()) return true
+      }
+      return false
+    })
+  }
 
   const handleOpenModal = (slot?: any, booking?: any) => {
     if (booking) {
@@ -200,6 +248,14 @@ export default function ScanService() {
       })
     }
 
+    if (checkBlockOverlap(formData.start_time, formData.end_time, formData.booking_date)) {
+      return toast({
+        title: 'Horário Indisponível',
+        description: 'SCAN SERVICE INDISPONÍVEL NESTE HORÁRIO.',
+        variant: 'destructive',
+      })
+    }
+
     setSaving(true)
     const payload = {
       dentist_id: formData.dentist_id,
@@ -262,6 +318,14 @@ export default function ScanService() {
   const [configSettings, setConfigSettings] = useState<ScanSetting[]>([])
   const [savingConfig, setSavingConfig] = useState(false)
 
+  const [blockForm, setBlockForm] = useState({
+    block_date: format(new Date(), 'yyyy-MM-dd'),
+    start_time: '08:00',
+    end_time: '12:00',
+    recurrence: 'unique',
+  })
+  const [savingBlock, setSavingBlock] = useState(false)
+
   useEffect(() => {
     if (settings.length > 0) setConfigSettings([...settings])
   }, [settings])
@@ -284,9 +348,48 @@ export default function ScanService() {
     fetchAgenda()
   }
 
+  const handleAddBlock = async () => {
+    if (!blockForm.block_date && blockForm.recurrence !== 'daily') {
+      return toast({ title: 'Selecione a data de referência.', variant: 'destructive' })
+    }
+    if (blockForm.start_time >= blockForm.end_time) {
+      return toast({ title: 'O horário de fim deve ser após o início.', variant: 'destructive' })
+    }
+    setSavingBlock(true)
+    const { error } = await supabase.from('scan_service_blocks' as any).insert({
+      start_time: blockForm.start_time + ':00',
+      end_time: blockForm.end_time + ':00',
+      block_date: blockForm.block_date || null,
+      recurrence: blockForm.recurrence,
+    })
+    setSavingBlock(false)
+    if (error) {
+      toast({ title: 'Erro ao criar bloqueio', description: error.message, variant: 'destructive' })
+    } else {
+      toast({ title: 'Bloqueio criado com sucesso!' })
+      fetchAgenda()
+    }
+  }
+
+  const handleDeleteBlock = async (id: string) => {
+    if (!confirm('Deseja remover este bloqueio?')) return
+    await supabase
+      .from('scan_service_blocks' as any)
+      .delete()
+      .eq('id', id)
+    fetchAgenda()
+  }
+
+  const recurrenceLabels: Record<string, string> = {
+    unique: 'Único',
+    daily: 'Diário',
+    weekly: 'Semanal',
+    monthly: 'Mensal',
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12 print:max-w-none">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary/10 rounded-xl">
             <ScanLine className="w-6 h-6 text-primary" />
@@ -300,9 +403,21 @@ export default function ScanService() {
             </p>
           </div>
         </div>
-        <Button onClick={() => handleOpenModal()} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Nova Reserva
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            className="border-yellow-500 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 w-full sm:w-auto"
+          >
+            <Link to="/new-request?type=adjustment">
+              <RefreshCw className="w-4 h-4" />
+              Retorno <span className="hidden md:inline">para Ajustes</span>
+            </Link>
+          </Button>
+          <Button onClick={() => handleOpenModal()} className="gap-2 w-full sm:w-auto">
+            <Plus className="w-4 h-4" /> Nova Reserva
+          </Button>
+        </div>
       </div>
 
       <div className="hidden print:block mb-6">
@@ -317,7 +432,7 @@ export default function ScanService() {
           <TabsTrigger value="agenda" className="uppercase text-xs font-bold tracking-wider">
             Agenda Semanal
           </TabsTrigger>
-          {['admin', 'master'].includes(currentUser?.role || '') && (
+          {isAdmin && (
             <TabsTrigger value="config" className="uppercase text-xs font-bold tracking-wider">
               Configurações
             </TabsTrigger>
@@ -400,6 +515,25 @@ export default function ScanService() {
                             </div>
                           ) : (
                             slots.map((slot, sIdx) => {
+                              const overlappingBlock = checkBlockOverlap(
+                                slot.start,
+                                slot.end,
+                                dateStr,
+                              )
+                              if (overlappingBlock) {
+                                return (
+                                  <div
+                                    key={sIdx}
+                                    title="SCAN SERVICE INDISPONÍVEL NESTE HORÁRIO"
+                                    className="text-[10px] p-2 rounded-md shadow-sm bg-slate-800 text-white flex items-center justify-center text-center font-bold uppercase leading-tight cursor-not-allowed opacity-90 print:hidden"
+                                  >
+                                    Indisponível
+                                    <br />
+                                    Neste Horário
+                                  </div>
+                                )
+                              }
+
                               const overlappingBooking = dayBookings.find(
                                 (b) =>
                                   (b.start_time.substring(0, 5) <= slot.start &&
@@ -478,9 +612,9 @@ export default function ScanService() {
           </Card>
         </TabsContent>
 
-        {['admin', 'master'].includes(currentUser?.role || '') && (
+        {isAdmin && (
           <TabsContent value="config">
-            <Card className="shadow-subtle max-w-3xl">
+            <Card className="shadow-subtle max-w-4xl mx-auto mb-6">
               <CardHeader>
                 <CardTitle className="uppercase">Horários de Atendimento</CardTitle>
                 <CardDescription>
@@ -563,6 +697,147 @@ export default function ScanService() {
                   Salvar Configurações
                 </Button>
               </CardFooter>
+            </Card>
+
+            <Card className="shadow-subtle max-w-4xl mx-auto border-slate-300">
+              <CardHeader className="bg-slate-50/50">
+                <CardTitle className="uppercase text-slate-800">Bloquear Agendamentos</CardTitle>
+                <CardDescription>
+                  Defina horários indisponíveis para o serviço de Scan (ex: Almoço, Manutenções,
+                  Feriados).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end mb-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="space-y-2 sm:col-span-1">
+                    <Label className="uppercase text-[10px] font-bold text-slate-500">
+                      Recorrência
+                    </Label>
+                    <Select
+                      value={blockForm.recurrence}
+                      onValueChange={(v) => setBlockForm({ ...blockForm, recurrence: v as any })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unique">Data Única</SelectItem>
+                        <SelectItem value="daily">Diário (Todos os dias)</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 sm:col-span-1">
+                    <Label className="uppercase text-[10px] font-bold text-slate-500">
+                      Data Base
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal bg-background px-3',
+                            !blockForm.block_date && 'text-muted-foreground',
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                          {blockForm.block_date ? (
+                            format(new Date(blockForm.block_date + 'T00:00:00'), 'dd/MM/yyyy')
+                          ) : (
+                            <span>Selecione</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={
+                            blockForm.block_date
+                              ? new Date(blockForm.block_date + 'T00:00:00')
+                              : undefined
+                          }
+                          onSelect={(d) =>
+                            d && setBlockForm({ ...blockForm, block_date: format(d, 'yyyy-MM-dd') })
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2 sm:col-span-1">
+                    <Label className="uppercase text-[10px] font-bold text-slate-500">
+                      Hora Início
+                    </Label>
+                    <Input
+                      type="time"
+                      value={blockForm.start_time}
+                      onChange={(e) => setBlockForm({ ...blockForm, start_time: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-1">
+                    <Label className="uppercase text-[10px] font-bold text-slate-500">
+                      Hora Fim
+                    </Label>
+                    <Input
+                      type="time"
+                      value={blockForm.end_time}
+                      onChange={(e) => setBlockForm({ ...blockForm, end_time: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Button onClick={handleAddBlock} disabled={savingBlock} className="w-full">
+                      {savingBlock ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="w-4 h-4 mr-2" />
+                      )}
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold uppercase text-slate-600 mb-2">
+                    Bloqueios Ativos
+                  </h4>
+                  {blocks.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-slate-400 bg-slate-50 rounded-lg border border-dashed">
+                      Nenhum bloqueio cadastrado.
+                    </div>
+                  ) : (
+                    blocks.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex justify-between items-center bg-white border border-slate-200 p-3 sm:p-4 rounded-lg shadow-sm"
+                      >
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            {recurrenceLabels[b.recurrence]}
+                            <span className="text-muted-foreground font-normal">•</span>
+                            {b.start_time.substring(0, 5)} às {b.end_time.substring(0, 5)}
+                          </p>
+                          {b.block_date && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Data Ref: {format(new Date(b.block_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteBlock(b.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         )}

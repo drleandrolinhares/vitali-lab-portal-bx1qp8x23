@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Stage, Order } from '@/lib/types'
 import {
@@ -21,8 +21,7 @@ import {
   Paperclip,
   ExternalLink,
   QrCode,
-  Loader2,
-  RefreshCcw,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,6 +85,7 @@ export default function KanbanPage() {
 
   const canFilterDentist = checkPermission('kanban', 'filter_dentist')
   const showDentistFilter = !isDentist && canFilterDentist
+  const canCreateOrder = checkPermission('inbox', 'create_order') || isDentist
 
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
@@ -268,7 +268,7 @@ export default function KanbanPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-background">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between shrink-0 gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-pink-600 uppercase">
             Evolução dos Trabalhos
@@ -277,64 +277,85 @@ export default function KanbanPage() {
             Acompanhe o progresso do fluxo de produção.
           </p>
         </div>
-        {showDentistFilter && (
-          <div className="flex flex-col gap-2 w-full sm:w-[280px]">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
-              <Select
-                value={selectedDentistId === 'all' ? undefined : selectedDentistId}
-                onValueChange={(val) => setSelectedDentistId(val || 'all')}
-                disabled={isLoadingDentists}
+        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto items-end">
+          {showDentistFilter && (
+            <div className="flex flex-col gap-2 w-full sm:w-[280px]">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
+                <Select
+                  value={selectedDentistId === 'all' ? undefined : selectedDentistId}
+                  onValueChange={(val) => setSelectedDentistId(val || 'all')}
+                  disabled={isLoadingDentists}
+                >
+                  <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
+                    <SelectValue
+                      placeholder={
+                        isLoadingDentists
+                          ? 'CARREGANDO...'
+                          : dentistFetchError
+                            ? 'ERRO AO CARREGAR'
+                            : 'SELECIONE O CLIENTE'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dentistsList.map((d) => (
+                      <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                    {dentistFetchError && (
+                      <div className="p-2 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            fetchDentists()
+                          }}
+                          className="h-8 text-xs"
+                        >
+                          Tentar Novamente
+                        </Button>
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="secondary"
+                className={cn(
+                  'w-full sm:ml-6 sm:w-[calc(100%-24px)] text-xs font-bold uppercase h-8 transition-colors',
+                  selectedDentistId === 'all'
+                    ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
+                )}
+                onClick={() => setSelectedDentistId('all')}
               >
-                <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
-                  <SelectValue
-                    placeholder={
-                      isLoadingDentists
-                        ? 'CARREGANDO...'
-                        : dentistFetchError
-                          ? 'ERRO AO CARREGAR'
-                          : 'SELECIONE O CLIENTE'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {dentistsList.map((d) => (
-                    <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                  {dentistFetchError && (
-                    <div className="p-2 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          fetchDentists()
-                        }}
-                        className="h-8 text-xs"
-                      >
-                        Tentar Novamente
-                      </Button>
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+                TODOS OS CLIENTES
+              </Button>
             </div>
-            <Button
-              variant="secondary"
-              className={cn(
-                'w-full sm:ml-6 sm:w-[calc(100%-24px)] text-xs font-bold uppercase h-8 transition-colors',
-                selectedDentistId === 'all'
-                  ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
-                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
-              )}
-              onClick={() => setSelectedDentistId('all')}
-            >
-              TODOS OS CLIENTES
-            </Button>
-          </div>
-        )}
+          )}
+          {canCreateOrder && (
+            <div className="flex gap-2 w-full sm:w-auto h-9">
+              <Button
+                asChild
+                variant="outline"
+                className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+              >
+                <Link to="/new-request?type=adjustment">
+                  <RefreshCw className="w-4 h-4" />
+                  Retorno <span className="hidden sm:inline">para Ajustes</span>
+                </Link>
+              </Button>
+              <Button asChild className="flex-1 sm:flex-none h-full gap-2">
+                <Link to="/new-request">
+                  <Plus className="w-4 h-4 hidden sm:block" /> Novo Pedido
+                </Link>
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-slate-50 dark:bg-muted/30 p-4 rounded-xl border border-slate-200 dark:border-border/50 shrink-0">
@@ -560,8 +581,12 @@ export default function KanbanPage() {
                             }}
                             onClick={() => setSelectedOrderId(o.id)}
                             className={cn(
-                              'bg-white dark:bg-background p-3.5 rounded-lg border border-slate-200 dark:border-border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                              'p-3.5 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                              o.isAdjustmentReturn
+                                ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600'
+                                : 'bg-white dark:bg-background border-slate-200 dark:border-border',
                               canDragCards &&
+                                !o.isAdjustmentReturn &&
                                 'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
                               draggedCardId === o.id &&
                                 'opacity-50 scale-[0.98] border-dashed shadow-none',
@@ -572,16 +597,28 @@ export default function KanbanPage() {
                                 'absolute left-0 top-0 bottom-0 w-1',
                                 isPendingCard
                                   ? 'bg-red-500/80 dark:bg-red-600/80'
-                                  : 'bg-primary/20 dark:bg-primary/40',
+                                  : o.isAdjustmentReturn
+                                    ? 'bg-yellow-600/50'
+                                    : 'bg-primary/20 dark:bg-primary/40',
                               )}
                             />
                             <div className="flex justify-between items-start mb-2 pl-1">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-slate-500">
+                                <span
+                                  className={cn(
+                                    'text-xs font-bold',
+                                    o.isAdjustmentReturn ? 'text-yellow-900' : 'text-slate-500',
+                                  )}
+                                >
                                   {o.friendlyId}
                                 </span>
                                 {o.fileUrls && o.fileUrls.length > 0 && (
-                                  <Paperclip className="w-3 h-3 text-primary opacity-70" />
+                                  <Paperclip
+                                    className={cn(
+                                      'w-3 h-3 opacity-70',
+                                      o.isAdjustmentReturn ? 'text-yellow-900' : 'text-primary',
+                                    )}
+                                  />
                                 )}
                               </div>
                               <StatusBadge
@@ -589,8 +626,20 @@ export default function KanbanPage() {
                                 className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
                               />
                             </div>
-                            <p className="font-medium text-sm truncate pl-1">{o.patientName}</p>
-                            <p className="text-xs text-slate-500 mt-1 truncate pl-1">
+                            <p
+                              className={cn(
+                                'font-medium text-sm truncate pl-1',
+                                o.isAdjustmentReturn ? 'text-yellow-950 font-bold' : '',
+                              )}
+                            >
+                              {o.patientName}
+                            </p>
+                            <p
+                              className={cn(
+                                'text-xs mt-1 truncate pl-1',
+                                o.isAdjustmentReturn ? 'text-yellow-900' : 'text-slate-500',
+                              )}
+                            >
                               {o.workType}
                             </p>
 
@@ -600,8 +649,18 @@ export default function KanbanPage() {
                               </div>
                             )}
 
-                            <div className="flex justify-between items-center mt-3 pt-2 border-t gap-1">
-                              <div className="text-[10px] font-medium text-slate-400 truncate flex-1 pl-1">
+                            <div
+                              className={cn(
+                                'flex justify-between items-center mt-3 pt-2 border-t gap-1',
+                                o.isAdjustmentReturn ? 'border-yellow-500/30' : '',
+                              )}
+                            >
+                              <div
+                                className={cn(
+                                  'text-[10px] font-medium truncate flex-1 pl-1',
+                                  o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                )}
+                              >
                                 {currentUser?.role !== 'dentist' && o.dentistName}
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
@@ -612,7 +671,12 @@ export default function KanbanPage() {
                                       variant="outline"
                                       size="sm"
                                       disabled={finishingOrderId === o.id}
-                                      className="h-[22px] px-2 py-0 text-[10px] font-bold border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50"
+                                      className={cn(
+                                        'h-[22px] px-2 py-0 text-[10px] font-bold',
+                                        o.isAdjustmentReturn
+                                          ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/50'
+                                          : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50',
+                                      )}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         handleQuickFinish(o.id)
@@ -620,7 +684,14 @@ export default function KanbanPage() {
                                       title="Mover para Finalizados e Entregues"
                                     >
                                       {finishingOrderId === o.id ? (
-                                        <div className="w-3 h-3 mr-1 border-[1.5px] border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                        <div
+                                          className={cn(
+                                            'w-3 h-3 mr-1 border-[1.5px] border-t-transparent rounded-full animate-spin',
+                                            o.isAdjustmentReturn
+                                              ? 'border-yellow-900'
+                                              : 'border-emerald-600',
+                                          )}
+                                        />
                                       ) : (
                                         <CheckCircle2 className="w-3 h-3 mr-1" />
                                       )}
@@ -634,7 +705,12 @@ export default function KanbanPage() {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="w-full text-[10px] font-bold uppercase h-7 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 transition-colors px-1"
+                                className={cn(
+                                  'w-full text-[10px] font-bold uppercase h-7 transition-colors px-1',
+                                  o.isAdjustmentReturn
+                                    ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
+                                    : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
+                                )}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   navigate(`/order/${o.id}`)
@@ -647,7 +723,12 @@ export default function KanbanPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                  className={cn(
+                                    'flex-1 text-[9px] font-bold uppercase h-7 transition-colors px-1',
+                                    o.isAdjustmentReturn
+                                      ? 'border-yellow-600 text-yellow-900 hover:bg-yellow-500'
+                                      : 'border-primary/20 text-primary hover:bg-primary/10',
+                                  )}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     setSelectedFullQrOrder(o)
@@ -659,7 +740,12 @@ export default function KanbanPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="flex-1 text-[9px] font-bold uppercase h-7 border-primary/20 text-primary hover:bg-primary/10 transition-colors px-1"
+                                  className={cn(
+                                    'flex-1 text-[9px] font-bold uppercase h-7 transition-colors px-1',
+                                    o.isAdjustmentReturn
+                                      ? 'border-yellow-600 text-yellow-900 hover:bg-yellow-500'
+                                      : 'border-primary/20 text-primary hover:bg-primary/10',
+                                  )}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     setSelectedPrintQrOrder(o)
@@ -677,14 +763,16 @@ export default function KanbanPage() {
                           sideOffset={8}
                           className={cn(
                             'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
-                            'bg-primary',
+                            o.isAdjustmentReturn
+                              ? 'bg-yellow-500 text-yellow-950 border-yellow-600'
+                              : 'bg-primary',
                           )}
                         >
                           <div className="space-y-2">
                             <div>
                               <p className="font-bold text-sm leading-tight">{o.patientName}</p>
                               <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
-                                {o.friendlyId}
+                                {o.friendlyId} {o.isAdjustmentReturn ? ' (AJUSTE)' : ''}
                               </p>
                             </div>
                             <div className="text-xs space-y-1 opacity-90">
@@ -705,14 +793,21 @@ export default function KanbanPage() {
                                 </p>
                               )}
                               {o.fileUrls && o.fileUrls.length > 0 && (
-                                <p className="flex items-center gap-1 mt-1 text-primary-foreground/90">
+                                <p className="flex items-center gap-1 mt-1 text-inherit">
                                   <Paperclip className="w-3 h-3" /> {o.fileUrls.length} arquivo(s)
                                   anexo(s)
                                 </p>
                               )}
                             </div>
                             {o.observations && (
-                              <div className="mt-2 pt-2 border-t border-primary-foreground/20 text-xs">
+                              <div
+                                className={cn(
+                                  'mt-2 pt-2 border-t text-xs',
+                                  o.isAdjustmentReturn
+                                    ? 'border-yellow-700/30'
+                                    : 'border-primary-foreground/20',
+                                )}
+                              >
                                 <p className="font-semibold mb-1">Observações:</p>
                                 <p className="opacity-90 line-clamp-4 leading-relaxed">
                                   {o.observations}

@@ -1,7 +1,7 @@
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Check, Clock, Activity, FileText, Inbox, ArrowRight } from 'lucide-react'
+import { Check, Clock, Activity, FileText, Inbox, ArrowRight, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '@/components/StatusBadge'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -9,13 +9,14 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { DentistDashboard } from '@/pages/dashboard/DentistDashboard'
+import { cn } from '@/lib/utils'
 
 export default function Index() {
   const { currentUser, orders, acknowledgeOrder, updateOrderObservations, checkPermission } =
     useAppStore()
 
   const showGlobalInbox = checkPermission('inbox', 'view_all')
-  const canCreateOrder = checkPermission('inbox', 'create_order')
+  const canCreateOrder = checkPermission('inbox', 'create_order') || currentUser?.role === 'dentist'
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -52,15 +53,27 @@ export default function Index() {
 
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Meu Painel</h2>
             <p className="text-muted-foreground">Bem-vindo(a), {currentUser?.name}!</p>
           </div>
           {canCreateOrder && (
-            <Button asChild className="hidden sm:flex">
-              <Link to="/new-request">Novo Pedido</Link>
-            </Button>
+            <div className="flex gap-3 w-full sm:w-auto h-10">
+              <Button
+                asChild
+                variant="outline"
+                className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+              >
+                <Link to="/new-request?type=adjustment">
+                  <RefreshCw className="w-4 h-4 hidden sm:block" />
+                  Retorno <span className="hidden sm:inline">para Ajustes</span>
+                </Link>
+              </Button>
+              <Button asChild className="flex-1 sm:flex-none h-full">
+                <Link to="/new-request">Novo Pedido</Link>
+              </Button>
+            </div>
           )}
         </div>
 
@@ -84,7 +97,10 @@ export default function Index() {
                   {myOrders.map((o) => (
                     <div
                       key={o.id}
-                      className="p-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
+                      className={cn(
+                        'p-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group',
+                        o.isAdjustmentReturn ? 'bg-yellow-50/30 dark:bg-yellow-950/10' : '',
+                      )}
                       onClick={() => {
                         setSelectedOrderId(o.id)
                         setObsText(o.observations || '')
@@ -92,9 +108,21 @@ export default function Index() {
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider">
+                          <span
+                            className={cn(
+                              'text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider',
+                              o.isAdjustmentReturn
+                                ? 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'text-primary bg-primary/10',
+                            )}
+                          >
                             {o.friendlyId}
                           </span>
+                          {o.isAdjustmentReturn && (
+                            <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              Ajuste
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {format(new Date(o.createdAt), "dd/MM/yyyy 'às' HH:mm", {
@@ -102,10 +130,24 @@ export default function Index() {
                             })}
                           </span>
                         </div>
-                        <p className="font-semibold text-lg text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">
+                        <p
+                          className={cn(
+                            'font-semibold text-lg transition-colors',
+                            o.isAdjustmentReturn
+                              ? 'text-yellow-950 dark:text-yellow-50'
+                              : 'text-slate-800 dark:text-slate-100 group-hover:text-primary',
+                          )}
+                        >
                           {o.patientName}
                         </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5 flex items-center flex-wrap gap-x-1.5">
+                        <p
+                          className={cn(
+                            'text-sm mt-0.5 flex items-center flex-wrap gap-x-1.5',
+                            o.isAdjustmentReturn
+                              ? 'text-yellow-800 dark:text-yellow-200/80'
+                              : 'text-slate-600 dark:text-slate-400',
+                          )}
+                        >
                           <span className="font-medium text-foreground/80">{o.workType}</span>
                           <span className="text-slate-300">•</span>
                           <span>{o.material}</span>
@@ -139,9 +181,20 @@ export default function Index() {
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               {canCreateOrder && (
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link to="/new-request">Novo Pedido</Link>
-                </Button>
+                <>
+                  <Button
+                    asChild
+                    className="w-full justify-start text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-500 dark:hover:bg-yellow-900/30"
+                    variant="outline"
+                  >
+                    <Link to="/new-request?type=adjustment">
+                      <RefreshCw className="w-4 h-4 mr-2" /> Retorno para Ajustes
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full justify-start" variant="outline">
+                    <Link to="/new-request">Novo Pedido</Link>
+                  </Button>
+                </>
               )}
               {checkPermission('kanban') && (
                 <Button asChild className="w-full justify-start" variant="outline">
@@ -169,7 +222,7 @@ export default function Index() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
             <Inbox className="w-6 h-6" /> Caixa de Entrada
@@ -179,9 +232,21 @@ export default function Index() {
           </p>
         </div>
         {canCreateOrder && (
-          <Button asChild>
-            <Link to="/new-request">Novo Pedido</Link>
-          </Button>
+          <div className="flex gap-3 w-full sm:w-auto h-10">
+            <Button
+              asChild
+              variant="outline"
+              className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+            >
+              <Link to="/new-request?type=adjustment">
+                <RefreshCw className="w-4 h-4 hidden sm:block" />
+                Retorno <span className="hidden sm:inline">para Ajustes</span>
+              </Link>
+            </Button>
+            <Button asChild className="flex-1 sm:flex-none h-full">
+              <Link to="/new-request">Novo Pedido</Link>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -199,7 +264,12 @@ export default function Index() {
           displayOrders.map((order) => (
             <Card
               key={order.id}
-              className="group hover:border-primary/40 transition-all shadow-sm cursor-pointer"
+              className={cn(
+                'group transition-all shadow-sm cursor-pointer',
+                order.isAdjustmentReturn
+                  ? 'bg-yellow-50/50 border-yellow-300 hover:border-yellow-500 dark:bg-yellow-950/20 dark:border-yellow-900/50 dark:hover:border-yellow-700'
+                  : 'hover:border-primary/40',
+              )}
               onClick={() => {
                 setSelectedOrderId(order.id)
                 setObsText(order.observations || '')
@@ -208,17 +278,43 @@ export default function Index() {
               <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider">
+                    <span
+                      className={cn(
+                        'text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider',
+                        order.isAdjustmentReturn
+                          ? 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300'
+                          : 'text-primary bg-primary/10',
+                      )}
+                    >
                       {order.friendlyId}
                     </span>
+                    {order.isAdjustmentReturn && (
+                      <span className="text-[10px] font-bold text-white bg-yellow-500 dark:bg-yellow-600 px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                        Ajuste
+                      </span>
+                    )}
                     <StatusBadge status={order.status} className="scale-[0.8] origin-left" />
                   </div>
-                  <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">
+                  <h3
+                    className={cn(
+                      'font-semibold text-lg',
+                      order.isAdjustmentReturn
+                        ? 'text-yellow-950 dark:text-yellow-50'
+                        : 'text-slate-800 dark:text-slate-100',
+                    )}
+                  >
                     {order.patientName}
                   </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                  <p
+                    className={cn(
+                      'text-sm flex items-center gap-1.5 mt-0.5',
+                      order.isAdjustmentReturn
+                        ? 'text-yellow-800 dark:text-yellow-200/80'
+                        : 'text-slate-600 dark:text-slate-400',
+                    )}
+                  >
                     <span className="font-medium">{order.dentistName}</span>
-                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
                     {order.workType} <span className="opacity-75">({order.material})</span>
                   </p>
                 </div>

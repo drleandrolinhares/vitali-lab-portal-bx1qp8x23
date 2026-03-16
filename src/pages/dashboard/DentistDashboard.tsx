@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock } from 'lucide-react'
+import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
@@ -68,7 +68,7 @@ export function DentistDashboard() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-2">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-6 border-b border-border/50">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <Logo variant="square" size="lg" className="hidden sm:flex" />
           <div>
@@ -79,7 +79,7 @@ export function DentistDashboard() {
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
           {isWhatsappConfigured ? (
             <Button
               asChild
@@ -89,7 +89,7 @@ export function DentistDashboard() {
             >
               <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
                 <WhatsAppIcon className="w-5 h-5" />
-                Contato Laboratório
+                <span className="hidden lg:inline">Contato</span> Laboratório
               </a>
             </Button>
           ) : (
@@ -100,9 +100,20 @@ export function DentistDashboard() {
               className="gap-2 shadow-sm w-full sm:w-auto"
             >
               <WhatsAppIcon className="w-5 h-5 opacity-50" />
-              Contato Indisponível
+              Indisponível
             </Button>
           )}
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30"
+          >
+            <Link to="/new-request?type=adjustment">
+              <RefreshCw className="w-5 h-5" /> RETORNO{' '}
+              <span className="hidden lg:inline">AJUSTES</span>
+            </Link>
+          </Button>
           <Button asChild size="lg" className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto">
             <Link to="/new-request">
               <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
@@ -213,16 +224,45 @@ export function DentistDashboard() {
               {activeOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4"
+                  className={cn(
+                    'flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4',
+                    order.isAdjustmentReturn ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : '',
+                  )}
                 >
                   <div className="grid gap-1.5 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-lg">{order.patientName}</span>
-                      <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                      <span
+                        className={cn(
+                          'font-semibold text-lg',
+                          order.isAdjustmentReturn ? 'text-yellow-950 dark:text-yellow-50' : '',
+                        )}
+                      >
+                        {order.patientName}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-xs font-mono px-2 py-0.5 rounded',
+                          order.isAdjustmentReturn
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+                            : 'bg-muted text-muted-foreground',
+                        )}
+                      >
                         {order.friendlyId}
                       </span>
+                      {order.isAdjustmentReturn && (
+                        <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          Ajuste
+                        </span>
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'text-sm flex items-center gap-2',
+                        order.isAdjustmentReturn
+                          ? 'text-yellow-800 dark:text-yellow-200/80'
+                          : 'text-muted-foreground',
+                      )}
+                    >
                       <span className="font-medium text-foreground/80">{order.workType}</span> •{' '}
                       {order.material} • Criado em{' '}
                       {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
@@ -231,15 +271,39 @@ export function DentistDashboard() {
 
                   <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
                     <div className="text-right flex flex-col justify-center">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                      <span
+                        className={cn(
+                          'text-[10px] uppercase tracking-wider font-semibold',
+                          order.isAdjustmentReturn
+                            ? 'text-yellow-700 dark:text-yellow-500/70'
+                            : 'text-muted-foreground',
+                        )}
+                      >
                         Estimativa
                       </span>
-                      <span className="font-bold text-foreground">
+                      <span
+                        className={cn(
+                          'font-bold',
+                          order.isAdjustmentReturn
+                            ? 'text-yellow-900 dark:text-yellow-400'
+                            : 'text-foreground',
+                        )}
+                      >
                         {formatBRL(order.basePrice || 0)}
                       </span>
                     </div>
                     <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
-                    <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      className={cn(
+                        'rounded-full shrink-0',
+                        order.isAdjustmentReturn
+                          ? 'hover:bg-yellow-200/50 text-yellow-900 hover:text-yellow-950 dark:hover:bg-yellow-900/50 dark:text-yellow-500 dark:hover:text-yellow-400'
+                          : '',
+                      )}
+                    >
                       <Link to={`/order/${order.id}`}>
                         <ArrowRight className="w-5 h-5" />
                       </Link>
