@@ -97,6 +97,28 @@ export default function ScanService() {
   const [dentists, setDentists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const [modal, setModal] = useState({ open: false, mode: 'create', booking: null as any })
+  const [formData, setFormData] = useState({
+    dentist_id: currentUser?.id || '',
+    patient_name: '',
+    booking_date: '',
+    start_time: '',
+    end_time: '',
+    notes: '',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const [configSettings, setConfigSettings] = useState<ScanSetting[]>([])
+  const [savingConfig, setSavingConfig] = useState(false)
+
+  const [blockForm, setBlockForm] = useState({
+    block_date: format(new Date(), 'yyyy-MM-dd'),
+    start_time: '08:00',
+    end_time: '12:00',
+    recurrence: 'unique',
+  })
+  const [savingBlock, setSavingBlock] = useState(false)
+
   const isStaff = [
     'admin',
     'master',
@@ -108,10 +130,6 @@ export default function ScanService() {
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
   const scanServiceEnabled = appSettings['scan_service_enabled'] === 'true'
-
-  if (!isAdmin && !scanServiceEnabled) {
-    return <Navigate to="/app" replace />
-  }
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i))
@@ -150,19 +168,17 @@ export default function ScanService() {
   }
 
   useEffect(() => {
+    if (!isAdmin && !scanServiceEnabled) return
     fetchAgenda()
-  }, [currentDate, isStaff])
+  }, [currentDate, isStaff, isAdmin, scanServiceEnabled])
 
-  const [modal, setModal] = useState({ open: false, mode: 'create', booking: null as any })
-  const [formData, setFormData] = useState({
-    dentist_id: currentUser?.id || '',
-    patient_name: '',
-    booking_date: '',
-    start_time: '',
-    end_time: '',
-    notes: '',
-  })
-  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    if (settings.length > 0) setConfigSettings([...settings])
+  }, [settings])
+
+  if (!isAdmin && !scanServiceEnabled) {
+    return <Navigate to="/app" replace />
+  }
 
   const checkBlockOverlap = (slotStart: string, slotEnd: string, dateStr: string) => {
     return blocks.find((b) => {
@@ -319,21 +335,6 @@ export default function ScanService() {
 
   const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1))
   const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1))
-
-  const [configSettings, setConfigSettings] = useState<ScanSetting[]>([])
-  const [savingConfig, setSavingConfig] = useState(false)
-
-  const [blockForm, setBlockForm] = useState({
-    block_date: format(new Date(), 'yyyy-MM-dd'),
-    start_time: '08:00',
-    end_time: '12:00',
-    recurrence: 'unique',
-  })
-  const [savingBlock, setSavingBlock] = useState(false)
-
-  useEffect(() => {
-    if (settings.length > 0) setConfigSettings([...settings])
-  }, [settings])
 
   const handleSaveConfig = async () => {
     setSavingConfig(true)
