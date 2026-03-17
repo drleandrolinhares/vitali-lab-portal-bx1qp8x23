@@ -53,6 +53,9 @@ export default function NewRequest() {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
+  const [partnerPrices, setPartnerPrices] = useState<Record<string, any>>({})
+  const [hasCustomPrices, setHasCustomPrices] = useState(false)
+
   const [formData, setFormData] = useState({
     dentistId: '',
     patientName: '',
@@ -158,6 +161,32 @@ export default function NewRequest() {
   }, [isAdjustment, patientSearch, isInternalUser, formData.dentistId, currentUser?.id])
 
   useEffect(() => {
+    const fetchPartnerPrices = async () => {
+      const id = isInternalUser ? formData.dentistId : currentUser?.id
+      if (!id) {
+        setPartnerPrices({})
+        setHasCustomPrices(false)
+        return
+      }
+
+      const { data } = await supabase.from('partner_prices').select('*').eq('partner_id', id)
+
+      if (data && data.length > 0) {
+        const pricesMap: Record<string, any> = {}
+        data.forEach((p) => {
+          pricesMap[p.price_list_id] = p
+        })
+        setPartnerPrices(pricesMap)
+        setHasCustomPrices(true)
+      } else {
+        setPartnerPrices({})
+        setHasCustomPrices(false)
+      }
+    }
+    fetchPartnerPrices()
+  }, [isInternalUser, formData.dentistId, currentUser?.id])
+
+  useEffect(() => {
     if (formData.sector) {
       const normalize = (str: string) =>
         str
@@ -166,17 +195,21 @@ export default function NewRequest() {
           .toLowerCase()
       const normalizedFormSector = normalize(formData.sector)
 
+      let filteredList = priceList.filter((p) => {
+        const catMatch = p.category && normalize(p.category) === normalizedFormSector
+        const secMatch = p.sector && normalize(p.sector) === normalizedFormSector
+        return catMatch || secMatch
+      })
+
+      if (hasCustomPrices) {
+        filteredList = filteredList.filter((p) => {
+          const pp = partnerPrices[p.id]
+          return pp && pp.is_enabled
+        })
+      }
+
       const filtered = Array.from(
-        new Set(
-          priceList
-            .filter((p) => {
-              const catMatch = p.category && normalize(p.category) === normalizedFormSector
-              const secMatch = p.sector && normalize(p.sector) === normalizedFormSector
-              return catMatch || secMatch
-            })
-            .map((p) => p.work_type)
-            .filter(Boolean),
-        ),
+        new Set(filteredList.map((p) => p.work_type).filter(Boolean)),
       ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
       setAvailableWorkTypes(filtered)
@@ -187,13 +220,24 @@ export default function NewRequest() {
     } else {
       setAvailableWorkTypes([])
     }
-  }, [formData.sector, priceList])
+  }, [formData.sector, priceList, hasCustomPrices, partnerPrices])
 
   useEffect(() => {
     if (formData.workType && formData.sector && !isAdjustment) {
-      const priceItem =
-        priceList.find((p) => p.work_type === formData.workType && p.sector === formData.sector) ||
-        priceList.find((p) => p.work_type === formData.workType)
+      let possibleItems = priceList.filter(
+        (p) => p.work_type === formData.workType && p.sector === formData.sector,
+      )
+      if (possibleItems.length === 0) {
+        possibleItems = priceList.filter((p) => p.work_type === formData.workType)
+      }
+
+      if (hasCustomPrices) {
+        possibleItems = possibleItems.filter(
+          (p) => partnerPrices[p.id] && partnerPrices[p.id].is_enabled,
+        )
+      }
+
+      const priceItem = possibleItems[0]
 
       if (priceItem && priceItem.material) {
         setFormData((prev) => ({ ...prev, material: priceItem.material }))
@@ -201,7 +245,7 @@ export default function NewRequest() {
         setFormData((prev) => ({ ...prev, material: '' }))
       }
     }
-  }, [formData.workType, formData.sector, priceList, isAdjustment])
+  }, [formData.workType, formData.sector, priceList, isAdjustment, hasCustomPrices, partnerPrices])
 
   const isSobreImplante = formData.estruturaFixacao === 'SOBRE IMPLANTE'
 

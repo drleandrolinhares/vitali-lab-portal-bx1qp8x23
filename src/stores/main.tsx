@@ -650,7 +650,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .maybeSingle()
 
     const discountPercent = dentistProfile?.commercial_agreement || 0
-    const isLaboratory = dentistProfile?.role === 'laboratory'
 
     const priceItem =
       priceList.find(
@@ -659,7 +658,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let unitPrice = 0
 
-    if (isLaboratory && priceItem) {
+    if (priceItem) {
       const { data: customPrice } = await supabase
         .from('partner_prices')
         .select('custom_price, is_enabled')
@@ -672,7 +671,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else if (customPrice && !customPrice.is_enabled) {
         toast({
           title: 'Erro',
-          description: 'Procedimento desabilitado para este laboratório.',
+          description: 'Procedimento desabilitado para este parceiro.',
           variant: 'destructive',
         })
         return false
@@ -683,12 +682,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .replace(',', '.')
         unitPrice = !isNaN(parseFloat(numericString)) ? parseFloat(numericString) : 0
       }
-    } else if (priceItem && priceItem.price != null) {
-      const numericString = String(priceItem.price)
-        .replace(/[^\d,.-]/g, '')
-        .replace(/\./g, '')
-        .replace(',', '.')
-      unitPrice = !isNaN(parseFloat(numericString)) ? parseFloat(numericString) : 0
     }
 
     const teethCount = orderData.teeth?.length || 0
