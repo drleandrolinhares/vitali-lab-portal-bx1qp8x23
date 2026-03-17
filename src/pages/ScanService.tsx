@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import {
   format,
   startOfWeek,
@@ -89,7 +89,7 @@ interface ScanBlock {
 }
 
 export default function ScanService() {
-  const { currentUser } = useAppStore()
+  const { currentUser, appSettings } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [settings, setSettings] = useState<ScanSetting[]>([])
@@ -107,6 +107,11 @@ export default function ScanService() {
   ].includes(currentUser?.role || '')
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
+  const scanServiceEnabled = appSettings['scan_service_enabled'] === 'true'
+
+  if (!isAdmin && !scanServiceEnabled) {
+    return <Navigate to="/app" replace />
+  }
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i))

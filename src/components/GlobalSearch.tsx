@@ -15,7 +15,7 @@ import { useAppStore } from '@/stores/main'
 export function GlobalSearch() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { currentUser } = useAppStore()
+  const { currentUser, appSettings } = useAppStore()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -34,12 +34,14 @@ export function GlobalSearch() {
   }
 
   const isClientRole = currentUser?.role === 'dentist' || currentUser?.role === 'laboratory'
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
+  const showScanService = isAdmin || appSettings['scan_service_enabled'] === 'true'
 
   const items = isClientRole
     ? [
         { title: 'Meu Painel', path: '/app' },
         { title: 'Novo Pedido', path: '/new-request' },
-        { title: 'Scan Service', path: '/scan-service' },
+        ...(showScanService ? [{ title: 'Scan Service', path: '/scan-service' }] : []),
         { title: 'Evolução dos Trabalhos', path: '/kanban' },
         { title: 'Histórico Global', path: '/history' },
         { title: 'Dash Financeiro', path: '/financial' },
@@ -47,7 +49,7 @@ export function GlobalSearch() {
       ]
     : [
         { title: 'Novo Pedido', path: '/new-request' },
-        { title: 'Scan Service', path: '/scan-service' },
+        ...(showScanService ? [{ title: 'Scan Service', path: '/scan-service' }] : []),
         { title: 'Caixa de Entrada', path: '/app' },
         { title: 'Evolução dos Trabalhos', path: '/kanban' },
         { title: 'Histórico Global', path: '/history' },

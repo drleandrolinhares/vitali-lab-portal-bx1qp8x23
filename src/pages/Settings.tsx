@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
 import {
   Phone,
   User,
@@ -25,6 +26,7 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  ScanLine,
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { WorkSchedule } from '@/components/WorkSchedule'
@@ -199,6 +201,7 @@ export default function SettingsPage() {
   const activeTab = searchParams.get('tab') || 'profile'
 
   const [labLink, setLabLink] = useState('')
+  const [scanServiceEnabled, setScanServiceEnabled] = useState(false)
   const [savingSystem, setSavingSystem] = useState(false)
 
   const [name, setName] = useState('')
@@ -217,6 +220,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setLabLink(appSettings?.whatsapp_lab_link || '')
+    setScanServiceEnabled(appSettings?.scan_service_enabled === 'true')
     try {
       if (appSettings?.shade_scales) {
         setScales(
@@ -377,7 +381,7 @@ export default function SettingsPage() {
               value="system"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
-              WHATSAPP
+              SISTEMA & COMUNICAÇÃO
             </TabsTrigger>
           )}
           {isAdmin && (
@@ -513,9 +517,9 @@ export default function SettingsPage() {
             <TabsContent value="system" className="space-y-6">
               <Card className="shadow-subtle">
                 <CardHeader>
-                  <CardTitle className="uppercase">CANAIS DE COMUNICAÇÃO</CardTitle>
+                  <CardTitle className="uppercase">SISTEMA & CANAIS DE COMUNICAÇÃO</CardTitle>
                   <CardDescription className="uppercase text-xs font-semibold">
-                    DEFINA OS LINKS DO WHATSAPP PARA ACESSO RÁPIDO PELO MENU LATERAL.
+                    GERENCIE AS FUNCIONALIDADES GLOBAIS E LINKS DO SISTEMA.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -532,6 +536,30 @@ export default function SettingsPage() {
                     />
                     <p className="text-xs text-muted-foreground uppercase font-semibold">
                       LINK GLOBAL DE CONTATO DIRETO PARA O NÚMERO DO LABORATÓRIO.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-6 border-t mt-6">
+                    <Label className="flex items-center gap-2 font-bold uppercase text-xs">
+                      <ScanLine className="w-4 h-4 text-emerald-500" />
+                      Habilitar Scan Service para não-administradores
+                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={scanServiceEnabled}
+                        onCheckedChange={async (checked) => {
+                          setScanServiceEnabled(checked)
+                          await updateSetting('scan_service_enabled', checked ? 'true' : 'false')
+                          toast({ title: 'Configuração atualizada com sucesso!' })
+                        }}
+                      />
+                      <span className="text-sm font-medium">
+                        {scanServiceEnabled ? 'Ativado' : 'Desativado'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mt-1">
+                      QUANDO DESATIVADO, APENAS ADMINISTRADORES PODERÃO VER E ACESSAR O MÓDULO SCAN
+                      SERVICE.
                     </p>
                   </div>
                 </CardContent>

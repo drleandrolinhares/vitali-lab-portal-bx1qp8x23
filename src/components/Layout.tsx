@@ -226,7 +226,10 @@ function AppSidebar() {
     if (isMaster) return true
     if (id === 'profile' || id === 'my-profile') return true
     if (id === 'lab-profile') return isMaster
-    if (id === 'scan-service') return true
+    if (id === 'scan-service') {
+      if (currentUser.role === 'admin' || currentUser.role === 'master') return true
+      return appSettings['scan_service_enabled'] === 'true'
+    }
 
     if (id === 'new-request') {
       return checkPermission('inbox', 'create_order')
