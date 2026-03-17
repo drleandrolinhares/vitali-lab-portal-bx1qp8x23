@@ -32,7 +32,12 @@ interface AppState {
   loading: boolean
   fetchError: string | null
   selectedLab: string
+  Visualizando_Como_ID: string | null
+  Visualizando_Como_Name: string | null
+  effectiveUserId: string | undefined
+  effectiveRole: UserRole | undefined
   setSelectedLab: (lab: string) => void
+  setVisualizando_Como: (id: string | null, name: string | null) => void
   switchRole: (role: UserRole) => void
   addOrder: (order: any) => Promise<boolean>
   deleteOrder: (dbId: string, reason: string) => Promise<void>
@@ -105,6 +110,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
+  const [Visualizando_Como_ID, setVisualizando_Como_ID] = useState<string | null>(null)
+  const [Visualizando_Como_Name, setVisualizando_Como_Name] = useState<string | null>(null)
+
+  const setVisualizando_Como = useCallback((id: string | null, name: string | null) => {
+    setVisualizando_Como_ID(id)
+    setVisualizando_Como_Name(name)
+  }, [])
+
+  const effectiveUserId =
+    currentUser?.role === 'master' && Visualizando_Como_ID ? Visualizando_Como_ID : currentUser?.id
+  const effectiveRole =
+    currentUser?.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser?.role
+
   const hasFetchedOrders = useRef(false)
 
   const fetchOrdersRef = useRef<() => void>(() => {})
@@ -143,6 +161,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDreCategories([])
       setProfileLoading(false)
       hasFetchedOrders.current = false
+      setVisualizando_Como_ID(null)
+      setVisualizando_Como_Name(null)
       return
     }
     if (currentUser?.id !== session.user.id) setProfileLoading(true)
@@ -200,14 +220,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const checkPermission = useCallback(
     (module: string, action?: string) => {
       if (!currentUser) return false
-      if (currentUser.role === 'master') return true
 
-      let perms = currentUser.permissions
+      const roleToUse =
+        currentUser.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser.role
 
-      if (!perms || Array.isArray(perms) || Object.keys(perms).length === 0) {
+      if (roleToUse === 'master') return true
+
+      let perms: any = currentUser.permissions
+
+      if (
+        roleToUse !== currentUser.role ||
+        !perms ||
+        Array.isArray(perms) ||
+        Object.keys(perms).length === 0
+      ) {
         try {
           const defaults = JSON.parse(appSettings['role_permissions_v2'] || '{}')
-          perms = defaults[currentUser.role] || {}
+          perms = defaults[roleToUse] || {}
         } catch (e) {
           perms = {}
         }
@@ -221,7 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return modPerms.access === true
     },
-    [currentUser, appSettings],
+    [currentUser, appSettings, Visualizando_Como_ID],
   )
 
   const fetchStages = useCallback(async () => {
@@ -490,18 +519,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let baseOrders = orders
 
+    const roleToUse =
+      currentUser?.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser?.role
+
     const canViewAll =
       currentUser &&
-      (currentUser.role === 'admin' ||
-        currentUser.role === 'master' ||
+      (roleToUse === 'admin' ||
+        roleToUse === 'master' ||
         checkPermission('inbox', 'view_all') ||
         checkPermission('kanban', 'view_all') ||
         ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
-          currentUser.role,
+          roleToUse || '',
         ))
 
-    if (!canViewAll && currentUser) {
-      if (currentUser.role !== 'dentist' && currentUser.role !== 'laboratory') {
+    if (currentUser?.role === 'master' && Visualizando_Como_ID) {
+      baseOrders = baseOrders.filter((o) => o.dentistId === Visualizando_Como_ID)
+    } else if (!canViewAll && currentUser) {
+      if (roleToUse !== 'dentist' && roleToUse !== 'laboratory') {
         if (!currentUser.assigned_dentists || currentUser.assigned_dentists.length === 0) {
           return []
         } else {
@@ -559,7 +593,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         basePrice,
       }
     })
-  }, [orders, priceList, currentUser, checkPermission])
+  }, [orders, priceList, currentUser, checkPermission, Visualizando_Como_ID])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
@@ -633,15 +667,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addOrder = async (orderData: any): Promise<boolean> => {
     if (!currentUser) return false
 
-    const targetDentistId =
+    let targetDentistId = currentUser.id
+    if (currentUser.role === 'master' && Visualizando_Como_ID) {
+      targetDentistId = Visualizando_Como_ID
+    } else if (
       (currentUser.role === 'admin' ||
         currentUser.role === 'master' ||
         ['receptionist', 'technical_assistant', 'financial', 'relationship_manager'].includes(
           currentUser.role,
         )) &&
       orderData.dentistId
-        ? orderData.dentistId
-        : currentUser.id
+    ) {
+      targetDentistId = orderData.dentistId
+    }
 
     const { data: dentistProfile } = await supabase
       .from('profiles' as any)
@@ -950,6 +988,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchError,
         selectedLab,
         setSelectedLab,
+        Visualizando_Como_ID,
+        Visualizando_Como_Name,
+        effectiveUserId,
+        effectiveRole,
+        setVisualizando_Como,
         switchRole,
         addOrder,
         deleteOrder,

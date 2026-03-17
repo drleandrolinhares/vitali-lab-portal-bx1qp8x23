@@ -61,6 +61,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useNavigate } from 'react-router-dom'
 
 const ROLES_INFO = [
   {
@@ -136,7 +137,8 @@ const deepEqual = (obj1: any, obj2: any): boolean => {
 }
 
 export function UsersManagement() {
-  const { currentUser, logAudit, appSettings } = useAppStore()
+  const { currentUser, logAudit, appSettings, setVisualizando_Como } = useAppStore()
+  const navigate = useNavigate()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -849,8 +851,22 @@ export function UsersManagement() {
                   key={user.id}
                   className="shadow-none rounded-xl border flex flex-col md:flex-row items-start md:items-center p-4 bg-background gap-4 md:gap-0"
                 >
-                  <div className="w-full md:w-[35%] font-bold uppercase text-sm truncate pr-4 text-foreground">
-                    {user.name}
+                  <div className="w-full md:w-[35%] pr-4 flex items-center justify-between">
+                    <span className="font-bold uppercase text-sm truncate text-foreground">
+                      {user.name}
+                    </span>
+                    {isCurrentUserMaster &&
+                      (user.role === 'dentist' || user.role === 'laboratory') && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                          title="Visualizar Painel"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      )}
                   </div>
                   <div className="w-full md:w-[25%] flex items-center gap-2 md:pr-4">
                     <Input
@@ -998,48 +1014,62 @@ export function UsersManagement() {
                             {user.is_active !== false ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 -mr-2 -mt-2 relative z-10"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (isMaster && actualUserRole !== 'master') {
-                                  toast({
-                                    title: 'Acesso Negado',
-                                    description:
-                                      'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
-                                    variant: 'destructive',
-                                  })
-                                  return
-                                }
-                                openModal(user)
-                              }}
-                            >
-                              <Edit className="w-4 h-4 mr-2" /> Editar Perfil
-                            </DropdownMenuItem>
-                            {isMasterOrAdmin && (
+                        <div className="flex items-center gap-1 z-10">
+                          {isCurrentUserMaster &&
+                            (user.role === 'dentist' || user.role === 'laboratory') && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 relative z-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                title="Visualizar Painel"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 -mr-2 relative z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  confirmAndResetPassword(user)
+                                  if (isMaster && actualUserRole !== 'master') {
+                                    toast({
+                                      title: 'Acesso Negado',
+                                      description:
+                                        'Apenas usuários MASTER podem visualizar ou editar perfis MASTER.',
+                                      variant: 'destructive',
+                                    })
+                                    return
+                                  }
+                                  openModal(user)
                                 }}
-                                className="text-amber-600 focus:text-amber-700"
                               >
-                                <Key className="w-4 h-4 mr-2" /> Redefinir Senha
+                                <Edit className="w-4 h-4 mr-2" /> Editar Perfil
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {isMasterOrAdmin && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    confirmAndResetPassword(user)
+                                  }}
+                                  className="text-amber-600 focus:text-amber-700"
+                                >
+                                  <Key className="w-4 h-4 mr-2" /> Redefinir Senha
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
 
                       <div className="flex flex-col items-center p-4 pt-2">

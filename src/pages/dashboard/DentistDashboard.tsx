@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw } from 'lucide-react'
+import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw, Eye } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
@@ -67,254 +67,276 @@ export function DentistDashboard() {
   ]
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-2">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-6 border-b border-border/50">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <Logo variant="square" size="lg" className="hidden sm:flex" />
-          <div>
-            <Logo variant="square" size="sm" className="sm:hidden mb-4" />
-            <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Aqui está o resumo dos seus casos protéticos.
-            </p>
-          </div>
+    <>
+      <div className="fixed top-0 left-0 right-0 bg-slate-900 text-white z-[100] flex items-center justify-between px-6 py-2.5 shadow-md print:hidden">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4 text-blue-400" />
+          <span className="text-sm font-medium">
+            Você está visualizando como: [Nome do Dentista]
+          </span>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-          {isWhatsappConfigured ? (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 text-xs font-semibold px-4 hover:bg-red-600"
+        >
+          Encerrar Visualização
+        </Button>
+      </div>
+
+      <div className="space-y-8 max-w-5xl mx-auto py-2 pt-14">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-6 border-b border-border/50">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <Logo variant="square" size="lg" className="hidden sm:flex" />
+            <div>
+              <Logo variant="square" size="sm" className="sm:hidden mb-4" />
+              <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
+              <p className="text-muted-foreground mt-1 text-lg">
+                Aqui está o resumo dos seus casos protéticos.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            {isWhatsappConfigured ? (
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="gap-2 shadow-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 w-full sm:w-auto"
+              >
+                <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
+                  <WhatsAppIcon className="w-5 h-5" />
+                  <span className="hidden lg:inline">Contato</span> Laboratório
+                </a>
+              </Button>
+            ) : (
+              <Button
+                disabled
+                variant="outline"
+                size="lg"
+                className="gap-2 shadow-sm w-full sm:w-auto"
+              >
+                <WhatsAppIcon className="w-5 h-5 opacity-50" />
+                Indisponível
+              </Button>
+            )}
             <Button
               asChild
-              variant="outline"
               size="lg"
-              className="gap-2 shadow-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 w-full sm:w-auto"
+              variant="outline"
+              className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30"
             >
-              <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
-                <WhatsAppIcon className="w-5 h-5" />
-                <span className="hidden lg:inline">Contato</span> Laboratório
-              </a>
+              <Link to="/new-request?type=adjustment">
+                <RefreshCw className="w-5 h-5" /> RETORNO{' '}
+                <span className="hidden lg:inline">AJUSTES</span>
+              </Link>
             </Button>
-          ) : (
             <Button
-              disabled
-              variant="outline"
+              asChild
               size="lg"
-              className="gap-2 shadow-sm w-full sm:w-auto"
+              className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto"
             >
-              <WhatsAppIcon className="w-5 h-5 opacity-50" />
-              Indisponível
+              <Link to="/new-request">
+                <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
+              </Link>
             </Button>
-          )}
-          <Button
-            asChild
-            size="lg"
-            variant="outline"
-            className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30"
-          >
-            <Link to="/new-request?type=adjustment">
-              <RefreshCw className="w-5 h-5" /> RETORNO{' '}
-              <span className="hidden lg:inline">AJUSTES</span>
-            </Link>
-          </Button>
-          <Button asChild size="lg" className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto">
-            <Link to="/new-request">
-              <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
-            </Link>
-          </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        {stats.map((s, i) => (
-          <Card key={i} className="shadow-subtle hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {s.label}
-              </CardTitle>
-              <s.icon className={`h-5 w-5 ${s.color}`} />
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-10 w-16" />
-              ) : (
-                <div className="text-4xl font-bold">{s.value}</div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {hasIndividualDash && (
-        <>
-          <div className="mt-8 flex items-center gap-3 mb-6 animate-fade-in">
-            <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
-            <div className="h-px flex-1 bg-border/50 ml-4"></div>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2 animate-fade-in">
-            <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <div className="grid gap-5 md:grid-cols-3">
+          {stats.map((s, i) => (
+            <Card key={i} className="shadow-subtle hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Financeiro Finalizado
+                  {s.label}
                 </CardTitle>
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <s.icon className={`h-5 w-5 ${s.color}`} />
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <Skeleton className="h-9 w-32" />
+                  <Skeleton className="h-10 w-16" />
                 ) : (
-                  <div className="text-3xl font-bold text-emerald-600">
-                    {formatBRL(completedTotal)}
-                  </div>
+                  <div className="text-4xl font-bold">{s.value}</div>
                 )}
-                <p className="text-sm text-muted-foreground mt-1">
-                  Soma de valores de trabalhos concluídos/entregues
-                </p>
               </CardContent>
             </Card>
+          ))}
+        </div>
 
-            <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Valores a Faturar
-                </CardTitle>
-                <Activity className="w-5 h-5 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <Skeleton className="h-9 w-32" />
-                ) : (
-                  <div className="text-3xl font-bold text-amber-600">
-                    {formatBRL(pipelineTotal)}
-                  </div>
-                )}
-                <p className="text-sm text-muted-foreground mt-1">
-                  Soma de valores em produção (pipeline)
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
+        {hasIndividualDash && (
+          <>
+            <div className="mt-8 flex items-center gap-3 mb-6 animate-fade-in">
+              <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
+              <div className="h-px flex-1 bg-border/50 ml-4"></div>
+            </div>
 
-      <Card className={cn('shadow-subtle border-muted/60', !hasIndividualDash ? 'mt-8' : 'mt-8')}>
-        <CardHeader className="bg-muted/10">
-          <CardTitle>Casos Ativos</CardTitle>
-          <CardDescription>
-            Acompanhe o status dos trabalhos em andamento no laboratório.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-5 space-y-4">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : activeOrders.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Activity className="w-8 h-8 opacity-50" />
-              </div>
-              <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
-              <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
-                <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {activeOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className={cn(
-                    'flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4',
-                    order.isAdjustmentReturn ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : '',
+            <div className="grid gap-5 md:grid-cols-2 animate-fade-in">
+              <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    Financeiro Finalizado
+                  </CardTitle>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <Skeleton className="h-9 w-32" />
+                  ) : (
+                    <div className="text-3xl font-bold text-emerald-600">
+                      {formatBRL(completedTotal)}
+                    </div>
                   )}
-                >
-                  <div className="grid gap-1.5 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'font-semibold text-lg',
-                          order.isAdjustmentReturn ? 'text-yellow-950 dark:text-yellow-50' : '',
-                        )}
-                      >
-                        {order.patientName}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-xs font-mono px-2 py-0.5 rounded',
-                          order.isAdjustmentReturn
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
-                            : 'bg-muted text-muted-foreground',
-                        )}
-                      >
-                        {order.friendlyId}
-                      </span>
-                      {order.isAdjustmentReturn && (
-                        <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                          Ajuste
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        'text-sm flex items-center gap-2',
-                        order.isAdjustmentReturn
-                          ? 'text-yellow-800 dark:text-yellow-200/80'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      <span className="font-medium text-foreground/80">{order.workType}</span> •{' '}
-                      {order.material} • Criado em{' '}
-                      {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
-                    </div>
-                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Soma de valores de trabalhos concluídos/entregues
+                  </p>
+                </CardContent>
+              </Card>
 
-                  <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="text-right flex flex-col justify-center">
-                      <span
+              <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    Valores a Faturar
+                  </CardTitle>
+                  <Activity className="w-5 h-5 text-amber-500" />
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <Skeleton className="h-9 w-32" />
+                  ) : (
+                    <div className="text-3xl font-bold text-amber-600">
+                      {formatBRL(pipelineTotal)}
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Soma de valores em produção (pipeline)
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        <Card className={cn('shadow-subtle border-muted/60', !hasIndividualDash ? 'mt-8' : 'mt-8')}>
+          <CardHeader className="bg-muted/10">
+            <CardTitle>Casos Ativos</CardTitle>
+            <CardDescription>
+              Acompanhe o status dos trabalhos em andamento no laboratório.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="p-5 space-y-4">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : activeOrders.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Activity className="w-8 h-8 opacity-50" />
+                </div>
+                <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
+                <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
+                  <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {activeOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className={cn(
+                      'flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4',
+                      order.isAdjustmentReturn ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : '',
+                    )}
+                  >
+                    <div className="grid gap-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'font-semibold text-lg',
+                            order.isAdjustmentReturn ? 'text-yellow-950 dark:text-yellow-50' : '',
+                          )}
+                        >
+                          {order.patientName}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-xs font-mono px-2 py-0.5 rounded',
+                            order.isAdjustmentReturn
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+                              : 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          {order.friendlyId}
+                        </span>
+                        {order.isAdjustmentReturn && (
+                          <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Ajuste
+                          </span>
+                        )}
+                      </div>
+                      <div
                         className={cn(
-                          'text-[10px] uppercase tracking-wider font-semibold',
+                          'text-sm flex items-center gap-2',
                           order.isAdjustmentReturn
-                            ? 'text-yellow-700 dark:text-yellow-500/70'
+                            ? 'text-yellow-800 dark:text-yellow-200/80'
                             : 'text-muted-foreground',
                         )}
                       >
-                        Estimativa
-                      </span>
-                      <span
+                        <span className="font-medium text-foreground/80">{order.workType}</span> •{' '}
+                        {order.material} • Criado em{' '}
+                        {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-right flex flex-col justify-center">
+                        <span
+                          className={cn(
+                            'text-[10px] uppercase tracking-wider font-semibold',
+                            order.isAdjustmentReturn
+                              ? 'text-yellow-700 dark:text-yellow-500/70'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          Estimativa
+                        </span>
+                        <span
+                          className={cn(
+                            'font-bold',
+                            order.isAdjustmentReturn
+                              ? 'text-yellow-900 dark:text-yellow-400'
+                              : 'text-foreground',
+                          )}
+                        >
+                          {formatBRL(order.basePrice || 0)}
+                        </span>
+                      </div>
+                      <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
                         className={cn(
-                          'font-bold',
+                          'rounded-full shrink-0',
                           order.isAdjustmentReturn
-                            ? 'text-yellow-900 dark:text-yellow-400'
-                            : 'text-foreground',
+                            ? 'hover:bg-yellow-200/50 text-yellow-900 hover:text-yellow-950 dark:hover:bg-yellow-900/50 dark:text-yellow-500 dark:hover:text-yellow-400'
+                            : '',
                         )}
                       >
-                        {formatBRL(order.basePrice || 0)}
-                      </span>
+                        <Link to={`/order/${order.id}`}>
+                          <ArrowRight className="w-5 h-5" />
+                        </Link>
+                      </Button>
                     </div>
-                    <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      asChild
-                      className={cn(
-                        'rounded-full shrink-0',
-                        order.isAdjustmentReturn
-                          ? 'hover:bg-yellow-200/50 text-yellow-900 hover:text-yellow-950 dark:hover:bg-yellow-900/50 dark:text-yellow-500 dark:hover:text-yellow-400'
-                          : '',
-                      )}
-                    >
-                      <Link to={`/order/${order.id}`}>
-                        <ArrowRight className="w-5 h-5" />
-                      </Link>
-                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 }

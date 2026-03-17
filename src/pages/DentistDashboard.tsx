@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock } from 'lucide-react'
+import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, Eye } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
@@ -63,164 +63,186 @@ export function DentistDashboard() {
   ]
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-2">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <Logo variant="square" size="lg" className="hidden sm:flex" />
-          <div>
-            <Logo variant="square" size="sm" className="sm:hidden mb-4" />
-            <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Aqui está o resumo dos seus casos protéticos.
-            </p>
-          </div>
+    <>
+      <div className="fixed top-0 left-0 right-0 bg-slate-900 text-white z-[100] flex items-center justify-between px-6 py-2.5 shadow-md print:hidden">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4 text-blue-400" />
+          <span className="text-sm font-medium">
+            Você está visualizando como: [Nome do Dentista]
+          </span>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          {isWhatsappConfigured ? (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 text-xs font-semibold px-4 hover:bg-red-600"
+        >
+          Encerrar Visualização
+        </Button>
+      </div>
+
+      <div className="space-y-8 max-w-5xl mx-auto py-2 pt-14">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-border/50">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <Logo variant="square" size="lg" className="hidden sm:flex" />
+            <div>
+              <Logo variant="square" size="sm" className="sm:hidden mb-4" />
+              <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
+              <p className="text-muted-foreground mt-1 text-lg">
+                Aqui está o resumo dos seus casos protéticos.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {isWhatsappConfigured ? (
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="gap-2 shadow-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 w-full sm:w-auto"
+              >
+                <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
+                  <WhatsAppIcon className="w-5 h-5" />
+                  Contato Laboratório
+                </a>
+              </Button>
+            ) : (
+              <Button
+                disabled
+                variant="outline"
+                size="lg"
+                className="gap-2 shadow-sm w-full sm:w-auto"
+              >
+                <WhatsAppIcon className="w-5 h-5 opacity-50" />
+                Contato Indisponível
+              </Button>
+            )}
             <Button
               asChild
-              variant="outline"
               size="lg"
-              className="gap-2 shadow-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 w-full sm:w-auto"
+              className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto"
             >
-              <a href={validWhatsappLink} target="_blank" rel="noopener noreferrer">
-                <WhatsAppIcon className="w-5 h-5" />
-                Contato Laboratório
-              </a>
+              <Link to="/new-request">
+                <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
+              </Link>
             </Button>
-          ) : (
-            <Button
-              disabled
-              variant="outline"
-              size="lg"
-              className="gap-2 shadow-sm w-full sm:w-auto"
-            >
-              <WhatsAppIcon className="w-5 h-5 opacity-50" />
-              Contato Indisponível
-            </Button>
-          )}
-          <Button asChild size="lg" className="gap-2 shadow-sm whitespace-nowrap w-full sm:w-auto">
-            <Link to="/new-request">
-              <PlusCircle className="w-5 h-5" /> NOVO PEDIDO
-            </Link>
-          </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        {stats.map((s, i) => (
-          <Card key={i} className="shadow-subtle hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="grid gap-5 md:grid-cols-3">
+          {stats.map((s, i) => (
+            <Card key={i} className="shadow-subtle hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  {s.label}
+                </CardTitle>
+                <s.icon className={`h-5 w-5 ${s.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{s.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-8 flex items-center gap-3 mb-6">
+          <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
+          <div className="h-px flex-1 bg-border/50 ml-4"></div>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {s.label}
+                Financeiro Finalizado
               </CardTitle>
-              <s.icon className={`h-5 w-5 ${s.color}`} />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold">{s.value}</div>
+              <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Soma de valores de trabalhos concluídos/entregues
+              </p>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      <div className="mt-8 flex items-center gap-3 mb-6">
-        <h3 className="text-2xl font-bold tracking-tight uppercase">DASH FINANCEIRO</h3>
-        <div className="h-px flex-1 bg-border/50 ml-4"></div>
-      </div>
+          <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Valores a Faturar
+              </CardTitle>
+              <Activity className="w-5 h-5 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Soma de valores em produção (pipeline)
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card className="shadow-subtle border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Financeiro Finalizado
-            </CardTitle>
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+        <Card className="shadow-subtle border-muted/60 mt-8">
+          <CardHeader className="bg-muted/10">
+            <CardTitle>Casos Ativos</CardTitle>
+            <CardDescription>
+              Acompanhe o status dos trabalhos em andamento no laboratório.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">{formatBRL(completedTotal)}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Soma de valores de trabalhos concluídos/entregues
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-subtle border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Valores a Faturar
-            </CardTitle>
-            <Activity className="w-5 h-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-600">{formatBRL(pipelineTotal)}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Soma de valores em produção (pipeline)
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-subtle border-muted/60 mt-8">
-        <CardHeader className="bg-muted/10">
-          <CardTitle>Casos Ativos</CardTitle>
-          <CardDescription>
-            Acompanhe o status dos trabalhos em andamento no laboratório.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {activeOrders.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Activity className="w-8 h-8 opacity-50" />
-              </div>
-              <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
-              <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
-                <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {activeOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4"
-                >
-                  <div className="grid gap-1.5 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-lg">{order.patientName}</span>
-                      <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                        {order.friendlyId}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <span className="font-medium text-foreground/80">{order.workType}</span> •{' '}
-                      {order.material} • Criado em{' '}
-                      {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="text-right flex flex-col justify-center">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        Estimativa
-                      </span>
-                      <span className="font-bold text-foreground">
-                        {formatBRL(order.basePrice || 0)}
-                      </span>
-                    </div>
-                    <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
-                    <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
-                      <Link to={`/order/${order.id}`}>
-                        <ArrowRight className="w-5 h-5" />
-                      </Link>
-                    </Button>
-                  </div>
+          <CardContent className="p-0">
+            {activeOrders.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Activity className="w-8 h-8 opacity-50" />
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                <p className="text-lg font-medium">Nenhum caso ativo no momento.</p>
+                <Button variant="link" asChild className="mt-2 uppercase tracking-wider font-bold">
+                  <Link to="/new-request">INICIAR UM NOVO PEDIDO</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {activeOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors gap-4"
+                  >
+                    <div className="grid gap-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-lg">{order.patientName}</span>
+                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                          {order.friendlyId}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span className="font-medium text-foreground/80">{order.workType}</span> •{' '}
+                        {order.material} • Criado em{' '}
+                        {format(new Date(order.createdAt), 'dd MMM, HH:mm', { locale: ptBR })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-right flex flex-col justify-center">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                          Estimativa
+                        </span>
+                        <span className="font-bold text-foreground">
+                          {formatBRL(order.basePrice || 0)}
+                        </span>
+                      </div>
+                      <StatusBadge status={order.status} className="px-3 py-1 shrink-0" />
+                      <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
+                        <Link to={`/order/${order.id}`}>
+                          <ArrowRight className="w-5 h-5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 }
