@@ -141,8 +141,8 @@ export default function ScanService() {
 
     const [bookRes, setRes, dentRes, blockRes] = await Promise.all([
       supabase
-        .from('scan_service_bookings' as any)
-        .select('*, profiles(name)')
+        .from('vw_secure_scan_bookings' as any)
+        .select('*')
         .gte('booking_date', start)
         .lte('booking_date', end),
       supabase
@@ -160,7 +160,14 @@ export default function ScanService() {
       supabase.from('scan_service_blocks' as any).select('*'),
     ])
 
-    if (bookRes.data) setBookings(bookRes.data as Booking[])
+    if (bookRes.data) {
+      setBookings(
+        bookRes.data.map((b: any) => ({
+          ...b,
+          profiles: { name: b.dentist_name },
+        })) as Booking[],
+      )
+    }
     if (setRes.data) setSettings(setRes.data as ScanSetting[])
     if (dentRes.data) setDentists(dentRes.data)
     if (blockRes.data) setBlocks(blockRes.data as ScanBlock[])
@@ -272,7 +279,7 @@ export default function ScanService() {
     if (checkBlockOverlap(formData.start_time, formData.end_time, formData.booking_date)) {
       return toast({
         title: 'Horário Indisponível',
-        description: 'SCAN SERVICE INDISPONÍVEL NESTE HORÁRIO.',
+        description: 'O serviço está bloqueado administrativamente neste horário.',
         variant: 'destructive',
       })
     }
@@ -531,7 +538,7 @@ export default function ScanService() {
                                 return (
                                   <div
                                     key={sIdx}
-                                    title="SCAN SERVICE INDISPONÍVEL NESTE HORÁRIO"
+                                    title="Bloqueio Administrativo"
                                     className="text-[10px] p-2 rounded-md shadow-sm bg-slate-800 text-white flex items-center justify-center text-center font-bold uppercase leading-tight cursor-not-allowed opacity-90 print:hidden"
                                   >
                                     Indisponível
@@ -543,12 +550,8 @@ export default function ScanService() {
 
                               const overlappingBooking = dayBookings.find(
                                 (b) =>
-                                  (b.start_time.substring(0, 5) <= slot.start &&
-                                    b.end_time.substring(0, 5) > slot.start) ||
-                                  (b.start_time.substring(0, 5) < slot.end &&
-                                    b.end_time.substring(0, 5) >= slot.end) ||
-                                  (b.start_time.substring(0, 5) >= slot.start &&
-                                    b.end_time.substring(0, 5) <= slot.end),
+                                  b.start_time.substring(0, 5) < slot.end &&
+                                  b.end_time.substring(0, 5) > slot.start,
                               )
 
                               if (overlappingBooking) {
@@ -558,7 +561,9 @@ export default function ScanService() {
                                 return (
                                   <div
                                     key={sIdx}
-                                    onClick={() => handleOpenModal(null, overlappingBooking)}
+                                    onClick={() => {
+                                      if (canViewDetails) handleOpenModal(null, overlappingBooking)
+                                    }}
                                     className={cn(
                                       'text-xs p-2 rounded-md border shadow-sm select-none transition-colors relative group print:shadow-none print:border-black',
                                       canViewDetails
@@ -569,7 +574,7 @@ export default function ScanService() {
                                     <div
                                       className={cn(
                                         'absolute left-0 top-0 bottom-0 w-1 rounded-l-md',
-                                        canViewDetails ? 'bg-primary' : 'bg-slate-300',
+                                        canViewDetails ? 'bg-primary' : 'bg-slate-400',
                                       )}
                                     />
                                     <div className="pl-1">
@@ -580,7 +585,7 @@ export default function ScanService() {
                                       <p className="font-semibold text-slate-800 truncate">
                                         {canViewDetails
                                           ? overlappingBooking.patient_name
-                                          : 'INDISPONÍVEL'}
+                                          : 'OCUPADO'}
                                       </p>
                                       {canViewDetails && isStaff && (
                                         <p className="truncate text-slate-500 text-[10px] mt-0.5 font-medium uppercase">
