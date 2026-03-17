@@ -155,6 +155,8 @@ export function UsersManagement() {
     'pessoais',
   )
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
   const partnerPricesRef = useRef<PartnerPricesPanelRef>(null)
 
   const actualUserRole = currentUser?.role
@@ -298,6 +300,7 @@ export function UsersManagement() {
   const openModal = (user?: any) => {
     setActiveTab('pessoais')
     setShowPassword(false)
+    setFormErrors({})
     if (user) {
       setEditingUser(user)
       setFormData({
@@ -379,10 +382,19 @@ export function UsersManagement() {
   const handleSave = async () => {
     if (!isMasterOrAdmin) return
 
-    if (!formData.name) return toast({ title: 'O Nome é obrigatório', variant: 'destructive' })
+    setFormErrors({})
+
+    if (!formData.name) {
+      setFormErrors((prev) => ({ ...prev, name: 'O Nome é obrigatório' }))
+      return toast({ title: 'O Nome é obrigatório', variant: 'destructive' })
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!formData.email || !emailRegex.test(formData.email)) {
+      setFormErrors((prev) => ({
+        ...prev,
+        email: 'Por favor, insira um endereço de e-mail válido.',
+      }))
       return toast({
         title: 'Email inválido',
         description: 'Por favor, insira um endereço de e-mail válido.',
@@ -390,12 +402,14 @@ export function UsersManagement() {
       })
     }
 
-    if (!editingUser && (!formData.password || formData.password.length < 6))
+    if (!editingUser && (!formData.password || formData.password.length < 6)) {
+      setFormErrors((prev) => ({ ...prev, password: 'A senha deve ter no mínimo 6 caracteres' }))
       return toast({
         title: 'Senha inválida',
         description: 'A senha deve ter no mínimo 6 caracteres',
         variant: 'destructive',
       })
+    }
 
     setSaving(true)
 
@@ -592,13 +606,75 @@ export function UsersManagement() {
 
       setModalOpen(false)
     } catch (err: any) {
-      const errorMsg =
-        typeof err === 'string'
-          ? err
-          : err?.message || 'Ocorreu um erro ao processar sua requisição.'
+      let errorMsg = 'Ocorreu um erro ao processar sua requisição.'
+      if (err) {
+        if (typeof err === 'string') {
+          errorMsg = err
+        } else if (typeof err.message === 'string') {
+          errorMsg = err.message
+        } else if (err.message && typeof err.message === 'object') {
+          try {
+            errorMsg = JSON.stringify(err.message)
+          } catch {
+            // ignore
+          }
+        } else {
+          try {
+            errorMsg = JSON.stringify(err)
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      const lowerMsg = errorMsg.toLowerCase()
+      let fieldError = false
+
+      if (
+        lowerMsg.includes('e-mail') ||
+        lowerMsg.includes('email') ||
+        lowerMsg.includes('already registered')
+      ) {
+        setFormErrors((prev) => ({
+          ...prev,
+          email: 'Este e-mail já está em uso por outro perfil.',
+        }))
+        errorMsg = 'Este e-mail já está em uso por outro perfil.'
+        fieldError = true
+      } else if (
+        lowerMsg.includes('telefone') ||
+        lowerMsg.includes('phone') ||
+        lowerMsg.includes('vinculado')
+      ) {
+        setFormErrors((prev) => ({
+          ...prev,
+          personal_phone: 'Este número de telefone já está vinculado a outra conta.',
+        }))
+        errorMsg = 'Este número de telefone já está vinculado a outra conta.'
+        fieldError = true
+      } else if (lowerMsg.includes('cpf')) {
+        setFormErrors((prev) => ({ ...prev, cpf: 'O CPF informado já está cadastrado.' }))
+        errorMsg = 'O CPF informado já está cadastrado em outro perfil.'
+        fieldError = true
+      } else if (lowerMsg.includes('rg')) {
+        setFormErrors((prev) => ({ ...prev, rg: 'O RG informado já está cadastrado.' }))
+        errorMsg = 'O RG informado já está cadastrado em outro perfil.'
+        fieldError = true
+      } else if (lowerMsg.includes('senha') || lowerMsg.includes('password')) {
+        setFormErrors((prev) => ({
+          ...prev,
+          password: 'A senha informada é inválida ou muito fraca.',
+        }))
+        errorMsg = 'A senha informada é inválida ou muito fraca. Deve conter ao menos 6 caracteres.'
+        fieldError = true
+      }
+
+      if (fieldError) {
+        setActiveTab('pessoais')
+      }
 
       toast({
-        title: 'Atenção',
+        title: 'Erro ao salvar',
         description: errorMsg,
         variant: 'destructive',
       })
@@ -1217,13 +1293,32 @@ export function UsersManagement() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Nome Completo *</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.name && 'text-destructive',
+                          )}
+                        >
+                          Nome Completo *
+                        </Label>
                         <Input
                           value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="h-9"
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value })
+                            if (formErrors.name)
+                              setFormErrors((prev) => ({ ...prev, name: undefined }))
+                          }}
+                          className={cn(
+                            'h-9',
+                            formErrors.name && 'border-destructive focus-visible:ring-destructive',
+                          )}
                           disabled={!isMasterOrAdmin || saving}
                         />
+                        {formErrors.name && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.name}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Usuário *</Label>
@@ -1235,15 +1330,33 @@ export function UsersManagement() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Telefone *</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.personal_phone && 'text-destructive',
+                          )}
+                        >
+                          Telefone *
+                        </Label>
                         <Input
                           value={formData.personal_phone}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setFormData({ ...formData, personal_phone: e.target.value })
-                          }
-                          className="h-9"
+                            if (formErrors.personal_phone)
+                              setFormErrors((prev) => ({ ...prev, personal_phone: undefined }))
+                          }}
+                          className={cn(
+                            'h-9',
+                            formErrors.personal_phone &&
+                              'border-destructive focus-visible:ring-destructive',
+                          )}
                           disabled={!isMasterOrAdmin || saving}
                         />
+                        {formErrors.personal_phone && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.personal_phone}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Clínica / Empresa</Label>
@@ -1379,26 +1492,60 @@ export function UsersManagement() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-xl bg-background">
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">E-mail de Login *</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.email && 'text-destructive',
+                          )}
+                        >
+                          E-mail de Login *
+                        </Label>
                         <Input
                           type="email"
                           value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="h-9"
+                          onChange={(e) => {
+                            setFormData({ ...formData, email: e.target.value })
+                            if (formErrors.email)
+                              setFormErrors((prev) => ({ ...prev, email: undefined }))
+                          }}
+                          className={cn(
+                            'h-9',
+                            formErrors.email && 'border-destructive focus-visible:ring-destructive',
+                          )}
                           disabled={!isMasterOrAdmin || saving}
                         />
+                        {formErrors.email && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.email}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Nova Senha</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.password && 'text-destructive',
+                          )}
+                        >
+                          Nova Senha
+                        </Label>
                         <div className="relative">
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            onChange={(e) => {
+                              setFormData({ ...formData, password: e.target.value })
+                              if (formErrors.password)
+                                setFormErrors((prev) => ({ ...prev, password: undefined }))
+                            }}
                             placeholder={
                               editingUser ? 'Preencha apenas para alterar' : 'Senha inicial'
                             }
-                            className="h-9 pr-10 normal-case"
+                            className={cn(
+                              'h-9 pr-10 normal-case',
+                              formErrors.password &&
+                                'border-destructive focus-visible:ring-destructive',
+                            )}
                             disabled={!isMasterOrAdmin || saving}
                           />
                           <Button
@@ -1416,6 +1563,11 @@ export function UsersManagement() {
                             )}
                           </Button>
                         </div>
+                        {formErrors.password && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.password}
+                          </p>
+                        )}
                         {editingUser && (
                           <Button
                             type="button"
@@ -1447,22 +1599,59 @@ export function UsersManagement() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">RG</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.rg && 'text-destructive',
+                          )}
+                        >
+                          RG
+                        </Label>
                         <Input
                           value={formData.rg}
-                          onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
-                          className="h-9"
+                          onChange={(e) => {
+                            setFormData({ ...formData, rg: e.target.value })
+                            if (formErrors.rg) setFormErrors((prev) => ({ ...prev, rg: undefined }))
+                          }}
+                          className={cn(
+                            'h-9',
+                            formErrors.rg && 'border-destructive focus-visible:ring-destructive',
+                          )}
                           disabled={!isMasterOrAdmin || saving}
                         />
+                        {formErrors.rg && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.rg}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">CPF</Label>
+                        <Label
+                          className={cn(
+                            'text-xs text-muted-foreground',
+                            formErrors.cpf && 'text-destructive',
+                          )}
+                        >
+                          CPF
+                        </Label>
                         <Input
                           value={formData.cpf}
-                          onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                          className="h-9"
+                          onChange={(e) => {
+                            setFormData({ ...formData, cpf: e.target.value })
+                            if (formErrors.cpf)
+                              setFormErrors((prev) => ({ ...prev, cpf: undefined }))
+                          }}
+                          className={cn(
+                            'h-9',
+                            formErrors.cpf && 'border-destructive focus-visible:ring-destructive',
+                          )}
                           disabled={!isMasterOrAdmin || saving}
                         />
+                        {formErrors.cpf && (
+                          <p className="text-[10px] text-destructive font-medium mt-1">
+                            {formErrors.cpf}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </section>

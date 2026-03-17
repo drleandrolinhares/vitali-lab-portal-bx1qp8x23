@@ -1,0 +1,1 @@
+import{P as e}from"./index-Ds9cF27A.js";function t(t,n){return e(t,n?.in).getMonth()}function n(t,n){return e(t,n?.in).getFullYear()}export{t as n,n as t};
