@@ -37,7 +37,8 @@ import { Check, ChevronsUpDown, UploadCloud, X, File as FileIcon, RefreshCw } fr
 import { cn } from '@/lib/utils'
 
 export default function NewRequest() {
-  const { addOrder, currentUser, priceList, appSettings } = useAppStore()
+  const { addOrder, currentUser, priceList, appSettings, effectiveRole, Visualizando_Como_ID } =
+    useAppStore()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isAdjustment = searchParams.get('type') === 'adjustment'
@@ -77,12 +78,12 @@ export default function NewRequest() {
   const [selectedArches, setSelectedArches] = useState<string[]>([])
 
   const isInternalUser =
-    currentUser?.role === 'admin' ||
-    currentUser?.role === 'master' ||
-    currentUser?.role === 'receptionist' ||
-    currentUser?.role === 'technical_assistant' ||
-    currentUser?.role === 'financial' ||
-    currentUser?.role === 'relationship_manager'
+    effectiveRole === 'admin' ||
+    effectiveRole === 'master' ||
+    effectiveRole === 'receptionist' ||
+    effectiveRole === 'technical_assistant' ||
+    effectiveRole === 'financial' ||
+    effectiveRole === 'relationship_manager'
 
   const availableScales = useMemo(() => {
     if (appSettings['shade_scales']) {
@@ -132,7 +133,9 @@ export default function NewRequest() {
 
   useEffect(() => {
     if (isAdjustment && patientSearch.length >= 3) {
-      const dentistIdToUse = isInternalUser ? formData.dentistId : currentUser?.id
+      const dentistIdToUse = isInternalUser
+        ? formData.dentistId
+        : Visualizando_Como_ID || currentUser?.id
       if (!dentistIdToUse) return
 
       const fetchP = async () => {
@@ -158,11 +161,18 @@ export default function NewRequest() {
     } else {
       setPatientList([])
     }
-  }, [isAdjustment, patientSearch, isInternalUser, formData.dentistId, currentUser?.id])
+  }, [
+    isAdjustment,
+    patientSearch,
+    isInternalUser,
+    formData.dentistId,
+    currentUser?.id,
+    Visualizando_Como_ID,
+  ])
 
   useEffect(() => {
     const fetchPartnerPrices = async () => {
-      const id = isInternalUser ? formData.dentistId : currentUser?.id
+      const id = isInternalUser ? formData.dentistId : Visualizando_Como_ID || currentUser?.id
       if (!id) {
         setPartnerPrices({})
         setHasCustomPrices(false)
@@ -184,7 +194,7 @@ export default function NewRequest() {
       }
     }
     fetchPartnerPrices()
-  }, [isInternalUser, formData.dentistId, currentUser?.id])
+  }, [isInternalUser, formData.dentistId, currentUser?.id, Visualizando_Como_ID])
 
   useEffect(() => {
     if (formData.sector) {

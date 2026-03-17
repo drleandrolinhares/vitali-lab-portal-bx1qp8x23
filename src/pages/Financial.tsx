@@ -41,7 +41,15 @@ import { ptBR } from 'date-fns/locale'
 import { Navigate } from 'react-router-dom'
 
 export default function FinancialPage() {
-  const { orders, kanbanStages, currentUser, priceList, loading } = useAppStore()
+  const {
+    orders,
+    kanbanStages,
+    currentUser,
+    priceList,
+    loading,
+    effectiveRole,
+    Visualizando_Como_ID,
+  } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
 
@@ -102,7 +110,8 @@ export default function FinancialPage() {
     let isMounted = true
 
     const fetchSettlements = async () => {
-      if (!currentUser?.id) return
+      const targetId = Visualizando_Como_ID || currentUser?.id
+      if (!targetId) return
 
       try {
         setFetchError(null)
@@ -112,8 +121,8 @@ export default function FinancialPage() {
           .select('*')
           .order('created_at', { ascending: false })
 
-        if (currentUser.role === 'dentist' || currentUser.role === 'laboratory') {
-          query = query.eq('dentist_id', currentUser.id)
+        if (effectiveRole === 'dentist' || effectiveRole === 'laboratory') {
+          query = query.eq('dentist_id', targetId)
         }
 
         const { data, error } = await query
@@ -141,10 +150,10 @@ export default function FinancialPage() {
     return () => {
       isMounted = false
     }
-  }, [currentUser?.id, currentUser?.role])
+  }, [currentUser?.id, effectiveRole, Visualizando_Como_ID])
 
-  if (currentUser && currentUser.role !== 'dentist') {
-    if (['admin', 'master', 'receptionist'].includes(currentUser.role)) {
+  if (effectiveRole !== 'dentist' && effectiveRole !== 'laboratory') {
+    if (['admin', 'master', 'receptionist'].includes(currentUser?.role || '')) {
       return <Navigate to="/admin-financial" replace />
     }
     return <Navigate to="/app" replace />

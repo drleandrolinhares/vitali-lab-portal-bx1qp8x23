@@ -49,6 +49,7 @@ export default function KanbanPage() {
   const {
     orders,
     currentUser,
+    effectiveRole,
     updateOrderKanbanStage,
     updateOrderObservations,
     kanbanStages,
@@ -64,8 +65,8 @@ export default function KanbanPage() {
   } = useAppStore()
 
   const navigate = useNavigate()
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
-  const isDentist = currentUser?.role === 'dentist'
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'master'
+  const isDentist = effectiveRole === 'dentist' || effectiveRole === 'laboratory'
 
   const activeLab = SECTORS.includes((selectedLab || '').toUpperCase())
     ? (selectedLab || '').toUpperCase()
@@ -80,7 +81,7 @@ export default function KanbanPage() {
       'technical_assistant',
       'financial',
       'relationship_manager',
-    ].includes(currentUser?.role || '') ||
+    ].includes(effectiveRole || '') ||
       checkPermission('kanban', 'move_cards'))
 
   const canFilterDentist = checkPermission('kanban', 'filter_dentist')
@@ -170,11 +171,11 @@ export default function KanbanPage() {
   }, [selectedOrder])
 
   const visibleOrders = useMemo(() => {
-    if (currentUser?.role === 'dentist') return orders
+    if (isDentist) return orders
     if (canFilterDentist && selectedDentistId !== 'all')
       return orders.filter((o) => o.dentistId === selectedDentistId)
     return orders
-  }, [orders, currentUser?.role, selectedDentistId, canFilterDentist])
+  }, [orders, isDentist, selectedDentistId, canFilterDentist])
 
   const hasOrders = useMemo(
     () => (deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false),
@@ -661,10 +662,10 @@ export default function KanbanPage() {
                                   o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
                                 )}
                               >
-                                {currentUser?.role !== 'dentist' && o.dentistName}
+                                {!isDentist && o.dentistName}
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
-                                {currentUser?.role !== 'dentist' &&
+                                {!isDentist &&
                                   !stage.name.toUpperCase().includes('FINALIZADO') &&
                                   !stage.name.toUpperCase().includes('ENTREGUE') && (
                                     <Button
@@ -776,7 +777,7 @@ export default function KanbanPage() {
                               </p>
                             </div>
                             <div className="text-xs space-y-1 opacity-90">
-                              {currentUser?.role !== 'dentist' && (
+                              {!isDentist && (
                                 <p>
                                   <span className="font-semibold opacity-100">Dr(a):</span>{' '}
                                   {o.dentistName}

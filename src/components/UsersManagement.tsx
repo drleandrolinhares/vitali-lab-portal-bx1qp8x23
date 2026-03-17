@@ -855,14 +855,18 @@ export function UsersManagement() {
                     <span className="font-bold uppercase text-sm truncate text-foreground">
                       {user.name}
                     </span>
-                    {isCurrentUserMaster &&
+                    {(isCurrentUserMaster || actualUserRole === 'admin') &&
                       (user.role === 'dentist' || user.role === 'laboratory') && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                           title="Visualizar Painel"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setVisualizando_Como(user.id, user.name)
+                            navigate('/app')
+                          }}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -1015,14 +1019,18 @@ export function UsersManagement() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1 z-10">
-                          {isCurrentUserMaster &&
+                          {(isCurrentUserMaster || actualUserRole === 'admin') &&
                             (user.role === 'dentist' || user.role === 'laboratory') && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 relative z-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                                 title="Visualizar Painel"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setVisualizando_Como(user.id, user.name)
+                                  navigate('/app')
+                                }}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>

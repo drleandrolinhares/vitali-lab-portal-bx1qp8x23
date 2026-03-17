@@ -35,6 +35,7 @@ import {
   Building,
   ChevronRight,
   ScanLine,
+  Eye,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -210,7 +211,7 @@ function useAdminBadges(currentUser: any) {
 }
 
 function AppSidebar() {
-  const { currentUser, appSettings, orders, checkPermission } = useAppStore()
+  const { currentUser, appSettings, orders, checkPermission, effectiveRole } = useAppStore()
   const { signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -220,7 +221,7 @@ function AppSidebar() {
   if (!currentUser) return null
 
   const isMaster = currentUser.role === 'master'
-  const isClientRole = currentUser.role === 'dentist' || currentUser.role === 'laboratory'
+  const isClientRole = effectiveRole === 'dentist' || effectiveRole === 'laboratory'
 
   const hasPerm = (id: string) => {
     if (isMaster) return true
@@ -561,12 +562,13 @@ function AppSidebar() {
 }
 
 function MainHeader() {
-  const { currentUser, selectedLab, setSelectedLab, appSettings, orders } = useAppStore()
+  const { currentUser, selectedLab, setSelectedLab, appSettings, orders, effectiveRole } =
+    useAppStore()
   const location = useLocation()
 
   if (!currentUser) return null
 
-  const isClientRole = currentUser.role === 'dentist' || currentUser.role === 'laboratory'
+  const isClientRole = effectiveRole === 'dentist' || effectiveRole === 'laboratory'
 
   const isFinancialRoute = [
     '/dashboard',
@@ -606,7 +608,7 @@ function MainHeader() {
   const hasLabLink = Boolean(labLink && labLink.trim() !== '')
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-white/95 dark:bg-background/95 px-4 backdrop-blur sm:px-6 print:hidden shrink-0">
       <SidebarTrigger />
       <div className="flex flex-1 items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
@@ -695,7 +697,17 @@ function MainHeader() {
 }
 
 export default function Layout() {
-  const { fetchError } = useAppStore()
+  const {
+    fetchError,
+    currentUser,
+    Visualizando_Como_ID,
+    Visualizando_Como_Name,
+    setVisualizando_Como,
+  } = useAppStore()
+  const navigate = useNavigate()
+
+  const isImpersonating =
+    (currentUser?.role === 'master' || currentUser?.role === 'admin') && !!Visualizando_Como_ID
 
   return (
     <SidebarProvider>
@@ -703,6 +715,27 @@ export default function Layout() {
         <AppSidebar />
       </div>
       <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen">
+        {isImpersonating && (
+          <div className="bg-slate-900 text-white z-[100] flex items-center justify-between px-4 sm:px-6 py-2.5 shadow-md print:hidden shrink-0">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-blue-400" />
+              <span className="text-sm font-medium">
+                Visualizando como: <strong className="ml-1">{Visualizando_Como_Name}</strong>
+              </span>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs font-semibold px-4 hover:bg-red-600 transition-colors"
+              onClick={() => {
+                setVisualizando_Como(null, null)
+                navigate('/users')
+              }}
+            >
+              Encerrar Visualização
+            </Button>
+          </div>
+        )}
         <MainHeader />
         <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible relative z-0">
           {fetchError && (

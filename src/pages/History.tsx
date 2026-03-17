@@ -43,7 +43,7 @@ import {
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts'
 
 export default function HistoryPage() {
-  const { orders, currentUser, checkPermission } = useAppStore()
+  const { orders, currentUser, checkPermission, effectiveRole } = useAppStore()
   const [search, setSearch] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const [dentistFilter, setDentistFilter] = useState<string>('all')
@@ -63,7 +63,7 @@ export default function HistoryPage() {
     'technical_assistant',
     'financial',
     'relationship_manager',
-  ].includes(currentUser?.role || '')
+  ].includes(effectiveRole || '')
 
   const canSelectDentist = checkPermission('history', 'select_dentist') || isCollaboratorOrAdmin
   const canShowCompleted = checkPermission('history', 'show_completed') || isCollaboratorOrAdmin
@@ -171,14 +171,14 @@ export default function HistoryPage() {
     )
   }
 
-  const showDentistCol = currentUser?.role !== 'dentist'
+  const showDentistCol = effectiveRole !== 'dentist' && effectiveRole !== 'laboratory'
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-primary uppercase">
-            {isCollaboratorOrAdmin ? 'Histórico Global' : 'Histórico de Pedidos'}
+            {isCollaboratorOrAdmin ? 'Histórico Global' : 'Meu Histórico'}
           </h2>
           <p className="text-muted-foreground">
             Consulte todos os casos e a evolução dos trabalhos.

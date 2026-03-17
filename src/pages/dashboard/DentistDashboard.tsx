@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
-import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw, Eye } from 'lucide-react'
+import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
@@ -19,12 +19,24 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 export function DentistDashboard() {
-  const { orders, currentUser, appSettings, loading, checkPermission } = useAppStore()
+  const {
+    orders,
+    currentUser,
+    appSettings,
+    loading,
+    checkPermission,
+    Visualizando_Como_ID,
+    Visualizando_Como_Name,
+  } = useAppStore()
   const activeOrders = orders.filter(
     (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
   )
 
   const hasIndividualDash = checkPermission('individual_financial_dash')
+
+  const isImpersonating =
+    (currentUser?.role === 'admin' || currentUser?.role === 'master') && !!Visualizando_Como_ID
+  const displayName = isImpersonating ? Visualizando_Como_Name : currentUser?.name
 
   const financialData = useMemo(() => orders.map((o) => getOrderFinancials(o)), [orders])
   const pipelineTotal = financialData.reduce((acc, o) => acc + o.pipelineCost, 0)
@@ -68,29 +80,13 @@ export function DentistDashboard() {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 bg-slate-900 text-white z-[100] flex items-center justify-between px-6 py-2.5 shadow-md print:hidden">
-        <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium">
-            Você está visualizando como: [Nome do Dentista]
-          </span>
-        </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="h-7 text-xs font-semibold px-4 hover:bg-red-600"
-        >
-          Encerrar Visualização
-        </Button>
-      </div>
-
-      <div className="space-y-8 max-w-5xl mx-auto py-2 pt-14">
+      <div className="space-y-8 max-w-5xl mx-auto py-2">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-6 border-b border-border/50">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <Logo variant="square" size="lg" className="hidden sm:flex" />
             <div>
               <Logo variant="square" size="sm" className="sm:hidden mb-4" />
-              <h2 className="text-3xl font-bold tracking-tight">Olá, {currentUser.name}</h2>
+              <h2 className="text-3xl font-bold tracking-tight">Olá, {displayName}</h2>
               <p className="text-muted-foreground mt-1 text-lg">
                 Aqui está o resumo dos seus casos protéticos.
               </p>

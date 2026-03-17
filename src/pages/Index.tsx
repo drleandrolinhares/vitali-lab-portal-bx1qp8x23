@@ -12,11 +12,18 @@ import { DentistDashboard } from '@/pages/dashboard/DentistDashboard'
 import { cn } from '@/lib/utils'
 
 export default function Index() {
-  const { currentUser, orders, acknowledgeOrder, updateOrderObservations, checkPermission } =
-    useAppStore()
+  const {
+    currentUser,
+    orders,
+    acknowledgeOrder,
+    updateOrderObservations,
+    checkPermission,
+    effectiveRole,
+    effectiveUserId,
+  } = useAppStore()
 
   const showGlobalInbox = checkPermission('inbox', 'view_all')
-  const canCreateOrder = checkPermission('inbox', 'create_order') || currentUser?.role === 'dentist'
+  const canCreateOrder = checkPermission('inbox', 'create_order') || effectiveRole === 'dentist'
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -29,8 +36,8 @@ export default function Index() {
   }
 
   if (!showGlobalInbox) {
-    if (currentUser?.role === 'dentist' || currentUser?.role === 'laboratory') {
-      if (!checkPermission('my_panel')) {
+    if (effectiveRole === 'dentist' || effectiveRole === 'laboratory') {
+      if (currentUser?.role === effectiveRole && !checkPermission('my_panel')) {
         return (
           <div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)] animate-fade-in px-4 text-center">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -49,7 +56,7 @@ export default function Index() {
       return <DentistDashboard />
     }
 
-    const myOrders = orders.filter((o) => o.dentistId === currentUser?.id)
+    const myOrders = orders.filter((o) => o.dentistId === effectiveUserId)
 
     return (
       <div className="space-y-6 max-w-5xl mx-auto">

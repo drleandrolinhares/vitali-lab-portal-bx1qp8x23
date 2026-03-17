@@ -110,18 +110,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
-  const [Visualizando_Como_ID, setVisualizando_Como_ID] = useState<string | null>(null)
-  const [Visualizando_Como_Name, setVisualizando_Como_Name] = useState<string | null>(null)
+  const [Visualizando_Como_ID, setVisualizando_Como_ID] = useState<string | null>(() =>
+    sessionStorage.getItem('vitali_visualizando_como_id'),
+  )
+  const [Visualizando_Como_Name, setVisualizando_Como_Name] = useState<string | null>(() =>
+    sessionStorage.getItem('vitali_visualizando_como_name'),
+  )
 
   const setVisualizando_Como = useCallback((id: string | null, name: string | null) => {
+    if (id && name) {
+      sessionStorage.setItem('vitali_visualizando_como_id', id)
+      sessionStorage.setItem('vitali_visualizando_como_name', name)
+    } else {
+      sessionStorage.removeItem('vitali_visualizando_como_id')
+      sessionStorage.removeItem('vitali_visualizando_como_name')
+    }
     setVisualizando_Como_ID(id)
     setVisualizando_Como_Name(name)
   }, [])
 
   const effectiveUserId =
-    currentUser?.role === 'master' && Visualizando_Como_ID ? Visualizando_Como_ID : currentUser?.id
+    (currentUser?.role === 'master' || currentUser?.role === 'admin') && Visualizando_Como_ID
+      ? Visualizando_Como_ID
+      : currentUser?.id
   const effectiveRole =
-    currentUser?.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser?.role
+    (currentUser?.role === 'master' || currentUser?.role === 'admin') && Visualizando_Como_ID
+      ? 'dentist'
+      : currentUser?.role
 
   const hasFetchedOrders = useRef(false)
 
@@ -146,10 +161,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('vitali_selected_lab', selectedLab)
   }, [selectedLab])
 
-  useEffect(() => {
-    sessionStorage.removeItem('vitali_simulated_user')
-  }, [])
-
   const fetchProfile = async () => {
     if (!session?.user) {
       setCurrentUser(null)
@@ -161,8 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDreCategories([])
       setProfileLoading(false)
       hasFetchedOrders.current = false
-      setVisualizando_Como_ID(null)
-      setVisualizando_Como_Name(null)
+      setVisualizando_Como(null, null)
       return
     }
     if (currentUser?.id !== session.user.id) setProfileLoading(true)
@@ -222,7 +232,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUser) return false
 
       const roleToUse =
-        currentUser.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser.role
+        (currentUser.role === 'master' || currentUser.role === 'admin') && Visualizando_Como_ID
+          ? 'dentist'
+          : currentUser.role
 
       if (roleToUse === 'master') return true
 
@@ -520,7 +532,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let baseOrders = orders
 
     const roleToUse =
-      currentUser?.role === 'master' && Visualizando_Como_ID ? 'dentist' : currentUser?.role
+      (currentUser?.role === 'master' || currentUser?.role === 'admin') && Visualizando_Como_ID
+        ? 'dentist'
+        : currentUser?.role
 
     const canViewAll =
       currentUser &&
@@ -532,7 +546,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           roleToUse || '',
         ))
 
-    if (currentUser?.role === 'master' && Visualizando_Como_ID) {
+    if ((currentUser?.role === 'master' || currentUser?.role === 'admin') && Visualizando_Como_ID) {
       baseOrders = baseOrders.filter((o) => o.dentistId === Visualizando_Como_ID)
     } else if (!canViewAll && currentUser) {
       if (roleToUse !== 'dentist' && roleToUse !== 'laboratory') {
@@ -668,7 +682,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return false
 
     let targetDentistId = currentUser.id
-    if (currentUser.role === 'master' && Visualizando_Como_ID) {
+    if ((currentUser.role === 'master' || currentUser.role === 'admin') && Visualizando_Como_ID) {
       targetDentistId = Visualizando_Como_ID
     } else if (
       (currentUser.role === 'admin' ||
