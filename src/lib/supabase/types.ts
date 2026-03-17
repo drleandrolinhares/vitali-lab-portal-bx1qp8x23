@@ -906,7 +906,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_secure_scan_bookings: {
+        Row: {
+          booking_date: string | null
+          created_at: string | null
+          dentist_id: string | null
+          dentist_name: string | null
+          end_time: string | null
+          id: string | null
+          notes: string | null
+          patient_name: string | null
+          start_time: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'scan_service_bookings_dentist_id_fkey'
+            columns: ['dentist_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Functions: {
       delete_user: { Args: { target_user_id: string }; Returns: undefined }
@@ -1276,6 +1298,17 @@ export const Constants = {
 //   amount: numeric (not null)
 //   orders_snapshot: jsonb (not null)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: vw_secure_scan_bookings
+//   id: uuid (nullable)
+//   dentist_id: uuid (nullable)
+//   booking_date: date (nullable)
+//   start_time: time without time zone (nullable)
+//   end_time: time without time zone (nullable)
+//   status: text (nullable)
+//   created_at: timestamp with time zone (nullable)
+//   patient_name: text (nullable)
+//   notes: text (nullable)
+//   dentist_name: text (nullable)
 
 // --- CONSTRAINTS ---
 // Table: app_settings

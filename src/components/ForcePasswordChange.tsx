@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
 import { useAppStore } from '@/stores/main'
+import { useAuth } from '@/hooks/use-auth'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function ForcePasswordChange() {
@@ -14,7 +15,20 @@ export default function ForcePasswordChange() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const { updateProfile } = useAppStore()
+  const { signOut } = useAuth()
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      await signOut()
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Logout error:', error)
+      setLoggingOut(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,6 +149,7 @@ export default function ForcePasswordChange() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                   className="pr-10 normal-case"
+                  disabled={loading || loggingOut}
                 />
                 <Button
                   type="button"
@@ -142,6 +157,7 @@ export default function ForcePasswordChange() {
                   size="icon"
                   className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-transparent"
                   onClick={() => setShowNewPassword(!showNewPassword)}
+                  disabled={loading || loggingOut}
                 >
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -156,6 +172,7 @@ export default function ForcePasswordChange() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   className="pr-10 normal-case"
+                  disabled={loading || loggingOut}
                 />
                 <Button
                   type="button"
@@ -163,6 +180,7 @@ export default function ForcePasswordChange() {
                   size="icon"
                   className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading || loggingOut}
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -172,9 +190,20 @@ export default function ForcePasswordChange() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Atualizando...' : 'Atualizar Senha'}
-            </Button>
+            <div className="flex flex-col gap-3 pt-2">
+              <Button type="submit" className="w-full" disabled={loading || loggingOut}>
+                {loading ? 'Atualizando...' : 'Atualizar Senha'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleLogout}
+                disabled={loading || loggingOut}
+              >
+                {loggingOut ? 'Saindo...' : 'Sair da Conta'}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
