@@ -137,7 +137,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
           keysToRemove.forEach((k) => localStorage.removeItem(k))
-        } catch (e) {}
+        } catch (e) {
+          console.error('Failed to clear local storage on sign out', e)
+        }
 
         setSession(null)
         setUser(null)
