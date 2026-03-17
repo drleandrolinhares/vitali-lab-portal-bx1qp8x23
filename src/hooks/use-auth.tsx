@@ -26,18 +26,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const handleSessionError = () => {
+  const isRefreshError = (error: any) => {
+    if (!error) return false
+    const msg = (error.message || '').toLowerCase()
+    return (
+      msg.includes('refresh token') ||
+      msg.includes('session from session_id claim in jwt does not exist') ||
+      msg.includes('session_not_found') ||
+      msg.includes('refresh_token_not_found') ||
+      error.code === 'PGRST301'
+    )
+  }
+
+  const handleSessionError = (silent = false) => {
+    try {
+      const keysToRemove = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k))
+    } catch (e) {
+      console.error('Failed to clear local storage', e)
+    }
+
     supabase.auth.signOut().catch(() => {})
     setSession(null)
     setUser(null)
     localStorage.removeItem('vitali_remember_me')
     sessionStorage.removeItem('vitali_session')
 
-    toast({
-      title: 'Sessão Expirada',
-      description: 'Sua sessão expirou ou é inválida. Por favor, faça login novamente.',
-      variant: 'destructive',
-    })
+    if (!silent && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      toast({
+        title: 'Sessão Expirada',
+        description: 'Sua sessão expirou ou é inválida. Por favor, faça login novamente.',
+        variant: 'destructive',
+      })
+    }
 
     if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
       window.location.href = '/login'
@@ -53,13 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle()
 
       if (error) {
-        if (
-          error.message?.toLowerCase().includes('refresh token') ||
-          error.message?.includes('Session from session_id claim in JWT does not exist') ||
-          error.message?.includes('session_not_found') ||
-          error.message?.includes('refresh_token_not_found') ||
-          error.code === 'PGRST301'
-        ) {
+        if (isRefreshError(error)) {
           handleSessionError()
           return
         }
@@ -85,13 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (e: any) {
       console.error('Failed to reconcile profile:', e)
-      if (
-        e?.message?.toLowerCase().includes('refresh token') ||
-        e?.message?.includes('Session from session_id claim in JWT does not exist') ||
-        e?.message?.includes('session_not_found') ||
-        e?.message?.includes('refresh_token_not_found') ||
-        e?.code === 'PGRST301'
-      ) {
+      if (isRefreshError(e)) {
         handleSessionError()
       }
     }
@@ -113,6 +128,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        try {
+          const keysToRemove = []
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+              keysToRemove.push(key)
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k))
+        } catch (e) {}
+
         setSession(null)
         setUser(null)
         setLoading(false)
@@ -133,14 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .getSession()
       .then(({ data: { session }, error }) => {
         if (error) {
-          if (
-            error.message?.toLowerCase().includes('refresh token') ||
-            error.message?.includes('Session from session_id claim in JWT does not exist') ||
-            error.message?.includes('session_not_found') ||
-            error.message?.includes('refresh_token_not_found') ||
-            error.name === 'AuthApiError'
-          ) {
-            handleSessionError()
+          if (isRefreshError(error)) {
+            handleSessionError(true)
             setLoading(false)
             return
           }
@@ -155,13 +175,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .catch((err) => {
         console.error('getSession error', err)
-        if (
-          err?.message?.toLowerCase().includes('refresh token') ||
-          err?.message?.includes('Session from session_id claim in JWT does not exist') ||
-          err?.message?.includes('session_not_found') ||
-          err?.message?.includes('refresh_token_not_found')
-        ) {
-          handleSessionError()
+        if (isRefreshError(err)) {
+          handleSessionError(true)
         }
         setLoading(false)
       })
