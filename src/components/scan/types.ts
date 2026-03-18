@@ -24,6 +24,7 @@ export interface ScanBlock {
   start_time: string
   end_time: string
   block_date: string | null
+  day_of_week?: number | null
   recurrence: 'unique' | 'daily' | 'weekly' | 'monthly'
 }
 

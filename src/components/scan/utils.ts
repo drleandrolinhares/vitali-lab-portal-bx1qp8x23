@@ -17,13 +17,22 @@ export const checkBlockOverlap = (
     if (b.recurrence === 'daily') return true
     if (b.recurrence === 'unique' && b.block_date === dateStr) return true
 
-    if (b.block_date) {
-      const targetDate = new Date(dateStr + 'T00:00:00')
-      const blockDate = new Date(b.block_date + 'T00:00:00')
+    const targetDate = new Date(dateStr + 'T12:00:00')
 
-      if (b.recurrence === 'weekly' && targetDate.getDay() === blockDate.getDay()) return true
-      if (b.recurrence === 'monthly' && targetDate.getDate() === blockDate.getDate()) return true
+    if (b.recurrence === 'weekly') {
+      if (b.day_of_week !== null && b.day_of_week !== undefined) {
+        if (targetDate.getDay() === b.day_of_week) return true
+      } else if (b.block_date) {
+        const blockDate = new Date(b.block_date + 'T12:00:00')
+        if (targetDate.getDay() === blockDate.getDay()) return true
+      }
     }
+
+    if (b.recurrence === 'monthly' && b.block_date) {
+      const blockDate = new Date(b.block_date + 'T12:00:00')
+      if (targetDate.getDate() === blockDate.getDate()) return true
+    }
+
     return false
   })
 }

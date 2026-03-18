@@ -45,6 +45,7 @@ export default function ScanService() {
   const [blockModal, setBlockModal] = useState({ open: false })
   const [blockForm, setBlockForm] = useState({
     block_date: format(new Date(), 'yyyy-MM-dd'),
+    day_of_week: new Date().getDay().toString(),
     start_time: '08:00',
     end_time: '12:00',
     recurrence: 'unique',
@@ -241,15 +242,21 @@ export default function ScanService() {
   }
 
   const handleAddBlock = async () => {
-    if (!blockForm.block_date && blockForm.recurrence !== 'daily')
-      return toast({ title: 'Selecione a data', variant: 'destructive' })
+    if (blockForm.recurrence === 'unique' || blockForm.recurrence === 'monthly') {
+      if (!blockForm.block_date) return toast({ title: 'Selecione a data', variant: 'destructive' })
+    }
     if (blockForm.start_time >= blockForm.end_time)
       return toast({ title: 'Horários inválidos', variant: 'destructive' })
+
     setSavingBlock(true)
     const { error } = await supabase.from('scan_service_blocks' as any).insert({
       start_time: blockForm.start_time + ':00',
       end_time: blockForm.end_time + ':00',
-      block_date: blockForm.block_date || null,
+      block_date:
+        blockForm.recurrence === 'unique' || blockForm.recurrence === 'monthly'
+          ? blockForm.block_date
+          : null,
+      day_of_week: blockForm.recurrence === 'weekly' ? parseInt(blockForm.day_of_week) : null,
       recurrence: blockForm.recurrence,
     })
     setSavingBlock(false)

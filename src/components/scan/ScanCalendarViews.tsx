@@ -15,6 +15,15 @@ import { cn } from '@/lib/utils'
 import { generateTimeSlots, checkBlockOverlap } from './utils'
 import { Clock, CalendarX2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Props {
   view: ViewType
@@ -60,6 +69,91 @@ export function ScanCalendarViews({
   })
 
   if (activeTab === 'AGENDAMENTOS MARCADOS') {
+    if (isStaff) {
+      const allBookings = [...visibleBookings].sort((a, b) => {
+        if (a.booking_date !== b.booking_date) return a.booking_date.localeCompare(b.booking_date)
+        return a.start_time.localeCompare(b.start_time)
+      })
+
+      const grouped = allBookings.reduce(
+        (acc, b) => {
+          const date = b.booking_date.substring(0, 10)
+          if (!acc[date]) acc[date] = []
+          acc[date].push(b)
+          return acc
+        },
+        {} as Record<string, Booking[]>,
+      )
+
+      const sortedDates = Object.keys(grouped).sort()
+
+      return (
+        <div className="flex flex-col gap-6">
+          {sortedDates.length === 0 ? (
+            <Card className="h-full w-full min-h-[400px] flex flex-col items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl text-slate-400 gap-3">
+              <CalendarX2 className="w-10 h-10 opacity-50" />
+              <p className="text-sm font-black uppercase tracking-widest text-center px-4">
+                NENHUM AGENDAMENTO ENCONTRADO.
+              </p>
+            </Card>
+          ) : (
+            sortedDates.map((date) => (
+              <div
+                key={date}
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+              >
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 font-black text-sm uppercase tracking-wider text-[#1A233A]">
+                  {format(new Date(date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                </div>
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 w-[140px]">
+                        Horário
+                      </TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
+                        Dentista
+                      </TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
+                        Paciente
+                      </TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 text-center w-[120px]">
+                        Status
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grouped[date].map((b) => (
+                      <TableRow
+                        key={b.id}
+                        className="cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => onBookingClick(b)}
+                      >
+                        <TableCell className="font-semibold text-slate-600 whitespace-nowrap">
+                          {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {b.profiles?.name || 'Não informado'}
+                        </TableCell>
+                        <TableCell className="font-black text-[#1A233A]">
+                          {b.patient_name}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700">
+                            CONFIRMADO
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))
+          )}
+        </div>
+      )
+    }
+
     const selectedDateStr = format(currentDate, 'yyyy-MM-dd')
     const dayBookings = visibleBookings
       .filter((b) => b.booking_date.substring(0, 10) === selectedDateStr)
@@ -301,8 +395,8 @@ export function ScanCalendarViews({
                       </div>
                       <div className="flex-1">
                         {overlapBlock ? (
-                          <div className="bg-slate-100 border border-slate-200 text-slate-500 h-10 px-4 rounded-lg flex items-center justify-center font-bold text-xs uppercase tracking-widest cursor-not-allowed">
-                            Bloqueio Administrativo
+                          <div className="bg-[#E11D48] border-[#BE123C] text-white shadow-sm h-10 px-4 rounded-lg flex items-center justify-center font-bold text-xs uppercase tracking-widest cursor-not-allowed">
+                            Indisponível
                           </div>
                         ) : overlapBooking ? (
                           <div

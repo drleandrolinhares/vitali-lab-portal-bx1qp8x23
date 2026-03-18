@@ -197,35 +197,64 @@ export function BlockModal({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 col-span-2 sm:col-span-1">
-              <Label className="uppercase text-[10px] font-bold">Data Base</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal px-3',
-                      !form.block_date && 'text-muted-foreground',
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                    {form.block_date ? (
-                      format(new Date(form.block_date + 'T00:00:00'), 'dd/MM/yyyy')
-                    ) : (
-                      <span>Selecione</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={form.block_date ? new Date(form.block_date + 'T00:00:00') : undefined}
-                    onSelect={(d) => d && setForm({ ...form, block_date: format(d, 'yyyy-MM-dd') })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+
+            {form.recurrence === 'weekly' ? (
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label className="uppercase text-[10px] font-bold">Dia da Semana</Label>
+                <Select
+                  value={form.day_of_week}
+                  onValueChange={(v) => setForm({ ...form, day_of_week: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">DOM</SelectItem>
+                    <SelectItem value="1">SEG</SelectItem>
+                    <SelectItem value="2">TER</SelectItem>
+                    <SelectItem value="3">QUA</SelectItem>
+                    <SelectItem value="4">QUI</SelectItem>
+                    <SelectItem value="5">SEX</SelectItem>
+                    <SelectItem value="6">SÁB</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2 col-span-2 sm:col-span-1">
+                <Label className="uppercase text-[10px] font-bold">Data Base</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal px-3',
+                        !form.block_date && 'text-muted-foreground',
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                      {form.block_date ? (
+                        format(new Date(form.block_date + 'T00:00:00'), 'dd/MM/yyyy')
+                      ) : (
+                        <span>Selecione</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        form.block_date ? new Date(form.block_date + 'T00:00:00') : undefined
+                      }
+                      onSelect={(d) =>
+                        d && setForm({ ...form, block_date: format(d, 'yyyy-MM-dd') })
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-bold">Início</Label>
               <Input
@@ -263,7 +292,13 @@ export function BlockModal({
                   </p>
                   <p className="text-[10px] text-muted-foreground capitalize">
                     {b.recurrence}{' '}
-                    {b.block_date ? format(new Date(b.block_date + 'T00:00:00'), 'dd/MM/yyyy') : ''}
+                    {b.recurrence === 'weekly' &&
+                    b.day_of_week !== null &&
+                    b.day_of_week !== undefined
+                      ? `- ${['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][b.day_of_week]}`
+                      : b.block_date
+                        ? format(new Date(b.block_date + 'T00:00:00'), 'dd/MM/yyyy')
+                        : ''}
                   </p>
                 </div>
                 <Button
