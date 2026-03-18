@@ -3,12 +3,13 @@ import { Calendar, CalendarDayButton } from '@/components/ui/calendar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Booking, ScanFilters } from './types'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 interface Props {
   currentDate: Date
   setCurrentDate: (date: Date) => void
+  onDateSelect: (date: Date) => void
   bookings: Booking[]
   isStaff: boolean
   currentUserId?: string
@@ -18,12 +19,14 @@ interface Props {
 export function ScanSidebar({
   currentDate,
   setCurrentDate,
+  onDateSelect,
   bookings,
   isStaff,
   currentUserId,
   filters,
 }: Props) {
   const visibleBookings = useMemo(() => {
+    if (!filters.showBookings) return []
     return bookings.filter((b) => {
       if (!isStaff && b.dentist_id !== currentUserId) return false
       if (isStaff && filters.dentistId && filters.dentistId !== 'all') {
@@ -31,7 +34,7 @@ export function ScanSidebar({
       }
       return true
     })
-  }, [bookings, isStaff, currentUserId, filters.dentistId])
+  }, [bookings, isStaff, currentUserId, filters.dentistId, filters.showBookings])
 
   const CustomDayButton = useMemo(() => {
     const Component = React.forwardRef<HTMLButtonElement, any>((props, ref) => {
@@ -39,7 +42,7 @@ export function ScanSidebar({
       const dateStr = day.date ? format(day.date, 'yyyy-MM-dd') : ''
       const dayBookings = dateStr
         ? visibleBookings
-            .filter((b) => b.booking_date === dateStr)
+            .filter((b) => b.booking_date.substring(0, 10) === dateStr)
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
         : []
 
@@ -48,12 +51,15 @@ export function ScanSidebar({
           ref={ref}
           day={day}
           modifiers={modifiers}
-          className={cn(className, 'relative overflow-hidden')}
+          className={cn(
+            className,
+            'relative overflow-hidden flex flex-col items-center justify-start h-10 pt-1.5 group',
+          )}
           {...rest}
         >
-          <span className="relative z-10">{props.children}</span>
+          <span className="relative z-10 leading-none">{props.children}</span>
           {dayBookings.length > 0 && (
-            <div className="absolute bottom-1 left-0 right-0 flex flex-col gap-[2px] w-full px-1.5 z-0">
+            <div className="mt-auto mb-1 flex gap-[3px] flex-wrap justify-center w-full px-1">
               {dayBookings.slice(0, 3).map((b) => {
                 const colors = [
                   'bg-blue-400',
@@ -67,12 +73,15 @@ export function ScanSidebar({
                 return (
                   <div
                     key={b.id}
-                    className={cn('h-[3px] w-full rounded-full opacity-90', colorClass)}
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full opacity-90 transition-colors',
+                      colorClass,
+                    )}
                   />
                 )
               })}
               {dayBookings.length > 3 && (
-                <div className="h-[3px] w-full rounded-full bg-slate-300 opacity-90 flex items-center justify-center text-[5px] leading-none text-slate-600 font-bold"></div>
+                <div className="h-1.5 w-1.5 rounded-full bg-slate-300 opacity-90 transition-colors"></div>
               )}
             </div>
           )}
@@ -90,7 +99,11 @@ export function ScanSidebar({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentDate(new Date())}
+          onClick={() => {
+            const today = new Date()
+            setCurrentDate(today)
+            onDateSelect(today)
+          }}
           className="h-7 px-3 text-[10px] font-bold uppercase border-slate-200 text-slate-600 hover:bg-slate-50"
         >
           Hoje
@@ -102,7 +115,7 @@ export function ScanSidebar({
           selected={currentDate}
           month={currentDate}
           onMonthChange={setCurrentDate}
-          onSelect={(d) => d && setCurrentDate(d)}
+          onSelect={(d) => d && onDateSelect(d)}
           components={{ DayButton: CustomDayButton }}
           className="w-full flex justify-center [&_.rdp]:w-full [&_.rdp-month]:w-full [&_table]:w-full [&_td]:w-10 [&_td]:h-10 [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-black [&_.rdp-caption_label]:uppercase [&_.rdp-caption_label]:tracking-wider [&_.rdp-head_cell]:text-[10px] [&_.rdp-head_cell]:font-bold [&_.rdp-head_cell]:text-slate-400 [&_.rdp-nav_button]:h-8 [&_.rdp-nav_button]:w-8 [&_.rdp-day_selected]:bg-[#1A233A] [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:font-black [&_.rdp-day_today]:border-b-2 [&_.rdp-day_today]:border-[#1A233A]"
         />

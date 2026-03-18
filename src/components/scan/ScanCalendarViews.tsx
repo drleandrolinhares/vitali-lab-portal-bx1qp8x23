@@ -9,7 +9,6 @@ import {
   endOfMonth,
   endOfWeek,
   getDay,
-  parseISO,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -47,6 +46,7 @@ export function ScanCalendarViews({
   onBookingClick,
 }: Props) {
   const visibleBookings = bookings.filter((b) => {
+    if (!filters.showBookings) return false
     if (!isStaff && b.dentist_id !== currentUserId) return false
     if (isStaff && filters.dentistId && filters.dentistId !== 'all') {
       if (b.dentist_id !== filters.dentistId) return false
@@ -54,10 +54,15 @@ export function ScanCalendarViews({
     return true
   })
 
+  const timelineBookings = bookings.filter((b) => {
+    if (!filters.showBookings) return false
+    return true
+  })
+
   if (activeTab === 'AGENDAMENTOS MARCADOS') {
     const selectedDateStr = format(currentDate, 'yyyy-MM-dd')
     const dayBookings = visibleBookings
-      .filter((b) => b.booking_date === selectedDateStr)
+      .filter((b) => b.booking_date.substring(0, 10) === selectedDateStr)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
     if (dayBookings.length === 0) {
@@ -85,10 +90,12 @@ export function ScanCalendarViews({
             <div className="flex items-center gap-4">
               <div className="bg-[#E11D48]/10 text-[#E11D48] border border-[#E11D48]/20 w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 group-hover:bg-[#E11D48] group-hover:text-white transition-colors">
                 <span className="text-[10px] font-black uppercase">
-                  {format(parseISO(b.booking_date), 'MMM', { locale: ptBR })}
+                  {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'MMM', {
+                    locale: ptBR,
+                  })}
                 </span>
                 <span className="text-lg font-black leading-none">
-                  {format(parseISO(b.booking_date), 'dd')}
+                  {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'dd')}
                 </span>
               </div>
               <div>
@@ -141,7 +148,7 @@ export function ScanCalendarViews({
           {calendarDays.map((d) => {
             const dateStr = format(d, 'yyyy-MM-dd')
             const dayBookings = visibleBookings
-              .filter((b) => b.booking_date === dateStr)
+              .filter((b) => b.booking_date.substring(0, 10) === dateStr)
               .sort((a, b) => a.start_time.localeCompare(b.start_time))
             const isCurrentMonth = isSameMonth(d, currentDate)
             const isToday = isSameDay(d, new Date())
@@ -216,7 +223,9 @@ export function ScanCalendarViews({
     <div className="flex flex-col gap-6">
       {days.map((d) => {
         const dateStr = format(d, 'yyyy-MM-dd')
-        const dayBookings = visibleBookings.filter((b) => b.booking_date === dateStr)
+        const dayBookings = timelineBookings.filter(
+          (b) => b.booking_date.substring(0, 10) === dateStr,
+        )
         const setting = settings.find((s) => s.day_of_week === getDay(d))
         const slots = generateTimeSlots(setting)
 
@@ -263,6 +272,12 @@ export function ScanCalendarViews({
                   if (overlapBooking && !filters.showBookings) return null
 
                   const isMine = overlapBooking?.dentist_id === currentUserId
+                  const isTargetDentist =
+                    isStaff && filters.dentistId && filters.dentistId !== 'all'
+                      ? overlapBooking?.dentist_id === filters.dentistId
+                      : true
+
+                  const isVisibleForUser = isStaff ? isTargetDentist : isMine
                   const canViewDetails = isStaff || isMine
 
                   return (
@@ -283,21 +298,31 @@ export function ScanCalendarViews({
                             onClick={() => canViewDetails && onBookingClick(overlapBooking)}
                             className={cn(
                               'h-auto min-h-[40px] py-2 px-4 rounded-lg border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-4 transition-colors',
-                              canViewDetails
+                              isVisibleForUser
                                 ? 'bg-[#E11D48]/5 border-[#E11D48]/20 cursor-pointer hover:bg-[#E11D48]/10'
-                                : 'bg-slate-100 border-slate-200 opacity-80 cursor-not-allowed',
+                                : cn(
+                                    'bg-slate-100 border-slate-200 opacity-80',
+                                    canViewDetails
+                                      ? 'cursor-pointer hover:bg-slate-200'
+                                      : 'cursor-not-allowed',
+                                  ),
                             )}
                           >
                             <span
                               className={cn(
                                 'font-bold text-sm truncate',
-                                canViewDetails ? 'text-[#E11D48]' : 'text-slate-600',
+                                isVisibleForUser ? 'text-[#E11D48]' : 'text-slate-600',
                               )}
                             >
                               {canViewDetails ? overlapBooking.patient_name : 'Horário Ocupado'}
                             </span>
                             {canViewDetails && (
-                              <span className="text-xs text-[#E11D48]/70 font-bold truncate">
+                              <span
+                                className={cn(
+                                  'text-xs font-bold truncate',
+                                  isVisibleForUser ? 'text-[#E11D48]/70' : 'text-slate-500',
+                                )}
+                              >
                                 {overlapBooking.profiles?.name}
                               </span>
                             )}

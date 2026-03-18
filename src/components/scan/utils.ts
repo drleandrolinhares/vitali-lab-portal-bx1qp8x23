@@ -35,7 +35,9 @@ export const checkBookingOverlap = (
   bookings: Booking[],
   excludeId?: string,
 ) => {
-  const dayBookings = bookings.filter((b) => b.booking_date === date && b.id !== excludeId)
+  const dayBookings = bookings.filter(
+    (b) => b.booking_date.substring(0, 10) === date && b.id !== excludeId,
+  )
   return dayBookings.some(
     (b) => b.start_time.substring(0, 5) < end && b.end_time.substring(0, 5) > start,
   )

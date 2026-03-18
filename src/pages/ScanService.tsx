@@ -118,7 +118,7 @@ export default function ScanService() {
       setFormData({
         dentist_id: booking.dentist_id,
         patient_name: booking.patient_name,
-        booking_date: booking.booking_date,
+        booking_date: booking.booking_date.substring(0, 10),
         start_time: booking.start_time.substring(0, 5),
         end_time: booking.end_time.substring(0, 5),
         notes: booking.notes || '',
@@ -296,6 +296,10 @@ export default function ScanService() {
         <ScanSidebar
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
+          onDateSelect={(date) => {
+            setCurrentDate(date)
+            setActiveTab('AGENDAMENTOS MARCADOS')
+          }}
           bookings={bookings}
           isStaff={isStaff}
           currentUserId={currentUser?.id}
