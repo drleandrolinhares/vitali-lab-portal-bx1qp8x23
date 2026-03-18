@@ -1,1 +1,0 @@
-import{It as e,St as t,zt as n}from"./index-C7qBPurf.js";var r=n(e(),1);t();var i=r.createContext(void 0);function a(e){let t=r.useContext(i);return e||t||`ltr`}export{a as t};

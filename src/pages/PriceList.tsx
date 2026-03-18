@@ -44,6 +44,8 @@ import {
   TrendingDown,
   AlertTriangle,
   Filter,
+  Search,
+  Copy,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
@@ -77,6 +79,7 @@ export default function PriceList() {
   const [modalOpen, setModalOpen] = useState(false)
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
   const [profitFilter, setProfitFilter] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Validation States
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({})
@@ -111,6 +114,8 @@ export default function PriceList() {
     cadista_cost: '',
     material_cost: '',
     is_hidden: false,
+    notes: '',
+    estrutura_fixacao: 'SOBRE DENTE',
     stages: [] as StageInput[],
   })
 
@@ -175,11 +180,19 @@ export default function PriceList() {
         if (!profitFilter.includes(category)) return false
       }
 
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase()
+        const matchesWorkType = p.work_type?.toLowerCase().includes(q)
+        const matchesCategory = p.category?.toLowerCase().includes(q)
+        const matchesMaterial = p.material?.toLowerCase().includes(q)
+        if (!matchesWorkType && !matchesCategory && !matchesMaterial) return false
+      }
+
       return true
     })
 
     return result.sort((a, b) => (a.work_type || '').localeCompare(b.work_type || '', 'pt-BR'))
-  }, [prices, selectedLab, profitFilter, getMargin])
+  }, [prices, selectedLab, profitFilter, getMargin, searchQuery])
 
   const availableMaterials = useMemo(() => {
     let list: string[] = []
@@ -261,6 +274,8 @@ export default function PriceList() {
       cadista_cost: '',
       material_cost: '',
       is_hidden: false,
+      notes: '',
+      estrutura_fixacao: 'SOBRE DENTE',
       stages: [],
     })
     setModalOpen(true)
@@ -280,6 +295,33 @@ export default function PriceList() {
       cadista_cost: item.cadista_cost ? String(item.cadista_cost) : '',
       material_cost: item.material_cost ? String(item.material_cost) : '',
       is_hidden: item.is_hidden || false,
+      notes: item.notes || '',
+      estrutura_fixacao: item.estrutura_fixacao || 'SOBRE DENTE',
+      stages: (item.price_stages || []).map((s: any) => ({
+        name: s.name,
+        price: String(s.price),
+        kanban_stage: s.kanban_stage,
+      })),
+    })
+    setModalOpen(true)
+  }
+
+  const handleDuplicate = (item: any) => {
+    setFormErrors({})
+    setHasAttemptedSubmit(false)
+    setFormData({
+      id: '',
+      work_type: `${item.work_type} (Cópia)`,
+      category: item.category,
+      material: item.material || '',
+      price: item.price,
+      sector: item.sector || 'Soluções Cerâmicas',
+      execution_time: item.execution_time ? String(item.execution_time) : '',
+      cadista_cost: item.cadista_cost ? String(item.cadista_cost) : '',
+      material_cost: item.material_cost ? String(item.material_cost) : '',
+      is_hidden: item.is_hidden || false,
+      notes: item.notes || '',
+      estrutura_fixacao: item.estrutura_fixacao || 'SOBRE DENTE',
       stages: (item.price_stages || []).map((s: any) => ({
         name: s.name,
         price: String(s.price),
@@ -343,6 +385,8 @@ export default function PriceList() {
       material_cost: parseLocalNum(formData.material_cost),
       fixed_cost: calculatedFixedCost,
       is_hidden: formData.is_hidden,
+      notes: formData.notes,
+      estrutura_fixacao: formData.estrutura_fixacao,
     }
 
     let priceListId = formData.id
@@ -478,44 +522,56 @@ export default function PriceList() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 bg-muted/30 p-3 rounded-lg border">
-        <div className="text-sm font-medium text-foreground flex items-center gap-2 shrink-0">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          Filtrar por Margem:
+        <div className="flex-1 flex items-center gap-2 w-full sm:max-w-xs relative">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3" />
+          <Input
+            placeholder="Buscar procedimento..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-background w-full normal-case"
+          />
         </div>
-        <ToggleGroup
-          type="multiple"
-          value={profitFilter}
-          onValueChange={setProfitFilter}
-          className="justify-start flex-wrap gap-2"
-        >
-          <ToggleGroupItem
-            value="high"
-            aria-label="Alta Margem"
-            variant="outline"
-            className="h-8 px-3 text-xs data-[state=on]:bg-emerald-100 data-[state=on]:border-emerald-300 data-[state=on]:text-emerald-900 dark:data-[state=on]:bg-emerald-900/40 dark:data-[state=on]:border-emerald-800 dark:data-[state=on]:text-emerald-300 transition-colors"
+
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <div className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <span className="hidden sm:inline">Filtrar por Margem:</span>
+          </div>
+          <ToggleGroup
+            type="multiple"
+            value={profitFilter}
+            onValueChange={setProfitFilter}
+            className="justify-start flex-wrap gap-2"
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 shadow-sm" />
-            Alta (&gt; 20%)
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="medium"
-            aria-label="Margem Média"
-            variant="outline"
-            className="h-8 px-3 text-xs data-[state=on]:bg-amber-100 data-[state=on]:border-amber-300 data-[state=on]:text-amber-900 dark:data-[state=on]:bg-amber-900/40 dark:data-[state=on]:border-amber-800 dark:data-[state=on]:text-amber-300 transition-colors"
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shadow-sm" />
-            Média (10% a 20%)
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="low"
-            aria-label="Baixa Margem"
-            variant="outline"
-            className="h-8 px-3 text-xs data-[state=on]:bg-red-100 data-[state=on]:border-red-300 data-[state=on]:text-red-900 dark:data-[state=on]:bg-red-900/40 dark:data-[state=on]:border-red-800 dark:data-[state=on]:text-red-300 transition-colors"
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 shadow-sm" />
-            Baixa (&lt; 10%)
-          </ToggleGroupItem>
-        </ToggleGroup>
+            <ToggleGroupItem
+              value="high"
+              aria-label="Alta Margem"
+              variant="outline"
+              className="h-8 px-3 text-xs data-[state=on]:bg-emerald-100 data-[state=on]:border-emerald-300 data-[state=on]:text-emerald-900 dark:data-[state=on]:bg-emerald-900/40 dark:data-[state=on]:border-emerald-800 dark:data-[state=on]:text-emerald-300 transition-colors"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 shadow-sm" />
+              Alta (&gt; 20%)
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="medium"
+              aria-label="Margem Média"
+              variant="outline"
+              className="h-8 px-3 text-xs data-[state=on]:bg-amber-100 data-[state=on]:border-amber-300 data-[state=on]:text-amber-900 dark:data-[state=on]:bg-amber-900/40 dark:data-[state=on]:border-amber-800 dark:data-[state=on]:text-amber-300 transition-colors"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shadow-sm" />
+              Média (10% a 20%)
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="low"
+              aria-label="Baixa Margem"
+              variant="outline"
+              className="h-8 px-3 text-xs data-[state=on]:bg-red-100 data-[state=on]:border-red-300 data-[state=on]:text-red-900 dark:data-[state=on]:bg-red-900/40 dark:data-[state=on]:border-red-800 dark:data-[state=on]:text-red-300 transition-colors"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 shadow-sm" />
+              Baixa (&lt; 10%)
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       <Card className="shadow-subtle">
@@ -542,8 +598,8 @@ export default function PriceList() {
               ) : filteredPrices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    {prices.length > 0 && profitFilter.length > 0
-                      ? 'Nenhum procedimento encontrado para o filtro de rentabilidade selecionado.'
+                    {prices.length > 0 && (profitFilter.length > 0 || searchQuery)
+                      ? 'Nenhum procedimento encontrado para os filtros selecionados.'
                       : 'Nenhum procedimento encontrado.'}
                   </TableCell>
                 </TableRow>
@@ -616,14 +672,27 @@ export default function PriceList() {
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => handleEdit(item)}
+                          title="Editar"
                         >
                           <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
+                        {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleDuplicate(item)}
+                            title="Duplicar"
+                          >
+                            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => handleDelete(item.id)}
+                          title="Excluir"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-600" />
                         </Button>
@@ -853,6 +922,31 @@ export default function PriceList() {
                     placeholder="0,00"
                     value={formData.material_cost}
                     onChange={(e) => handleFormChange('material_cost', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Estrutura de Fixação</Label>
+                  <Select
+                    value={formData.estrutura_fixacao}
+                    onValueChange={(v) => handleFormChange('estrutura_fixacao', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                      <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Input
+                    className="normal-case"
+                    value={formData.notes}
+                    onChange={(e) => handleFormChange('notes', e.target.value)}
+                    placeholder="Notas adicionais"
                   />
                 </div>
 

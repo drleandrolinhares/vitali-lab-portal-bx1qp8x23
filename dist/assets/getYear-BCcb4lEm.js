@@ -1,1 +1,0 @@
-import{P as e}from"./index-C7qBPurf.js";function t(t,n){return e(t,n?.in).getMonth()}function n(t,n){return e(t,n?.in).getFullYear()}export{t as n,n as t};

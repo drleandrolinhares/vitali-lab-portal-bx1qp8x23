@@ -565,6 +565,7 @@ export type Database = {
           execution_time: number | null
           fixed_cost: number | null
           id: string
+          is_hidden: boolean
           material: string
           material_cost: number | null
           notes: string | null
@@ -580,6 +581,7 @@ export type Database = {
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
+          is_hidden?: boolean
           material?: string
           material_cost?: number | null
           notes?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
+          is_hidden?: boolean
           material?: string
           material_cost?: number | null
           notes?: string | null
@@ -1221,6 +1224,7 @@ export const Constants = {
 //   material_cost: numeric (nullable, default: 0)
 //   fixed_cost: numeric (nullable, default: 0)
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
+//   is_hidden: boolean (not null, default: false)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)
@@ -1458,7 +1462,7 @@ export const Constants = {
 //   Policy "Admin price_list update" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public price_list view" (SELECT, PERMISSIVE) roles={public}
-//     USING: true
+//     USING: ((is_hidden = false) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'master'::text)))))
 // Table: price_stages
 //   Policy "Admin price_stages delete" (DELETE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
