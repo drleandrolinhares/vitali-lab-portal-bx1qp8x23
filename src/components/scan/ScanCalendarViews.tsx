@@ -186,7 +186,7 @@ export function ScanCalendarViews({
                     const charCode = b.id.charCodeAt(0) || 0
                     const colorClass = canViewDetails
                       ? colors[charCode % colors.length]
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-not-allowed'
+                      : 'bg-[#E11D48] text-white cursor-not-allowed border border-[#BE123C]'
                     return (
                       <div
                         key={b.id}
@@ -199,12 +199,17 @@ export function ScanCalendarViews({
                           canViewDetails ? 'cursor-pointer' : '',
                           colorClass,
                         )}
-                        title={`${b.start_time.substring(0, 5)} - ${canViewDetails ? b.patient_name : 'Horário Ocupado'}`}
+                        title={`${b.start_time.substring(0, 5)} - ${canViewDetails ? b.patient_name : 'INDISPONÍVEL'}`}
                       >
-                        <span className="opacity-75 mr-1 font-semibold">
+                        <span
+                          className={cn(
+                            'mr-1 font-semibold',
+                            canViewDetails ? 'opacity-75' : 'opacity-90',
+                          )}
+                        >
                           {b.start_time.substring(0, 5)}
                         </span>
-                        {canViewDetails ? b.patient_name : 'Ocupado'}
+                        {canViewDetails ? b.patient_name : 'INDISPONÍVEL'}
                       </div>
                     )
                   })}
@@ -306,21 +311,22 @@ export function ScanCalendarViews({
                               'h-auto min-h-[40px] py-2 px-4 rounded-lg border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-4 transition-colors',
                               isVisibleForUser
                                 ? 'bg-[#E11D48]/5 border-[#E11D48]/20 cursor-pointer hover:bg-[#E11D48]/10'
-                                : cn(
-                                    'bg-slate-100 border-slate-200 opacity-80',
-                                    canViewDetails
-                                      ? 'cursor-pointer hover:bg-slate-200'
-                                      : 'cursor-not-allowed',
-                                  ),
+                                : canViewDetails
+                                  ? 'bg-slate-100 border-slate-200 opacity-80 cursor-pointer hover:bg-slate-200'
+                                  : 'bg-[#E11D48] border-[#BE123C] text-white cursor-not-allowed shadow-sm',
                             )}
                           >
                             <span
                               className={cn(
                                 'font-bold text-sm truncate',
-                                isVisibleForUser ? 'text-[#E11D48]' : 'text-slate-600',
+                                isVisibleForUser
+                                  ? 'text-[#E11D48]'
+                                  : canViewDetails
+                                    ? 'text-slate-600'
+                                    : 'text-white tracking-widest',
                               )}
                             >
-                              {canViewDetails ? overlapBooking.patient_name : 'Horário Ocupado'}
+                              {canViewDetails ? overlapBooking.patient_name : 'INDISPONÍVEL'}
                             </span>
                             {canViewDetails && (
                               <span
