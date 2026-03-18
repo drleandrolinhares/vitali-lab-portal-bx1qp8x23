@@ -37,6 +37,24 @@ export function BookingModal({
   dentists,
   isStaff,
 }: any) {
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const start_time = e.target.value
+    let end_time = formData.end_time
+
+    if (start_time && start_time.includes(':')) {
+      const [hStr, mStr] = start_time.split(':')
+      const h = parseInt(hStr, 10)
+      const m = parseInt(mStr, 10)
+
+      if (!isNaN(h) && !isNaN(m)) {
+        const endH = (h + 1) % 24
+        end_time = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      }
+    }
+
+    setFormData({ ...formData, start_time, end_time })
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
@@ -95,11 +113,7 @@ export function BookingModal({
                 <Label className="uppercase text-xs font-bold">
                   Início <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  type="time"
-                  value={formData.start_time}
-                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                />
+                <Input type="time" value={formData.start_time} onChange={handleStartTimeChange} />
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-xs font-bold">
