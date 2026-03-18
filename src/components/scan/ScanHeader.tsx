@@ -37,7 +37,7 @@ export function ScanHeader({
   dentists,
   isStaff,
 }: Props) {
-  const tabs: ScanTab[] = ['VISÃO GERAL', 'AGENDAMENTOS MARCADOS']
+  const tabs: ScanTab[] = ['AGENDAMENTOS MARCADOS', 'VISÃO GERAL']
 
   return (
     <div className="flex flex-col bg-white">
@@ -64,7 +64,7 @@ export function ScanHeader({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="h-11 text-xs font-bold uppercase text-[#8A6D3B] gap-2 border-[#E5D5B5] bg-[#FDFBF7] hover:bg-[#F8F1E3] flex-1 sm:flex-none"
+                className="h-11 text-xs font-bold uppercase text-[#8A6D3B] gap-2 border-[#E5D5B5] bg-[#FDFBF7] hover:bg-[#F8F1E3] flex-1 sm:flex-none transition-colors"
               >
                 <Filter className="w-4 h-4" /> Visibilidade
               </Button>
@@ -107,23 +107,21 @@ export function ScanHeader({
         </div>
       </div>
 
-      <div className="px-4 pt-2">
-        <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'px-5 pb-3 pt-4 text-[11px] whitespace-nowrap font-black uppercase border-b-[3px] transition-colors tracking-wide',
-                activeTab === tab
-                  ? 'border-[#E11D48] text-[#1A233A]'
-                  : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200',
-              )}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-6 py-2.5 text-[11px] whitespace-nowrap font-black uppercase rounded-lg transition-all duration-200 tracking-wider shadow-sm border',
+              activeTab === tab
+                ? 'bg-[#1A233A] border-[#1A233A] text-white shadow-md'
+                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-[#1A233A] hover:bg-slate-50',
+            )}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
     </div>
   )

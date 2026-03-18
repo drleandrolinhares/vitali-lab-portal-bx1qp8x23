@@ -18,7 +18,7 @@ export default function ScanService() {
   const { currentUser, appSettings } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<ViewType>('week')
-  const [activeTab, setActiveTab] = useState('VISÃO GERAL')
+  const [activeTab, setActiveTab] = useState('AGENDAMENTOS MARCADOS')
   const [filters, setFilters] = useState<ScanFilters>({
     showBookings: true,
     showBlocks: true,
@@ -64,7 +64,6 @@ export default function ScanService() {
     'relationship_manager',
   ].includes(currentUser?.role || '')
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
-  const isMaster = currentUser?.role === ('master' as any)
   const scanServiceEnabled = appSettings['scan_service_enabled'] === 'true'
 
   const fetchAgenda = async () => {
@@ -270,25 +269,23 @@ export default function ScanService() {
               <Button
                 variant="outline"
                 onClick={() => setSettingsModalOpen(true)}
-                className="text-slate-600 font-bold uppercase text-xs h-11 px-4 gap-2"
+                className="text-slate-600 font-bold uppercase text-xs h-11 px-4 gap-2 bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors"
                 title="Configurações"
               >
                 <Settings className="w-4 h-4" /> <span className="hidden sm:inline">Configs</span>
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setBlockModal({ open: true })}
+                className="text-[#E11D48] border-[#E11D48]/20 hover:bg-[#E11D48]/10 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white shadow-sm transition-colors"
+              >
+                <UserMinus className="w-4 h-4" /> Bloqueio de Agendamentos
+              </Button>
             </>
-          )}
-          {isMaster && (
-            <Button
-              variant="outline"
-              onClick={() => setBlockModal({ open: true })}
-              className="text-[#E11D48] border-[#E11D48]/20 hover:bg-[#E11D48]/5 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white"
-            >
-              <UserMinus className="w-4 h-4" /> Bloqueio de Agendamentos
-            </Button>
           )}
           <Button
             onClick={() => handleOpenBooking()}
-            className="bg-[#E11D48] text-white hover:bg-[#BE123C] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm"
+            className="bg-[#E11D48] text-white hover:bg-[#BE123C] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" /> Novo Registro
           </Button>
