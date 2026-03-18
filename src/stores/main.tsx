@@ -307,7 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchPriceList = useCallback(async () => {
     const { data } = await supabase
       .from('price_list')
-      .select('id, work_type, sector, price, material, price_stages(*)')
+      .select('*, price_stages(*)')
       .order('work_type', { ascending: true })
     if (data) {
       const sorted = data.sort((a, b) =>

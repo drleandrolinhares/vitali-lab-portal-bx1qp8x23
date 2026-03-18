@@ -778,6 +778,7 @@ export type Database = {
         Row: {
           block_date: string | null
           created_at: string | null
+          day_of_week: number | null
           end_time: string
           id: string
           recurrence: string
@@ -786,6 +787,7 @@ export type Database = {
         Insert: {
           block_date?: string | null
           created_at?: string | null
+          day_of_week?: number | null
           end_time: string
           id?: string
           recurrence: string
@@ -794,6 +796,7 @@ export type Database = {
         Update: {
           block_date?: string | null
           created_at?: string | null
+          day_of_week?: number | null
           end_time?: string
           id?: string
           recurrence?: string
@@ -1275,6 +1278,7 @@ export const Constants = {
 //   block_date: date (nullable)
 //   recurrence: text (not null)
 //   created_at: timestamp with time zone (nullable, default: now())
+//   day_of_week: integer (nullable)
 // Table: scan_service_bookings
 //   id: uuid (not null, default: gen_random_uuid())
 //   dentist_id: uuid (not null)

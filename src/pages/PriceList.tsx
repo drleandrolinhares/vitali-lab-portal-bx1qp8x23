@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -70,7 +71,7 @@ const isInvalidNumber = (val: string | number | null | undefined) => {
 }
 
 export default function PriceList() {
-  const { selectedLab, kanbanStages, appSettings, updateSettings } = useAppStore()
+  const { selectedLab, kanbanStages, appSettings, updateSettings, currentUser } = useAppStore()
   const [prices, setPrices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -109,6 +110,7 @@ export default function PriceList() {
     execution_time: '',
     cadista_cost: '',
     material_cost: '',
+    is_hidden: false,
     stages: [] as StageInput[],
   })
 
@@ -116,9 +118,7 @@ export default function PriceList() {
     setLoading(true)
     const { data } = await supabase
       .from('price_list')
-      .select(
-        'id, work_type, category, material, price, sector, execution_time, cadista_cost, material_cost, fixed_cost, price_stages(*)',
-      )
+      .select('*, price_stages(*)')
       .order('work_type', { ascending: true })
     if (data) {
       const sorted = data.sort((a, b) =>
@@ -260,6 +260,7 @@ export default function PriceList() {
       execution_time: '',
       cadista_cost: '',
       material_cost: '',
+      is_hidden: false,
       stages: [],
     })
     setModalOpen(true)
@@ -278,6 +279,7 @@ export default function PriceList() {
       execution_time: item.execution_time ? String(item.execution_time) : '',
       cadista_cost: item.cadista_cost ? String(item.cadista_cost) : '',
       material_cost: item.material_cost ? String(item.material_cost) : '',
+      is_hidden: item.is_hidden || false,
       stages: (item.price_stages || []).map((s: any) => ({
         name: s.name,
         price: String(s.price),
@@ -287,24 +289,24 @@ export default function PriceList() {
     setModalOpen(true)
   }
 
-  const handleFormChange = (field: keyof typeof formData, value: string) => {
+  const handleFormChange = (field: keyof typeof formData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (hasAttemptedSubmit || formErrors[field]) {
       if (field === 'price') {
-        setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(value) }))
-      } else {
-        setFormErrors((prev) => ({ ...prev, [field]: !value.toString().trim() }))
+        setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(value as string) }))
+      } else if (field !== 'is_hidden' && typeof value === 'string') {
+        setFormErrors((prev) => ({ ...prev, [field]: !value.trim() }))
       }
     }
   }
 
   const handleFormBlur = (field: keyof typeof formData) => {
     if (field === 'price') {
-      setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(formData[field]) }))
-    } else {
+      setFormErrors((prev) => ({ ...prev, [field]: isInvalidNumber(formData[field] as string) }))
+    } else if (field !== 'is_hidden') {
       setFormErrors((prev) => ({
         ...prev,
-        [field]: !formData[field]?.toString().trim(),
+        [field]: !(formData[field] as string)?.toString().trim(),
       }))
     }
   }
@@ -330,7 +332,7 @@ export default function PriceList() {
     const execTimeForSave = parseLocalNum(formData.execution_time)
     const calculatedFixedCost = execTimeForSave * sharedCosts.costPerMinute
 
-    const payload = {
+    const payload: any = {
       work_type: formData.work_type,
       category: formData.category,
       material: formData.material,
@@ -340,6 +342,7 @@ export default function PriceList() {
       cadista_cost: parseLocalNum(formData.cadista_cost),
       material_cost: parseLocalNum(formData.material_cost),
       fixed_cost: calculatedFixedCost,
+      is_hidden: formData.is_hidden,
     }
 
     let priceListId = formData.id
@@ -570,9 +573,19 @@ export default function PriceList() {
                       <TableCell className="pl-6 py-1.5 min-w-[320px]">
                         <div className={containerClass}>
                           <div className="flex flex-col">
-                            <span className="font-bold tracking-tight leading-tight text-[13px]">
-                              {item.work_type}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold tracking-tight leading-tight text-[13px]">
+                                {item.work_type}
+                              </span>
+                              {item.is_hidden && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] uppercase border-white/40 text-white bg-black/20 px-1 py-0 h-4"
+                                >
+                                  Oculto
+                                </Badge>
+                              )}
+                            </div>
                             <span className="text-[10px] font-medium text-white/80 mt-0 uppercase tracking-wider">
                               {item.category}
                             </span>
@@ -842,6 +855,24 @@ export default function PriceList() {
                     onChange={(e) => handleFormChange('material_cost', e.target.value)}
                   />
                 </div>
+
+                {currentUser?.role === 'master' && (
+                  <div className="space-y-2 col-span-2 flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20 mt-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-semibold text-destructive">
+                        PROCEDIMENTO OCULTO
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Este procedimento será usado apenas para testes e ficará invisível para os
+                        demais usuários.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.is_hidden}
+                      onCheckedChange={(v) => handleFormChange('is_hidden', v)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 mt-6 border-t pt-4">
