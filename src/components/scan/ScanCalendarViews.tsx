@@ -9,8 +9,6 @@ import {
   endOfWeek,
   getDay,
   parseISO,
-  isBefore,
-  startOfDay,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -56,23 +54,17 @@ export function ScanCalendarViews({
   })
 
   if (activeTab === 'AGENDAMENTOS MARCADOS') {
-    const today = startOfDay(new Date())
-    const futureBookings = visibleBookings
-      .filter((b) => {
-        const bDate = parseISO(b.booking_date + 'T00:00:00')
-        return !isBefore(bDate, today)
-      })
-      .sort(
-        (a, b) =>
-          a.booking_date.localeCompare(b.booking_date) || a.start_time.localeCompare(b.start_time),
-      )
+    const selectedDateStr = format(currentDate, 'yyyy-MM-dd')
+    const dayBookings = visibleBookings
+      .filter((b) => b.booking_date === selectedDateStr)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-    if (futureBookings.length === 0) {
+    if (dayBookings.length === 0) {
       return (
         <Card className="h-full w-full min-h-[400px] flex flex-col items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl text-slate-400 gap-3">
           <CalendarX2 className="w-10 h-10 opacity-50" />
           <p className="text-sm font-black uppercase tracking-widest text-center px-4">
-            NENHUM AGENDAMENTO ENCONTRADO.
+            NENHUM AGENDAMENTO ENCONTRADO PARA ESTA DATA.
           </p>
         </Card>
       )
@@ -80,7 +72,10 @@ export function ScanCalendarViews({
 
     return (
       <div className="flex flex-col gap-4">
-        {futureBookings.map((b) => (
+        <h3 className="text-lg font-black uppercase tracking-wider text-[#1A233A] mb-2 px-2">
+          {format(currentDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+        </h3>
+        {dayBookings.map((b) => (
           <div
             key={b.id}
             onClick={() => onBookingClick(b)}

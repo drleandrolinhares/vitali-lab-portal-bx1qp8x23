@@ -54,7 +54,7 @@ export function ScanSidebar({
           modifiers={{ booked: bookedDates }}
           modifiersClassNames={{
             booked:
-              "relative after:content-[''] after:absolute after:bottom-[3px] after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-[#E11D48] after:rounded-full font-bold",
+              "relative after:content-[''] after:absolute after:bottom-[6px] after:left-1/2 after:-translate-x-1/2 after:w-3.5 after:h-1 after:bg-[#E11D48] after:rounded-full font-bold",
           }}
           className="w-full flex justify-center [&_.rdp]:w-full [&_.rdp-month]:w-full [&_table]:w-full [&_td]:w-10 [&_td]:h-10 [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-black [&_.rdp-caption_label]:uppercase [&_.rdp-caption_label]:tracking-wider [&_.rdp-head_cell]:text-[10px] [&_.rdp-head_cell]:font-bold [&_.rdp-head_cell]:text-slate-400 [&_.rdp-nav_button]:h-8 [&_.rdp-nav_button]:w-8 [&_.rdp-day_selected]:bg-[#1A233A] [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:font-black [&_.rdp-day_today]:border-b-2 [&_.rdp-day_today]:border-[#1A233A]"
         />
