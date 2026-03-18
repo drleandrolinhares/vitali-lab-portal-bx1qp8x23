@@ -160,7 +160,7 @@ export default function ScanService() {
     ) {
       return toast({
         title: 'Horário Indisponível',
-        description: 'Já existe um agendamento neste horário.',
+        description: 'Este horário já foi reservado por outro profissional.',
         variant: 'destructive',
       })
     }
@@ -173,6 +173,44 @@ export default function ScanService() {
     }
 
     setSaving(true)
+
+    const formattedStart =
+      formData.start_time.length === 5 ? `${formData.start_time}:00` : formData.start_time
+    const formattedEnd =
+      formData.end_time.length === 5 ? `${formData.end_time}:00` : formData.end_time
+
+    let overlapQuery = supabase
+      .from('scan_service_bookings' as any)
+      .select('id')
+      .eq('booking_date', formData.booking_date)
+      .lt('start_time', formattedEnd)
+      .gt('end_time', formattedStart)
+
+    if (modal.mode === 'edit' && modal.booking?.id) {
+      overlapQuery = overlapQuery.neq('id', modal.booking.id)
+    }
+
+    const { data: overlappingBookings, error: overlapError } = await overlapQuery
+
+    if (overlapError) {
+      setSaving(false)
+      return toast({
+        title: 'Erro ao verificar disponibilidade',
+        description: overlapError.message,
+        variant: 'destructive',
+      })
+    }
+
+    if (overlappingBookings && overlappingBookings.length > 0) {
+      setSaving(false)
+      fetchAgenda()
+      return toast({
+        title: 'Horário Indisponível',
+        description: 'Este horário já foi reservado por outro profissional.',
+        variant: 'destructive',
+      })
+    }
+
     const payload = { ...formData }
     if (modal.mode === 'edit') {
       await supabase

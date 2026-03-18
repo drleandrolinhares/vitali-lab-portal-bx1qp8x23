@@ -147,7 +147,7 @@ export function ScanCalendarViews({
         <div className="grid grid-cols-7 auto-rows-[minmax(80px,1fr)] bg-slate-200 gap-px flex-1">
           {calendarDays.map((d) => {
             const dateStr = format(d, 'yyyy-MM-dd')
-            const dayBookings = visibleBookings
+            const dayBookings = timelineBookings
               .filter((b) => b.booking_date.substring(0, 10) === dateStr)
               .sort((a, b) => a.start_time.localeCompare(b.start_time))
             const isCurrentMonth = isSameMonth(d, currentDate)
@@ -173,6 +173,9 @@ export function ScanCalendarViews({
                 </div>
                 <div className="flex flex-col gap-1 px-0.5 sm:px-1 overflow-y-auto no-scrollbar pb-1">
                   {dayBookings.map((b) => {
+                    const isMine = b.dentist_id === currentUserId
+                    const canViewDetails = isStaff || isMine
+
                     const colors = [
                       'bg-blue-100 text-blue-700 hover:bg-blue-200',
                       'bg-pink-100 text-pink-700 hover:bg-pink-200',
@@ -181,24 +184,27 @@ export function ScanCalendarViews({
                       'bg-purple-100 text-purple-700 hover:bg-purple-200',
                     ]
                     const charCode = b.id.charCodeAt(0) || 0
-                    const colorClass = colors[charCode % colors.length]
+                    const colorClass = canViewDetails
+                      ? colors[charCode % colors.length]
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-not-allowed'
                     return (
                       <div
                         key={b.id}
                         onClick={(e) => {
                           e.stopPropagation()
-                          onBookingClick(b)
+                          if (canViewDetails) onBookingClick(b)
                         }}
                         className={cn(
-                          'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded cursor-pointer truncate transition-colors shadow-sm',
+                          'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded truncate transition-colors shadow-sm',
+                          canViewDetails ? 'cursor-pointer' : '',
                           colorClass,
                         )}
-                        title={`${b.start_time.substring(0, 5)} - ${b.patient_name}`}
+                        title={`${b.start_time.substring(0, 5)} - ${canViewDetails ? b.patient_name : 'Horário Ocupado'}`}
                       >
                         <span className="opacity-75 mr-1 font-semibold">
                           {b.start_time.substring(0, 5)}
                         </span>
-                        {b.patient_name}
+                        {canViewDetails ? b.patient_name : 'Ocupado'}
                       </div>
                     )
                   })}

@@ -25,23 +25,17 @@ export function ScanSidebar({
   currentUserId,
   filters,
 }: Props) {
-  const visibleBookings = useMemo(() => {
+  const visibleBookingsForDots = useMemo(() => {
     if (!filters.showBookings) return []
-    return bookings.filter((b) => {
-      if (!isStaff && b.dentist_id !== currentUserId) return false
-      if (isStaff && filters.dentistId && filters.dentistId !== 'all') {
-        if (b.dentist_id !== filters.dentistId) return false
-      }
-      return true
-    })
-  }, [bookings, isStaff, currentUserId, filters.dentistId, filters.showBookings])
+    return bookings
+  }, [bookings, filters.showBookings])
 
   const CustomDayButton = useMemo(() => {
     const Component = React.forwardRef<HTMLButtonElement, any>((props, ref) => {
       const { day, modifiers, className, ...rest } = props
       const dateStr = day.date ? format(day.date, 'yyyy-MM-dd') : ''
       const dayBookings = dateStr
-        ? visibleBookings
+        ? visibleBookingsForDots
             .filter((b) => b.booking_date.substring(0, 10) === dateStr)
             .sort((a, b) => a.start_time.localeCompare(b.start_time))
         : []
@@ -61,6 +55,9 @@ export function ScanSidebar({
           {dayBookings.length > 0 && (
             <div className="mt-auto mb-1 flex gap-[3px] flex-wrap justify-center w-full px-1">
               {dayBookings.slice(0, 3).map((b) => {
+                const isMine = b.dentist_id === currentUserId
+                const canViewDetails = isStaff || isMine
+
                 const colors = [
                   'bg-blue-400',
                   'bg-pink-400',
@@ -69,7 +66,9 @@ export function ScanSidebar({
                   'bg-purple-400',
                 ]
                 const charCode = b.id.charCodeAt(0) || 0
-                const colorClass = colors[charCode % colors.length]
+                const colorClass = canViewDetails
+                  ? colors[charCode % colors.length]
+                  : 'bg-slate-300'
                 return (
                   <div
                     key={b.id}
@@ -90,7 +89,7 @@ export function ScanSidebar({
     })
     Component.displayName = 'CustomDayButton'
     return Component
-  }, [visibleBookings])
+  }, [visibleBookingsForDots, currentUserId, isStaff])
 
   return (
     <Card className="w-full lg:w-[320px] shrink-0 h-max shadow-sm border-slate-200 rounded-xl overflow-hidden">
