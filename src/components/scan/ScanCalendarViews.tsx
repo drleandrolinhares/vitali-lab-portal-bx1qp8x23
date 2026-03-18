@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { generateTimeSlots, checkBlockOverlap } from './utils'
 import { Clock } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 
 interface Props {
   view: ViewType
@@ -24,6 +25,7 @@ interface Props {
   filters: ScanFilters
   isStaff: boolean
   currentUserId?: string
+  activeTab: string
   onSlotClick: (date: string, start: string, end: string) => void
   onBookingClick: (booking: Booking) => void
   setCurrentDate: (date: Date) => void
@@ -42,12 +44,13 @@ function SlotItem({
   onBookingClick,
 }: any) {
   const overlappingBlock = checkBlockOverlap(slot.start, slot.end, dateStr, blocks)
+
   if (overlappingBlock && filters.showBlocks) {
     return (
-      <div className="text-[10px] p-2 rounded-md shadow-sm bg-slate-100 text-slate-500 border border-slate-300 border-dashed flex items-center justify-center text-center font-bold uppercase leading-tight cursor-not-allowed opacity-90">
-        Bloqueado
-        <br />
-        Neste Horário
+      <div className="h-[72px] border-b border-slate-100 p-1.5 group">
+        <div className="w-full h-full rounded-md bg-slate-50 text-slate-400 border border-slate-200 border-dashed flex items-center justify-center text-[10px] font-bold uppercase cursor-not-allowed">
+          Bloqueado
+        </div>
       </div>
     )
   }
@@ -55,38 +58,31 @@ function SlotItem({
   const overlappingBooking = bookings.find(
     (b: any) => b.start_time.substring(0, 5) < slot.end && b.end_time.substring(0, 5) > slot.start,
   )
+
   if (overlappingBooking && filters.showBookings) {
     const isMine = overlappingBooking.dentist_id === currentUserId
     const canViewDetails = isStaff || isMine
 
     return (
-      <div
-        onClick={() => canViewDetails && onBookingClick(overlappingBooking)}
-        className={cn(
-          'text-xs p-2 rounded-md border shadow-sm select-none transition-colors relative group',
-          canViewDetails
-            ? 'bg-primary/10 text-primary-foreground border-primary/20 cursor-pointer hover:bg-primary/20'
-            : 'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-80',
-        )}
-      >
+      <div className="h-[72px] border-b border-slate-100 p-1.5">
         <div
+          onClick={() => canViewDetails && onBookingClick(overlappingBooking)}
           className={cn(
-            'absolute left-0 top-0 bottom-0 w-1 rounded-l-md',
-            canViewDetails ? 'bg-primary' : 'bg-slate-400',
+            'w-full h-full rounded-md border shadow-sm select-none transition-colors relative flex flex-col justify-center px-3',
+            canViewDetails
+              ? 'bg-[#1A233A] text-white border-[#1A233A] cursor-pointer hover:bg-[#2A344A]'
+              : 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed opacity-80',
           )}
-        />
-        <div className="pl-1.5">
-          <p className="font-bold text-foreground flex items-center gap-1 mb-0.5">
-            <Clock className="w-3 h-3 opacity-70" /> {slot.start} - {slot.end}
-          </p>
-          <p className="font-semibold text-slate-800 truncate">
+        >
+          <div className="flex items-center gap-1.5 mb-0.5 opacity-80">
+            <Clock className="w-3 h-3" />
+            <span className="text-[10px] font-bold tracking-wider">
+              {slot.start} - {slot.end}
+            </span>
+          </div>
+          <p className="font-bold text-xs truncate">
             {canViewDetails ? overlappingBooking.patient_name : 'OCUPADO'}
           </p>
-          {canViewDetails && isStaff && (
-            <p className="truncate text-slate-500 text-[10px] mt-0.5 font-medium uppercase">
-              {overlappingBooking.profiles?.name}
-            </p>
-          )}
         </div>
       </div>
     )
@@ -98,9 +94,13 @@ function SlotItem({
   return (
     <div
       onClick={() => onSlotClick(dateStr, slot.start, slot.end)}
-      className="text-xs p-2 rounded-md border border-dashed border-border bg-transparent text-muted-foreground hover:bg-primary/5 hover:border-primary/30 hover:text-primary cursor-pointer transition-colors text-center font-medium"
+      className="h-[72px] border-b border-slate-100 p-1 group cursor-pointer"
     >
-      {slot.start} - {slot.end}
+      <div className="w-full h-full rounded-md border border-transparent group-hover:border-dashed group-hover:border-slate-300 group-hover:bg-slate-50 flex items-center justify-center transition-all">
+        <span className="text-[10px] font-bold text-transparent group-hover:text-slate-400 tracking-wider">
+          {slot.start} - {slot.end}
+        </span>
+      </div>
     </div>
   )
 }
@@ -114,34 +114,67 @@ export function ScanCalendarViews({
   filters,
   isStaff,
   currentUserId,
+  activeTab,
   onSlotClick,
   onBookingClick,
   setCurrentDate,
   setView,
 }: Props) {
+  const visibleBookings = bookings.filter((b) => {
+    if (activeTab === 'PARA MIM') return b.dentist_id === currentUserId
+    if (activeTab === 'AUSÊNCIAS') return false
+    if (activeTab === 'COMPROMISSOS') return true
+    if (activeTab === 'ALERTAS DO SISTEMA') return false
+    if (activeTab === 'DELEGADOS POR MIM') return false
+    return true
+  })
+
+  const visibleBlocks = blocks.filter((b) => {
+    if (activeTab === 'AUSÊNCIAS') return true
+    if (activeTab === 'PARA MIM') return true
+    if (activeTab === 'COMPROMISSOS') return true
+    return false
+  })
+
   if (view === 'month') {
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
     const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
-    const days = []
+    const mDays = []
     let day = start
     while (day <= end) {
-      days.push(day)
+      mDays.push(day)
       day = addDays(day, 1)
     }
 
+    const hasMonthRecords = mDays.some((d) => {
+      const dStr = format(d, 'yyyy-MM-dd')
+      const dBookings = visibleBookings.filter((b) => b.booking_date === dStr)
+      return filters.showBookings && dBookings.length > 0
+    })
+
+    if (!hasMonthRecords) {
+      return (
+        <Card className="h-full w-full min-h-[400px] flex items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl">
+          <p className="text-sm font-black text-slate-500 uppercase tracking-widest text-center px-4">
+            NENHUM REGISTRO ENCONTRADO PARA OS FILTROS SELECIONADOS.
+          </p>
+        </Card>
+      )
+    }
+
     return (
-      <div className="grid grid-cols-7 h-full border-l border-t border-border/50 bg-background min-w-[600px] lg:min-w-0">
+      <div className="grid grid-cols-7 h-full border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
           <div
             key={d}
-            className="p-3 text-center text-xs font-bold text-muted-foreground uppercase border-r border-b border-border/50 bg-muted/20"
+            className="p-3 text-center text-[10px] font-black tracking-widest text-slate-400 uppercase border-r border-b border-slate-100 bg-slate-50/50"
           >
             {d}
           </div>
         ))}
-        {days.map((d, i) => {
+        {mDays.map((d, i) => {
           const dateStr = format(d, 'yyyy-MM-dd')
-          const dayBookings = bookings.filter((b) => b.booking_date === dateStr)
+          const dayBookings = visibleBookings.filter((b) => b.booking_date === dateStr)
           const isCurrentMonth = isSameMonth(d, currentDate)
           return (
             <div
@@ -151,20 +184,20 @@ export function ScanCalendarViews({
                 setView('day')
               }}
               className={cn(
-                'min-h-[120px] p-2 border-r border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors flex flex-col gap-1',
-                !isCurrentMonth && 'opacity-40 bg-muted/5',
+                'min-h-[120px] p-2 border-r border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex flex-col gap-1',
+                !isCurrentMonth && 'bg-slate-50/30 opacity-60',
               )}
             >
               <div
                 className={cn(
                   'text-sm font-bold mb-1 w-8 h-8 flex items-center justify-center rounded-full ml-auto',
-                  isSameDay(d, new Date()) && 'bg-primary text-primary-foreground',
+                  isSameDay(d, new Date()) && 'bg-[#1A233A] text-white',
                 )}
               >
                 {format(d, 'd')}
               </div>
               {filters.showBookings && dayBookings.length > 0 && (
-                <div className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded font-bold truncate border border-primary/10">
+                <div className="text-[10px] bg-[#1A233A]/10 text-[#1A233A] px-2 py-1 rounded font-bold truncate border border-[#1A233A]/10 uppercase text-center">
                   {dayBookings.length} Reserva{dayBookings.length > 1 ? 's' : ''}
                 </div>
               )}
@@ -182,49 +215,83 @@ export function ScanCalendarViews({
           addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), i),
         )
 
+  const hasRecords = days.some((d) => {
+    const dateStr = format(d, 'yyyy-MM-dd')
+    const dayBookings = visibleBookings.filter((b) => b.booking_date === dateStr)
+    const setting = settings.find((s) => s.day_of_week === getDay(d))
+    const slots = generateTimeSlots(setting)
+    const hasBlocks = slots.some((slot) =>
+      checkBlockOverlap(slot.start, slot.end, dateStr, visibleBlocks),
+    )
+    return (filters.showBookings && dayBookings.length > 0) || (filters.showBlocks && hasBlocks)
+  })
+
+  if (!hasRecords) {
+    return (
+      <Card className="h-full w-full min-h-[400px] flex items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl">
+        <p className="text-sm font-black text-slate-500 uppercase tracking-widest text-center px-4">
+          NENHUM REGISTRO ENCONTRADO PARA OS FILTROS SELECIONADOS.
+        </p>
+      </Card>
+    )
+  }
+
   return (
     <div
       className={cn(
-        'flex flex-1 min-h-0 min-w-[800px] lg:min-w-0 bg-background border border-border/50 rounded-lg overflow-hidden',
-        view === 'week' && 'divide-x divide-border/50',
+        'flex flex-col flex-1 min-h-[500px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm',
       )}
     >
-      {days.map((d, i) => {
-        const dateStr = format(d, 'yyyy-MM-dd')
-        const dayBookings = bookings.filter((b) => b.booking_date === dateStr)
-        const setting = settings.find((s) => s.day_of_week === getDay(d))
-        const slots = generateTimeSlots(setting)
-        const isToday = isSameDay(d, new Date())
-
-        return (
-          <div key={i} className="flex-1 flex flex-col min-w-0">
-            <div
-              className={cn(
-                'p-3 text-center border-b border-border/50',
-                isToday ? 'bg-primary/10 border-primary/20' : 'bg-muted/20',
-              )}
-            >
+      <div
+        className={cn(
+          'flex border-b border-slate-200 bg-slate-50/50',
+          view === 'week' && 'divide-x divide-slate-100',
+        )}
+      >
+        {days.map((d, i) => {
+          const isToday = isSameDay(d, new Date())
+          return (
+            <div key={i} className="flex-1 p-3 text-center min-w-[120px]">
               <p
                 className={cn(
-                  'text-xs font-bold uppercase',
-                  isToday ? 'text-primary' : 'text-muted-foreground',
+                  'text-[10px] font-black uppercase tracking-widest',
+                  isToday ? 'text-[#1A233A]' : 'text-slate-400',
                 )}
               >
                 {format(d, 'EEEE', { locale: ptBR })}
               </p>
               <p
                 className={cn(
-                  'text-xl font-black mt-0.5',
-                  isToday ? 'text-primary' : 'text-foreground',
+                  'text-2xl font-black mt-0.5',
+                  isToday ? 'text-[#1A233A]' : 'text-slate-800',
                 )}
               >
                 {format(d, 'dd')}
               </p>
             </div>
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+          )
+        })}
+      </div>
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex">
+        {days.map((d, i) => {
+          const dateStr = format(d, 'yyyy-MM-dd')
+          const dayBookings = visibleBookings.filter((b) => b.booking_date === dateStr)
+          const setting = settings.find((s) => s.day_of_week === getDay(d))
+          const slots = generateTimeSlots(setting)
+
+          return (
+            <div
+              key={i}
+              className={cn(
+                'flex-1 min-w-[120px] flex flex-col',
+                view === 'week' && 'border-r border-slate-100 last:border-0',
+              )}
+            >
               {!setting?.is_available ? (
-                <div className="h-full flex flex-col items-center justify-center text-xs text-muted-foreground uppercase text-center opacity-50 p-4 font-bold border-2 border-dashed border-border rounded-lg bg-muted/10 min-h-[100px]">
-                  Fechado
+                <div className="h-full flex flex-col items-center justify-center p-4 bg-slate-50/30">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full">
+                    Fechado
+                  </div>
                 </div>
               ) : slots.length === 0 ? null : (
                 slots.map((slot, sIdx) => (
@@ -233,7 +300,7 @@ export function ScanCalendarViews({
                     slot={slot}
                     dateStr={dateStr}
                     bookings={dayBookings}
-                    blocks={blocks}
+                    blocks={visibleBlocks}
                     filters={filters}
                     isStaff={isStaff}
                     currentUserId={currentUserId}
@@ -243,9 +310,9 @@ export function ScanCalendarViews({
                 ))
               )}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }

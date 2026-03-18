@@ -1,65 +1,34 @@
 import { Calendar } from '@/components/ui/calendar'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { ScanFilters } from './types'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   currentDate: Date
   setCurrentDate: (date: Date) => void
-  filters: ScanFilters
-  setFilters: (f: ScanFilters) => void
 }
 
-export function ScanSidebar({ currentDate, setCurrentDate, filters, setFilters }: Props) {
+export function ScanSidebar({ currentDate, setCurrentDate }: Props) {
   return (
-    <div className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
-      <Card className="border-border/60 shadow-sm overflow-hidden">
-        <CardContent className="p-0 flex justify-center bg-background">
-          <Calendar
-            mode="single"
-            selected={currentDate}
-            onSelect={(d) => d && setCurrentDate(d)}
-            className="pointer-events-auto w-full flex justify-center [&_.rdp]:w-full [&_.rdp-month]:w-full [&_table]:w-full [&_td]:w-10 [&_td]:h-10"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 shadow-sm">
-        <CardHeader className="pb-3 pt-4 px-4 bg-muted/20 border-b border-border/50">
-          <CardTitle className="text-sm uppercase font-bold text-muted-foreground">
-            Visibilidade
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 space-y-4">
-          <div className="flex items-center space-x-3 bg-primary/5 p-3 rounded-md border border-primary/10">
-            <Checkbox
-              id="show-bookings"
-              checked={filters.showBookings}
-              onCheckedChange={(c) => setFilters({ ...filters, showBookings: !!c })}
-            />
-            <Label
-              htmlFor="show-bookings"
-              className="text-sm font-semibold cursor-pointer text-foreground flex-1"
-            >
-              Reservas Confirmadas
-            </Label>
-          </div>
-          <div className="flex items-center space-x-3 bg-muted p-3 rounded-md border border-border">
-            <Checkbox
-              id="show-blocks"
-              checked={filters.showBlocks}
-              onCheckedChange={(c) => setFilters({ ...filters, showBlocks: !!c })}
-            />
-            <Label
-              htmlFor="show-blocks"
-              className="text-sm font-semibold cursor-pointer text-foreground flex-1"
-            >
-              Bloqueios Administrativos
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full lg:w-[320px] shrink-0 h-max shadow-sm border-slate-200 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white">
+        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Navegação</h3>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentDate(new Date())}
+          className="h-7 px-3 text-[10px] font-bold uppercase border-slate-200 text-slate-600 hover:bg-slate-50"
+        >
+          Hoje
+        </Button>
+      </div>
+      <CardContent className="p-4 flex justify-center bg-white">
+        <Calendar
+          mode="single"
+          selected={currentDate}
+          onSelect={(d) => d && setCurrentDate(d)}
+          className="w-full flex justify-center [&_.rdp]:w-full [&_.rdp-month]:w-full [&_table]:w-full [&_td]:w-10 [&_td]:h-10 [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-black [&_.rdp-caption_label]:uppercase [&_.rdp-caption_label]:tracking-wider [&_.rdp-head_cell]:text-[10px] [&_.rdp-head_cell]:font-bold [&_.rdp-head_cell]:text-slate-400 [&_.rdp-nav_button]:h-8 [&_.rdp-nav_button]:w-8 [&_.rdp-day_selected]:bg-[#1A233A] [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:font-black [&_.rdp-day_today]:border-b-2 [&_.rdp-day_today]:border-[#1A233A]"
+        />
+      </CardContent>
+    </Card>
   )
 }

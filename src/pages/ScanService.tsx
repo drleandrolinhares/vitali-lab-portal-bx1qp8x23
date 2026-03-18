@@ -4,7 +4,8 @@ import { useAppStore } from '@/stores/main'
 import { Navigate } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, subWeeks, addWeeks } from 'date-fns'
 import { toast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus, UserMinus, Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 import { Booking, ScanSetting, ScanBlock, ViewType, ScanFilters } from '@/components/scan/types'
 import { checkBlockOverlap, checkBookingOverlap } from '@/components/scan/utils'
@@ -17,6 +18,7 @@ export default function ScanService() {
   const { currentUser, appSettings } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<ViewType>('week')
+  const [activeTab, setActiveTab] = useState('PARA MIM')
   const [filters, setFilters] = useState<ScanFilters>({ showBookings: true, showBlocks: true })
 
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -247,31 +249,62 @@ export default function ScanService() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-[calc(100vh-6rem)] gap-4 md:gap-6 p-4 md:p-6 max-w-[1600px] mx-auto animate-fade-in pb-12">
-      <ScanSidebar
-        currentDate={currentDate}
-        setCurrentDate={setCurrentDate}
-        filters={filters}
-        setFilters={setFilters}
-      />
-      <div className="flex-1 flex flex-col min-w-0 bg-background rounded-xl border shadow-subtle overflow-hidden relative">
-        <ScanHeader
-          view={view}
-          setView={setView}
-          currentDate={currentDate}
-          setCurrentDate={setCurrentDate}
-          isAdmin={isAdmin}
-          onNewBooking={() => handleOpenBooking()}
-          onNewBlock={() => setBlockModal({ open: true })}
-          onOpenSettings={() => setSettingsModalOpen(true)}
-        />
-        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-muted/5 flex flex-col min-h-0">
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full max-w-[1600px] mx-auto">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black text-[#1A233A] tracking-tighter uppercase">
+            Agenda e Pedidos
+          </h1>
+          <p className="text-xs md:text-sm font-bold text-slate-500 uppercase mt-1 tracking-wide">
+            Gerencie compromissos e acompanhe pedidos delegados.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setSettingsModalOpen(true)}
+                className="text-slate-600 font-bold uppercase text-xs h-11 px-4 gap-2"
+                title="Configurações"
+              >
+                <Settings className="w-4 h-4" /> <span className="hidden sm:inline">Configs</span>
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setBlockModal({ open: true })}
+            className="text-destructive border-destructive/20 hover:bg-destructive/5 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white"
+          >
+            <UserMinus className="w-4 h-4" /> Nova Ausência
+          </Button>
+          <Button
+            onClick={() => handleOpenBooking()}
+            className="bg-[#1A233A] text-white hover:bg-[#2A344A] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Novo Registro
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col xl:flex-row gap-6 max-w-[1600px] mx-auto w-full flex-1 min-h-0 pb-12">
+        <ScanSidebar currentDate={currentDate} setCurrentDate={setCurrentDate} />
+        <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <ScanHeader
+            view={view}
+            setView={setView}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            filters={filters}
+            setFilters={setFilters}
+          />
+          <div className="flex-1 bg-slate-50/30 p-4 md:p-6 flex flex-col min-h-[400px]">
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#1A233A]" />
+              </div>
+            ) : (
               <ScanCalendarViews
                 view={view}
                 currentDate={currentDate}
@@ -281,13 +314,14 @@ export default function ScanService() {
                 filters={filters}
                 isStaff={isStaff}
                 currentUserId={currentUser?.id}
+                activeTab={activeTab}
                 onSlotClick={(date, start, end) => handleOpenBooking({ date, start, end })}
                 onBookingClick={(b) => handleOpenBooking(null, b)}
                 setCurrentDate={setCurrentDate}
                 setView={setView}
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
       <BookingModal
