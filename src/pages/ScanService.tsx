@@ -293,7 +293,14 @@ export default function ScanService() {
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6 max-w-[1600px] mx-auto w-full flex-1 min-h-0 pb-12">
-        <ScanSidebar currentDate={currentDate} setCurrentDate={setCurrentDate} />
+        <ScanSidebar
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          bookings={bookings}
+          isStaff={isStaff}
+          currentUserId={currentUser?.id}
+          filters={filters}
+        />
         <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <ScanHeader
             view={view}

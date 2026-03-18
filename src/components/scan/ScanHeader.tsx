@@ -59,7 +59,7 @@ export function ScanHeader({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -90,12 +90,12 @@ export function ScanHeader({
               value={filters.dentistId || 'all'}
               onValueChange={(v) => setFilters({ ...filters, dentistId: v })}
             >
-              <SelectTrigger className="w-full sm:w-[220px] h-11 text-xs font-bold uppercase border-slate-200 bg-white">
+              <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px] h-11 text-xs font-bold uppercase border-slate-200 bg-white">
                 <User className="w-4 h-4 mr-2 text-slate-400" />
-                <SelectValue placeholder="POR DENTISTAS" />
+                <SelectValue placeholder="DENTISTAS" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Dentistas</SelectItem>
+                <SelectItem value="all">Dentistas</SelectItem>
                 {dentists.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
                     {d.name}
