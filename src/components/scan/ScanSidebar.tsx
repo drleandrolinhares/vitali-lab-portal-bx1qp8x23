@@ -1,8 +1,10 @@
-import { Calendar } from '@/components/ui/calendar'
+import React, { useMemo } from 'react'
+import { Calendar, CalendarDayButton } from '@/components/ui/calendar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Booking, ScanFilters } from './types'
-import { parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface Props {
   currentDate: Date
@@ -21,15 +23,65 @@ export function ScanSidebar({
   currentUserId,
   filters,
 }: Props) {
-  const visibleBookings = bookings.filter((b) => {
-    if (!isStaff && b.dentist_id !== currentUserId) return false
-    if (isStaff && filters.dentistId && filters.dentistId !== 'all') {
-      if (b.dentist_id !== filters.dentistId) return false
-    }
-    return true
-  })
+  const visibleBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      if (!isStaff && b.dentist_id !== currentUserId) return false
+      if (isStaff && filters.dentistId && filters.dentistId !== 'all') {
+        if (b.dentist_id !== filters.dentistId) return false
+      }
+      return true
+    })
+  }, [bookings, isStaff, currentUserId, filters.dentistId])
 
-  const bookedDates = visibleBookings.map((b) => parseISO(b.booking_date))
+  const CustomDayButton = useMemo(() => {
+    const Component = React.forwardRef<HTMLButtonElement, any>((props, ref) => {
+      const { day, modifiers, className, ...rest } = props
+      const dateStr = day.date ? format(day.date, 'yyyy-MM-dd') : ''
+      const dayBookings = dateStr
+        ? visibleBookings
+            .filter((b) => b.booking_date === dateStr)
+            .sort((a, b) => a.start_time.localeCompare(b.start_time))
+        : []
+
+      return (
+        <CalendarDayButton
+          ref={ref}
+          day={day}
+          modifiers={modifiers}
+          className={cn(className, 'relative overflow-hidden')}
+          {...rest}
+        >
+          <span className="relative z-10">{props.children}</span>
+          {dayBookings.length > 0 && (
+            <div className="absolute bottom-1 left-0 right-0 flex flex-col gap-[2px] w-full px-1.5 z-0">
+              {dayBookings.slice(0, 3).map((b) => {
+                const colors = [
+                  'bg-blue-400',
+                  'bg-pink-400',
+                  'bg-emerald-400',
+                  'bg-amber-400',
+                  'bg-purple-400',
+                ]
+                const charCode = b.id.charCodeAt(0) || 0
+                const colorClass = colors[charCode % colors.length]
+                return (
+                  <div
+                    key={b.id}
+                    className={cn('h-[3px] w-full rounded-full opacity-90', colorClass)}
+                  />
+                )
+              })}
+              {dayBookings.length > 3 && (
+                <div className="h-[3px] w-full rounded-full bg-slate-300 opacity-90 flex items-center justify-center text-[5px] leading-none text-slate-600 font-bold"></div>
+              )}
+            </div>
+          )}
+        </CalendarDayButton>
+      )
+    })
+    Component.displayName = 'CustomDayButton'
+    return Component
+  }, [visibleBookings])
 
   return (
     <Card className="w-full lg:w-[320px] shrink-0 h-max shadow-sm border-slate-200 rounded-xl overflow-hidden">
@@ -51,11 +103,7 @@ export function ScanSidebar({
           month={currentDate}
           onMonthChange={setCurrentDate}
           onSelect={(d) => d && setCurrentDate(d)}
-          modifiers={{ booked: bookedDates }}
-          modifiersClassNames={{
-            booked:
-              "relative after:content-[''] after:absolute after:bottom-[6px] after:left-1/2 after:-translate-x-1/2 after:w-3.5 after:h-1 after:bg-[#E11D48] after:rounded-full font-bold",
-          }}
+          components={{ DayButton: CustomDayButton }}
           className="w-full flex justify-center [&_.rdp]:w-full [&_.rdp-month]:w-full [&_table]:w-full [&_td]:w-10 [&_td]:h-10 [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-black [&_.rdp-caption_label]:uppercase [&_.rdp-caption_label]:tracking-wider [&_.rdp-head_cell]:text-[10px] [&_.rdp-head_cell]:font-bold [&_.rdp-head_cell]:text-slate-400 [&_.rdp-nav_button]:h-8 [&_.rdp-nav_button]:w-8 [&_.rdp-day_selected]:bg-[#1A233A] [&_.rdp-day_selected]:text-white [&_.rdp-day_today]:font-black [&_.rdp-day_today]:border-b-2 [&_.rdp-day_today]:border-[#1A233A]"
         />
       </CardContent>

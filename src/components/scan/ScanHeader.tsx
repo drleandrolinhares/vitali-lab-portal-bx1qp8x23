@@ -46,7 +46,10 @@ export function ScanHeader({
           {['day', 'week', 'month'].map((v) => (
             <button
               key={v}
-              onClick={() => setView(v as ViewType)}
+              onClick={() => {
+                setView(v as ViewType)
+                setActiveTab('VISÃO GERAL')
+              }}
               className={cn(
                 'px-5 sm:px-6 h-full text-[11px] font-black uppercase rounded-md transition-all duration-200 tracking-wider',
                 view === v

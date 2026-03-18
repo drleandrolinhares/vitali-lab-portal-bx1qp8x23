@@ -4,6 +4,7 @@ import {
   startOfWeek,
   addDays,
   isSameDay,
+  isSameMonth,
   startOfMonth,
   endOfMonth,
   endOfWeek,
@@ -112,20 +113,103 @@ export function ScanCalendarViews({
     )
   }
 
+  if (view === 'month' && activeTab === 'VISÃO GERAL') {
+    const monthStart = startOfMonth(currentDate)
+    const monthEnd = endOfMonth(currentDate)
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 })
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 })
+    let currentDay = startDate
+    const calendarDays = []
+    while (currentDay <= endDate) {
+      calendarDays.push(currentDay)
+      currentDay = addDays(currentDay, 1)
+    }
+
+    return (
+      <div className="flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm h-full min-h-[500px]">
+        <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 shrink-0">
+          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
+            <div
+              key={d}
+              className="p-2 sm:p-3 text-center text-[10px] sm:text-xs font-black uppercase text-slate-500 tracking-widest"
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 auto-rows-[minmax(80px,1fr)] bg-slate-200 gap-px flex-1">
+          {calendarDays.map((d) => {
+            const dateStr = format(d, 'yyyy-MM-dd')
+            const dayBookings = visibleBookings
+              .filter((b) => b.booking_date === dateStr)
+              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+            const isCurrentMonth = isSameMonth(d, currentDate)
+            const isToday = isSameDay(d, new Date())
+
+            return (
+              <div
+                key={dateStr}
+                className={cn(
+                  'bg-white p-1 sm:p-1.5 flex flex-col gap-1 overflow-hidden transition-colors hover:bg-slate-50 group',
+                  !isCurrentMonth && 'bg-slate-50/50 opacity-70',
+                )}
+              >
+                <div className="flex items-center justify-between px-1 pt-1">
+                  <span
+                    className={cn(
+                      'text-[10px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full',
+                      isToday ? 'bg-[#E11D48] text-white' : 'text-slate-700',
+                    )}
+                  >
+                    {format(d, 'd')}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 px-0.5 sm:px-1 overflow-y-auto no-scrollbar pb-1">
+                  {dayBookings.map((b) => {
+                    const colors = [
+                      'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                      'bg-pink-100 text-pink-700 hover:bg-pink-200',
+                      'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
+                      'bg-amber-100 text-amber-700 hover:bg-amber-200',
+                      'bg-purple-100 text-purple-700 hover:bg-purple-200',
+                    ]
+                    const charCode = b.id.charCodeAt(0) || 0
+                    const colorClass = colors[charCode % colors.length]
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onBookingClick(b)
+                        }}
+                        className={cn(
+                          'text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded cursor-pointer truncate transition-colors shadow-sm',
+                          colorClass,
+                        )}
+                        title={`${b.start_time.substring(0, 5)} - ${b.patient_name}`}
+                      >
+                        <span className="opacity-75 mr-1 font-semibold">
+                          {b.start_time.substring(0, 5)}
+                        </span>
+                        {b.patient_name}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   const days = []
   if (view === 'day') {
     days.push(currentDate)
   } else if (view === 'week') {
     const start = startOfWeek(currentDate, { weekStartsOn: 0 })
     for (let i = 0; i < 7; i++) days.push(addDays(start, i))
-  } else {
-    const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
-    const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
-    let day = start
-    while (day <= end) {
-      days.push(day)
-      day = addDays(day, 1)
-    }
   }
 
   return (
@@ -135,19 +219,6 @@ export function ScanCalendarViews({
         const dayBookings = visibleBookings.filter((b) => b.booking_date === dateStr)
         const setting = settings.find((s) => s.day_of_week === getDay(d))
         const slots = generateTimeSlots(setting)
-
-        if (view === 'month' && slots.length > 0) {
-          const hasEvents = slots.some(
-            (slot) =>
-              checkBlockOverlap(slot.start, slot.end, dateStr, blocks) ||
-              dayBookings.find(
-                (b) =>
-                  b.start_time.substring(0, 5) < slot.end &&
-                  b.end_time.substring(0, 5) > slot.start,
-              ),
-          )
-          if (!hasEvents && !isSameDay(d, currentDate)) return null
-        }
 
         return (
           <div
