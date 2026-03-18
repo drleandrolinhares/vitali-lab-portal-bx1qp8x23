@@ -18,8 +18,12 @@ export default function ScanService() {
   const { currentUser, appSettings } = useAppStore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<ViewType>('week')
-  const [activeTab, setActiveTab] = useState('PARA MIM')
-  const [filters, setFilters] = useState<ScanFilters>({ showBookings: true, showBlocks: true })
+  const [activeTab, setActiveTab] = useState('VISÃO GERAL')
+  const [filters, setFilters] = useState<ScanFilters>({
+    showBookings: true,
+    showBlocks: true,
+    dentistId: 'all',
+  })
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [settings, setSettings] = useState<ScanSetting[]>([])
@@ -60,6 +64,7 @@ export default function ScanService() {
     'relationship_manager',
   ].includes(currentUser?.role || '')
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === ('master' as any)
+  const isMaster = currentUser?.role === ('master' as any)
   const scanServiceEnabled = appSettings['scan_service_enabled'] === 'true'
 
   const fetchAgenda = async () => {
@@ -272,16 +277,18 @@ export default function ScanService() {
               </Button>
             </>
           )}
-          <Button
-            variant="outline"
-            onClick={() => setBlockModal({ open: true })}
-            className="text-destructive border-destructive/20 hover:bg-destructive/5 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white"
-          >
-            <UserMinus className="w-4 h-4" /> Nova Ausência
-          </Button>
+          {isMaster && (
+            <Button
+              variant="outline"
+              onClick={() => setBlockModal({ open: true })}
+              className="text-[#E11D48] border-[#E11D48]/20 hover:bg-[#E11D48]/5 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white"
+            >
+              <UserMinus className="w-4 h-4" /> Bloqueio de Agendamentos
+            </Button>
+          )}
           <Button
             onClick={() => handleOpenBooking()}
-            className="bg-[#1A233A] text-white hover:bg-[#2A344A] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm"
+            className="bg-[#E11D48] text-white hover:bg-[#BE123C] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" /> Novo Registro
           </Button>
@@ -298,6 +305,8 @@ export default function ScanService() {
             setActiveTab={setActiveTab}
             filters={filters}
             setFilters={setFilters}
+            dentists={dentists}
+            isStaff={isStaff}
           />
           <div className="flex-1 bg-slate-50/30 p-4 md:p-6 flex flex-col min-h-[400px]">
             {loading ? (

@@ -32,4 +32,7 @@ export type ViewType = 'day' | 'week' | 'month'
 export interface ScanFilters {
   showBookings: boolean
   showBlocks: boolean
+  dentistId?: string
 }
+
+export type ScanTab = 'VISÃO GERAL' | 'AGENDAMENTOS MARCADOS'

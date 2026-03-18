@@ -12,9 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Filter } from 'lucide-react'
+import { Filter, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ViewType, ScanFilters } from './types'
+import { ViewType, ScanFilters, ScanTab } from './types'
 
 interface Props {
   view: ViewType
@@ -23,15 +23,26 @@ interface Props {
   setActiveTab: (t: string) => void
   filters: ScanFilters
   setFilters: (f: ScanFilters) => void
+  dentists: any[]
+  isStaff: boolean
 }
 
-export function ScanHeader({ view, setView, activeTab, setActiveTab, filters, setFilters }: Props) {
-  const tabs = ['PARA MIM', 'AUSÊNCIAS', 'COMPROMISSOS', 'ALERTAS DO SISTEMA', 'DELEGADOS POR MIM']
+export function ScanHeader({
+  view,
+  setView,
+  activeTab,
+  setActiveTab,
+  filters,
+  setFilters,
+  dentists,
+  isStaff,
+}: Props) {
+  const tabs: ScanTab[] = ['VISÃO GERAL', 'AGENDAMENTOS MARCADOS']
 
   return (
     <div className="flex flex-col bg-white">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b border-slate-100">
-        <div className="bg-slate-100/80 p-1 rounded-lg flex items-center h-11 border border-slate-200">
+        <div className="bg-slate-100/80 p-1 rounded-lg flex items-center h-11 border border-slate-200 shrink-0">
           {['day', 'week', 'month'].map((v) => (
             <button
               key={v}
@@ -74,15 +85,25 @@ export function ScanHeader({ view, setView, activeTab, setActiveTab, filters, se
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Select defaultValue="geral">
-            <SelectTrigger className="w-full sm:w-[160px] h-11 text-xs font-bold uppercase border-slate-200 bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="geral">Geral</SelectItem>
-              <SelectItem value="meus">Meus Pacientes</SelectItem>
-            </SelectContent>
-          </Select>
+          {isStaff && (
+            <Select
+              value={filters.dentistId || 'all'}
+              onValueChange={(v) => setFilters({ ...filters, dentistId: v })}
+            >
+              <SelectTrigger className="w-full sm:w-[220px] h-11 text-xs font-bold uppercase border-slate-200 bg-white">
+                <User className="w-4 h-4 mr-2 text-slate-400" />
+                <SelectValue placeholder="POR DENTISTAS" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Dentistas</SelectItem>
+                {dentists.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
@@ -95,7 +116,7 @@ export function ScanHeader({ view, setView, activeTab, setActiveTab, filters, se
               className={cn(
                 'px-5 pb-3 pt-4 text-[11px] whitespace-nowrap font-black uppercase border-b-[3px] transition-colors tracking-wide',
                 activeTab === tab
-                  ? 'border-[#D6A75A] text-[#1A233A]'
+                  ? 'border-[#E11D48] text-[#1A233A]'
                   : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200',
               )}
             >
