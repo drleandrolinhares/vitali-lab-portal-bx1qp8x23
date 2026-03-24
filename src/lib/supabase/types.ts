@@ -1,11 +1,17 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.1'
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -57,11 +63,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'audit_logs_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -89,11 +95,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'billing_controls_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "billing_controls_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -101,9 +107,16 @@ export type Database = {
         Row: {
           created_at: string
           dentist_id: string
+          due_date: string | null
           id: string
+          installment_number: number | null
           installment_value: number
+          note: string | null
+          paid_at: string | null
+          payment_method: string | null
           remaining_installments: number
+          settlement_id: string | null
+          start_month: string | null
           status: string
           total_amount: number
           total_installments: number
@@ -111,9 +124,16 @@ export type Database = {
         Insert: {
           created_at?: string
           dentist_id: string
+          due_date?: string | null
           id?: string
+          installment_number?: number | null
           installment_value: number
+          note?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
           remaining_installments: number
+          settlement_id?: string | null
+          start_month?: string | null
           status?: string
           total_amount: number
           total_installments: number
@@ -121,20 +141,79 @@ export type Database = {
         Update: {
           created_at?: string
           dentist_id?: string
+          due_date?: string | null
           id?: string
+          installment_number?: number | null
           installment_value?: number
+          note?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
           remaining_installments?: number
+          settlement_id?: string | null
+          start_month?: string | null
           status?: string
           total_amount?: number
           total_installments?: number
         }
         Relationships: [
           {
-            foreignKeyName: 'billing_installments_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "billing_installments_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_installments_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dentist_boxes: {
+        Row: {
+          box_number: string
+          dentist_id: string
+          id: string
+          order_id: string | null
+          returned_at: string | null
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          box_number: string
+          dentist_id: string
+          id?: string
+          order_id?: string | null
+          returned_at?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          box_number?: string
+          dentist_id?: string
+          id?: string
+          order_id?: string | null
+          returned_at?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dentist_boxes_dentist_id_fkey"
+            columns: ["dentist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dentist_boxes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -222,31 +301,35 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'expenses_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "expenses_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'expenses_dre_category_fkey'
-            columns: ['dre_category']
+            foreignKeyName: "expenses_dre_category_fkey"
+            columns: ["dre_category"]
             isOneToOne: false
-            referencedRelation: 'dre_categories'
-            referencedColumns: ['name']
+            referencedRelation: "dre_categories"
+            referencedColumns: ["name"]
           },
           {
-            foreignKeyName: 'expenses_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "expenses_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
       inventory_items: {
         Row: {
+          brand: string | null
+          color: string | null
           created_at: string
+          do_not_buy: boolean | null
+          do_not_buy_reason: string | null
           id: string
           items_per_box: number | null
           last_purchase_brand: string | null
@@ -259,12 +342,18 @@ export type Database = {
           purchase_cost: number | null
           quantity: number
           sector: string
+          specification: string | null
+          specificity: string | null
           storage_location: string | null
           unit_price: number
           usage_factor: number | null
         }
         Insert: {
+          brand?: string | null
+          color?: string | null
           created_at?: string
+          do_not_buy?: boolean | null
+          do_not_buy_reason?: string | null
           id?: string
           items_per_box?: number | null
           last_purchase_brand?: string | null
@@ -277,12 +366,18 @@ export type Database = {
           purchase_cost?: number | null
           quantity?: number
           sector?: string
+          specification?: string | null
+          specificity?: string | null
           storage_location?: string | null
           unit_price?: number
           usage_factor?: number | null
         }
         Update: {
+          brand?: string | null
+          color?: string | null
           created_at?: string
+          do_not_buy?: boolean | null
+          do_not_buy_reason?: string | null
           id?: string
           items_per_box?: number | null
           last_purchase_brand?: string | null
@@ -295,6 +390,8 @@ export type Database = {
           purchase_cost?: number | null
           quantity?: number
           sector?: string
+          specification?: string | null
+          specificity?: string | null
           storage_location?: string | null
           unit_price?: number
           usage_factor?: number | null
@@ -325,11 +422,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'inventory_transactions_item_id_fkey'
-            columns: ['item_id']
+            foreignKeyName: "inventory_transactions_item_id_fkey"
+            columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: 'inventory_items'
-            referencedColumns: ['id']
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -381,11 +478,69 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'order_history_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "order_history_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_repetitions: {
+        Row: {
+          dentist_id: string | null
+          details: string | null
+          estimated_loss: number
+          id: string
+          logged_at: string
+          logged_by: string | null
+          order_id: string
+          reason: string
+          work_type: string
+        }
+        Insert: {
+          dentist_id?: string | null
+          details?: string | null
+          estimated_loss?: number
+          id?: string
+          logged_at?: string
+          logged_by?: string | null
+          order_id: string
+          reason: string
+          work_type: string
+        }
+        Update: {
+          dentist_id?: string | null
+          details?: string | null
+          estimated_loss?: number
+          id?: string
+          logged_at?: string
+          logged_by?: string | null
+          order_id?: string
+          reason?: string
+          work_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_repetitions_dentist_id_fkey"
+            columns: ["dentist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_repetitions_logged_by_fkey"
+            columns: ["logged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_repetitions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -485,32 +640,32 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'orders_created_by_fkey'
-            columns: ['created_by']
+            foreignKeyName: "orders_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'orders_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "orders_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'orders_dre_category_fkey'
-            columns: ['dre_category']
+            foreignKeyName: "orders_dre_category_fkey"
+            columns: ["dre_category"]
             isOneToOne: false
-            referencedRelation: 'dre_categories'
-            referencedColumns: ['name']
+            referencedRelation: "dre_categories"
+            referencedColumns: ["name"]
           },
           {
-            foreignKeyName: 'orders_settlement_id_fkey'
-            columns: ['settlement_id']
+            foreignKeyName: "orders_settlement_id_fkey"
+            columns: ["settlement_id"]
             isOneToOne: false
-            referencedRelation: 'settlements'
-            referencedColumns: ['id']
+            referencedRelation: "settlements"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -541,18 +696,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'partner_prices_partner_id_fkey'
-            columns: ['partner_id']
+            foreignKeyName: "partner_prices_partner_id_fkey"
+            columns: ["partner_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'partner_prices_price_list_id_fkey'
-            columns: ['price_list_id']
+            foreignKeyName: "partner_prices_price_list_id_fkey"
+            columns: ["price_list_id"]
             isOneToOne: false
-            referencedRelation: 'price_list'
-            referencedColumns: ['id']
+            referencedRelation: "price_list"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -562,6 +717,7 @@ export type Database = {
           category: string
           created_at: string
           estrutura_fixacao: string
+          exclusive_dentist_id: string | null
           execution_time: number | null
           fixed_cost: number | null
           id: string
@@ -578,6 +734,7 @@ export type Database = {
           category: string
           created_at?: string
           estrutura_fixacao?: string
+          exclusive_dentist_id?: string | null
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
@@ -594,6 +751,7 @@ export type Database = {
           category?: string
           created_at?: string
           estrutura_fixacao?: string
+          exclusive_dentist_id?: string | null
           execution_time?: number | null
           fixed_cost?: number | null
           id?: string
@@ -605,7 +763,15 @@ export type Database = {
           sector?: string
           work_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "price_list_exclusive_dentist_id_fkey"
+            columns: ["exclusive_dentist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       price_stages: {
         Row: {
@@ -634,11 +800,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'price_stages_price_list_id_fkey'
-            columns: ['price_list_id']
+            foreignKeyName: "price_stages_price_list_id_fkey"
+            columns: ["price_list_id"]
             isOneToOne: false
-            referencedRelation: 'price_list'
-            referencedColumns: ['id']
+            referencedRelation: "price_list"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -843,11 +1009,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'scan_service_bookings_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "scan_service_bookings_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -883,30 +1049,51 @@ export type Database = {
           amount: number
           created_at: string
           dentist_id: string
+          discount: number | null
+          due_date: string | null
           id: string
+          note: string | null
           orders_snapshot: Json
+          paid_at: string | null
+          payment_method: string | null
+          status: string
+          total_installments: number | null
         }
         Insert: {
           amount: number
           created_at?: string
           dentist_id: string
+          discount?: number | null
+          due_date?: string | null
           id?: string
+          note?: string | null
           orders_snapshot: Json
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          total_installments?: number | null
         }
         Update: {
           amount?: number
           created_at?: string
           dentist_id?: string
+          discount?: number | null
+          due_date?: string | null
           id?: string
+          note?: string | null
           orders_snapshot?: Json
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          total_installments?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: 'settlements_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "settlements_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -927,11 +1114,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'scan_service_bookings_dentist_id_fkey'
-            columns: ['dentist_id']
+            foreignKeyName: "scan_service_bookings_dentist_id_fkey"
+            columns: ["dentist_id"]
             isOneToOne: false
-            referencedRelation: 'profiles'
-            referencedColumns: ['id']
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -956,31 +1143,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -989,23 +1178,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1014,23 +1203,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1039,36 +1228,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -1076,6 +1265,7 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -1114,6 +1304,21 @@ export const Constants = {
 //   remaining_installments: integer (not null)
 //   status: text (not null, default: 'active'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+//   settlement_id: uuid (nullable)
+//   start_month: text (nullable)
+//   due_date: date (nullable)
+//   paid_at: timestamp with time zone (nullable)
+//   installment_number: integer (nullable, default: 1)
+//   note: text (nullable)
+//   payment_method: text (nullable)
+// Table: dentist_boxes
+//   id: uuid (not null, default: gen_random_uuid())
+//   dentist_id: uuid (not null)
+//   box_number: text (not null)
+//   order_id: uuid (nullable)
+//   status: text (not null, default: 'with_dentist'::text)
+//   sent_at: timestamp with time zone (not null, default: now())
+//   returned_at: timestamp with time zone (nullable)
 // Table: dre_categories
 //   name: text (not null)
 //   category_type: text (not null, default: 'fixed'::text)
@@ -1155,6 +1360,12 @@ export const Constants = {
 //   items_per_box: numeric (nullable, default: 1)
 //   packaging_types: jsonb (nullable, default: '[]'::jsonb)
 //   minimum_stock_level: numeric (not null, default: 0)
+//   brand: text (nullable)
+//   specification: text (nullable)
+//   color: text (nullable)
+//   do_not_buy: boolean (nullable, default: false)
+//   do_not_buy_reason: text (nullable)
+//   specificity: text (nullable)
 // Table: inventory_transactions
 //   id: uuid (not null, default: gen_random_uuid())
 //   item_id: uuid (not null)
@@ -1173,6 +1384,16 @@ export const Constants = {
 //   status: text (not null)
 //   note: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: order_repetitions
+//   id: uuid (not null, default: gen_random_uuid())
+//   order_id: uuid (not null)
+//   dentist_id: uuid (nullable)
+//   work_type: text (not null)
+//   reason: text (not null)
+//   details: text (nullable)
+//   estimated_loss: numeric (not null, default: 0)
+//   logged_at: timestamp with time zone (not null, default: now())
+//   logged_by: uuid (nullable)
 // Table: orders
 //   id: uuid (not null, default: gen_random_uuid())
 //   friendly_id: text (not null, default: ('ORD-'::text || to_char(nextval('order_seq'::regclass), 'FM0000'::text)))
@@ -1225,6 +1446,7 @@ export const Constants = {
 //   fixed_cost: numeric (nullable, default: 0)
 //   estrutura_fixacao: text (not null, default: 'SOBRE DENTE'::text)
 //   is_hidden: boolean (not null, default: false)
+//   exclusive_dentist_id: uuid (nullable)
 // Table: price_stages
 //   id: uuid (not null, default: gen_random_uuid())
 //   price_list_id: uuid (not null)
@@ -1306,6 +1528,13 @@ export const Constants = {
 //   amount: numeric (not null)
 //   orders_snapshot: jsonb (not null)
 //   created_at: timestamp with time zone (not null, default: now())
+//   discount: numeric (nullable, default: 0)
+//   payment_method: text (nullable)
+//   total_installments: integer (nullable, default: 1)
+//   status: text (not null, default: 'pending'::text)
+//   due_date: date (nullable)
+//   paid_at: timestamp with time zone (nullable)
+//   note: text (nullable)
 // Table: vw_secure_scan_bookings
 //   id: uuid (nullable)
 //   dentist_id: uuid (nullable)
@@ -1331,6 +1560,11 @@ export const Constants = {
 // Table: billing_installments
 //   FOREIGN KEY billing_installments_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
 //   PRIMARY KEY billing_installments_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY billing_installments_settlement_id_fkey: FOREIGN KEY (settlement_id) REFERENCES settlements(id) ON DELETE CASCADE
+// Table: dentist_boxes
+//   FOREIGN KEY dentist_boxes_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
+//   FOREIGN KEY dentist_boxes_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+//   PRIMARY KEY dentist_boxes_pkey: PRIMARY KEY (id)
 // Table: dre_categories
 //   PRIMARY KEY dre_categories_pkey: PRIMARY KEY (name)
 // Table: expenses
@@ -1349,6 +1583,11 @@ export const Constants = {
 // Table: order_history
 //   FOREIGN KEY order_history_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 //   PRIMARY KEY order_history_pkey: PRIMARY KEY (id)
+// Table: order_repetitions
+//   FOREIGN KEY order_repetitions_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE SET NULL
+//   FOREIGN KEY order_repetitions_logged_by_fkey: FOREIGN KEY (logged_by) REFERENCES profiles(id) ON DELETE SET NULL
+//   FOREIGN KEY order_repetitions_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+//   PRIMARY KEY order_repetitions_pkey: PRIMARY KEY (id)
 // Table: orders
 //   FOREIGN KEY orders_created_by_fkey: FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
 //   FOREIGN KEY orders_dentist_id_fkey: FOREIGN KEY (dentist_id) REFERENCES profiles(id) ON DELETE CASCADE
@@ -1361,6 +1600,7 @@ export const Constants = {
 //   PRIMARY KEY partner_prices_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY partner_prices_price_list_id_fkey: FOREIGN KEY (price_list_id) REFERENCES price_list(id) ON DELETE CASCADE
 // Table: price_list
+//   FOREIGN KEY price_list_exclusive_dentist_id_fkey: FOREIGN KEY (exclusive_dentist_id) REFERENCES profiles(id) ON DELETE SET NULL
 //   PRIMARY KEY price_list_pkey: PRIMARY KEY (id)
 // Table: price_stages
 //   PRIMARY KEY price_stages_pkey: PRIMARY KEY (id)
@@ -1402,6 +1642,11 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'financial'::text])))))
 //   Policy "Dentist read own billing_installments" (SELECT, PERMISSIVE) roles={public}
 //     USING: (dentist_id = auth.uid())
+// Table: dentist_boxes
+//   Policy "Admin access dentist_boxes" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text])))))
+//   Policy "Dentist view own boxes" (SELECT, PERMISSIVE) roles={public}
+//     USING: (dentist_id = auth.uid())
 // Table: dre_categories
 //   Policy "Admin write dre_categories" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
@@ -1417,19 +1662,19 @@ export const Constants = {
 //   Policy "Admin/Reception view expenses" (SELECT, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
 // Table: inventory_items
-//   Policy "Admin delete inventory_items" (DELETE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
-//   Policy "Admin/Reception insert inventory_items" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
-//   Policy "Admin/Reception update inventory_items" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
-//   Policy "Admin/Reception view inventory_items" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
+//   Policy "Staff delete inventory_items" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
+//   Policy "Staff insert inventory_items" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
+//   Policy "Staff update inventory_items" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
+//   Policy "Staff view inventory_items" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
 // Table: inventory_transactions
-//   Policy "Admin/Reception insert inventory_transactions" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
-//   Policy "Admin/Reception view inventory_transactions" (SELECT, PERMISSIVE) roles={public}
-//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
+//   Policy "Staff insert inventory_transactions" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
+//   Policy "Staff view inventory_transactions" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))
 // Table: kanban_stages
 //   Policy "Admin kanban_stages all" (ALL, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
@@ -1440,6 +1685,9 @@ export const Constants = {
 //     USING: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))))))
 //   Policy "Lab can insert order history, dentists can insert for own" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: (EXISTS ( SELECT 1    FROM orders   WHERE ((orders.id = order_history.order_id) AND ((orders.dentist_id = auth.uid()) OR (EXISTS ( SELECT 1            FROM profiles           WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text, 'financial'::text, 'relationship_manager'::text])))))))))
+// Table: order_repetitions
+//   Policy "Admin access order_repetitions" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'technical_assistant'::text])))))
 // Table: orders
 //   Policy "Admin can delete orders" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
@@ -1462,7 +1710,7 @@ export const Constants = {
 //   Policy "Admin price_list update" (UPDATE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Public price_list view" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((is_hidden = false) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'master'::text)))))
+//     USING: ((EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['master'::text, 'admin'::text]))))) OR ((is_hidden = false) AND ((exclusive_dentist_id IS NULL) OR (exclusive_dentist_id = auth.uid()))))
 // Table: price_stages
 //   Policy "Admin price_stages delete" (DELETE, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
@@ -1503,8 +1751,13 @@ export const Constants = {
 //   Policy "Authenticated users can select scan settings" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: settlements
+//   Policy "Admin delete settlements" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text])))))
 //   Policy "Admin insert settlements" (INSERT, PERMISSIVE) roles={authenticated}
-//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'financial'::text])))))
+//   Policy "Admin update settlements" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'financial'::text])))))
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text, 'financial'::text])))))
 //   Policy "Admin view all settlements, dentists view own" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: ((dentist_id = auth.uid()) OR (EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::text, 'master'::text, 'receptionist'::text]))))))
 
@@ -1515,18 +1768,29 @@ export const Constants = {
 //    LANGUAGE plpgsql
 //    SECURITY DEFINER
 //   AS $function$
+//   DECLARE
+//     caller_role text;
+//     target_role text;
 //   BEGIN
-//     IF EXISTS (
-//       SELECT 1 FROM public.profiles
-//       WHERE id = auth.uid() AND role IN ('admin', 'master')
-//     ) THEN
-//       DELETE FROM auth.users WHERE id = target_user_id;
-//     ELSE
-//       RAISE EXCEPTION 'Unauthorized';
+//     -- Get the caller's role
+//     SELECT role INTO caller_role FROM public.profiles WHERE id = auth.uid();
+//     
+//     IF caller_role NOT IN ('admin', 'master') THEN
+//       RAISE EXCEPTION 'Unauthorized: Apenas administradores ou masters podem excluir usuários.';
 //     END IF;
+//   
+//     -- Get the target user's role
+//     SELECT role INTO target_role FROM public.profiles WHERE id = target_user_id;
+//   
+//     -- Prevent admin from deleting master
+//     IF target_role = 'master' AND caller_role != 'master' THEN
+//       RAISE EXCEPTION 'Unauthorized: Apenas usuários MASTER podem excluir outro usuário MASTER.';
+//     END IF;
+//   
+//     DELETE FROM auth.users WHERE id = target_user_id;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION get_public_order_full_details(uuid)
 //   CREATE OR REPLACE FUNCTION public.get_public_order_full_details(target_order_id uuid)
 //    RETURNS json
@@ -1580,11 +1844,11 @@ export const Constants = {
 //     LEFT JOIN public.profiles p ON o.dentist_id = p.id
 //     LEFT JOIN public.profiles creator ON o.created_by = creator.id
 //     WHERE o.id = target_order_id;
-//
+//     
 //     RETURN result;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION get_public_order_guide(uuid)
 //   CREATE OR REPLACE FUNCTION public.get_public_order_guide(target_order_id uuid)
 //    RETURNS json
@@ -1603,11 +1867,11 @@ export const Constants = {
 //     FROM public.orders o
 //     LEFT JOIN public.profiles p ON o.dentist_id = p.id
 //     WHERE o.id = target_order_id;
-//
+//     
 //     RETURN result;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION handle_new_order()
 //   CREATE OR REPLACE FUNCTION public.handle_new_order()
 //    RETURNS trigger
@@ -1620,7 +1884,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger
@@ -1646,7 +1910,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION protect_is_approved()
 //   CREATE OR REPLACE FUNCTION public.protect_is_approved()
 //    RETURNS trigger
@@ -1665,12 +1929,65 @@ export const Constants = {
 //         END IF;
 //       END IF;
 //     END IF;
-//
+//     
 //     -- Ensure other fields like is_active remain untouched by this trigger
 //     RETURN NEW;
 //   END;
 //   $function$
-//
+//   
+// FUNCTION protect_profile_permissions()
+//   CREATE OR REPLACE FUNCTION public.protect_profile_permissions()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     caller_role text;
+//   BEGIN
+//     IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
+//       IF auth.uid() IS NOT NULL THEN
+//         SELECT role INTO caller_role FROM public.profiles WHERE id = auth.uid();
+//         
+//         IF caller_role NOT IN ('admin', 'master') THEN
+//            -- Revert to old permissions to prevent unauthorized escalation
+//            NEW.permissions = OLD.permissions;
+//         END IF;
+//       END IF;
+//     END IF;
+//     
+//     RETURN NEW;
+//   END;
+//   $function$
+//   
+// FUNCTION protect_profile_role()
+//   CREATE OR REPLACE FUNCTION public.protect_profile_role()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     caller_role text;
+//   BEGIN
+//     IF NEW.role IS DISTINCT FROM OLD.role THEN
+//       IF auth.uid() IS NOT NULL THEN
+//         SELECT role INTO caller_role FROM public.profiles WHERE id = auth.uid();
+//         
+//         -- Only master can assign or remove master
+//         IF caller_role != 'master' AND (NEW.role = 'master' OR OLD.role = 'master') THEN
+//           RAISE EXCEPTION 'Unauthorized: Apenas usuários MASTER podem modificar a função MASTER.';
+//         END IF;
+//   
+//         -- Only admin or master can change roles
+//         IF caller_role NOT IN ('admin', 'master') THEN
+//           RAISE EXCEPTION 'Unauthorized: Apenas administradores podem alterar funções.';
+//         END IF;
+//       END IF;
+//     END IF;
+//     
+//     RETURN NEW;
+//   END;
+//   $function$
+//   
 // FUNCTION update_inventory_quantity()
 //   CREATE OR REPLACE FUNCTION public.update_inventory_quantity()
 //    RETURNS trigger
@@ -1685,7 +2002,7 @@ export const Constants = {
 //       RETURN NEW;
 //   END;
 //   $function$
-//
+//   
 
 // --- TRIGGERS ---
 // Table: inventory_transactions
@@ -1694,6 +2011,8 @@ export const Constants = {
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
 // Table: profiles
 //   protect_is_approved_trigger: CREATE TRIGGER protect_is_approved_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_is_approved()
+//   protect_profile_permissions_trigger: CREATE TRIGGER protect_profile_permissions_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_profile_permissions()
+//   protect_profile_role_trigger: CREATE TRIGGER protect_profile_role_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_profile_role()
 
 // --- INDEXES ---
 // Table: audit_logs
@@ -1701,6 +2020,9 @@ export const Constants = {
 //   CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id)
 // Table: billing_controls
 //   CREATE UNIQUE INDEX billing_controls_dentist_id_month_key ON public.billing_controls USING btree (dentist_id, month)
+// Table: billing_installments
+//   CREATE INDEX idx_billing_inst_due_date ON public.billing_installments USING btree (due_date)
+//   CREATE INDEX idx_billing_inst_status ON public.billing_installments USING btree (status)
 // Table: expenses
 //   CREATE INDEX idx_expenses_status_due_date ON public.expenses USING btree (status, due_date)
 // Table: kanban_stages
@@ -1712,6 +2034,12 @@ export const Constants = {
 //   CREATE INDEX idx_orders_status ON public.orders USING btree (status)
 // Table: partner_prices
 //   CREATE UNIQUE INDEX partner_prices_partner_id_price_list_id_key ON public.partner_prices USING btree (partner_id, price_list_id)
+// Table: price_list
+//   CREATE INDEX idx_price_list_exclusive_dentist_id ON public.price_list USING btree (exclusive_dentist_id)
 // Table: profiles
 //   CREATE INDEX idx_profiles_active_approved ON public.profiles USING btree (is_active, is_approved)
 //   CREATE INDEX idx_profiles_role ON public.profiles USING btree (role)
+// Table: settlements
+//   CREATE INDEX idx_settlements_due_date ON public.settlements USING btree (due_date)
+//   CREATE INDEX idx_settlements_status ON public.settlements USING btree (status)
+
