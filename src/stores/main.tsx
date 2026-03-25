@@ -117,17 +117,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sessionStorage.getItem('vitali_visualizando_como_name'),
   )
 
-  const setVisualizando_Como = useCallback((id: string | null, name: string | null) => {
-    if (id && name) {
-      sessionStorage.setItem('vitali_visualizando_como_id', id)
-      sessionStorage.setItem('vitali_visualizando_como_name', name)
-    } else {
-      sessionStorage.removeItem('vitali_visualizando_como_id')
-      sessionStorage.removeItem('vitali_visualizando_como_name')
-    }
-    setVisualizando_Como_ID(id)
-    setVisualizando_Como_Name(name)
-  }, [])
+  const setVisualizando_Como = useCallback(
+    (id: string | null, name: string | null) => {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
+      if (id && name) {
+        sessionStorage.setItem('vitali_visualizando_como_id', id)
+        sessionStorage.setItem('vitali_visualizando_como_name', name)
+        supabase
+          .from('audit_logs')
+          .insert({
+            user_id: currentUser.id,
+            action: 'impersonate_start',
+            entity_type: 'profile',
+            entity_id: id,
+            details: { target_name: name },
+          } as any)
+          .then()
+      } else {
+        sessionStorage.removeItem('vitali_visualizando_como_id')
+        sessionStorage.removeItem('vitali_visualizando_como_name')
+      }
+      setVisualizando_Como_ID(id)
+      setVisualizando_Como_Name(name)
+    },
+    [currentUser],
+  )
 
   const effectiveUserId =
     (currentUser?.role === 'master' || currentUser?.role === 'admin') && Visualizando_Como_ID
@@ -177,11 +191,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     if (currentUser?.id !== session.user.id) setProfileLoading(true)
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle()
+    const [{ data }, { data: settingsData }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+      supabase.from('app_settings').select('*'),
+    ])
+
+    if (settingsData) {
+      const settings = settingsData.reduce((acc: any, row: any) => {
+        acc[row.key] = row.value
+        return acc
+      }, {})
+      setAppSettings(settings)
+    }
+
     if (data) {
       setCurrentUser({
         id: data.id,
@@ -645,18 +667,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const approveUser = async (userId: string) => {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
     const { error } = await supabase.from('profiles').update({ is_approved: true }).eq('id', userId)
     if (!error) {
       toast({ title: 'Usuário aprovado!' })
       setPendingUsers((p) => p.filter((u) => u.id !== userId))
+      await supabase.from('audit_logs').insert({
+        user_id: currentUser.id,
+        action: 'approve_user',
+        entity_type: 'profile',
+        entity_id: userId,
+        details: {},
+      } as any)
     }
   }
 
   const rejectUser = async (userId: string) => {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master')) return
     const { error } = await supabase.rpc('delete_user', { target_user_id: userId })
     if (!error) {
       toast({ title: 'Usuário rejeitado!' })
       setPendingUsers((p) => p.filter((u) => u.id !== userId))
+      await supabase.from('audit_logs').insert({
+        user_id: currentUser.id,
+        action: 'reject_user',
+        entity_type: 'profile',
+        entity_id: userId,
+        details: {},
+      } as any)
     }
   }
 
