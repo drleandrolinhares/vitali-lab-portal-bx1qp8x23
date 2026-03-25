@@ -714,7 +714,7 @@ export default function Layout() {
       <div className="print:hidden h-full flex z-20">
         <AppSidebar />
       </div>
-      <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen">
+      <div className="flex flex-1 flex-col min-w-0 bg-white dark:bg-background h-screen print:h-auto print:min-h-0 print:overflow-visible print:block">
         {isImpersonating && (
           <div className="bg-slate-900 text-white z-[100] flex items-center justify-between px-4 sm:px-6 py-2.5 shadow-md print:hidden shrink-0">
             <div className="flex items-center gap-2">
@@ -737,7 +737,7 @@ export default function Layout() {
           </div>
         )}
         <MainHeader />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible relative z-0">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto animate-fade-in print:p-0 print:overflow-visible print:block relative z-0">
           {fetchError && (
             <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border border-red-200 gap-4">
               <div className="flex items-center gap-3">

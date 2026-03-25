@@ -1018,13 +1018,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
     const nextIndex =
       sectorStages.length > 0 ? Math.max(...sectorStages.map((s) => s.orderIndex)) + 1 : 1
-    const { error } = await supabase
-      .from('kanban_stages')
-      .insert({
-        name: name.trim().toUpperCase(),
-        order_index: nextIndex,
-        sector: sector.toUpperCase(),
-      })
+    const { error } = await supabase.from('kanban_stages').insert({
+      name: name.trim().toUpperCase(),
+      order_index: nextIndex,
+      sector: sector.toUpperCase(),
+    })
     return !error
   }
 

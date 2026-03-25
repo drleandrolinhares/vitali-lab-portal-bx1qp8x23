@@ -96,7 +96,7 @@
 
 @media print {
   @page {
-    margin: 0;
+    margin: 1cm;
   }
 
   body {
@@ -106,7 +106,7 @@
   }
 
   #root {
-    display: none !important;
+    display: block !important;
   }
 
   [data-radix-dialog-overlay] {

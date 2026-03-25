@@ -491,34 +491,6 @@ export default function PriceList() {
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden !important;
-          }
-          #price-list-print-area, #price-list-print-area * {
-            visibility: visible !important;
-          }
-          #price-list-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 16px !important;
-          }
-          html, body {
-            height: auto !important;
-            overflow: visible !important;
-            background-color: white !important;
-          }
-          @page {
-            size: A4;
-            margin: 1cm;
-          }
-        }
-      `}</style>
-
       <div className="print:hidden space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">
@@ -1247,48 +1219,58 @@ export default function PriceList() {
       </div>
 
       {/* PRINT ONLY VIEW */}
-      <div id="price-list-print-area" className="hidden print:block w-full bg-white text-black">
-        <div className="text-center mb-6 border-b border-gray-300 pb-4">
-          <h2 className="text-2xl font-bold uppercase tracking-tight">VITALI LAB</h2>
-          <h3 className="text-lg text-gray-700 mt-1 uppercase">
-            Tabela de Preços - {selectedLab === 'Todos' ? 'Geral' : selectedLab}
+      <div id="price-list-print-area" className="hidden print:block w-full bg-white text-black p-4">
+        <div className="text-center mb-6 border-b-2 border-black pb-4">
+          <h2 className="text-3xl font-bold uppercase tracking-tight text-black">VITALI LAB</h2>
+          <h3 className="text-xl text-gray-800 mt-1 uppercase font-semibold">
+            Tabela de Preços - {selectedLab === 'Todos' ? 'Visão Consolidada' : selectedLab}
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Gerado em {new Date().toLocaleDateString('pt-BR')}
+          <p className="text-sm text-gray-500 mt-2">
+            Gerado em {new Date().toLocaleDateString('pt-BR')} às{' '}
+            {new Date().toLocaleTimeString('pt-BR')}
           </p>
         </div>
-        <table className="w-full text-left border-collapse text-sm">
+        <table className="w-full text-left border-collapse text-sm mb-8">
           <thead>
-            <tr className="border-b-2 border-gray-300 text-gray-800">
-              <th className="py-2 font-bold uppercase">Procedimento</th>
-              <th className="py-2 font-bold uppercase">Categoria</th>
-              <th className="py-2 font-bold uppercase">Material</th>
-              <th className="py-2 text-right font-bold uppercase">Valor (R$)</th>
+            <tr className="border-b-2 border-black text-black">
+              <th className="py-3 px-2 font-bold uppercase text-xs w-1/3">Procedimento</th>
+              <th className="py-3 px-2 font-bold uppercase text-xs">Categoria</th>
+              <th className="py-3 px-2 font-bold uppercase text-xs">Material</th>
+              <th className="py-3 px-2 text-right font-bold uppercase text-xs">Valor (R$)</th>
             </tr>
           </thead>
           <tbody>
             {filteredPrices.map((item, idx) => (
               <tr
                 key={item.id}
-                className={cn('border-b border-gray-200', idx % 2 === 0 ? 'bg-gray-50' : '')}
+                className={cn(
+                  'border-b border-gray-300 break-inside-avoid',
+                  idx % 2 === 0 ? 'bg-gray-50' : 'bg-white',
+                )}
               >
-                <td className="py-2 font-semibold">{item.work_type}</td>
-                <td className="py-2 text-gray-600 text-xs uppercase">{item.category}</td>
-                <td className="py-2 text-gray-600 text-xs uppercase">{item.material || '-'}</td>
-                <td className="py-2 text-right font-bold">
+                <td className="py-2.5 px-2 font-semibold text-gray-900">{item.work_type}</td>
+                <td className="py-2.5 px-2 text-gray-700 text-xs uppercase">{item.category}</td>
+                <td className="py-2.5 px-2 text-gray-700 text-xs uppercase">
+                  {item.material || '-'}
+                </td>
+                <td className="py-2.5 px-2 text-right font-bold text-black whitespace-nowrap">
                   {formatBRL(parseLocalNum(item.price))}
                 </td>
               </tr>
             ))}
             {filteredPrices.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-4 text-center text-gray-500">
-                  Nenhum procedimento encontrado.
+                <td colSpan={4} className="py-8 text-center text-gray-500 italic">
+                  Nenhum procedimento encontrado para os filtros atuais.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        <div className="mt-8 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
+          Documento gerado internamente pelo sistema Studio Vitali Lab. Valores sujeitos a
+          alteração.
+        </div>
       </div>
     </div>
   )
