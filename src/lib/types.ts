@@ -32,6 +32,7 @@ export interface Stage {
   name: KanbanStage
   orderIndex: number
   description?: string
+  sector?: string
 }
 
 export interface DRECategory {
@@ -71,6 +72,7 @@ export interface Order {
   stlDeliveryMethod?: string
   observations?: string
   status: OrderStatus
+  dbStatus: OrderStatus
   isAcknowledged?: boolean
   createdAt: string
   history: OrderHistory[]

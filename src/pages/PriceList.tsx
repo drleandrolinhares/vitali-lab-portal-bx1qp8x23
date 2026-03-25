@@ -170,7 +170,8 @@ export default function PriceList() {
 
   const filteredPrices = useMemo(() => {
     const result = prices.filter((p) => {
-      if (selectedLab !== 'Todos' && p.sector !== selectedLab) return false
+      if (selectedLab !== 'Todos' && (p.sector || '').toUpperCase() !== selectedLab.toUpperCase())
+        return false
 
       if (profitFilter.length > 0) {
         const margin = getMargin(p)
@@ -489,7 +490,35 @@ export default function PriceList() {
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in print:p-0 print:m-0">
+    <div className="max-w-6xl mx-auto animate-fade-in">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #price-list-print-area, #price-list-print-area * {
+            visibility: visible !important;
+          }
+          #price-list-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 16px !important;
+          }
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            background-color: white !important;
+          }
+          @page {
+            size: A4;
+            margin: 1cm;
+          }
+        }
+      `}</style>
+
       <div className="print:hidden space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">
@@ -849,8 +878,8 @@ export default function PriceList() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
-                        <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+                        <SelectItem value="SOLUÇÕES CERÂMICAS">Soluções Cerâmicas</SelectItem>
+                        <SelectItem value="STÚDIO ACRÍLICO">Studio Acrílico</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1218,7 +1247,7 @@ export default function PriceList() {
       </div>
 
       {/* PRINT ONLY VIEW */}
-      <div className="hidden print:block w-full bg-white text-black !m-0 !p-0">
+      <div id="price-list-print-area" className="hidden print:block w-full bg-white text-black">
         <div className="text-center mb-6 border-b border-gray-300 pb-4">
           <h2 className="text-2xl font-bold uppercase tracking-tight">VITALI LAB</h2>
           <h3 className="text-lg text-gray-700 mt-1 uppercase">

@@ -73,6 +73,12 @@ export default function KanbanPage() {
     ? (selectedLab || '').toUpperCase()
     : SECTORS[0]
 
+  const activeStages = useMemo(() => {
+    return kanbanStages
+      .filter((s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === activeLab)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+  }, [kanbanStages, activeLab])
+
   const canDragCards =
     !isDentist &&
     ([
@@ -179,8 +185,15 @@ export default function KanbanPage() {
   }, [orders, isDentist, selectedDentistId, canFilterDentist])
 
   const hasOrders = useMemo(
-    () => (deleteStageData ? orders.some((o) => o.kanbanStage === deleteStageData.name) : false),
-    [deleteStageData, orders],
+    () =>
+      deleteStageData
+        ? orders.some(
+            (o) =>
+              (o.sector || '').toUpperCase() === activeLab &&
+              o.kanbanStage === deleteStageData.name,
+          )
+        : false,
+    [deleteStageData, orders, activeLab],
   )
 
   const handleColumnDrop = (e: React.DragEvent, targetStageId: string) => {
@@ -189,13 +202,16 @@ export default function KanbanPage() {
     if (!isAdmin) return
     const dragId = e.dataTransfer.getData('column-id')
     if (dragId && dragId !== targetStageId) {
-      const oldIndex = kanbanStages.findIndex((s) => s.id === dragId)
-      const newIndex = kanbanStages.findIndex((s) => s.id === targetStageId)
+      const oldIndex = activeStages.findIndex((s) => s.id === dragId)
+      const newIndex = activeStages.findIndex((s) => s.id === targetStageId)
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newStages = [...kanbanStages]
+        const newStages = [...activeStages]
         const [moved] = newStages.splice(oldIndex, 1)
         newStages.splice(newIndex, 0, moved)
-        reorderKanbanStages(newStages.map((s, idx) => ({ ...s, orderIndex: idx + 1 })))
+        reorderKanbanStages(
+          newStages.map((s, idx) => ({ ...s, orderIndex: idx + 1 })),
+          activeLab,
+        )
       }
     }
   }
@@ -222,7 +238,7 @@ export default function KanbanPage() {
 
     savingRef.current = true
     try {
-      await updateKanbanStage(id, oldName, trimmed)
+      await updateKanbanStage(id, oldName, trimmed, activeLab)
     } catch (e) {
       console.error(e)
     } finally {
@@ -246,10 +262,10 @@ export default function KanbanPage() {
     setFinishingOrderId(orderId)
     try {
       let targetStageName = 'FINALIZADOS E ENTREGUES'
-      const existingExact = kanbanStages.find((s) => s.name.toUpperCase() === targetStageName)
+      const existingExact = activeStages.find((s) => s.name.toUpperCase() === targetStageName)
 
       if (!existingExact) {
-        const fallback = kanbanStages.find(
+        const fallback = activeStages.find(
           (s) =>
             s.name.toUpperCase().includes('FINALIZADO') ||
             s.name.toUpperCase().includes('ENTREGUE'),
@@ -257,7 +273,7 @@ export default function KanbanPage() {
         if (fallback) {
           targetStageName = fallback.name
         } else {
-          await addKanbanStage(targetStageName)
+          await addKanbanStage(targetStageName, activeLab)
         }
       }
 
@@ -398,15 +414,15 @@ export default function KanbanPage() {
             <div className="w-2 h-6 bg-pink-600 rounded-full" /> {activeLab}
           </h3>
           <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-start">
-            {kanbanStages.map((stage) => {
+            {activeStages.map((stage, index) => {
               const cols = visibleOrders.filter(
                 (o) => (o.sector || '').toUpperCase() === activeLab && o.kanbanStage === stage.name,
               )
               const isExpanded = expandedCols.has(`${activeLab}-${stage.id}`)
               const displayCols = isExpanded ? cols : cols.slice(0, 4)
               const hasMore = cols.length > 4
-              const isPendingCard = stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
-              const isFirstStage = stage.id === kanbanStages[0]?.id
+              const isPendingCard = index === 0 || stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
+              const isFirstStage = index === 0
 
               return (
                 <div
@@ -542,7 +558,7 @@ export default function KanbanPage() {
                             onClick={() => {
                               setDeleteStageData(stage)
                               setFallbackStageName(
-                                kanbanStages.find((s) => s.id !== stage.id)?.name || '',
+                                activeStages.find((s) => s.id !== stage.id)?.name || '',
                               )
                             }}
                           >
@@ -955,7 +971,7 @@ export default function KanbanPage() {
             onKeyDown={async (e) => {
               if (e.key === 'Enter' && newColumnName.trim()) {
                 e.preventDefault()
-                const success = await addKanbanStage(newColumnName.trim())
+                const success = await addKanbanStage(newColumnName.trim(), activeLab)
                 if (success) {
                   setNewColumnName('')
                   setIsAddColumnOpen(false)
@@ -978,7 +994,7 @@ export default function KanbanPage() {
             <Button
               onClick={async () => {
                 if (newColumnName.trim()) {
-                  const success = await addKanbanStage(newColumnName.trim())
+                  const success = await addKanbanStage(newColumnName.trim(), activeLab)
                   if (success) {
                     setNewColumnName('')
                     setIsAddColumnOpen(false)
@@ -1009,7 +1025,7 @@ export default function KanbanPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {kanbanStages
+                  {activeStages
                     .filter((s) => s.id !== deleteStageData?.id)
                     .map((s) => (
                       <SelectItem key={s.id} value={s.name}>
@@ -1033,6 +1049,7 @@ export default function KanbanPage() {
                     deleteStageData.id,
                     deleteStageData.name,
                     hasOrders ? fallbackStageName : undefined,
+                    activeLab,
                   )
                   setDeleteStageData(null)
                 }

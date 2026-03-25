@@ -98,8 +98,13 @@ export function OrderDetailsSheet({
 
   if (!order) return null
 
+  const sectorStages = kanbanStages.filter(
+    (s) =>
+      (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() ===
+      (order.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase(),
+  )
   const actualHistory = historyItems.length > 0 ? historyItems : order.history
-  const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
+  const processedHistory = processOrderHistory(actualHistory, sectorStages, order.kanbanStage)
 
   return (
     <>

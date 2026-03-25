@@ -46,11 +46,16 @@ interface AppState {
   updateOrderSector: (dbId: string, sector: string) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
   acknowledgeOrder: (id: string) => Promise<void>
-  addKanbanStage: (name: string) => Promise<boolean>
-  updateKanbanStage: (id: string, oldName: string, newName: string) => Promise<void>
+  addKanbanStage: (name: string, sector: string) => Promise<boolean>
+  updateKanbanStage: (id: string, oldName: string, newName: string, sector: string) => Promise<void>
   updateKanbanStageDescription: (id: string, description: string) => Promise<void>
-  deleteKanbanStage: (id: string, oldName: string, fallbackName?: string) => Promise<void>
-  reorderKanbanStages: (reorderedStages: Stage[]) => Promise<void>
+  deleteKanbanStage: (
+    id: string,
+    oldName: string,
+    fallbackName?: string,
+    sector?: string,
+  ) => Promise<void>
+  reorderKanbanStages: (reorderedStages: Stage[], sector: string) => Promise<void>
   updateSetting: (key: string, value: string) => Promise<void>
   updateSettings: (updates: Record<string, string>) => Promise<void>
   updateProfile: (updates: Partial<User & { requires_password_change?: boolean }>) => Promise<void>
@@ -69,9 +74,14 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
-const deriveStatus = (stage: string, dbStatus: OrderStatus): OrderStatus => {
+const deriveStatus = (
+  stage: string,
+  dbStatus: OrderStatus,
+  firstStageNames: string[] = [],
+): OrderStatus => {
   const stg = (stage || '').toUpperCase()
   if (
+    firstStageNames.includes(stg) ||
     stg === 'EM TRIAGEM' ||
     stg === 'TRIAGEM' ||
     stg === 'CAIXA DE ENTRADA' ||
@@ -169,7 +179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   idRef.current = currentUser?.id
 
   const [selectedLab, setSelectedLab] = useState<string>(
-    () => localStorage.getItem('vitali_selected_lab') || 'Soluções Cerâmicas',
+    () => localStorage.getItem('vitali_selected_lab') || 'SOLUÇÕES CERÂMICAS',
   )
 
   useEffect(() => {
@@ -300,6 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           name: s.name,
           orderIndex: s.order_index,
           description: s.description,
+          sector: s.sector || 'SOLUÇÕES CERÂMICAS',
         })),
       )
   }, [])
@@ -453,7 +464,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             shippingMethod: o.shipping_method,
             stlDeliveryMethod: o.shipping_details,
             observations: o.observations,
-            status: deriveStatus(o.kanban_stage, o.status),
+            status: o.status,
+            dbStatus: o.status,
             isAcknowledged: o.is_acknowledged || false,
             createdAt: o.created_at,
             clearedBalance: o.cleared_balance || 0,
@@ -583,6 +595,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    const firstStageNames = kanbanStages
+      .filter((s) => s.orderIndex === 1)
+      .map((s) => s.name.toUpperCase())
+
     return baseOrders.map((o) => {
       let unitPrice = o.unitPrice || 0
       let basePrice = o.basePrice || 0
@@ -622,15 +638,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const effectiveUnitPrice = unitPrice * (1 - discount / 100)
+      const dynamicStatus = deriveStatus(o.kanbanStage, o.dbStatus, firstStageNames)
 
       return {
         ...o,
+        status: dynamicStatus,
         unitPrice,
         effectiveUnitPrice,
         basePrice,
       }
     })
-  }, [orders, priceList, currentUser, checkPermission, Visualizando_Como_ID])
+  }, [orders, priceList, currentUser, checkPermission, Visualizando_Como_ID, kanbanStages])
 
   const addDRECategory = async (name: string, type: 'revenue' | 'variable' | 'fixed') => {
     const { error } = await supabase
@@ -782,6 +800,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ? 0
       : unitPrice * quantity * (1 - discountPercent / 100)
 
+    const sectorStages = kanbanStages.filter(
+      (s) =>
+        (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === (orderData.sector || '').toUpperCase(),
+    )
+    const initialStage =
+      sectorStages.sort((a, b) => a.orderIndex - b.orderIndex)[0]?.name || 'EM TRIAGEM'
+
     const { data, error } = await supabase
       .from('orders')
       .insert({
@@ -791,7 +816,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dentist_id: targetDentistId,
         created_by: currentUser.id,
         sector: orderData.sector,
-        kanban_stage: kanbanStages[0]?.name || 'EM TRIAGEM',
+        kanban_stage: initialStage,
         work_type: orderData.workType,
         material: orderData.material,
         tooth_or_arch: { teeth: orderData.teeth, arches: orderData.arches },
@@ -870,7 +895,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setOrders((prev) =>
       prev.map((o) =>
-        o.id === dbId ? { ...o, status, history: [newHistoryEntry, ...o.history] } : o,
+        o.id === dbId ? { ...o, dbStatus: status, history: [newHistoryEntry, ...o.history] } : o,
       ),
     )
 
@@ -888,7 +913,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const order = orders.find((o) => o.id === dbId)
     if (!order) return
 
-    const newStatus = deriveStatus(stage, order.status)
+    const firstStageNames = kanbanStages
+      .filter((s) => s.orderIndex === 1)
+      .map((s) => s.name.toUpperCase())
+    const newStatus = deriveStatus(stage, order.dbStatus, firstStageNames)
     const shouldAcknowledge =
       !order.isAcknowledged && (newStatus === 'in_production' || newStatus === 'completed')
 
@@ -899,7 +927,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       note: `Movido para ${stage}`,
     }
 
-    const updatedOrder = { ...order, kanbanStage: stage, status: newStatus }
+    const updatedOrder = { ...order, kanbanStage: stage, dbStatus: newStatus }
     const financials = getOrderFinancials(updatedOrder, priceList)
 
     setOrders((prev) =>
@@ -908,7 +936,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? {
               ...o,
               kanbanStage: stage,
-              status: newStatus,
+              dbStatus: newStatus,
               basePrice: financials.basePrice,
               isAcknowledged: shouldAcknowledge ? true : o.isAcknowledged,
               history: [newHistoryEntry, ...o.history],
@@ -931,7 +959,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     await supabase.from('orders').update(updates).eq('id', dbId)
 
-    if (newStatus === 'completed' && order.status !== 'completed' && order.status !== 'delivered') {
+    if (
+      newStatus === 'completed' &&
+      order.dbStatus !== 'completed' &&
+      order.dbStatus !== 'delivered'
+    ) {
       if (financials.totalCost > 0) {
         await supabase.from('expenses').insert({
           description: `Serviço Concluído: Pedido ${order.friendlyId} - ${order.patientName}`,
@@ -956,7 +988,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const newHistoryEntry = {
       id: crypto.randomUUID(),
-      status: order.status,
+      status: order.dbStatus,
       date: new Date().toISOString(),
       note: `Setor alterado para ${sector}`,
     }
@@ -970,7 +1002,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('orders').update({ sector }).eq('id', dbId)
     await supabase.from('order_history').insert({
       order_id: dbId,
-      status: order.status,
+      status: order.dbStatus,
       note: `Setor alterado para ${sector}`,
     })
     await logAudit('UPDATE', 'order', dbId, { field: 'sector', new_value: sector })
@@ -980,28 +1012,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('orders').update({ observations }).eq('id', dbId)
   }
 
-  const addKanbanStage = async (name: string): Promise<boolean> => {
+  const addKanbanStage = async (name: string, sector: string): Promise<boolean> => {
+    const sectorStages = kanbanStages.filter(
+      (s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === sector.toUpperCase(),
+    )
     const nextIndex =
-      kanbanStages.length > 0 ? Math.max(...kanbanStages.map((s) => s.orderIndex)) + 1 : 1
+      sectorStages.length > 0 ? Math.max(...sectorStages.map((s) => s.orderIndex)) + 1 : 1
     const { error } = await supabase
       .from('kanban_stages')
-      .insert({ name: name.trim().toUpperCase(), order_index: nextIndex })
+      .insert({
+        name: name.trim().toUpperCase(),
+        order_index: nextIndex,
+        sector: sector.toUpperCase(),
+      })
     return !error
   }
 
-  const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
+  const updateKanbanStage = async (
+    id: string,
+    oldName: string,
+    newName: string,
+    sector: string,
+  ) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
     const trimmedNewName = newName.trim().toUpperCase()
 
     setKanbanStages((prev) => prev.map((s) => (s.id === id ? { ...s, name: trimmedNewName } : s)))
     setOrders((prev) =>
-      prev.map((o) => (o.kanbanStage === oldName ? { ...o, kanbanStage: trimmedNewName } : o)),
+      prev.map((o) =>
+        (o.sector || '').toUpperCase() === sector.toUpperCase() && o.kanbanStage === oldName
+          ? { ...o, kanbanStage: trimmedNewName }
+          : o,
+      ),
     )
 
     await supabase.from('kanban_stages').update({ name: trimmedNewName }).eq('id', id)
     await supabase
       .from('orders')
       .update({ kanban_stage: trimmedNewName })
+      .eq('sector', sector.toUpperCase())
       .eq('kanban_stage', oldName)
   }
 
@@ -1009,18 +1058,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('kanban_stages').update({ description }).eq('id', id)
   }
 
-  const deleteKanbanStage = async (id: string, oldName: string, fallbackName?: string) => {
-    if (fallbackName)
+  const deleteKanbanStage = async (
+    id: string,
+    oldName: string,
+    fallbackName?: string,
+    sector?: string,
+  ) => {
+    if (fallbackName && sector) {
       await supabase
         .from('orders')
         .update({ kanban_stage: fallbackName })
+        .eq('sector', sector.toUpperCase())
         .eq('kanban_stage', oldName)
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          (o.sector || '').toUpperCase() === sector.toUpperCase() && o.kanbanStage === oldName
+            ? { ...o, kanbanStage: fallbackName }
+            : o,
+        ),
+      )
+    }
     await supabase.from('kanban_stages').delete().eq('id', id)
+    setKanbanStages((prev) => prev.filter((s) => s.id !== id))
   }
 
-  const reorderKanbanStages = async (reorderedStages: Stage[]) => {
+  const reorderKanbanStages = async (reorderedStages: Stage[], sector: string) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
-    setKanbanStages(reorderedStages)
+    setKanbanStages((prev) => {
+      const otherStages = prev.filter(
+        (s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() !== sector.toUpperCase(),
+      )
+      return [...otherStages, ...reorderedStages]
+    })
     const updates = reorderedStages.map((stage, index) =>
       supabase
         .from('kanban_stages')
