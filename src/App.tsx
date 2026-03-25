@@ -154,23 +154,114 @@ const App = () => (
                 <Route path="/app" element={<Index />} />
                 <Route path="/new-request" element={<NewRequest />} />
                 <Route path="/order/:id" element={<OrderDetails />} />
-                <Route path="/history" element={<RouteGuard module="history"><HistoryPage /></RouteGuard>} />
-                <Route path="/kanban" element={<RouteGuard module="kanban"><KanbanPage /></RouteGuard>} />
+                <Route
+                  path="/history"
+                  element={
+                    <RouteGuard module="history">
+                      <HistoryPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/kanban"
+                  element={
+                    <RouteGuard module="kanban">
+                      <KanbanPage />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/dentists" element={<Navigate to="/users" replace />} />
                 <Route path="/patients" element={<PatientsPage />} />
-                <Route path="/dashboard" element={<RouteGuard module="dashboards" action="view_general"><AdminDashboard /></RouteGuard>} />
-                <Route path="/comparative-dashboard" element={<RouteGuard module="dashboards" action="view_operational"><ComparativeDashboard /></RouteGuard>} />
-                <Route path="/admin-financial" element={<RouteGuard module="finances"><AdminFinancial /></RouteGuard>} />
-                <Route path="/dre" element={<RouteGuard module="finances"><DREPage /></RouteGuard>} />
-                <Route path="/dre-categories" element={<RouteGuard module="settings"><DRECategories /></RouteGuard>} />
-                <Route path="/prices" element={<RouteGuard module="finances"><PriceList /></RouteGuard>} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <RouteGuard module="dashboards" action="view_general">
+                      <AdminDashboard />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/comparative-dashboard"
+                  element={
+                    <RouteGuard module="dashboards" action="view_operational">
+                      <ComparativeDashboard />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/admin-financial"
+                  element={
+                    <RouteGuard module="finances">
+                      <AdminFinancial />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/dre"
+                  element={
+                    <RouteGuard module="finances">
+                      <DREPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/dre-categories"
+                  element={
+                    <RouteGuard module="settings">
+                      <DRECategories />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/prices"
+                  element={
+                    <RouteGuard module="finances">
+                      <PriceList />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/financial" element={<FinancialPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/lab-profile" element={<RouteGuard adminOnly><LabProfile /></RouteGuard>} />
-                <Route path="/users" element={<RouteGuard module="settings"><UsersPage /></RouteGuard>} />
-                <Route path="/audit-logs" element={<RouteGuard module="settings"><AuditTrail /></RouteGuard>} />
-                <Route path="/accounts-payable" element={<RouteGuard module="finances"><AccountsPayable /></RouteGuard>} />
-                <Route path="/inventory" element={<RouteGuard module="inventory"><Inventory /></RouteGuard>} />
+                <Route
+                  path="/lab-profile"
+                  element={
+                    <RouteGuard adminOnly>
+                      <LabProfile />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <RouteGuard module="settings">
+                      <UsersPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/audit-logs"
+                  element={
+                    <RouteGuard module="settings">
+                      <AuditTrail />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/accounts-payable"
+                  element={
+                    <RouteGuard module="finances">
+                      <AccountsPayable />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/inventory"
+                  element={
+                    <RouteGuard module="inventory">
+                      <Inventory />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/hourly-cost" element={<HourlyCost />} />
                 <Route path="/materials" element={<MaterialsPage />} />
                 <Route path="/scan-service" element={<ScanService />} />

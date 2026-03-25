@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         setSession((prev) => prev ?? session)
-        setUser((prev) => prev ?? (session?.user ?? null))
+        setUser((prev) => prev ?? session?.user ?? null)
         setLoading(false)
       })
       .catch((err) => {
