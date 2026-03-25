@@ -40,6 +40,33 @@ const PublicOrderFull = lazy(() => import('./pages/PublicOrderFull'))
 const LabProfile = lazy(() => import('./pages/LabProfile'))
 const ScanService = lazy(() => import('./pages/ScanService'))
 
+const RouteGuard = ({
+  children,
+  module,
+  action,
+  adminOnly,
+}: {
+  children: React.ReactNode
+  module?: string
+  action?: string
+  adminOnly?: boolean
+}) => {
+  const { currentUser, checkPermission } = useAppStore()
+  if (!currentUser) return null
+
+  const home = currentUser.role === 'admin' || currentUser.role === 'master' ? '/dashboard' : '/app'
+
+  if (adminOnly && currentUser.role !== 'admin' && currentUser.role !== 'master') {
+    return <Navigate to={home} replace />
+  }
+
+  if (module && !checkPermission(module, action)) {
+    return <Navigate to={home} replace />
+  }
+
+  return <>{children}</>
+}
+
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth()
   const { currentUser } = useAppStore()
@@ -127,23 +154,23 @@ const App = () => (
                 <Route path="/app" element={<Index />} />
                 <Route path="/new-request" element={<NewRequest />} />
                 <Route path="/order/:id" element={<OrderDetails />} />
-                <Route path="/history" element={<HistoryPage />} />
-                <Route path="/kanban" element={<KanbanPage />} />
+                <Route path="/history" element={<RouteGuard module="history"><HistoryPage /></RouteGuard>} />
+                <Route path="/kanban" element={<RouteGuard module="kanban"><KanbanPage /></RouteGuard>} />
                 <Route path="/dentists" element={<Navigate to="/users" replace />} />
                 <Route path="/patients" element={<PatientsPage />} />
-                <Route path="/dashboard" element={<AdminDashboard />} />
-                <Route path="/comparative-dashboard" element={<ComparativeDashboard />} />
-                <Route path="/admin-financial" element={<AdminFinancial />} />
-                <Route path="/dre" element={<DREPage />} />
-                <Route path="/dre-categories" element={<DRECategories />} />
-                <Route path="/prices" element={<PriceList />} />
+                <Route path="/dashboard" element={<RouteGuard module="dashboards" action="view_general"><AdminDashboard /></RouteGuard>} />
+                <Route path="/comparative-dashboard" element={<RouteGuard module="dashboards" action="view_operational"><ComparativeDashboard /></RouteGuard>} />
+                <Route path="/admin-financial" element={<RouteGuard module="finances"><AdminFinancial /></RouteGuard>} />
+                <Route path="/dre" element={<RouteGuard module="finances"><DREPage /></RouteGuard>} />
+                <Route path="/dre-categories" element={<RouteGuard module="settings"><DRECategories /></RouteGuard>} />
+                <Route path="/prices" element={<RouteGuard module="finances"><PriceList /></RouteGuard>} />
                 <Route path="/financial" element={<FinancialPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/lab-profile" element={<LabProfile />} />
-                <Route path="/users" element={<UsersPage />} />
-                <Route path="/audit-logs" element={<AuditTrail />} />
-                <Route path="/accounts-payable" element={<AccountsPayable />} />
-                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/lab-profile" element={<RouteGuard adminOnly><LabProfile /></RouteGuard>} />
+                <Route path="/users" element={<RouteGuard module="settings"><UsersPage /></RouteGuard>} />
+                <Route path="/audit-logs" element={<RouteGuard module="settings"><AuditTrail /></RouteGuard>} />
+                <Route path="/accounts-payable" element={<RouteGuard module="finances"><AccountsPayable /></RouteGuard>} />
+                <Route path="/inventory" element={<RouteGuard module="inventory"><Inventory /></RouteGuard>} />
                 <Route path="/hourly-cost" element={<HourlyCost />} />
                 <Route path="/materials" element={<MaterialsPage />} />
                 <Route path="/scan-service" element={<ScanService />} />

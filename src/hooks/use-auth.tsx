@@ -29,12 +29,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isRefreshError = (error: any) => {
     if (!error) return false
     const msg = (error.message || '').toLowerCase()
+    // PGRST301 é erro de RLS/autorização, NÃO erro de token — não deve causar logout
     return (
       msg.includes('refresh token') ||
       msg.includes('session from session_id claim in jwt does not exist') ||
       msg.includes('session_not_found') ||
-      msg.includes('refresh_token_not_found') ||
-      error.code === 'PGRST301'
+      msg.includes('refresh_token_not_found')
     )
   }
 
@@ -113,15 +113,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   useEffect(() => {
-    const rememberMeFalse = localStorage.getItem('vitali_remember_me') === 'false'
-    const isNewTab = !sessionStorage.getItem('vitali_session')
-
-    if (rememberMeFalse && isNewTab) {
-      supabase.auth.signOut().then(() => {
-        localStorage.removeItem('vitali_remember_me')
-      })
-    }
-
     sessionStorage.setItem('vitali_session', 'true')
 
     const {
@@ -157,6 +148,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     })
 
+    // getSession é usado apenas como fallback de loading caso onAuthStateChange
+    // demore a disparar. reconcileProfile já é chamado pelo onAuthStateChange.
     supabase.auth
       .getSession()
       .then(({ data: { session }, error }) => {
@@ -167,13 +160,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return
           }
         }
-        setSession(session)
-        setUser(session?.user ?? null)
+        setSession((prev) => prev ?? session)
+        setUser((prev) => prev ?? (session?.user ?? null))
         setLoading(false)
-
-        if (session?.user) {
-          reconcileProfile(session.user).catch(console.error)
-        }
       })
       .catch((err) => {
         console.error('getSession error', err)
@@ -226,11 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: authError }
       }
 
-      if (!rememberMe) {
-        localStorage.setItem('vitali_remember_me', 'false')
-      } else {
-        localStorage.removeItem('vitali_remember_me')
-      }
+      localStorage.removeItem('vitali_remember_me')
       sessionStorage.setItem('vitali_session', 'true')
 
       if (authData?.user) {
