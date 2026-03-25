@@ -489,754 +489,736 @@ export default function PriceList() {
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in print:hidden">
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #price-list-print-wrapper, #price-list-print-wrapper * {
-            visibility: visible;
-          }
-          #price-list-print-wrapper {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          @page {
-            margin: 1.5cm;
-          }
-        }
-      `}</style>
-
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-100 rounded-xl dark:bg-emerald-900/30">
-            <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+    <div className="max-w-6xl mx-auto animate-fade-in print:p-0 print:m-0">
+      <div className="print:hidden space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 rounded-xl dark:bg-emerald-900/30">
+              <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-primary">Tabela de Preços</h2>
+              <p className="text-muted-foreground text-sm">
+                Gerencie os valores cobrados por procedimento e analise margens.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-primary">Tabela de Preços</h2>
-            <p className="text-muted-foreground text-sm">
-              Gerencie os valores cobrados por procedimento e analise margens.
-            </p>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <Button variant="outline" asChild>
+              <Link to="/materials">
+                <Settings className="w-4 h-4 mr-2" /> Materiais
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={handleOpenGlobalConfig}>
+              <Settings className="w-4 h-4 mr-2" /> Taxas Globais
+            </Button>
+            <Button variant="outline" asChild className="hidden sm:flex">
+              <Link to="/hourly-cost">
+                <Calculator className="w-4 h-4 mr-2" /> Custo Hora
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-2" /> Exportar PDF
+            </Button>
+            <Button onClick={handleNew}>
+              <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <Button variant="outline" asChild>
-            <Link to="/materials">
-              <Settings className="w-4 h-4 mr-2" /> Materiais
-            </Link>
-          </Button>
-          <Button variant="outline" onClick={handleOpenGlobalConfig}>
-            <Settings className="w-4 h-4 mr-2" /> Taxas Globais
-          </Button>
-          <Button variant="outline" asChild className="hidden sm:flex">
-            <Link to="/hourly-cost">
-              <Calculator className="w-4 h-4 mr-2" /> Custo Hora
-            </Link>
-          </Button>
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-2" /> Exportar PDF
-          </Button>
-          <Button onClick={handleNew}>
-            <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
-          </Button>
-        </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 bg-muted/30 p-3 rounded-lg border">
-        <div className="flex-1 flex items-center gap-2 w-full sm:max-w-xs relative">
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3" />
-          <Input
-            placeholder="Buscar procedimento..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-background w-full normal-case"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
-          <div className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <span className="hidden sm:inline">Filtrar por Margem:</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 bg-muted/30 p-3 rounded-lg border">
+          <div className="flex-1 flex items-center gap-2 w-full sm:max-w-xs relative">
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3" />
+            <Input
+              placeholder="Buscar procedimento..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-background w-full normal-case"
+            />
           </div>
-          <ToggleGroup
-            type="multiple"
-            value={profitFilter}
-            onValueChange={setProfitFilter}
-            className="justify-start flex-wrap gap-2"
-          >
-            <ToggleGroupItem
-              value="high"
-              aria-label="Alta Margem"
-              variant="outline"
-              className="h-8 px-3 text-xs data-[state=on]:bg-emerald-100 data-[state=on]:border-emerald-300 data-[state=on]:text-emerald-900 dark:data-[state=on]:bg-emerald-900/40 dark:data-[state=on]:border-emerald-800 dark:data-[state=on]:text-emerald-300 transition-colors"
-            >
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 shadow-sm" />
-              Alta (&gt; 20%)
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="medium"
-              aria-label="Margem Média"
-              variant="outline"
-              className="h-8 px-3 text-xs data-[state=on]:bg-amber-100 data-[state=on]:border-amber-300 data-[state=on]:text-amber-900 dark:data-[state=on]:bg-amber-900/40 dark:data-[state=on]:border-amber-800 dark:data-[state=on]:text-amber-300 transition-colors"
-            >
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shadow-sm" />
-              Média (10% a 20%)
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="low"
-              aria-label="Baixa Margem"
-              variant="outline"
-              className="h-8 px-3 text-xs data-[state=on]:bg-red-100 data-[state=on]:border-red-300 data-[state=on]:text-red-900 dark:data-[state=on]:bg-red-900/40 dark:data-[state=on]:border-red-800 dark:data-[state=on]:text-red-300 transition-colors"
-            >
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 shadow-sm" />
-              Baixa (&lt; 10%)
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-      </div>
 
-      <Card className="shadow-subtle">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-6 h-10 py-2">Procedimento</TableHead>
-                <TableHead className="h-10 py-2">Setor</TableHead>
-                <TableHead className="text-right h-10 py-2">Valor Venda Final</TableHead>
-                <TableHead className="text-right h-10 py-2">Tempo Exec.</TableHead>
-                <TableHead className="text-right h-10 py-2">Custo / Min</TableHead>
-                <TableHead className="text-right h-10 py-2">Custo Fixo Est.</TableHead>
-                <TableHead className="text-right pr-6 h-10 py-2">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <div className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="hidden sm:inline">Filtrar por Margem:</span>
+            </div>
+            <ToggleGroup
+              type="multiple"
+              value={profitFilter}
+              onValueChange={setProfitFilter}
+              className="justify-start flex-wrap gap-2"
+            >
+              <ToggleGroupItem
+                value="high"
+                aria-label="Alta Margem"
+                variant="outline"
+                className="h-8 px-3 text-xs data-[state=on]:bg-emerald-100 data-[state=on]:border-emerald-300 data-[state=on]:text-emerald-900 dark:data-[state=on]:bg-emerald-900/40 dark:data-[state=on]:border-emerald-800 dark:data-[state=on]:text-emerald-300 transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 shadow-sm" />
+                Alta (&gt; 20%)
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="medium"
+                aria-label="Margem Média"
+                variant="outline"
+                className="h-8 px-3 text-xs data-[state=on]:bg-amber-100 data-[state=on]:border-amber-300 data-[state=on]:text-amber-900 dark:data-[state=on]:bg-amber-900/40 dark:data-[state=on]:border-amber-800 dark:data-[state=on]:text-amber-300 transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shadow-sm" />
+                Média (10% a 20%)
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="low"
+                aria-label="Baixa Margem"
+                variant="outline"
+                className="h-8 px-3 text-xs data-[state=on]:bg-red-100 data-[state=on]:border-red-300 data-[state=on]:text-red-900 dark:data-[state=on]:bg-red-900/40 dark:data-[state=on]:border-red-800 dark:data-[state=on]:text-red-300 transition-colors"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 shadow-sm" />
+                Baixa (&lt; 10%)
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </div>
+
+        <Card className="shadow-subtle">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    Carregando procedimentos...
-                  </TableCell>
+                  <TableHead className="pl-6 h-10 py-2">Procedimento</TableHead>
+                  <TableHead className="h-10 py-2">Setor</TableHead>
+                  <TableHead className="text-right h-10 py-2">Valor Venda Final</TableHead>
+                  <TableHead className="text-right h-10 py-2">Tempo Exec.</TableHead>
+                  <TableHead className="text-right h-10 py-2">Custo / Min</TableHead>
+                  <TableHead className="text-right h-10 py-2">Custo Fixo Est.</TableHead>
+                  <TableHead className="text-right pr-6 h-10 py-2">Ações</TableHead>
                 </TableRow>
-              ) : filteredPrices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    {prices.length > 0 && (profitFilter.length > 0 || searchQuery)
-                      ? 'Nenhum procedimento encontrado para os filtros selecionados.'
-                      : 'Nenhum procedimento encontrado.'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPrices.map((item) => {
-                  const margin = getMargin(item)
-                  let containerClass =
-                    'flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg border shadow-sm transition-colors text-white '
-                  let badgeClass = 'px-1.5 py-0.5 rounded text-[11px] font-bold shadow-sm '
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                      Carregando procedimentos...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPrices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                      {prices.length > 0 && (profitFilter.length > 0 || searchQuery)
+                        ? 'Nenhum procedimento encontrado para os filtros selecionados.'
+                        : 'Nenhum procedimento encontrado.'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPrices.map((item) => {
+                    const margin = getMargin(item)
+                    let containerClass =
+                      'flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg border shadow-sm transition-colors text-white '
+                    let badgeClass = 'px-1.5 py-0.5 rounded text-[11px] font-bold shadow-sm '
 
-                  if (margin > 20) {
-                    containerClass +=
-                      'bg-emerald-500 border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700'
-                    badgeClass += 'bg-emerald-600/50 border border-emerald-400/50'
-                  } else if (margin >= 10) {
-                    containerClass +=
-                      'bg-amber-500 border-amber-600 dark:bg-amber-600 dark:border-amber-700'
-                    badgeClass += 'bg-amber-600/50 border border-amber-400/50'
-                  } else {
-                    containerClass +=
-                      'bg-red-500 border-red-600 dark:bg-red-600 dark:border-red-700'
-                    badgeClass += 'bg-red-600/50 border border-red-400/50'
-                  }
+                    if (margin > 20) {
+                      containerClass +=
+                        'bg-emerald-500 border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700'
+                      badgeClass += 'bg-emerald-600/50 border border-emerald-400/50'
+                    } else if (margin >= 10) {
+                      containerClass +=
+                        'bg-amber-500 border-amber-600 dark:bg-amber-600 dark:border-amber-700'
+                      badgeClass += 'bg-amber-600/50 border border-amber-400/50'
+                    } else {
+                      containerClass +=
+                        'bg-red-500 border-red-600 dark:bg-red-600 dark:border-red-700'
+                      badgeClass += 'bg-red-600/50 border border-red-400/50'
+                    }
 
-                  return (
-                    <TableRow key={item.id} className="group hover:bg-muted/30">
-                      <TableCell className="pl-6 py-1.5 min-w-[320px]">
-                        <div className={containerClass}>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold tracking-tight leading-tight text-[13px]">
-                                {item.work_type}
+                    return (
+                      <TableRow key={item.id} className="group hover:bg-muted/30">
+                        <TableCell className="pl-6 py-1.5 min-w-[320px]">
+                          <div className={containerClass}>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold tracking-tight leading-tight text-[13px]">
+                                  {item.work_type}
+                                </span>
+                                {item.is_hidden && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] uppercase border-white/40 text-white bg-black/20 px-1 py-0 h-4"
+                                  >
+                                    Oculto
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-medium text-white/80 mt-0 uppercase tracking-wider">
+                                {item.category}
                               </span>
-                              {item.is_hidden && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] uppercase border-white/40 text-white bg-black/20 px-1 py-0 h-4"
-                                >
-                                  Oculto
-                                </Badge>
-                              )}
                             </div>
-                            <span className="text-[10px] font-medium text-white/80 mt-0 uppercase tracking-wider">
-                              {item.category}
-                            </span>
+                            <div className={badgeClass}>{margin.toFixed(1)}%</div>
                           </div>
-                          <div className={badgeClass}>{margin.toFixed(1)}%</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1.5">
-                        <Badge variant="outline" className="bg-muted/50 text-[10px] py-0 h-5">
-                          {item.sector || 'Geral'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold py-1.5 text-[13px]">
-                        {formatBRL(parseLocalNum(item.price))}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
-                        {item.execution_time ? `${item.execution_time} min` : '-'}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground font-medium py-1.5 text-xs">
-                        {formatBRL(sharedCosts.costPerMinute)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
-                        {formatBRL((item.execution_time || 0) * sharedCosts.costPerMinute)}
-                      </TableCell>
-                      <TableCell className="text-right pr-6 py-1.5 space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(item)}
-                          title="Editar"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                        </Button>
-                        {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
+                        </TableCell>
+                        <TableCell className="py-1.5">
+                          <Badge variant="outline" className="bg-muted/50 text-[10px] py-0 h-5">
+                            {item.sector || 'Geral'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold py-1.5 text-[13px]">
+                          {formatBRL(parseLocalNum(item.price))}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
+                          {item.execution_time ? `${item.execution_time} min` : '-'}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground font-medium py-1.5 text-xs">
+                          {formatBRL(sharedCosts.costPerMinute)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
+                          {formatBRL((item.execution_time || 0) * sharedCosts.costPerMinute)}
+                        </TableCell>
+                        <TableCell className="text-right pr-6 py-1.5 space-x-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => handleDuplicate(item)}
-                            title="Duplicar"
+                            onClick={() => handleEdit(item)}
+                            title="Editar"
                           >
-                            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                            <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleDelete(item.id)}
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-600" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                          {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleDuplicate(item)}
+                              title="Duplicar"
+                            >
+                              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleDelete(item.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-600" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      {/* Global Config Dialog */}
-      <Dialog open={globalConfigOpen} onOpenChange={setGlobalConfigOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configurações Globais de Precificação</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Estas taxas em % serão aplicadas automaticamente na análise de rentabilidade de todos
-              os procedimentos sobre o Valor de Venda Final.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>
-                  Taxa de Cartão (%) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={configForm.cardFee}
-                  onChange={(e) => handleGlobalChange('cardFee', e.target.value)}
-                  onBlur={() => handleGlobalBlur('cardFee')}
-                  className={cn(
-                    globalErrors.cardFee && 'border-destructive focus-visible:ring-destructive',
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  Comissões (%) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={configForm.commission}
-                  onChange={(e) => handleGlobalChange('commission', e.target.value)}
-                  onBlur={() => handleGlobalBlur('commission')}
-                  className={cn(
-                    globalErrors.commission && 'border-destructive focus-visible:ring-destructive',
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  Inadimplência (%) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={configForm.inadimplency}
-                  onChange={(e) => handleGlobalChange('inadimplency', e.target.value)}
-                  onBlur={() => handleGlobalBlur('inadimplency')}
-                  className={cn(
-                    globalErrors.inadimplency &&
-                      'border-destructive focus-visible:ring-destructive',
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  Impostos (%) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={configForm.taxes}
-                  onChange={(e) => handleGlobalChange('taxes', e.target.value)}
-                  onBlur={() => handleGlobalBlur('taxes')}
-                  className={cn(
-                    globalErrors.taxes && 'border-destructive focus-visible:ring-destructive',
-                  )}
-                />
+        {/* Global Config Dialog */}
+        <Dialog open={globalConfigOpen} onOpenChange={setGlobalConfigOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Configurações Globais de Precificação</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Estas taxas em % serão aplicadas automaticamente na análise de rentabilidade de
+                todos os procedimentos sobre o Valor de Venda Final.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    Taxa de Cartão (%) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={configForm.cardFee}
+                    onChange={(e) => handleGlobalChange('cardFee', e.target.value)}
+                    onBlur={() => handleGlobalBlur('cardFee')}
+                    className={cn(
+                      globalErrors.cardFee && 'border-destructive focus-visible:ring-destructive',
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    Comissões (%) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={configForm.commission}
+                    onChange={(e) => handleGlobalChange('commission', e.target.value)}
+                    onBlur={() => handleGlobalBlur('commission')}
+                    className={cn(
+                      globalErrors.commission &&
+                        'border-destructive focus-visible:ring-destructive',
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    Inadimplência (%) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={configForm.inadimplency}
+                    onChange={(e) => handleGlobalChange('inadimplency', e.target.value)}
+                    onBlur={() => handleGlobalBlur('inadimplency')}
+                    className={cn(
+                      globalErrors.inadimplency &&
+                        'border-destructive focus-visible:ring-destructive',
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    Impostos (%) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={configForm.taxes}
+                    onChange={(e) => handleGlobalChange('taxes', e.target.value)}
+                    onBlur={() => handleGlobalBlur('taxes')}
+                    className={cn(
+                      globalErrors.taxes && 'border-destructive focus-visible:ring-destructive',
+                    )}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGlobalConfigOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveGlobalConfig}>Salvar Taxas</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setGlobalConfigOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveGlobalConfig}>Salvar Taxas</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Procedure Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>{formData.id ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
-          </DialogHeader>
+        {/* Procedure Dialog */}
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>{formData.id ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
+            </DialogHeader>
 
-          {modalOpen && <HourlyCostDashboard />}
+            {modalOpen && <HourlyCostDashboard />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-2">
-            {/* Left Column: Form Fields */}
-            <div className="lg:col-span-7 space-y-4 max-h-[55vh] overflow-y-auto px-1 pr-3 pb-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label>
-                    Nome do Procedimento <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    value={formData.work_type}
-                    onChange={(e) => handleFormChange('work_type', e.target.value)}
-                    onBlur={() => handleFormBlur('work_type')}
-                    className={cn(
-                      formErrors.work_type && 'border-destructive focus-visible:ring-destructive',
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>
-                    Categoria <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(v) => handleFormChange('category', v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PROTESE FIXA">PROTESE FIXA</SelectItem>
-                      <SelectItem value="PRÓTESE MÓVEL">PRÓTESE MÓVEL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Setor</Label>
-                  <Select
-                    value={formData.sector}
-                    onValueChange={(v) => handleFormChange('sector', v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
-                      <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
-                      <SelectItem value="Soluções Digitais">Soluções Digitais</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 col-span-2">
-                  <Label>Material</Label>
-                  <Input
-                    list="materials-list"
-                    placeholder="Selecione ou digite um material..."
-                    value={formData.material}
-                    onChange={(e) => handleFormChange('material', e.target.value)}
-                  />
-                  <datalist id="materials-list">
-                    {availableMaterials.map((m) => (
-                      <option key={m} value={m} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>
-                    Valor de Venda Final (R$) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="150,00"
-                    value={formData.price}
-                    className={cn(
-                      'font-semibold',
-                      formErrors.price && 'border-destructive focus-visible:ring-destructive',
-                    )}
-                    onChange={(e) => handleFormChange('price', e.target.value)}
-                    onBlur={() => handleFormBlur('price')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tempo de Execução (minutos)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="Ex: 45"
-                    value={formData.execution_time}
-                    onChange={(e) => handleFormChange('execution_time', e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2 col-span-2">
-                  <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
-                    CUSTO FIXO ESPECÍFICO DESTE PROCEDIMENTO (Tempo × Custo/Min)
-                  </Label>
-                  <Input
-                    value={formatBRL(fixedCost)}
-                    readOnly
-                    disabled
-                    className="bg-muted font-semibold text-primary cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Custo Cadista / Terceiro (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={formData.cadista_cost}
-                    onChange={(e) => handleFormChange('cadista_cost', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Custo de Material (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={formData.material_cost}
-                    onChange={(e) => handleFormChange('material_cost', e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Estrutura de Fixação</Label>
-                  <Select
-                    value={formData.estrutura_fixacao}
-                    onValueChange={(v) => handleFormChange('estrutura_fixacao', v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
-                      <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Observações</Label>
-                  <Input
-                    className="normal-case"
-                    value={formData.notes}
-                    onChange={(e) => handleFormChange('notes', e.target.value)}
-                    placeholder="Notas adicionais"
-                  />
-                </div>
-
-                {currentUser?.role === 'master' && (
-                  <div className="space-y-2 col-span-2 flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20 mt-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-base font-semibold text-destructive">
-                        PROCEDIMENTO OCULTO
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Este procedimento será usado apenas para testes e ficará invisível para os
-                        demais usuários.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formData.is_hidden}
-                      onCheckedChange={(v) => handleFormChange('is_hidden', v)}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-2">
+              {/* Left Column: Form Fields */}
+              <div className="lg:col-span-7 space-y-4 max-h-[55vh] overflow-y-auto px-1 pr-3 pb-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label>
+                      Nome do Procedimento <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      value={formData.work_type}
+                      onChange={(e) => handleFormChange('work_type', e.target.value)}
+                      onBlur={() => handleFormBlur('work_type')}
+                      className={cn(
+                        formErrors.work_type && 'border-destructive focus-visible:ring-destructive',
+                      )}
                     />
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-4 mt-6 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-semibold">
-                      Etapas de Faturamento (Opcional)
+                  <div className="space-y-2">
+                    <Label>
+                      Categoria <span className="text-destructive">*</span>
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Divida o valor por etapas do Kanban (não interfere no cálculo de lucro).
-                    </p>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(v) => handleFormChange('category', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PROTESE FIXA">PROTESE FIXA</SelectItem>
+                        <SelectItem value="PRÓTESE MÓVEL">PRÓTESE MÓVEL</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        stages: [
-                          ...p.stages,
-                          { name: '', price: '', kanban_stage: kanbanStages[0]?.name || '' },
-                        ],
-                      }))
-                    }
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Add Etapa
-                  </Button>
+                  <div className="space-y-2">
+                    <Label>Setor</Label>
+                    <Select
+                      value={formData.sector}
+                      onValueChange={(v) => handleFormChange('sector', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
+                        <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 col-span-2">
+                    <Label>Material</Label>
+                    <Input
+                      list="materials-list"
+                      placeholder="Selecione ou digite um material..."
+                      value={formData.material}
+                      onChange={(e) => handleFormChange('material', e.target.value)}
+                    />
+                    <datalist id="materials-list">
+                      {availableMaterials.map((m) => (
+                        <option key={m} value={m} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
+                      Valor de Venda Final (R$) <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="150,00"
+                      value={formData.price}
+                      className={cn(
+                        'font-semibold',
+                        formErrors.price && 'border-destructive focus-visible:ring-destructive',
+                      )}
+                      onChange={(e) => handleFormChange('price', e.target.value)}
+                      onBlur={() => handleFormBlur('price')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tempo de Execução (minutos)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 45"
+                      value={formData.execution_time}
+                      onChange={(e) => handleFormChange('execution_time', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2 col-span-2">
+                    <Label className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
+                      CUSTO FIXO ESPECÍFICO DESTE PROCEDIMENTO (Tempo × Custo/Min)
+                    </Label>
+                    <Input
+                      value={formatBRL(fixedCost)}
+                      readOnly
+                      disabled
+                      className="bg-muted font-semibold text-primary cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Custo Cadista / Terceiro (R$)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formData.cadista_cost}
+                      onChange={(e) => handleFormChange('cadista_cost', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Custo de Material (R$)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formData.material_cost}
+                      onChange={(e) => handleFormChange('material_cost', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Estrutura de Fixação</Label>
+                    <Select
+                      value={formData.estrutura_fixacao}
+                      onValueChange={(v) => handleFormChange('estrutura_fixacao', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SOBRE DENTE">SOBRE DENTE</SelectItem>
+                        <SelectItem value="SOBRE IMPLANTE">SOBRE IMPLANTE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Observações</Label>
+                    <Input
+                      className="normal-case"
+                      value={formData.notes}
+                      onChange={(e) => handleFormChange('notes', e.target.value)}
+                      placeholder="Notas adicionais"
+                    />
+                  </div>
+
+                  {currentUser?.role === 'master' && (
+                    <div className="space-y-2 col-span-2 flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20 mt-2">
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-semibold text-destructive">
+                          PROCEDIMENTO OCULTO
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Este procedimento será usado apenas para testes e ficará invisível para os
+                          demais usuários.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.is_hidden}
+                        onCheckedChange={(v) => handleFormChange('is_hidden', v)}
+                      />
+                    </div>
+                  )}
                 </div>
-                {formData.stages.map((stage, idx) => (
-                  <div
-                    key={idx}
-                    className="flex gap-2 items-end bg-muted/40 p-3 rounded-md border border-border/50"
-                  >
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">
-                        Descrição <span className="text-destructive">*</span>
+
+                <div className="space-y-4 mt-6 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">
+                        Etapas de Faturamento (Opcional)
                       </Label>
-                      <Input
-                        size="sm"
-                        value={stage.name}
-                        onChange={(e) => updateStage(idx, 'name', e.target.value)}
-                        onBlur={() => handleStageBlur(idx, 'name')}
-                        className={cn(
-                          formErrors[`stage_${idx}_name`] &&
-                            'border-destructive focus-visible:ring-destructive',
-                        )}
-                      />
-                    </div>
-                    <div className="w-24 space-y-1">
-                      <Label className="text-xs">
-                        Valor (R$) <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        size="sm"
-                        type="text"
-                        inputMode="decimal"
-                        value={stage.price}
-                        onChange={(e) => updateStage(idx, 'price', e.target.value)}
-                        onBlur={() => handleStageBlur(idx, 'price')}
-                        className={cn(
-                          formErrors[`stage_${idx}_price`] &&
-                            'border-destructive focus-visible:ring-destructive',
-                        )}
-                      />
-                    </div>
-                    <div className="w-48 space-y-1">
-                      <Label className="text-xs">Gatilho (Kanban)</Label>
-                      <Select
-                        value={stage.kanban_stage}
-                        onValueChange={(v) => updateStage(idx, 'kanban_stage', v)}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {kanbanStages.map((s) => (
-                            <SelectItem key={s.id} value={s.name}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Divida o valor por etapas do Kanban (não interfere no cálculo de lucro).
+                      </p>
                     </div>
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() =>
-                        setFormData((p) => ({ ...p, stages: p.stages.filter((_, i) => i !== idx) }))
+                        setFormData((p) => ({
+                          ...p,
+                          stages: [
+                            ...p.stages,
+                            { name: '', price: '', kanban_stage: kanbanStages[0]?.name || '' },
+                          ],
+                        }))
                       }
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <Plus className="w-4 h-4 mr-1" /> Add Etapa
                     </Button>
                   </div>
-                ))}
+                  {formData.stages.map((stage, idx) => (
+                    <div
+                      key={idx}
+                      className="flex gap-2 items-end bg-muted/40 p-3 rounded-md border border-border/50"
+                    >
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-xs">
+                          Descrição <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          size="sm"
+                          value={stage.name}
+                          onChange={(e) => updateStage(idx, 'name', e.target.value)}
+                          onBlur={() => handleStageBlur(idx, 'name')}
+                          className={cn(
+                            formErrors[`stage_${idx}_name`] &&
+                              'border-destructive focus-visible:ring-destructive',
+                          )}
+                        />
+                      </div>
+                      <div className="w-24 space-y-1">
+                        <Label className="text-xs">
+                          Valor (R$) <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          size="sm"
+                          type="text"
+                          inputMode="decimal"
+                          value={stage.price}
+                          onChange={(e) => updateStage(idx, 'price', e.target.value)}
+                          onBlur={() => handleStageBlur(idx, 'price')}
+                          className={cn(
+                            formErrors[`stage_${idx}_price`] &&
+                              'border-destructive focus-visible:ring-destructive',
+                          )}
+                        />
+                      </div>
+                      <div className="w-48 space-y-1">
+                        <Label className="text-xs">Gatilho (Kanban)</Label>
+                        <Select
+                          value={stage.kanban_stage}
+                          onValueChange={(v) => updateStage(idx, 'kanban_stage', v)}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {kanbanStages.map((s) => (
+                              <SelectItem key={s.id} value={s.name}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setFormData((p) => ({
+                            ...p,
+                            stages: p.stages.filter((_, i) => i !== idx),
+                          }))
+                        }
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column: Profitability Analysis */}
+              <div className="lg:col-span-5 flex flex-col">
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border flex flex-col h-full sticky top-0 shadow-sm">
+                  <h3 className="font-semibold flex items-center gap-2 mb-4 text-primary">
+                    <PieChart className="w-5 h-5" /> Análise de Rentabilidade
+                  </h3>
+
+                  <div className="space-y-3 flex-1 text-sm">
+                    <div className="flex justify-between font-medium">
+                      <span>Preço de Venda Final</span>
+                      <span className="text-lg">{formatBRL(priceNum)}</span>
+                    </div>
+
+                    <div className="h-px bg-border my-2" />
+
+                    <div className="flex justify-between text-muted-foreground items-center">
+                      <span>Custo Fixo</span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(fixedCost)}{' '}
+                        <span className="w-12 text-right text-[10px]">
+                          ({fixedCostPerc.toFixed(1)}%)
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Custo Cadista / Terceiros</span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(cadistaVal)}{' '}
+                        <span className="w-12 text-right text-[10px]">
+                          ({priceNum > 0 ? ((cadistaVal / priceNum) * 100).toFixed(1) : 0}%)
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Custo de Material</span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(materialVal)}{' '}
+                        <span className="w-12 text-right text-[10px]">
+                          ({materialCostPerc.toFixed(1)}%)
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="h-px bg-border/50 my-2" />
+
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        Taxa de Cartão <span className="text-[10px]">({globalCardFee}%)</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(cardFeeVal)} <span className="w-12"></span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        Comissões <span className="text-[10px]">({globalCommission}%)</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(commissionVal)} <span className="w-12"></span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        Impostos <span className="text-[10px]">({globalTaxes}%)</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(taxesVal)} <span className="w-12"></span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        Inadimplência <span className="text-[10px]">({globalInadimplency}%)</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        - {formatBRL(inadimplencyVal)} <span className="w-12"></span>
+                      </span>
+                    </div>
+
+                    <div className="h-px bg-border my-2" />
+
+                    <div className="flex justify-between font-medium text-destructive">
+                      <span>Custo Total Estimado</span>
+                      <span>{formatBRL(totalCosts)}</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      'mt-6 p-4 rounded-lg border transition-colors',
+                      profitMargin >= 20
+                        ? 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950'
+                        : profitMargin >= 10
+                          ? 'bg-amber-500 border-amber-600 text-white dark:bg-amber-600 dark:border-amber-700'
+                          : 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950',
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
+                          Lucro Líquido Estimado
+                        </p>
+                        <p className="text-2xl font-bold">{formatBRL(profitVal)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
+                          Margem
+                        </p>
+                        <p className="text-xl font-bold flex items-center justify-end gap-1">
+                          {profitMargin >= 20 ? (
+                            <TrendingUp className="w-4 h-4" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4" />
+                          )}
+                          {profitMargin.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                    {profitMargin < 10 && (
+                      <div className="mt-3 pt-3 border-t border-white/20">
+                        <p className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 uppercase">
+                          <AlertTriangle className="w-4 h-4" />
+                          ALERTA: PERIGO DE LUCRATIVIDADE BAIXA
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Profitability Analysis */}
-            <div className="lg:col-span-5 flex flex-col">
-              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border flex flex-col h-full sticky top-0 shadow-sm">
-                <h3 className="font-semibold flex items-center gap-2 mb-4 text-primary">
-                  <PieChart className="w-5 h-5" /> Análise de Rentabilidade
-                </h3>
-
-                <div className="space-y-3 flex-1 text-sm">
-                  <div className="flex justify-between font-medium">
-                    <span>Preço de Venda Final</span>
-                    <span className="text-lg">{formatBRL(priceNum)}</span>
-                  </div>
-
-                  <div className="h-px bg-border my-2" />
-
-                  <div className="flex justify-between text-muted-foreground items-center">
-                    <span>Custo Fixo</span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(fixedCost)}{' '}
-                      <span className="w-12 text-right text-[10px]">
-                        ({fixedCostPerc.toFixed(1)}%)
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Custo Cadista / Terceiros</span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(cadistaVal)}{' '}
-                      <span className="w-12 text-right text-[10px]">
-                        ({priceNum > 0 ? ((cadistaVal / priceNum) * 100).toFixed(1) : 0}%)
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Custo de Material</span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(materialVal)}{' '}
-                      <span className="w-12 text-right text-[10px]">
-                        ({materialCostPerc.toFixed(1)}%)
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="h-px bg-border/50 my-2" />
-
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>
-                      Taxa de Cartão <span className="text-[10px]">({globalCardFee}%)</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(cardFeeVal)} <span className="w-12"></span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>
-                      Comissões <span className="text-[10px]">({globalCommission}%)</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(commissionVal)} <span className="w-12"></span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>
-                      Impostos <span className="text-[10px]">({globalTaxes}%)</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(taxesVal)} <span className="w-12"></span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>
-                      Inadimplência <span className="text-[10px]">({globalInadimplency}%)</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      - {formatBRL(inadimplencyVal)} <span className="w-12"></span>
-                    </span>
-                  </div>
-
-                  <div className="h-px bg-border my-2" />
-
-                  <div className="flex justify-between font-medium text-destructive">
-                    <span>Custo Total Estimado</span>
-                    <span>{formatBRL(totalCosts)}</span>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    'mt-6 p-4 rounded-lg border transition-colors',
-                    profitMargin >= 20
-                      ? 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950'
-                      : profitMargin >= 10
-                        ? 'bg-amber-500 border-amber-600 text-white dark:bg-amber-600 dark:border-amber-700'
-                        : 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950',
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
-                        Lucro Líquido Estimado
-                      </p>
-                      <p className="text-2xl font-bold">{formatBRL(profitVal)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase font-bold tracking-wider opacity-90 mb-0.5">
-                        Margem
-                      </p>
-                      <p className="text-xl font-bold flex items-center justify-end gap-1">
-                        {profitMargin >= 20 ? (
-                          <TrendingUp className="w-4 h-4" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4" />
-                        )}
-                        {profitMargin.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                  {profitMargin < 10 && (
-                    <div className="mt-3 pt-3 border-t border-white/20">
-                      <p className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 uppercase">
-                        <AlertTriangle className="w-4 h-4" />
-                        ALERTA: PERIGO DE LUCRATIVIDADE BAIXA
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-4 pt-4 border-t">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave}>Salvar Procedimento</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={() => setModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave}>Salvar Procedimento</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* PRINT ONLY VIEW */}
-      <div
-        id="price-list-print-wrapper"
-        className="hidden print:block w-full bg-white text-black !m-0 !p-0"
-      >
+      <div className="hidden print:block w-full bg-white text-black !m-0 !p-0">
         <div className="text-center mb-6 border-b border-gray-300 pb-4">
           <h2 className="text-2xl font-bold uppercase tracking-tight">VITALI LAB</h2>
           <h3 className="text-lg text-gray-700 mt-1 uppercase">
