@@ -43,6 +43,7 @@ interface AppState {
   deleteOrder: (dbId: string, reason: string) => Promise<void>
   updateOrderStatus: (dbId: string, status: OrderStatus, note?: string) => Promise<void>
   updateOrderKanbanStage: (dbId: string, stage: KanbanStage) => Promise<void>
+  updateOrderSector: (dbId: string, sector: string) => Promise<void>
   updateOrderObservations: (dbId: string, observations: string) => Promise<void>
   acknowledgeOrder: (id: string) => Promise<void>
   addKanbanStage: (name: string) => Promise<boolean>
@@ -948,6 +949,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateOrderSector = async (dbId: string, sector: string) => {
+    if (!currentUser) return
+    const order = orders.find((o) => o.id === dbId)
+    if (!order) return
+
+    const newHistoryEntry = {
+      id: crypto.randomUUID(),
+      status: order.status,
+      date: new Date().toISOString(),
+      note: `Setor alterado para ${sector}`,
+    }
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === dbId ? { ...o, sector, history: [newHistoryEntry, ...o.history] } : o,
+      ),
+    )
+
+    await supabase.from('orders').update({ sector }).eq('id', dbId)
+    await supabase.from('order_history').insert({
+      order_id: dbId,
+      status: order.status,
+      note: `Setor alterado para ${sector}`,
+    })
+    await logAudit('UPDATE', 'order', dbId, { field: 'sector', new_value: sector })
+  }
+
   const updateOrderObservations = async (dbId: string, observations: string) => {
     await supabase.from('orders').update({ observations }).eq('id', dbId)
   }
@@ -963,7 +991,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateKanbanStage = async (id: string, oldName: string, newName: string) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
-    await supabase.from('kanban_stages').update({ name: newName.trim().toUpperCase() }).eq('id', id)
+    const trimmedNewName = newName.trim().toUpperCase()
+
+    setKanbanStages((prev) => prev.map((s) => (s.id === id ? { ...s, name: trimmedNewName } : s)))
+    setOrders((prev) =>
+      prev.map((o) => (o.kanbanStage === oldName ? { ...o, kanbanStage: trimmedNewName } : o)),
+    )
+
+    await supabase.from('kanban_stages').update({ name: trimmedNewName }).eq('id', id)
+    await supabase
+      .from('orders')
+      .update({ kanban_stage: trimmedNewName })
+      .eq('kanban_stage', oldName)
   }
 
   const updateKanbanStageDescription = async (id: string, description: string) => {
@@ -1050,6 +1089,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteOrder,
         updateOrderStatus,
         updateOrderKanbanStage,
+        updateOrderSector,
         updateOrderObservations,
         acknowledgeOrder,
         addKanbanStage,

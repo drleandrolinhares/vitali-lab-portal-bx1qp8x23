@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 
-const SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+const SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO', 'SOLUÇÕES DIGITAIS']
 
 export default function KanbanPage() {
   const {
@@ -51,6 +51,7 @@ export default function KanbanPage() {
     currentUser,
     effectiveRole,
     updateOrderKanbanStage,
+    updateOrderSector,
     updateOrderObservations,
     kanbanStages,
     addKanbanStage,
@@ -405,6 +406,7 @@ export default function KanbanPage() {
               const displayCols = isExpanded ? cols : cols.slice(0, 4)
               const hasMore = cols.length > 4
               const isPendingCard = stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
+              const isFirstStage = stage.id === kanbanStages[0]?.id
 
               return (
                 <div
@@ -647,6 +649,58 @@ export default function KanbanPage() {
                             {isPendingCard && (
                               <div className="mt-2.5 mb-0.5 bg-red-600 dark:bg-red-700 text-white text-[10px] font-bold px-2 py-1.5 rounded text-center uppercase tracking-wider shadow-sm w-full leading-tight">
                                 Aguardando Retorno do Dentista
+                              </div>
+                            )}
+
+                            {isFirstStage && !isDentist && (
+                              <div
+                                className={cn(
+                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
+                                  o.isAdjustmentReturn
+                                    ? 'border-yellow-500/30'
+                                    : 'border-slate-100 dark:border-border/50',
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onDragStart={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                }}
+                              >
+                                <Label
+                                  className={cn(
+                                    'text-[9px] uppercase font-bold tracking-wider',
+                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                  )}
+                                >
+                                  Mudar Laboratório
+                                </Label>
+                                <Select
+                                  value={o.sector?.toUpperCase()}
+                                  onValueChange={(val) => updateOrderSector(o.id, val)}
+                                >
+                                  <SelectTrigger
+                                    className={cn(
+                                      'h-7 text-[10px] font-bold uppercase',
+                                      o.isAdjustmentReturn
+                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
+                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
+                                    )}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="z-[110]">
+                                    {SECTORS.map((s) => (
+                                      <SelectItem
+                                        key={s}
+                                        value={s}
+                                        className="text-[10px] uppercase font-bold"
+                                      >
+                                        {s}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             )}
 

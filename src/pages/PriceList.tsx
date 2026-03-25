@@ -46,6 +46,7 @@ import {
   Filter,
   Search,
   Copy,
+  Printer,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
@@ -488,7 +489,27 @@ export default function PriceList() {
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in print:hidden">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #price-list-print-wrapper, #price-list-print-wrapper * {
+            visibility: visible;
+          }
+          #price-list-print-wrapper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          @page {
+            margin: 1.5cm;
+          }
+        }
+      `}</style>
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-emerald-100 rounded-xl dark:bg-emerald-900/30">
@@ -514,6 +535,9 @@ export default function PriceList() {
             <Link to="/hourly-cost">
               <Calculator className="w-4 h-4 mr-2" /> Custo Hora
             </Link>
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="w-4 h-4 mr-2" /> Exportar PDF
           </Button>
           <Button onClick={handleNew}>
             <Plus className="w-4 h-4 mr-2" /> Novo Procedimento
@@ -845,6 +869,7 @@ export default function PriceList() {
                     <SelectContent>
                       <SelectItem value="Soluções Cerâmicas">Soluções Cerâmicas</SelectItem>
                       <SelectItem value="Studio Acrílico">Studio Acrílico</SelectItem>
+                      <SelectItem value="Soluções Digitais">Soluções Digitais</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1206,6 +1231,54 @@ export default function PriceList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PRINT ONLY VIEW */}
+      <div
+        id="price-list-print-wrapper"
+        className="hidden print:block w-full bg-white text-black !m-0 !p-0"
+      >
+        <div className="text-center mb-6 border-b border-gray-300 pb-4">
+          <h2 className="text-2xl font-bold uppercase tracking-tight">VITALI LAB</h2>
+          <h3 className="text-lg text-gray-700 mt-1 uppercase">
+            Tabela de Preços - {selectedLab === 'Todos' ? 'Geral' : selectedLab}
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Gerado em {new Date().toLocaleDateString('pt-BR')}
+          </p>
+        </div>
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="border-b-2 border-gray-300 text-gray-800">
+              <th className="py-2 font-bold uppercase">Procedimento</th>
+              <th className="py-2 font-bold uppercase">Categoria</th>
+              <th className="py-2 font-bold uppercase">Material</th>
+              <th className="py-2 text-right font-bold uppercase">Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPrices.map((item, idx) => (
+              <tr
+                key={item.id}
+                className={cn('border-b border-gray-200', idx % 2 === 0 ? 'bg-gray-50' : '')}
+              >
+                <td className="py-2 font-semibold">{item.work_type}</td>
+                <td className="py-2 text-gray-600 text-xs uppercase">{item.category}</td>
+                <td className="py-2 text-gray-600 text-xs uppercase">{item.material || '-'}</td>
+                <td className="py-2 text-right font-bold">
+                  {formatBRL(parseLocalNum(item.price))}
+                </td>
+              </tr>
+            ))}
+            {filteredPrices.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-4 text-center text-gray-500">
+                  Nenhum procedimento encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
