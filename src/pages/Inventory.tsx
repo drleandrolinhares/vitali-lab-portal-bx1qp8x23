@@ -31,7 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { formatBRL } from '@/lib/financial'
-import { Package, Plus, ArrowUpRight, ArrowDownRight, Trash2, X } from 'lucide-react'
+import { Package, Plus, ArrowUpRight, ArrowDownRight, Trash2, X, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const formatQty = (q: any) => {
@@ -44,6 +44,7 @@ export default function Inventory() {
   const { selectedLab, currentUser, logAudit } = useAppStore()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const [productModal, setProductModal] = useState<{
     open: boolean
@@ -76,22 +77,35 @@ export default function Inventory() {
 
   const fetchItems = async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*, inventory_transactions(*)')
-      .order('name')
-    if (data) {
-      const processedItems = data.map((item) => {
-        const calculatedQty = (item.inventory_transactions || []).reduce((acc: number, t: any) => {
-          if (t.type === 'in') return acc + Number(t.quantity)
-          if (t.type === 'out') return acc - Number(t.quantity)
-          return acc
-        }, 0)
-        return { ...item, quantity: calculatedQty }
-      })
-      setItems(processedItems)
+    setFetchError(null)
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*, inventory_transactions(*)')
+        .order('name')
+
+      if (error) throw error
+
+      if (data) {
+        const processedItems = data.map((item) => {
+          const calculatedQty = (item.inventory_transactions || []).reduce(
+            (acc: number, t: any) => {
+              if (t.type === 'in') return acc + Number(t.quantity)
+              if (t.type === 'out') return acc - Number(t.quantity)
+              return acc
+            },
+            0,
+          )
+          return { ...item, quantity: calculatedQty }
+        })
+        setItems(processedItems)
+      }
+    } catch (err: any) {
+      console.error('Fetch inventory error:', err)
+      setFetchError(err.message || 'Falha de comunicação. Verifique sua conexão e tente novamente.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -99,7 +113,12 @@ export default function Inventory() {
   }, [])
 
   const filteredItems = useMemo(() => {
-    return items.filter((i) => selectedLab === 'Todos' || i.sector === selectedLab)
+    return items.filter(
+      (i) =>
+        !selectedLab ||
+        selectedLab.toUpperCase() === 'TODOS' ||
+        (i.sector || '').toUpperCase() === selectedLab.toUpperCase(),
+    )
   }, [items, selectedLab])
 
   const openModal = (mode: 'create' | 'view' | 'in', item?: any) => {
@@ -200,7 +219,10 @@ export default function Inventory() {
       last_purchase_value:
         Number(formData.last_purchase_value.replace(/[^0-9,-]+/g, '').replace(',', '.')) || null,
       observations: formData.observations,
-      sector: selectedLab === 'Todos' ? 'Soluções Cerâmicas' : selectedLab,
+      sector:
+        !selectedLab || selectedLab.toUpperCase() === 'TODOS'
+          ? 'SOLUÇÕES CERÂMICAS'
+          : selectedLab.toUpperCase(),
     }
 
     if (productModal.mode === 'create') {
@@ -350,10 +372,27 @@ export default function Inventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.length === 0 ? (
+              {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    Nenhum produto cadastrado.
+                    Carregando estoque...
+                  </TableCell>
+                </TableRow>
+              ) : fetchError ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <p className="text-destructive font-medium">{fetchError}</p>
+                      <Button variant="outline" size="sm" onClick={fetchItems}>
+                        <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    Nenhum produto encontrado para este setor.
                   </TableCell>
                 </TableRow>
               ) : (
