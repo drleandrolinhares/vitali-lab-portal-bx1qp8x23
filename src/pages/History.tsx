@@ -18,6 +18,8 @@ import {
   ListChecks,
   CheckCircle2,
   Clock,
+  MonitorPlay,
+  Minimize2,
 } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
@@ -41,12 +43,14 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts'
+import { cn } from '@/lib/utils'
 
 export default function HistoryPage() {
-  const { orders, currentUser, checkPermission, effectiveRole } = useAppStore()
+  const { orders, currentUser, checkPermission, effectiveRole, refreshOrders } = useAppStore()
   const [search, setSearch] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const [dentistFilter, setDentistFilter] = useState<string>('all')
+  const [isTvMode, setIsTvMode] = useState(false)
 
   const [historySector, setHistorySector] = useState<string>(
     () => sessionStorage.getItem('vitali_history_lab') || 'ALL',
@@ -55,6 +59,37 @@ export default function HistoryPage() {
   useEffect(() => {
     sessionStorage.setItem('vitali_history_lab', historySector)
   }, [historySector])
+
+  useEffect(() => {
+    if (!isTvMode) return
+    const interval = setInterval(
+      () => {
+        refreshOrders()
+      },
+      5 * 60 * 1000,
+    ) // Update every 5 mins in TV Mode
+    return () => clearInterval(interval)
+  }, [isTvMode, refreshOrders])
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsTvMode(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
+  }, [])
+
+  const toggleTvMode = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.log(`Error attempting to enable fullscreen: ${err.message}`)
+      })
+      setIsTvMode(true)
+    } else {
+      document.exitFullscreen()
+      setIsTvMode(false)
+    }
+  }
 
   const isCollaboratorOrAdmin = [
     'admin',
@@ -171,6 +206,73 @@ export default function HistoryPage() {
     )
   }
 
+  if (isTvMode) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-[#020617] text-slate-50 flex flex-col p-8 overflow-hidden font-sans">
+        <div className="flex justify-between items-center mb-8 shrink-0">
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/50">
+              <MonitorPlay className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-5xl font-extrabold uppercase tracking-tight text-white leading-none">
+                Monitoramento de Produção
+              </h1>
+              <p className="text-2xl text-blue-400 mt-2 uppercase font-bold tracking-widest flex items-center gap-3">
+                <span className="relative flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                </span>
+                {historySector === 'ALL' ? 'Visão Consolidada' : historySector}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTvMode}
+            className="text-slate-400 hover:text-white hover:bg-slate-800 h-20 w-20 rounded-full transition-colors"
+          >
+            <Minimize2 className="w-10 h-10" />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
+          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors duration-500" />
+            <ListChecks className="w-24 h-24 text-blue-500/30 mb-8" />
+            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
+              Total de Pedidos
+            </p>
+            <p className="text-[12rem] font-black text-blue-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
+              {kpis.total}
+            </p>
+          </div>
+          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors duration-500" />
+            <Clock className="w-24 h-24 text-amber-500/30 mb-8" />
+            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
+              Em Andamento
+            </p>
+            <p className="text-[12rem] font-black text-amber-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
+              {kpis.pending}
+            </p>
+          </div>
+          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors duration-500" />
+            <CheckCircle2 className="w-24 h-24 text-emerald-500/30 mb-8" />
+            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
+              Concluídos
+            </p>
+            <p className="text-[12rem] font-black text-emerald-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
+              {kpis.completed}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const showDentistCol = effectiveRole !== 'dentist' && effectiveRole !== 'laboratory'
 
   return (
@@ -185,23 +287,36 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <Select value={historySector} onValueChange={setHistorySector}>
-          <SelectTrigger className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border uppercase text-xs font-bold">
-            <Filter className="mr-2 h-4 w-4 opacity-50" />
-            <SelectValue placeholder="SELECIONAR LABORATÓRIO" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL" className="uppercase text-xs font-bold">
-              TODOS OS LABORATÓRIOS
-            </SelectItem>
-            <SelectItem value="SOLUÇÕES CERÂMICAS" className="uppercase text-xs font-bold">
-              SOLUÇÕES CERÂMICAS
-            </SelectItem>
-            <SelectItem value="STÚDIO ACRÍLICO" className="uppercase text-xs font-bold">
-              STÚDIO ACRÍLICO
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <Select value={historySector} onValueChange={setHistorySector}>
+            <SelectTrigger className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border uppercase text-xs font-bold">
+              <Filter className="mr-2 h-4 w-4 opacity-50" />
+              <SelectValue placeholder="SELECIONAR LABORATÓRIO" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL" className="uppercase text-xs font-bold">
+                TODOS OS LABORATÓRIOS
+              </SelectItem>
+              <SelectItem value="SOLUÇÕES CERÂMICAS" className="uppercase text-xs font-bold">
+                SOLUÇÕES CERÂMICAS
+              </SelectItem>
+              <SelectItem value="STÚDIO ACRÍLICO" className="uppercase text-xs font-bold">
+                STÚDIO ACRÍLICO
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {isCollaboratorOrAdmin && (
+            <Button
+              variant="outline"
+              onClick={toggleTvMode}
+              className="h-10 w-full md:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-900/20 font-bold tracking-wider uppercase text-xs shadow-sm transition-all"
+            >
+              <MonitorPlay className="w-4 h-4 mr-2" />
+              Modo TV
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="history" className="w-full space-y-6">

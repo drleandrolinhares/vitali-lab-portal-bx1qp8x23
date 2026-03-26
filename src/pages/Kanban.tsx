@@ -22,6 +22,7 @@ import {
   ExternalLink,
   QrCode,
   RefreshCw,
+  Tags,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -97,6 +98,7 @@ export default function KanbanPage() {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
+  const selectedWorkType = searchParams.get('workType') || 'all'
 
   const setSelectedDentistId = (val: string) => {
     if (val === 'all') {
@@ -106,6 +108,34 @@ export default function KanbanPage() {
     }
     setSearchParams(searchParams, { replace: true })
   }
+
+  const setSelectedWorkType = (val: string) => {
+    if (val === 'all') {
+      searchParams.delete('workType')
+    } else {
+      searchParams.set('workType', val)
+    }
+    setSearchParams(searchParams, { replace: true })
+  }
+
+  const availableWorkTypes = useMemo(() => {
+    const types = new Set<string>()
+    orders.forEach((o) => {
+      if ((o.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === activeLab) {
+        if (o.workType) types.add(o.workType)
+      }
+    })
+    return Array.from(types).sort()
+  }, [orders, activeLab])
+
+  useEffect(() => {
+    if (selectedWorkType !== 'all' && !availableWorkTypes.includes(selectedWorkType)) {
+      if (searchParams.get('workType')) {
+        searchParams.delete('workType')
+        setSearchParams(searchParams, { replace: true })
+      }
+    }
+  }, [availableWorkTypes, selectedWorkType, searchParams, setSearchParams])
 
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [isLoadingDentists, setIsLoadingDentists] = useState(false)
@@ -178,11 +208,15 @@ export default function KanbanPage() {
   }, [selectedOrder])
 
   const visibleOrders = useMemo(() => {
-    if (isDentist) return orders
-    if (canFilterDentist && selectedDentistId !== 'all')
-      return orders.filter((o) => o.dentistId === selectedDentistId)
-    return orders
-  }, [orders, isDentist, selectedDentistId, canFilterDentist])
+    let filtered = orders
+    if (!isDentist && canFilterDentist && selectedDentistId !== 'all') {
+      filtered = filtered.filter((o) => o.dentistId === selectedDentistId)
+    }
+    if (selectedWorkType !== 'all') {
+      filtered = filtered.filter((o) => o.workType === selectedWorkType)
+    }
+    return filtered
+  }, [orders, isDentist, selectedDentistId, canFilterDentist, selectedWorkType])
 
   const hasOrders = useMemo(
     () =>
@@ -295,48 +329,83 @@ export default function KanbanPage() {
             Acompanhe o progresso do fluxo de produção.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto items-end">
-          {showDentistFilter && (
+        <div className="flex flex-col xl:flex-row gap-4 w-full xl:w-auto items-end">
+          <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+            {showDentistFilter && (
+              <div className="flex flex-col gap-2 w-full sm:w-[280px]">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
+                  <Select
+                    value={selectedDentistId === 'all' ? undefined : selectedDentistId}
+                    onValueChange={(val) => setSelectedDentistId(val || 'all')}
+                    disabled={isLoadingDentists}
+                  >
+                    <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
+                      <SelectValue
+                        placeholder={
+                          isLoadingDentists
+                            ? 'CARREGANDO...'
+                            : dentistFetchError
+                              ? 'ERRO AO CARREGAR'
+                              : 'SELECIONE O CLIENTE'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dentistsList.map((d) => (
+                        <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                      {dentistFetchError && (
+                        <div className="p-2 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              fetchDentists()
+                            }}
+                            className="h-8 text-xs"
+                          >
+                            Tentar Novamente
+                          </Button>
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="secondary"
+                  className={cn(
+                    'w-full sm:ml-6 sm:w-[calc(100%-24px)] text-xs font-bold uppercase h-8 transition-colors',
+                    selectedDentistId === 'all'
+                      ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
+                  )}
+                  onClick={() => setSelectedDentistId('all')}
+                >
+                  TODOS OS CLIENTES
+                </Button>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2 w-full sm:w-[280px]">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
+                <Tags className="w-4 h-4 text-slate-400 dark:text-muted-foreground hidden sm:block shrink-0" />
                 <Select
-                  value={selectedDentistId === 'all' ? undefined : selectedDentistId}
-                  onValueChange={(val) => setSelectedDentistId(val || 'all')}
-                  disabled={isLoadingDentists}
+                  value={selectedWorkType === 'all' ? undefined : selectedWorkType}
+                  onValueChange={(val) => setSelectedWorkType(val || 'all')}
                 >
                   <SelectTrigger className="w-full bg-white border-slate-200 dark:border-border dark:bg-background uppercase text-xs font-bold h-9 focus:ring-primary/30">
-                    <SelectValue
-                      placeholder={
-                        isLoadingDentists
-                          ? 'CARREGANDO...'
-                          : dentistFetchError
-                            ? 'ERRO AO CARREGAR'
-                            : 'SELECIONE O CLIENTE'
-                      }
-                    />
+                    <SelectValue placeholder="TIPO DE TRABALHO" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dentistsList.map((d) => (
-                      <SelectItem key={d.id} value={d.id} className="uppercase text-xs font-bold">
-                        {d.name}
+                    {availableWorkTypes.map((t) => (
+                      <SelectItem key={t} value={t} className="uppercase text-xs font-bold">
+                        {t}
                       </SelectItem>
                     ))}
-                    {dentistFetchError && (
-                      <div className="p-2 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            fetchDentists()
-                          }}
-                          className="h-8 text-xs"
-                        >
-                          Tentar Novamente
-                        </Button>
-                      </div>
-                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -344,16 +413,16 @@ export default function KanbanPage() {
                 variant="secondary"
                 className={cn(
                   'w-full sm:ml-6 sm:w-[calc(100%-24px)] text-xs font-bold uppercase h-8 transition-colors',
-                  selectedDentistId === 'all'
+                  selectedWorkType === 'all'
                     ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
                 )}
-                onClick={() => setSelectedDentistId('all')}
+                onClick={() => setSelectedWorkType('all')}
               >
-                TODOS OS CLIENTES
+                TODOS OS TRABALHOS
               </Button>
             </div>
-          )}
+          </div>
           {canCreateOrder && (
             <div className="flex gap-2 w-full sm:w-auto h-9">
               <Button
