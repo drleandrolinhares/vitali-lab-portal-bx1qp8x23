@@ -21,6 +21,7 @@ interface AppState {
         job_function?: string
         is_active?: boolean
         requires_password_change?: boolean
+        allowed_sectors?: string[]
       })
     | null
   orders: any[]
@@ -107,6 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         job_function?: string
         is_active?: boolean
         requires_password_change?: boolean
+        allowed_sectors?: string[]
       })
     | null
   >(null)
@@ -230,6 +232,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         requires_password_change: data.requires_password_change,
         assigned_dentists: data.assigned_dentists,
         can_move_kanban_cards: data.can_move_kanban_cards,
+        allowed_sectors: data.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
       })
 
       const now = new Date()
@@ -251,6 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         is_approved: false,
         is_active: true,
         requires_password_change: false,
+        allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
       })
     }
     setProfileLoading(false)
@@ -549,6 +553,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   role: payload.new.role,
                   assigned_dentists: payload.new.assigned_dentists,
                   can_move_kanban_cards: payload.new.can_move_kanban_cards,
+                  allowed_sectors: payload.new.allowed_sectors || [
+                    'SOLUÇÕES CERÂMICAS',
+                    'STÚDIO ACRÍLICO',
+                  ],
                 }
               : prev,
           )
@@ -593,6 +601,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
           )
         }
       }
+    }
+
+    if (
+      currentUser &&
+      roleToUse !== 'admin' &&
+      roleToUse !== 'master' &&
+      roleToUse !== 'dentist' &&
+      roleToUse !== 'laboratory'
+    ) {
+      const allowedSecs = currentUser.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+      baseOrders = baseOrders.filter((o) =>
+        allowedSecs.includes((o.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase()),
+      )
     }
 
     const firstStageNames = kanbanStages

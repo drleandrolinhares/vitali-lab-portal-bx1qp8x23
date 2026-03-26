@@ -25,6 +25,7 @@ export interface User {
   pix_key?: string
   pix_type?: string
   bank_name?: string
+  allowed_sectors?: string[]
 }
 
 export interface Stage {

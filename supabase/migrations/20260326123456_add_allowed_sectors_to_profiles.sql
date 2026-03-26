@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS allowed_sectors JSONB DEFAULT '["SOLUÇÕES CERÂMICAS", "STÚDIO ACRÍLICO"]'::jsonb;
+

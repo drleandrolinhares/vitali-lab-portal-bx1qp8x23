@@ -44,8 +44,6 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 
-const SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
-
 export default function KanbanPage() {
   const {
     orders,
@@ -70,9 +68,20 @@ export default function KanbanPage() {
   const isAdmin = effectiveRole === 'admin' || effectiveRole === 'master'
   const isDentist = effectiveRole === 'dentist' || effectiveRole === 'laboratory'
 
-  const activeLab = SECTORS.includes((selectedLab || '').toUpperCase())
+  const availableSectors =
+    currentUser?.allowed_sectors && currentUser.allowed_sectors.length > 0
+      ? currentUser.allowed_sectors
+      : ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+
+  useEffect(() => {
+    if (!availableSectors.includes((selectedLab || '').toUpperCase())) {
+      setSelectedLab(availableSectors[0])
+    }
+  }, [availableSectors, selectedLab, setSelectedLab])
+
+  const activeLab = availableSectors.includes((selectedLab || '').toUpperCase())
     ? (selectedLab || '').toUpperCase()
-    : SECTORS[0]
+    : availableSectors[0]
 
   const activeStages = useMemo(() => {
     return kanbanStages
@@ -450,7 +459,7 @@ export default function KanbanPage() {
           ESCOLHA O LABORATÓRIO
         </Label>
         <div className="flex flex-wrap gap-3">
-          {SECTORS.map((s) => (
+          {availableSectors.map((s) => (
             <Button
               key={s}
               variant={activeLab === s ? 'default' : 'outline'}
@@ -775,7 +784,7 @@ export default function KanbanPage() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="z-[110]">
-                                    {SECTORS.map((s) => (
+                                    {availableSectors.map((s) => (
                                       <SelectItem
                                         key={s}
                                         value={s}

@@ -37,6 +37,7 @@ import {
   Key,
   Copy,
   Edit,
+  Microscope,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -122,6 +123,8 @@ const ROLES_INFO = [
   },
 ]
 
+const AVAILABLE_SECTORS = ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+
 const deepEqual = (obj1: any, obj2: any): boolean => {
   if (obj1 === obj2) return true
   if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) {
@@ -191,6 +194,7 @@ export function UsersManagement() {
     clinic_contact_role: '',
     clinic_contact_phone: '',
     whatsapp_group_link: '',
+    allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
   })
 
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
@@ -331,6 +335,7 @@ export function UsersManagement() {
         clinic_contact_role: user.clinic_contact_role || '',
         clinic_contact_phone: user.clinic_contact_phone || '',
         whatsapp_group_link: user.whatsapp_group_link || '',
+        allowed_sectors: user.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
       })
       let initialPerms = user.permissions
       if (Array.isArray(initialPerms) || !initialPerms || Object.keys(initialPerms).length === 0) {
@@ -367,6 +372,7 @@ export function UsersManagement() {
         clinic_contact_role: '',
         clinic_contact_phone: '',
         whatsapp_group_link: '',
+        allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
       })
       setSelectedPerms(null)
     }
@@ -407,6 +413,24 @@ export function UsersManagement() {
       return toast({
         title: 'Senha inválida',
         description: 'A senha deve ter no mínimo 6 caracteres',
+        variant: 'destructive',
+      })
+    }
+
+    if (
+      [
+        'admin',
+        'master',
+        'receptionist',
+        'technical_assistant',
+        'financial',
+        'relationship_manager',
+      ].includes(formData.role) &&
+      formData.allowed_sectors.length === 0
+    ) {
+      return toast({
+        title: 'Seleção de Laboratório',
+        description: 'Selecione pelo menos um laboratório para este colaborador ter acesso.',
         variant: 'destructive',
       })
     }
@@ -489,6 +513,13 @@ export function UsersManagement() {
         if (formData.is_active !== (editingUser.is_active !== false))
           payload.is_active = formData.is_active
 
+        if (
+          JSON.stringify(formData.allowed_sectors) !==
+          JSON.stringify(editingUser.allowed_sectors || [])
+        ) {
+          payload.allowed_sectors = formData.allowed_sectors
+        }
+
         let normalizedUserPerms = editingUser.permissions
         if (Array.isArray(normalizedUserPerms) || !normalizedUserPerms) {
           normalizedUserPerms = {}
@@ -540,6 +571,7 @@ export function UsersManagement() {
           is_active: formData.is_active,
           permissions: selectedPerms || {},
           assigned_dentists: formData.assigned_dentists,
+          allowed_sectors: formData.allowed_sectors,
           password: formData.password,
           requires_password_change: true,
           closing_date: sanitizeString(formData.closing_date),
@@ -802,6 +834,18 @@ export function UsersManagement() {
         return { ...prev, assigned_dentists: [...current, dentistId] }
       } else {
         return { ...prev, assigned_dentists: current.filter((id) => id !== dentistId) }
+      }
+    })
+  }
+
+  const handleToggleSector = (sector: string, checked: boolean) => {
+    if (!isMasterOrAdmin) return
+    setFormData((prev) => {
+      const current = prev.allowed_sectors || []
+      if (checked) {
+        return { ...prev, allowed_sectors: [...current, sector] }
+      } else {
+        return { ...prev, allowed_sectors: current.filter((s) => s !== sector) }
       }
     })
   }
@@ -1750,7 +1794,7 @@ export function UsersManagement() {
                       usuário:
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                     {ROLES_INFO.filter((r) => r.id !== 'master' || isCurrentUserMaster).map(
                       (role) => {
                         const Icon = role.icon
@@ -1815,6 +1859,61 @@ export function UsersManagement() {
                       },
                     )}
                   </div>
+
+                  {[
+                    'admin',
+                    'master',
+                    'receptionist',
+                    'technical_assistant',
+                    'financial',
+                    'relationship_manager',
+                  ].includes(formData.role) && (
+                    <div className="mt-8 mb-8">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                          <Microscope className="w-5 h-5 text-primary" /> Permissão de Laboratórios
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione em quais laboratórios este colaborador poderá atuar. Ele verá
+                          apenas as informações atreladas às opções selecionadas.
+                        </p>
+                      </div>
+                      <div className="border rounded-xl bg-background overflow-hidden p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {AVAILABLE_SECTORS.map((sector) => (
+                          <div
+                            key={sector}
+                            className={cn(
+                              'flex items-center gap-3 p-3 border rounded-lg transition-colors',
+                              formData.allowed_sectors.includes(sector)
+                                ? 'border-primary bg-primary/5'
+                                : 'hover:bg-muted/30',
+                              isMasterOrAdmin && !saving
+                                ? 'cursor-pointer'
+                                : 'opacity-80 cursor-not-allowed',
+                            )}
+                            onClick={() => {
+                              if (isMasterOrAdmin && !saving) {
+                                handleToggleSector(
+                                  sector,
+                                  !formData.allowed_sectors.includes(sector),
+                                )
+                              }
+                            }}
+                          >
+                            <Checkbox
+                              checked={formData.allowed_sectors.includes(sector)}
+                              onCheckedChange={(c) => handleToggleSector(sector, !!c)}
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                            <span className="font-bold text-sm uppercase tracking-wide">
+                              {sector}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {[
                     'receptionist',
