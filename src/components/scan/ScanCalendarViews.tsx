@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils'
 import { generateTimeSlots, checkBlockOverlap } from './utils'
 import { Clock, CalendarX2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -68,146 +67,161 @@ export function ScanCalendarViews({
     return true
   })
 
-  if (activeTab === 'AGENDAMENTOS MARCADOS') {
-    if (isStaff) {
-      const allBookings = [...visibleBookings].sort((a, b) => {
-        if (a.booking_date !== b.booking_date) return a.booking_date.localeCompare(b.booking_date)
-        return a.start_time.localeCompare(b.start_time)
-      })
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
 
-      const grouped = allBookings.reduce(
-        (acc, b) => {
-          const date = b.booking_date.substring(0, 10)
-          if (!acc[date]) acc[date] = []
-          acc[date].push(b)
-          return acc
-        },
-        {} as Record<string, Booking[]>,
-      )
+  if (activeTab === 'AGENDAMENTOS MARCADOS' || activeTab === 'HISTÓRICO TOTAL') {
+    const isHistory = activeTab === 'HISTÓRICO TOTAL'
 
-      const sortedDates = Object.keys(grouped).sort()
+    const filteredTabBookings = visibleBookings.filter((b) => {
+      const d = b.booking_date.substring(0, 10)
+      return isHistory ? d < todayStr : d >= todayStr
+    })
 
-      return (
-        <div className="flex flex-col gap-6">
-          {sortedDates.length === 0 ? (
-            <Card className="h-full w-full min-h-[400px] flex flex-col items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl text-slate-400 gap-3">
-              <CalendarX2 className="w-10 h-10 opacity-50" />
-              <p className="text-sm font-black uppercase tracking-widest text-center px-4">
-                NENHUM AGENDAMENTO ENCONTRADO.
-              </p>
-            </Card>
-          ) : (
-            sortedDates.map((date) => (
-              <div
-                key={date}
-                className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
-              >
-                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 font-black text-sm uppercase tracking-wider text-[#1A233A]">
-                  {format(new Date(date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                </div>
-                <Table>
-                  <TableHeader className="bg-slate-50/50">
-                    <TableRow>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 w-[140px]">
-                        Horário
-                      </TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
-                        Dentista
-                      </TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
-                        Paciente
-                      </TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 text-center w-[120px]">
-                        Status
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grouped[date].map((b) => (
-                      <TableRow
-                        key={b.id}
-                        className="cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => onBookingClick(b)}
-                      >
-                        <TableCell className="font-semibold text-slate-600 whitespace-nowrap">
-                          {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
-                        </TableCell>
-                        <TableCell className="font-medium text-slate-900">
-                          {b.profiles?.name || 'Não informado'}
-                        </TableCell>
-                        <TableCell className="font-black text-[#1A233A]">
-                          {b.patient_name}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700">
-                            CONFIRMADO
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ))
-          )}
-        </div>
-      )
-    }
+    const sortedBookings = [...filteredTabBookings].sort((a, b) => {
+      if (a.booking_date !== b.booking_date) {
+        return isHistory
+          ? b.booking_date.localeCompare(a.booking_date)
+          : a.booking_date.localeCompare(b.booking_date)
+      }
+      return a.start_time.localeCompare(b.start_time)
+    })
 
-    const selectedDateStr = format(currentDate, 'yyyy-MM-dd')
-    const dayBookings = visibleBookings
-      .filter((b) => b.booking_date.substring(0, 10) === selectedDateStr)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    const grouped = sortedBookings.reduce(
+      (acc, b) => {
+        const date = b.booking_date.substring(0, 10)
+        if (!acc[date]) acc[date] = []
+        acc[date].push(b)
+        return acc
+      },
+      {} as Record<string, Booking[]>,
+    )
 
-    if (dayBookings.length === 0) {
+    const sortedDates = Object.keys(grouped).sort((a, b) =>
+      isHistory ? b.localeCompare(a) : a.localeCompare(b),
+    )
+
+    if (sortedDates.length === 0) {
       return (
         <Card className="h-full w-full min-h-[400px] flex flex-col items-center justify-center border border-slate-200 shadow-sm bg-white rounded-xl text-slate-400 gap-3">
           <CalendarX2 className="w-10 h-10 opacity-50" />
           <p className="text-sm font-black uppercase tracking-widest text-center px-4">
-            NENHUM AGENDAMENTO ENCONTRADO PARA ESTA DATA.
+            NENHUM AGENDAMENTO ENCONTRADO{isHistory ? ' NO PASSADO' : ' PARA HOJE E FUTURO'}.
           </p>
         </Card>
       )
     }
 
     return (
-      <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-black uppercase tracking-wider text-[#1A233A] mb-2 px-2">
-          {format(currentDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-        </h3>
-        {dayBookings.map((b) => (
+      <div className="flex flex-col gap-6">
+        {sortedDates.map((date) => (
           <div
-            key={b.id}
-            onClick={() => onBookingClick(b)}
-            className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-pink-300 hover:shadow-md transition-all group"
+            key={date}
+            className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
           >
-            <div className="flex items-center gap-4">
-              <div className="bg-[#E11D48]/10 text-[#E11D48] border border-[#E11D48]/20 w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 group-hover:bg-[#E11D48] group-hover:text-white transition-colors">
-                <span className="text-[10px] font-black uppercase">
-                  {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'MMM', {
-                    locale: ptBR,
-                  })}
-                </span>
-                <span className="text-lg font-black leading-none">
-                  {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'dd')}
-                </span>
-              </div>
-              <div>
-                <p className="font-black text-[#1A233A] text-lg leading-tight">{b.patient_name}</p>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1">
-                  <Clock className="w-3.5 h-3.5" /> {b.start_time.substring(0, 5)} -{' '}
-                  {b.end_time.substring(0, 5)}
-                </div>
-              </div>
+            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 font-black text-sm uppercase tracking-wider text-[#1A233A]">
+              {format(new Date(date + 'T12:00:00'), "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </div>
-            <div className="flex flex-col items-start sm:items-end">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Dentista Solicitante
-              </span>
-              <span className="font-bold text-sm text-[#1A233A]">
-                {b.profiles?.name || 'Não informado'}
-              </span>
-            </div>
+            {isStaff ? (
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 w-[140px]">
+                      Horário
+                    </TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
+                      Dentista
+                    </TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500">
+                      Paciente
+                    </TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-500 text-center w-[120px]">
+                      Status
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {grouped[date].map((b) => (
+                    <TableRow
+                      key={b.id}
+                      className="cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() => onBookingClick(b)}
+                    >
+                      <TableCell className="font-semibold text-slate-600 whitespace-nowrap">
+                        {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-900">
+                        {b.profiles?.name || 'Não informado'}
+                      </TableCell>
+                      <TableCell className="font-black text-[#1A233A]">{b.patient_name}</TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={cn(
+                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+                            isHistory
+                              ? 'bg-slate-100 text-slate-600'
+                              : 'bg-emerald-100 text-emerald-700',
+                          )}
+                        >
+                          {isHistory ? 'REALIZADO' : 'CONFIRMADO'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col p-4 gap-4">
+                {grouped[date].map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => onBookingClick(b)}
+                    className="border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-pink-300 hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={cn(
+                          'border w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 transition-colors',
+                          isHistory
+                            ? 'bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-slate-200'
+                            : 'bg-[#E11D48]/10 text-[#E11D48] border-[#E11D48]/20 group-hover:bg-[#E11D48] group-hover:text-white',
+                        )}
+                      >
+                        <span className="text-[10px] font-black uppercase">
+                          {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'MMM', {
+                            locale: ptBR,
+                          })}
+                        </span>
+                        <span className="text-lg font-black leading-none">
+                          {format(new Date(b.booking_date.substring(0, 10) + 'T12:00:00'), 'dd')}
+                        </span>
+                      </div>
+                      <div>
+                        <p
+                          className={cn(
+                            'font-black text-lg leading-tight',
+                            isHistory ? 'text-slate-500' : 'text-[#1A233A]',
+                          )}
+                        >
+                          {b.patient_name}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1">
+                          <Clock className="w-3.5 h-3.5" /> {b.start_time.substring(0, 5)} -{' '}
+                          {b.end_time.substring(0, 5)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-start sm:items-end">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Dentista Solicitante
+                      </span>
+                      <span className="font-bold text-sm text-[#1A233A]">
+                        {b.profiles?.name || 'Não informado'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

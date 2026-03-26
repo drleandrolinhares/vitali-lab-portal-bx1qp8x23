@@ -36,4 +36,4 @@ export interface ScanFilters {
   dentistId?: string
 }
 
-export type ScanTab = 'VISÃO GERAL' | 'AGENDAMENTOS MARCADOS'
+export type ScanTab = 'VISÃO GERAL' | 'AGENDAMENTOS MARCADOS' | 'HISTÓRICO TOTAL'

@@ -37,7 +37,7 @@ export function ScanHeader({
   dentists,
   isStaff,
 }: Props) {
-  const tabs: ScanTab[] = ['AGENDAMENTOS MARCADOS', 'VISÃO GERAL']
+  const tabs: ScanTab[] = ['AGENDAMENTOS MARCADOS', 'HISTÓRICO TOTAL', 'VISÃO GERAL']
 
   return (
     <div className="flex flex-col bg-white">

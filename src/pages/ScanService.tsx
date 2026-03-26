@@ -343,7 +343,9 @@ export default function ScanService() {
           setCurrentDate={setCurrentDate}
           onDateSelect={(date) => {
             setCurrentDate(date)
-            setActiveTab('AGENDAMENTOS MARCADOS')
+            const todayStr = format(new Date(), 'yyyy-MM-dd')
+            const clickedStr = format(date, 'yyyy-MM-dd')
+            setActiveTab(clickedStr < todayStr ? 'HISTÓRICO TOTAL' : 'AGENDAMENTOS MARCADOS')
           }}
           bookings={bookings}
           isStaff={isStaff}
