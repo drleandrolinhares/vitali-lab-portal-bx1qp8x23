@@ -181,12 +181,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   idRef.current = currentUser?.id
 
   const [selectedLab, setSelectedLab] = useState<string>(
-    () => localStorage.getItem('vitali_selected_lab') || 'SOLUÇÕES CERÂMICAS',
+    () => localStorage.getItem('vitali_selected_lab') || 'Todos',
   )
 
   useEffect(() => {
     localStorage.setItem('vitali_selected_lab', selectedLab)
   }, [selectedLab])
+
+  // Ensure selectedLab is valid based on allowed_sectors
+  useEffect(() => {
+    if (currentUser?.allowed_sectors && currentUser.allowed_sectors.length > 0) {
+      let matchedSector = ''
+      if (selectedLab === 'Soluções Cerâmicas') matchedSector = 'SOLUÇÕES CERÂMICAS'
+      if (selectedLab === 'Studio Acrílico') matchedSector = 'STÚDIO ACRÍLICO'
+
+      if (selectedLab !== 'Todos' && !currentUser.allowed_sectors.includes(matchedSector)) {
+        const firstAllowed = currentUser.allowed_sectors[0]
+        setSelectedLab(
+          firstAllowed === 'SOLUÇÕES CERÂMICAS' ? 'Soluções Cerâmicas' : 'Studio Acrílico',
+        )
+      }
+    }
+  }, [currentUser?.allowed_sectors, selectedLab])
 
   const fetchProfile = async () => {
     if (!session?.user) {
@@ -603,16 +619,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    if (
-      currentUser &&
-      roleToUse !== 'admin' &&
-      roleToUse !== 'master' &&
-      roleToUse !== 'dentist' &&
-      roleToUse !== 'laboratory'
-    ) {
+    // Filter by allowed_sectors for ALL internal roles
+    if (currentUser && roleToUse !== 'dentist' && roleToUse !== 'laboratory') {
       const allowedSecs = currentUser.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+      const normalizeSector = (s: string) => s.toUpperCase().replace('STUDIO', 'STÚDIO')
       baseOrders = baseOrders.filter((o) =>
-        allowedSecs.includes((o.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase()),
+        allowedSecs
+          .map(normalizeSector)
+          .includes(normalizeSector(o.sector || 'SOLUÇÕES CERÂMICAS')),
       )
     }
 

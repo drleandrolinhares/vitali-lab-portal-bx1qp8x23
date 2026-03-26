@@ -578,11 +578,18 @@ function MainHeader() {
     '/prices',
   ].includes(location.pathname)
 
+  const allowedSectors = currentUser.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
+  const hasMultipleLabs = allowedSectors.length > 1
+
   const showLabSelector =
     (currentUser.role === 'admin' ||
       currentUser.role === 'master' ||
-      currentUser.role === 'receptionist') &&
-    isFinancialRoute
+      currentUser.role === 'receptionist' ||
+      currentUser.role === 'technical_assistant' ||
+      currentUser.role === 'financial' ||
+      currentUser.role === 'relationship_manager') &&
+    isFinancialRoute &&
+    hasMultipleLabs
 
   let adminDynamicLink = (currentUser as any).whatsapp_group_link
   let viewingClient = false
@@ -677,8 +684,12 @@ function MainHeader() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Todos">VISÃO CONSOLIDADA</SelectItem>
-                <SelectItem value="Soluções Cerâmicas">SOLUÇÕES CERÂMICAS</SelectItem>
-                <SelectItem value="Studio Acrílico">STUDIO ACRÍLICO</SelectItem>
+                {allowedSectors.includes('SOLUÇÕES CERÂMICAS') && (
+                  <SelectItem value="Soluções Cerâmicas">SOLUÇÕES CERÂMICAS</SelectItem>
+                )}
+                {allowedSectors.includes('STÚDIO ACRÍLICO') && (
+                  <SelectItem value="Studio Acrílico">STUDIO ACRÍLICO</SelectItem>
+                )}
               </SelectContent>
             </Select>
           )}
