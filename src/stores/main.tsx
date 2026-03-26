@@ -180,9 +180,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   roleRef.current = currentUser?.role
   idRef.current = currentUser?.id
 
-  const [selectedLab, setSelectedLab] = useState<string>(
-    () => localStorage.getItem('vitali_selected_lab') || 'Todos',
-  )
+  const [selectedLab, setSelectedLab] = useState<string>(() => {
+    const stored = localStorage.getItem('vitali_selected_lab')
+    if (stored === 'Todos' || stored === 'TODOS') return 'TODOS'
+    if (stored === 'Soluções Cerâmicas') return 'SOLUÇÕES CERÂMICAS'
+    if (stored === 'Studio Acrílico') return 'STÚDIO ACRÍLICO'
+    return stored || 'TODOS'
+  })
 
   useEffect(() => {
     localStorage.setItem('vitali_selected_lab', selectedLab)
@@ -191,15 +195,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Ensure selectedLab is valid based on allowed_sectors
   useEffect(() => {
     if (currentUser?.allowed_sectors && currentUser.allowed_sectors.length > 0) {
-      let matchedSector = ''
-      if (selectedLab === 'Soluções Cerâmicas') matchedSector = 'SOLUÇÕES CERÂMICAS'
-      if (selectedLab === 'Studio Acrílico') matchedSector = 'STÚDIO ACRÍLICO'
-
-      if (selectedLab !== 'Todos' && !currentUser.allowed_sectors.includes(matchedSector)) {
-        const firstAllowed = currentUser.allowed_sectors[0]
-        setSelectedLab(
-          firstAllowed === 'SOLUÇÕES CERÂMICAS' ? 'Soluções Cerâmicas' : 'Studio Acrílico',
-        )
+      if (selectedLab !== 'TODOS' && !currentUser.allowed_sectors.includes(selectedLab)) {
+        setSelectedLab(currentUser.allowed_sectors[0])
       }
     }
   }, [currentUser?.allowed_sectors, selectedLab])

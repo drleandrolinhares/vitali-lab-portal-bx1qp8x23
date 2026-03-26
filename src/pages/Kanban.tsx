@@ -74,7 +74,11 @@ export default function KanbanPage() {
       : ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO']
 
   useEffect(() => {
-    if (!availableSectors.includes((selectedLab || '').toUpperCase())) {
+    if (
+      selectedLab !== 'TODOS' &&
+      selectedLab !== 'Todos' &&
+      !availableSectors.includes((selectedLab || '').toUpperCase())
+    ) {
       setSelectedLab(availableSectors[0])
     }
   }, [availableSectors, selectedLab, setSelectedLab])

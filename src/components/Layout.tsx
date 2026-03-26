@@ -171,7 +171,7 @@ function useAdminBadges(currentUser: any) {
           .eq('status', 'pending')
           .is('order_id', null)
 
-        if (selectedLab && selectedLab !== 'Todos') {
+        if (selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos') {
           expQuery = expQuery.eq('sector', selectedLab)
         }
 
@@ -683,12 +683,12 @@ function MainHeader() {
                 <SelectValue placeholder="SELECIONE O LABORATÓRIO" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Todos">VISÃO CONSOLIDADA</SelectItem>
+                <SelectItem value="TODOS">VISÃO CONSOLIDADA</SelectItem>
                 {allowedSectors.includes('SOLUÇÕES CERÂMICAS') && (
-                  <SelectItem value="Soluções Cerâmicas">SOLUÇÕES CERÂMICAS</SelectItem>
+                  <SelectItem value="SOLUÇÕES CERÂMICAS">SOLUÇÕES CERÂMICAS</SelectItem>
                 )}
                 {allowedSectors.includes('STÚDIO ACRÍLICO') && (
-                  <SelectItem value="Studio Acrílico">STUDIO ACRÍLICO</SelectItem>
+                  <SelectItem value="STÚDIO ACRÍLICO">STUDIO ACRÍLICO</SelectItem>
                 )}
               </SelectContent>
             </Select>
