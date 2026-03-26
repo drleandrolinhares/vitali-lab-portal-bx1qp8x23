@@ -86,7 +86,9 @@ export default function HistoryPage() {
       })
       setIsTvMode(true)
     } else {
-      document.exitFullscreen()
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {})
+      }
       setIsTvMode(false)
     }
   }
@@ -153,6 +155,77 @@ export default function HistoryPage() {
     return { total, completed, pending }
   }, [sectorFilteredOrders])
 
+  const tvData = useMemo(() => {
+    const validOrders = sectorFilteredOrders.filter((o) => o.dentistRole !== 'master')
+
+    // Sort all by date ascending (oldest first)
+    const sorted = [...validOrders].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+
+    const pendentes: typeof validOrders = []
+    const emAndamento: typeof validOrders = []
+    let concluidosNoMes = 0
+    const totalPedidos = validOrders.length
+
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    sorted.forEach((o) => {
+      const stageUpper = (o.kanbanStage || '').toUpperCase()
+      const isPendencia =
+        stageUpper.includes('PENDÊNCIA') ||
+        stageUpper.includes('PENDENCIA') ||
+        stageUpper.includes('AGUARDANDO RETORNO')
+
+      const isFinished =
+        o.status === 'completed' ||
+        o.status === 'delivered' ||
+        stageUpper.includes('FINALIZADO') ||
+        stageUpper.includes('PRONTO PARA ENVIO') ||
+        stageUpper.includes('ENTREGUE')
+
+      if (isPendencia && !isFinished && o.status !== 'cancelled') {
+        pendentes.push(o)
+      } else if (!isFinished && o.status !== 'cancelled') {
+        emAndamento.push(o)
+      }
+
+      if (isFinished) {
+        let completionDate = new Date(o.createdAt)
+        if (o.history && o.history.length > 0) {
+          const completionEvents = o.history.filter(
+            (h: any) =>
+              h.status === 'completed' ||
+              h.status === 'delivered' ||
+              (h.note && h.note.toUpperCase().includes('FINALIZADO')),
+          )
+          if (completionEvents.length > 0) {
+            completionEvents.sort(
+              (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            )
+            completionDate = new Date(completionEvents[0].date)
+          }
+        }
+
+        if (
+          completionDate.getMonth() === currentMonth &&
+          completionDate.getFullYear() === currentYear
+        ) {
+          concluidosNoMes++
+        }
+      }
+    })
+
+    return {
+      pendentes,
+      emAndamento,
+      concluidosNoMes,
+      totalPedidos,
+    }
+  }, [sectorFilteredOrders])
+
   const statusChartData = useMemo(() => {
     const validOrders = sectorFilteredOrders.filter((o) => o.dentistRole !== 'master')
     const counts = { pending: 0, in_production: 0, completed: 0, delivered: 0 }
@@ -208,7 +281,7 @@ export default function HistoryPage() {
 
   if (isTvMode) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-[#020617] text-slate-50 flex flex-col p-8 overflow-hidden font-sans">
+      <div className="fixed inset-0 z-[9999] bg-[#020617] text-slate-50 flex flex-col p-6 lg:p-8 overflow-hidden font-sans">
         <div className="flex justify-between items-center mb-8 shrink-0">
           <div className="flex items-center gap-5">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-3xl flex items-center justify-center shadow-lg shadow-blue-900/50">
@@ -237,35 +310,160 @@ export default function HistoryPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
-          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors duration-500" />
-            <ListChecks className="w-24 h-24 text-blue-500/30 mb-8" />
-            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
-              Total de Pedidos
-            </p>
-            <p className="text-[12rem] font-black text-blue-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
-              {kpis.total}
-            </p>
+        <div className="grid grid-cols-4 gap-6 flex-1 min-h-0">
+          {/* PENDENTES */}
+          <div className="bg-slate-900/80 rounded-[2rem] p-6 border border-rose-800/60 flex flex-col shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-b from-rose-500/5 to-transparent transition-colors duration-500" />
+            <div className="flex items-center justify-between mb-6 z-10 shrink-0">
+              <h2 className="text-2xl text-rose-400 font-bold uppercase tracking-widest flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
+                Pendentes
+              </h2>
+              <span className="bg-rose-500/20 text-rose-300 py-1 px-3 rounded-full text-lg font-black">
+                {tvData.pendentes.length}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto z-10 space-y-3 pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-rose-500/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {tvData.pendentes.map((o) => {
+                const days = Math.floor(
+                  Math.abs(new Date().getTime() - new Date(o.createdAt).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                )
+                return (
+                  <div
+                    key={o.id}
+                    className="bg-slate-800/60 p-4 rounded-xl border border-rose-500/20 flex flex-col gap-2 hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="text-lg font-bold text-slate-100 leading-tight">
+                        {o.patientName}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-xs font-black px-2 py-1 rounded-md shrink-0',
+                          days > 5 ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-700 text-slate-300',
+                        )}
+                      >
+                        {days === 0 ? 'HOJE' : `${days} D${days > 1 ? 'IAS' : 'IA'}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span
+                        className="text-rose-200/60 truncate font-medium max-w-[150px]"
+                        title={o.dentistName}
+                      >
+                        {o.dentistName}
+                      </span>
+                      <span className="text-rose-400/80 font-mono text-xs">
+                        {format(new Date(o.createdAt), 'dd/MM/yy')}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              {tvData.pendentes.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-rose-500/30 space-y-4">
+                  <CheckCircle2 className="w-16 h-16" />
+                  <span className="text-xl font-bold uppercase tracking-widest text-center">
+                    Zero Pendências
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors duration-500" />
-            <Clock className="w-24 h-24 text-amber-500/30 mb-8" />
-            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
-              Em Andamento
-            </p>
-            <p className="text-[12rem] font-black text-amber-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
-              {kpis.pending}
-            </p>
+
+          {/* EM ANDAMENTO */}
+          <div className="bg-slate-900/80 rounded-[2rem] p-6 border border-amber-800/60 flex flex-col shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent transition-colors duration-500" />
+            <div className="flex items-center justify-between mb-6 z-10 shrink-0">
+              <h2 className="text-2xl text-amber-400 font-bold uppercase tracking-widest flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                Em Andamento
+              </h2>
+              <span className="bg-amber-500/20 text-amber-300 py-1 px-3 rounded-full text-lg font-black">
+                {tvData.emAndamento.length}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto z-10 space-y-3 pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-500/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {tvData.emAndamento.map((o) => {
+                const days = Math.floor(
+                  Math.abs(new Date().getTime() - new Date(o.createdAt).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                )
+                return (
+                  <div
+                    key={o.id}
+                    className="bg-slate-800/60 p-4 rounded-xl border border-amber-500/20 flex flex-col gap-2 hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="text-lg font-bold text-slate-100 leading-tight">
+                        {o.patientName}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-xs font-black px-2 py-1 rounded-md shrink-0',
+                          days > 5
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-slate-700 text-slate-300',
+                        )}
+                      >
+                        {days === 0 ? 'HOJE' : `${days} D${days > 1 ? 'IAS' : 'IA'}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span
+                        className="text-amber-200/60 truncate font-medium max-w-[150px] uppercase text-xs"
+                        title={o.kanbanStage}
+                      >
+                        {o.kanbanStage}
+                      </span>
+                      <span className="text-amber-400/80 font-mono text-xs">
+                        {format(new Date(o.createdAt), 'dd/MM/yy')}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              {tvData.emAndamento.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-amber-500/30 space-y-4">
+                  <CheckCircle2 className="w-16 h-16" />
+                  <span className="text-xl font-bold uppercase tracking-widest text-center">
+                    Produção Limpa
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="bg-slate-900/80 rounded-[2.5rem] p-10 border border-slate-800/80 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
+
+          {/* CONCLUÍDOS */}
+          <div className="bg-slate-900/80 rounded-[2rem] p-6 border border-emerald-800/60 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors duration-500" />
             <CheckCircle2 className="w-24 h-24 text-emerald-500/30 mb-8" />
-            <p className="text-4xl text-slate-400 font-bold uppercase tracking-widest mb-6 z-10">
+            <p className="text-3xl text-emerald-400 font-bold uppercase tracking-widest mb-2 z-10">
               Concluídos
             </p>
-            <p className="text-[12rem] font-black text-emerald-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
-              {kpis.completed}
+            <p className="text-lg text-emerald-500/60 font-semibold uppercase tracking-widest mb-6 z-10">
+              Neste Mês
+            </p>
+            <p className="text-[9rem] xl:text-[10rem] font-black text-emerald-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
+              {tvData.concluidosNoMes}
+            </p>
+          </div>
+
+          {/* TOTAL DE PEDIDOS */}
+          <div className="bg-slate-900/80 rounded-[2rem] p-6 border border-blue-800/60 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors duration-500" />
+            <ListChecks className="w-24 h-24 text-blue-500/30 mb-8" />
+            <p className="text-3xl text-blue-400 font-bold uppercase tracking-widest mb-2 z-10">
+              Total Pedidos
+            </p>
+            <p className="text-lg text-blue-500/60 font-semibold uppercase tracking-widest mb-6 z-10">
+              Acumulado
+            </p>
+            <p className="text-[9rem] xl:text-[10rem] font-black text-blue-500 leading-none tracking-tighter z-10 drop-shadow-2xl">
+              {tvData.totalPedidos}
             </p>
           </div>
         </div>
