@@ -21,6 +21,7 @@ import { cn, processOrderHistory } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { OrderHistory } from '@/lib/types'
 import { formatBRL } from '@/lib/financial'
+import { toast } from '@/hooks/use-toast'
 
 export default function OrderDetails() {
   const { id } = useParams()
@@ -32,6 +33,14 @@ export default function OrderDetails() {
   const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
   const [additionalCostDesc, setAdditionalCostDesc] = useState('')
   const [additionalCostValue, setAdditionalCostValue] = useState('')
+  const [isSavingCost, setIsSavingCost] = useState(false)
+
+  useEffect(() => {
+    if (order) {
+      setAdditionalCostDesc(order.custo_adicional_descricao || '')
+      setAdditionalCostValue(order.custo_adicional_valor?.toString() || '')
+    }
+  }, [order?.custo_adicional_descricao, order?.custo_adicional_valor])
 
   useEffect(() => {
     if (order?.id) {
@@ -65,6 +74,31 @@ export default function OrderDetails() {
   const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
 
   const additionalCostNum = parseFloat(additionalCostValue) || 0
+
+  const handleSaveAdditionalCost = async () => {
+    if (!order) return
+    setIsSavingCost(true)
+    const val = additionalCostNum
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          custo_adicional_descricao: additionalCostDesc,
+          custo_adicional_valor: val,
+        })
+        .eq('id', order.id)
+
+      if (error) throw error
+
+      order.custo_adicional_descricao = additionalCostDesc
+      order.custo_adicional_valor = val
+      toast({ title: 'Custo adicional salvo com sucesso!' })
+    } catch (error) {
+      toast({ title: 'Erro ao salvar custo adicional', variant: 'destructive' })
+    } finally {
+      setIsSavingCost(false)
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
@@ -223,7 +257,18 @@ export default function OrderDetails() {
               )}
 
               <div className="pt-4 mt-6 border-t border-border/50">
-                <p className="text-sm font-medium mb-3 text-muted-foreground">Custo Adicional</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-muted-foreground">Custo Adicional</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSaveAdditionalCost}
+                    disabled={isSavingCost}
+                    className="h-8 text-xs"
+                  >
+                    {isSavingCost ? 'Salvando...' : 'Salvar Custo'}
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="add-cost-desc" className="text-xs">
