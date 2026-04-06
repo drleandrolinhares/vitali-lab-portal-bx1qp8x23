@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/StatusBadge'
 import {
   ArrowLeft,
@@ -29,6 +30,8 @@ export default function OrderDetails() {
   const order = orders.find((o) => o.id === id)
 
   const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
+  const [additionalCostDesc, setAdditionalCostDesc] = useState('')
+  const [additionalCostValue, setAdditionalCostValue] = useState('')
 
   useEffect(() => {
     if (order?.id) {
@@ -216,6 +219,39 @@ export default function OrderDetails() {
                   </p>
                 </div>
               )}
+
+              <div className="pt-4 mt-6 border-t border-border/50">
+                <p className="text-sm font-medium mb-3 text-muted-foreground">Custo Adicional</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="add-cost-desc" className="text-xs">
+                      Descrição do Custo
+                    </Label>
+                    <input
+                      id="add-cost-desc"
+                      type="text"
+                      placeholder="Ex: Material extra"
+                      value={additionalCostDesc}
+                      onChange={(e) => setAdditionalCostDesc(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="add-cost-val" className="text-xs">
+                      Valor
+                    </Label>
+                    <input
+                      id="add-cost-val"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={additionalCostValue}
+                      onChange={(e) => setAdditionalCostValue(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
