@@ -34,13 +34,14 @@ export default function OrderDetails() {
   const [additionalCostDesc, setAdditionalCostDesc] = useState('')
   const [additionalCostValue, setAdditionalCostValue] = useState('')
   const [isSavingCost, setIsSavingCost] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
 
   useEffect(() => {
-    if (order) {
+    if (order && !isDirty) {
       setAdditionalCostDesc(order.custo_adicional_descricao || '')
       setAdditionalCostValue(order.custo_adicional_valor?.toString() || '')
     }
-  }, [order?.custo_adicional_descricao, order?.custo_adicional_valor])
+  }, [order?.custo_adicional_descricao, order?.custo_adicional_valor, isDirty])
 
   useEffect(() => {
     if (order?.id) {
@@ -92,6 +93,7 @@ export default function OrderDetails() {
 
       order.custo_adicional_descricao = additionalCostDesc
       order.custo_adicional_valor = val
+      setIsDirty(false)
       toast({ title: 'Custo adicional salvo com sucesso!' })
     } catch (error) {
       toast({ title: 'Erro ao salvar custo adicional', variant: 'destructive' })
@@ -99,6 +101,17 @@ export default function OrderDetails() {
       setIsSavingCost(false)
     }
   }
+
+  useEffect(() => {
+    if (!order || !isDirty) return
+
+    const timer = setTimeout(() => {
+      handleSaveAdditionalCost()
+    }, 2000)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [additionalCostDesc, additionalCostValue, isDirty])
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
@@ -259,15 +272,6 @@ export default function OrderDetails() {
               <div className="pt-4 mt-6 border-t border-border/50">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-muted-foreground">Custo Adicional</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSaveAdditionalCost}
-                    disabled={isSavingCost}
-                    className="h-8 text-xs"
-                  >
-                    {isSavingCost ? 'Salvando...' : 'Salvar Custo'}
-                  </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -279,7 +283,10 @@ export default function OrderDetails() {
                       type="text"
                       placeholder="Ex: Material extra"
                       value={additionalCostDesc}
-                      onChange={(e) => setAdditionalCostDesc(e.target.value)}
+                      onChange={(e) => {
+                        setAdditionalCostDesc(e.target.value)
+                        setIsDirty(true)
+                      }}
                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
@@ -293,10 +300,24 @@ export default function OrderDetails() {
                       step="0.01"
                       placeholder="0.00"
                       value={additionalCostValue}
-                      onChange={(e) => setAdditionalCostValue(e.target.value)}
+                      onChange={(e) => {
+                        setAdditionalCostValue(e.target.value)
+                        setIsDirty(true)
+                      }}
                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSaveAdditionalCost}
+                    disabled={isSavingCost || !isDirty}
+                    className="h-8 text-xs"
+                  >
+                    {isSavingCost ? 'Salvando...' : 'Salvar Custo Adicional'}
+                  </Button>
                 </div>
               </div>
             </CardContent>
