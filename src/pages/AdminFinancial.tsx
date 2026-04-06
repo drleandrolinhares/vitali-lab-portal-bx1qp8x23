@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import {
   Loader2,
   Download,
@@ -64,6 +64,7 @@ export default function AdminFinancial() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedDentist, setSelectedDentist] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('pending')
 
   const [loadingSettlements, setLoadingSettlements] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
@@ -74,6 +75,7 @@ export default function AdminFinancial() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [viewInvoiceSettlement, setViewInvoiceSettlement] = useState<any>(null)
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -83,10 +85,7 @@ export default function AdminFinancial() {
         error: sessionError,
       } = await supabase.auth.getSession()
 
-      if (sessionError || !session) {
-        // Redirection and cleanup is handled by useAuth
-        return
-      }
+      if (sessionError || !session) return
 
       const [profilesRes, settlementsRes] = await Promise.all([
         supabase
@@ -94,7 +93,7 @@ export default function AdminFinancial() {
           .select('id, name, clinic, closing_date, payment_due_date')
           .eq('role', 'dentist')
           .order('name'),
-        supabase.from('settlements').select('id, amount, created_at, dentist_id'),
+        supabase.from('settlements').select('*').order('created_at', { ascending: false }),
       ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -105,15 +104,11 @@ export default function AdminFinancial() {
     } catch (error: any) {
       console.error('Error fetching financial data:', error)
       if (
-        error?.message?.toLowerCase().includes('refresh token') ||
-        error?.message?.includes('session_not_found') ||
-        error?.message?.includes('refresh_token_not_found') ||
-        error?.code === 'PGRST301' || // JWT expired
-        error?.code === '401'
+        !error?.message?.toLowerCase().includes('refresh token') &&
+        !error?.message?.includes('session_not_found') &&
+        error?.code !== 'PGRST301' &&
+        error?.code !== '401'
       ) {
-        // App handleSessionExpiration will be invoked elsewhere, we just abort quietly
-        console.warn('Session expired during AdminFinancial fetch')
-      } else {
         toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
       }
     } finally {
@@ -167,6 +162,7 @@ export default function AdminFinancial() {
       return {
         ...order,
         basePrice: finalBasePrice,
+        finalTotal: finalBasePrice + (Number(order.custo_adicional_valor) || 0),
       }
     })
 
@@ -177,24 +173,24 @@ export default function AdminFinancial() {
       const isCancelled = o.status === 'cancelled'
 
       if (isCompleted && !o.settlementId) {
-        faturar += o.basePrice || 0
+        faturar += o.finalTotal || 0
       }
 
       if (!isCompleted && !isCancelled) {
-        pipeline += o.basePrice || 0
+        pipeline += o.finalTotal || 0
       }
 
       if (!o.dentistId || !map.has(o.dentistId)) return
       const dentistData = map.get(o.dentistId)
 
       if (isCompleted && !o.settlementId) {
-        dentistData.finalizadosMes += o.basePrice || 0
+        dentistData.finalizadosMes += o.finalTotal || 0
         dentistData.readyToInvoiceCount += 1
         dentistData.unsettledOrders.push(o)
       }
 
       if (!isCompleted && !isCancelled) {
-        dentistData.emProducao += o.basePrice || 0
+        dentistData.emProducao += o.finalTotal || 0
       }
     })
 
@@ -209,7 +205,9 @@ export default function AdminFinancial() {
     settlements.forEach((s) => {
       if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
       if (isSamePeriod(s.created_at)) {
-        recebido += Number(s.amount || 0)
+        if (s.status === 'paid') {
+          recebido += Number(s.amount || 0)
+        }
       }
     })
 
@@ -232,6 +230,24 @@ export default function AdminFinancial() {
     kanbanStages,
     formattedSelectedMonthYear,
   ])
+
+  const filteredSettlements = useMemo(() => {
+    return settlements
+      .filter((s) => {
+        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
+
+        const sDate = new Date(s.created_at)
+        const inPeriod =
+          sDate.getMonth().toString() === selectedMonth &&
+          sDate.getFullYear().toString() === selectedYear
+
+        if (statusFilter === 'pending') return s.status === 'pending'
+        if (statusFilter === 'paid') return s.status === 'paid' && inPeriod
+
+        return inPeriod || s.status === 'pending'
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [settlements, selectedDentist, statusFilter, selectedMonth, selectedYear])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
@@ -280,7 +296,7 @@ export default function AdminFinancial() {
     try {
       const ordersToSettle = modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))
       const totalAmount = ordersToSettle.reduce(
-        (sum: number, o: any) => sum + (o.basePrice || 0),
+        (sum: number, o: any) => sum + (o.finalTotal || 0),
         0,
       )
 
@@ -289,7 +305,8 @@ export default function AdminFinancial() {
         friendlyId: o.friendlyId,
         patientName: o.patientName,
         workType: o.workType,
-        clearedAmount: o.basePrice,
+        clearedAmount: o.finalTotal,
+        createdAt: o.createdAt,
       }))
 
       const { data, error } = await supabase
@@ -318,6 +335,30 @@ export default function AdminFinancial() {
     } catch (err: any) {
       console.error(err)
       toast({ title: 'Erro ao fechar fatura', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleMarkAsPaid = async (id: string) => {
+    try {
+      setIsSubmitting(true)
+      const { error } = await supabase
+        .from('settlements')
+        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast({ title: 'Fatura marcada como recebida!' })
+      fetchData()
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        title: 'Erro ao atualizar fatura',
+        description: error.message,
+        variant: 'destructive',
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -585,8 +626,118 @@ export default function AdminFinancial() {
               value="faturas"
               className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4"
             >
-              <Card className="flex-1 flex items-center justify-center text-muted-foreground bg-slate-50/50 border-dashed">
-                Nenhuma fatura fechada no período.
+              <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden bg-slate-50/50">
+                <div className="p-3 border-b flex items-center justify-between bg-white flex-none">
+                  <div className="flex items-center gap-2">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[220px] h-8 text-xs font-medium bg-slate-50">
+                        <SelectValue placeholder="Status da Fatura" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as Faturas (Mês)</SelectItem>
+                        <SelectItem value="pending">Aguardando Pagamento (Todas)</SelectItem>
+                        <SelectItem value="paid">Recebidas (Mês)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="overflow-auto flex-1 bg-white">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+                      <TableRow>
+                        <TableHead className="font-semibold text-slate-700 pl-6 w-24">ID</TableHead>
+                        <TableHead className="font-semibold text-slate-700">
+                          Dentista / Clínica
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
+                          Data Fechamento
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
+                          Status
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-right">
+                          Valor
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-right pr-6">
+                          Ações
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSettlements.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            Nenhuma fatura encontrada.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredSettlements.map((s) => {
+                          const dentist = profiles.find((p) => p.id === s.dentist_id)
+                          const isPaid = s.status === 'paid'
+                          return (
+                            <TableRow key={s.id} className="hover:bg-slate-50/50">
+                              <TableCell className="pl-6 font-mono text-xs text-slate-500">
+                                {s.id.substring(0, 8)}
+                              </TableCell>
+                              <TableCell>
+                                <p className="font-semibold text-slate-900">
+                                  {dentist?.name || 'Desconhecido'}
+                                </p>
+                                {dentist?.clinic && (
+                                  <p className="text-xs text-muted-foreground">{dentist.clinic}</p>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center font-medium text-slate-600">
+                                {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                                    isPaid
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : 'bg-amber-100 text-amber-700',
+                                  )}
+                                >
+                                  {isPaid ? 'Recebido' : 'Aguardando'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-bold text-slate-900">
+                                {formatCurrency(s.amount)}
+                              </TableCell>
+                              <TableCell className="text-right pr-6">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-8"
+                                    onClick={() => setViewInvoiceSettlement(s)}
+                                  >
+                                    Ver Detalhes
+                                  </Button>
+                                  {!isPaid && (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                      onClick={() => handleMarkAsPaid(s.id)}
+                                      disabled={isSubmitting}
+                                    >
+                                      Dar Baixa
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </Card>
             </TabsContent>
           </Tabs>
@@ -655,10 +806,15 @@ export default function AdminFinancial() {
                             - {o.patientName}
                           </span>
                         )}
+                        {Number(o.custo_adicional_valor) > 0 && (
+                          <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                            + Custo Adic.
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(o.basePrice || 0)}
+                        {formatCurrency(o.finalTotal || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -683,7 +839,7 @@ export default function AdminFinancial() {
                 {formatCurrency(
                   modalOrders
                     .filter((o: any) => selectedOrderIds.includes(o.id))
-                    .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0),
+                    .reduce((sum: number, o: any) => sum + (o.finalTotal || 0), 0),
                 )}
               </span>
             </div>
@@ -712,17 +868,38 @@ export default function AdminFinancial() {
         </DialogContent>
       </Dialog>
 
-      {/* INVOICE PREVIEW / PDF MODAL */}
+      {/* INVOICE PREVIEW / PDF MODAL (MANUAL INVOICE) */}
       {manualInvoiceDentist && (
         <InvoicePreviewDialog
           open={previewOpen}
           onOpenChange={setPreviewOpen}
           dentistName={profiles.find((p) => p.id === manualInvoiceDentist)?.name || ''}
           clinicName={profiles.find((p) => p.id === manualInvoiceDentist)?.clinic || ''}
-          orders={modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))}
+          orders={modalOrders
+            .filter((o: any) => selectedOrderIds.includes(o.id))
+            .map((o: any) => ({
+              ...o,
+              basePrice: o.finalTotal,
+            }))}
           totalAmount={modalOrders
             .filter((o: any) => selectedOrderIds.includes(o.id))
-            .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0)}
+            .reduce((sum: number, o: any) => sum + (o.finalTotal || 0), 0)}
+        />
+      )}
+
+      {/* EXISTING SETTLEMENT INVOICE PREVIEW */}
+      {viewInvoiceSettlement && (
+        <InvoicePreviewDialog
+          open={!!viewInvoiceSettlement}
+          onOpenChange={(open) => !open && setViewInvoiceSettlement(null)}
+          dentistName={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)?.name || ''}
+          clinicName={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)?.clinic || ''}
+          orders={viewInvoiceSettlement.orders_snapshot.map((o: any) => ({
+            ...o,
+            basePrice: o.clearedAmount || o.basePrice || o.price,
+            createdAt: o.createdAt || viewInvoiceSettlement.created_at,
+          }))}
+          totalAmount={viewInvoiceSettlement.amount}
         />
       )}
     </div>
