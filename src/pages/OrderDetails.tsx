@@ -64,6 +64,8 @@ export default function OrderDetails() {
   const actualHistory = historyItems.length > 0 ? historyItems : order.history
   const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
 
+  const additionalCostNum = parseFloat(additionalCostValue) || 0
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
       <div className="flex items-center gap-4">
@@ -278,9 +280,17 @@ export default function OrderDetails() {
                   <span className="font-medium">-{order.dentistDiscount}%</span>
                 </div>
               )}
+              {additionalCostNum > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Custo Adicional</span>
+                  <span className="font-medium">{formatBRL(additionalCostNum)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-2 border-t font-semibold">
                 <span>Total do Pedido</span>
-                <span className="text-primary">{formatBRL(order.basePrice)}</span>
+                <span className="text-primary">
+                  {formatBRL(order.basePrice + additionalCostNum)}
+                </span>
               </div>
             </CardContent>
           </Card>
