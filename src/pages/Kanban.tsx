@@ -23,6 +23,7 @@ import {
   QrCode,
   RefreshCw,
   Tags,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -114,6 +115,26 @@ export default function KanbanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDentistId = searchParams.get('dentist') || 'all'
   const selectedWorkType = searchParams.get('workType') || 'all'
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '')
+
+  const debouncedSearchTerm = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm])
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (!debouncedSearchTerm) {
+        if (searchParams.get('q')) {
+          searchParams.delete('q')
+          setSearchParams(searchParams, { replace: true })
+        }
+      } else {
+        if (searchParams.get('q') !== debouncedSearchTerm) {
+          searchParams.set('q', debouncedSearchTerm)
+          setSearchParams(searchParams, { replace: true })
+        }
+      }
+    }, 500)
+    return () => clearTimeout(delayDebounceFn)
+  }, [debouncedSearchTerm, searchParams, setSearchParams])
 
   const setSelectedDentistId = (val: string) => {
     if (val === 'all') {
@@ -312,8 +333,23 @@ export default function KanbanPage() {
     if (selectedWorkType !== 'all') {
       filtered = filtered.filter((o) => o.workType === selectedWorkType)
     }
+    if (debouncedSearchTerm) {
+      filtered = filtered.filter(
+        (o) =>
+          o.patientName?.toLowerCase().includes(debouncedSearchTerm) ||
+          o.dentistName?.toLowerCase().includes(debouncedSearchTerm) ||
+          o.friendlyId?.toLowerCase().includes(debouncedSearchTerm),
+      )
+    }
     return filtered
-  }, [orders, isDentist, selectedDentistId, canFilterDentist, selectedWorkType])
+  }, [
+    orders,
+    isDentist,
+    selectedDentistId,
+    canFilterDentist,
+    selectedWorkType,
+    debouncedSearchTerm,
+  ])
 
   const hasOrders = useMemo(
     () =>
@@ -428,6 +464,30 @@ export default function KanbanPage() {
         </div>
         <div className="flex flex-col xl:flex-row gap-4 w-full xl:w-auto items-end">
           <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+            <div className="flex flex-col gap-2 w-full sm:w-[280px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-muted-foreground" />
+                <Input
+                  placeholder="Buscar paciente ou dentista..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-xs uppercase font-bold focus:ring-primary/30"
+                />
+              </div>
+              <Button
+                variant="secondary"
+                className={cn(
+                  'w-full text-xs font-bold uppercase h-8 transition-colors',
+                  searchTerm
+                    ? 'bg-pink-50 text-pink-600 hover:bg-pink-100 dark:bg-pink-950/30 dark:text-pink-400 dark:hover:bg-pink-900/50 border border-pink-100 dark:border-pink-900/30'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-100 dark:border-slate-800',
+                )}
+                onClick={() => setSearchTerm('')}
+              >
+                LIMPAR BUSCA
+              </Button>
+            </div>
+
             {showDentistFilter && (
               <div className="flex flex-col gap-2 w-full sm:w-[280px]">
                 <div className="flex items-center gap-2">
@@ -595,21 +655,8 @@ export default function KanbanPage() {
               return (
                 <div
                   key={stage.id}
-                  draggable={isMaster && !editingStageId}
-                  onDragStart={(e) => {
-                    if (!isMaster) return
-                    e.dataTransfer.setData('column-id', stage.id)
-                    setTimeout(() => setDraggedStageId(stage.id), 0)
-                  }}
-                  onDragEnd={() => {
-                    setDraggedStageId(null)
-                    setDragOverStageId(null)
-                  }}
                   onDragOver={(e) => {
-                    if (draggedStageId && draggedStageId !== stage.id) {
-                      e.preventDefault()
-                      setDragOverStageId(`${activeLab}-${stage.id}`)
-                    } else if (draggedCardId && draggedCardSector?.toUpperCase() === activeLab) {
+                    if (draggedCardId && draggedCardSector?.toUpperCase() === activeLab) {
                       e.preventDefault()
                       setDragOverStageId(`${activeLab}-${stage.id}`)
                     }
@@ -621,19 +668,15 @@ export default function KanbanPage() {
                     e.preventDefault()
                     setDragOverStageId(null)
                     const columnId = e.dataTransfer.getData('column-id')
-                    if (columnId) {
-                      if (isMaster) handleColumnDrop(e, stage.id)
-                    } else {
+                    if (!columnId) {
                       handleDrop(e, stage.name, activeLab)
                     }
                   }}
                   className={cn(
                     'w-[300px] shrink-0 rounded-xl p-3 flex flex-col gap-3 border snap-start transition-all duration-200',
                     'bg-slate-50/60 dark:bg-muted/40 border-slate-200 dark:border-border/50',
-                    draggedStageId === stage.id &&
-                      'opacity-40 scale-[0.98] border-dashed border-slate-400 shadow-none',
                     dragOverStageId === `${activeLab}-${stage.id}` &&
-                      (draggedStageId || draggedCardId) &&
+                      draggedCardId &&
                       'border-primary shadow-sm bg-primary/5 ring-1 ring-primary scale-[1.02]',
                   )}
                 >
@@ -655,12 +698,6 @@ export default function KanbanPage() {
                       />
                     ) : (
                       <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-                        {isMaster && (
-                          <GripHorizontal
-                            className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
-                            title="Arraste para reordenar"
-                          />
-                        )}
                         <h4
                           onClick={() => {
                             if (isMaster) {
@@ -881,6 +918,62 @@ export default function KanbanPage() {
                                         className="text-[10px] uppercase font-bold"
                                       >
                                         {s}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {canDragCards && (
+                              <div
+                                className={cn(
+                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
+                                  o.isAdjustmentReturn
+                                    ? 'border-yellow-500/30'
+                                    : 'border-slate-100 dark:border-border/50',
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onDragStart={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                }}
+                              >
+                                <Label
+                                  className={cn(
+                                    'text-[9px] uppercase font-bold tracking-wider',
+                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                  )}
+                                >
+                                  Mover Etapa
+                                </Label>
+                                <Select
+                                  value={stage.name}
+                                  onValueChange={(val) => {
+                                    if (val && val !== stage.name) {
+                                      updateOrderKanbanStage(o.id, val)
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    className={cn(
+                                      'h-7 text-[10px] font-bold uppercase',
+                                      o.isAdjustmentReturn
+                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
+                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
+                                    )}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="z-[110]">
+                                    {activeStages.map((s) => (
+                                      <SelectItem
+                                        key={s.id}
+                                        value={s.name}
+                                        className="text-[10px] uppercase font-bold"
+                                      >
+                                        {s.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
