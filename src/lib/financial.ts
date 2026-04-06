@@ -82,8 +82,9 @@ export function getOrderFinancials(order: any, priceList?: PriceItem[], kanbanSt
 
   const effectiveUnitPrice = unitPrice * (1 - discount / 100)
 
-  const completedCost = isFullyCompleted ? basePrice : 0
-  const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice : 0
+  const additionalCost = order.custo_adicional_valor || 0
+  const completedCost = isFullyCompleted ? basePrice + additionalCost : 0
+  const pipelineCost = !isFullyCompleted && !isCancelled ? basePrice + additionalCost : 0
 
   const clearedBalance = order.clearedBalance || 0
   const outstandingCost = Math.max(0, completedCost - clearedBalance)

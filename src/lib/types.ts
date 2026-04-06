@@ -88,6 +88,8 @@ export interface Order {
   estruturaFixacao?: string
   settlementId?: string | null
   isAdjustmentReturn?: boolean
+  custo_adicional_descricao?: string | null
+  custo_adicional_valor?: number | null
   createdBy?: {
     id: string
     name: string
