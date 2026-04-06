@@ -30,6 +30,205 @@ import {
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { WorkSchedule } from '@/components/WorkSchedule'
+import { formatBRL } from '@/lib/financial'
+import { cn } from '@/lib/utils'
+
+function CadistasTab() {
+  const [cadistas, setCadistas] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+  const [newCadistaName, setNewCadistaName] = useState('')
+  const [selectedCadistaId, setSelectedCadistaId] = useState<string | null>(null)
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServicePrice, setNewServicePrice] = useState('')
+
+  const loadData = async () => {
+    const [cRes, sRes] = await Promise.all([
+      supabase
+        .from('cadistas' as any)
+        .select('*')
+        .order('name'),
+      supabase
+        .from('cadista_services' as any)
+        .select('*')
+        .order('name'),
+    ])
+    if (cRes.data) setCadistas(cRes.data)
+    if (sRes.data) setServices(sRes.data)
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleAddCadista = async () => {
+    if (!newCadistaName.trim()) return
+    await supabase.from('cadistas' as any).insert([{ name: newCadistaName.trim() }])
+    setNewCadistaName('')
+    loadData()
+  }
+
+  const handleDeleteCadista = async (id: string) => {
+    await supabase
+      .from('cadistas' as any)
+      .delete()
+      .eq('id', id)
+    if (selectedCadistaId === id) setSelectedCadistaId(null)
+    loadData()
+  }
+
+  const handleAddService = async () => {
+    if (!selectedCadistaId || !newServiceName.trim() || !newServicePrice) return
+    const price = parseFloat(newServicePrice.replace(',', '.'))
+    if (isNaN(price)) return
+    await supabase.from('cadista_services' as any).insert([
+      {
+        cadista_id: selectedCadistaId,
+        name: newServiceName.trim(),
+        price,
+      },
+    ])
+    setNewServiceName('')
+    setNewServicePrice('')
+    loadData()
+  }
+
+  const handleDeleteService = async (id: string) => {
+    await supabase
+      .from('cadista_services' as any)
+      .delete()
+      .eq('id', id)
+    loadData()
+  }
+
+  return (
+    <Card className="shadow-subtle">
+      <CardHeader>
+        <CardTitle className="uppercase">CADISTAS</CardTitle>
+        <CardDescription className="uppercase text-xs font-semibold">
+          GERENCIE OS CADISTAS E SUAS TABELAS DE PREÇOS.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex gap-3 items-end">
+          <div className="space-y-2 flex-1">
+            <Label className="uppercase text-xs font-bold">NOME DO CADISTA</Label>
+            <Input
+              value={newCadistaName}
+              onChange={(e) => setNewCadistaName(e.target.value)}
+              placeholder="EX: JOÃO DA SILVA"
+              className="uppercase"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCadista()}
+            />
+          </div>
+          <Button onClick={handleAddCadista} className="uppercase text-xs font-bold">
+            ADICIONAR
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {cadistas.map((c) => (
+            <div
+              key={c.id}
+              className={cn(
+                'p-4 rounded-lg border transition-colors cursor-pointer',
+                selectedCadistaId === c.id
+                  ? 'bg-primary/10 border-primary'
+                  : 'bg-muted/10 hover:bg-muted/30',
+              )}
+              onClick={() => setSelectedCadistaId(c.id)}
+            >
+              <div className="flex justify-between items-start">
+                <span className="font-bold text-sm uppercase">{c.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive hover:bg-destructive/10 -mt-1 -mr-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDeleteCadista(c.id)
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground mt-2 uppercase">
+                {services.filter((s) => s.cadista_id === c.id).length} SERVIÇO(S)
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {selectedCadistaId && (
+          <div className="mt-8 pt-6 border-t space-y-4">
+            <h3 className="text-sm font-bold uppercase text-primary">
+              TABELA DE PREÇOS: {cadistas.find((c) => c.id === selectedCadistaId)?.name}
+            </h3>
+            <div className="flex gap-3 items-end">
+              <div className="space-y-2 flex-[2]">
+                <Label className="uppercase text-xs font-bold">SERVIÇO</Label>
+                <Input
+                  value={newServiceName}
+                  onChange={(e) => setNewServiceName(e.target.value)}
+                  placeholder="EX: DESENHO COROA"
+                  className="uppercase"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddService()}
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label className="uppercase text-xs font-bold">VALOR (R$)</Label>
+                <Input
+                  value={newServicePrice}
+                  onChange={(e) => setNewServicePrice(e.target.value)}
+                  placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddService()}
+                />
+              </div>
+              <Button onClick={handleAddService} className="uppercase text-xs font-bold">
+                ADICIONAR
+              </Button>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              {services.filter((s) => s.cadista_id === selectedCadistaId).length === 0 ? (
+                <p className="text-xs text-muted-foreground uppercase p-4 bg-muted/20 rounded border border-dashed text-center">
+                  NENHUM SERVIÇO CADASTRADO.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {services
+                    .filter((s) => s.cadista_id === selectedCadistaId)
+                    .map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex justify-between items-center p-3 bg-white dark:bg-background border rounded-md"
+                      >
+                        <span className="text-sm font-bold uppercase">{s.name}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-bold text-emerald-600">
+                            {formatBRL(s.price)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteService(s.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 function ResetPasswordTab() {
   const [newPassword, setNewPassword] = useState('')
@@ -386,6 +585,14 @@ export default function SettingsPage() {
           )}
           {isAdmin && (
             <TabsTrigger
+              value="cadistas"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
+            >
+              CADISTAS
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger
               value="work-schedule"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 whitespace-nowrap uppercase text-xs font-bold"
             >
@@ -514,6 +721,10 @@ export default function SettingsPage() {
 
         {isAdmin && (
           <>
+            <TabsContent value="cadistas" className="space-y-6">
+              <CadistasTab />
+            </TabsContent>
+
             <TabsContent value="system" className="space-y-6">
               <Card className="shadow-subtle">
                 <CardHeader>

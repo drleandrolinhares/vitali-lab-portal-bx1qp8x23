@@ -43,6 +43,7 @@ import { MiniGuideDialog } from '@/components/MiniGuideDialog'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
+import { formatBRL } from '@/lib/financial'
 
 export default function KanbanPage() {
   const {
@@ -185,6 +186,10 @@ export default function KanbanPage() {
   const [selectedPrintQrOrder, setSelectedPrintQrOrder] = useState<Order | null>(null)
   const [selectedFullQrOrder, setSelectedFullQrOrder] = useState<Order | null>(null)
 
+  const [cadistas, setCadistas] = useState<any[]>([])
+  const [cadistaServices, setCadistaServices] = useState<any[]>([])
+  const [cadistaAssignments, setCadistaAssignments] = useState<Record<string, any>>({})
+
   const savingRef = useRef(false)
 
   const fetchDentists = async () => {
@@ -220,6 +225,84 @@ export default function KanbanPage() {
   useEffect(() => {
     if (selectedOrder) setObsText(selectedOrder.observations || '')
   }, [selectedOrder])
+
+  useEffect(() => {
+    if (!isDentist) {
+      supabase
+        .from('cadistas' as any)
+        .select('*')
+        .eq('is_active', true)
+        .then(({ data }) => data && setCadistas(data))
+      supabase
+        .from('cadista_services' as any)
+        .select('*')
+        .eq('is_active', true)
+        .then(({ data }) => data && setCadistaServices(data))
+    }
+  }, [isDentist])
+
+  const orderIdsString = orders
+    .map((o) => o.id)
+    .sort()
+    .join(',')
+  useEffect(() => {
+    if (!isDentist && orderIdsString) {
+      supabase
+        .from('orders' as any)
+        .select('id, cadista_id, cadista_service_id, cadista_price')
+        .in('id', orderIdsString.split(','))
+        .then(({ data }) => {
+          if (data) {
+            setCadistaAssignments((prev) => {
+              const map = { ...prev }
+              data.forEach((row: any) => (map[row.id] = row))
+              return map
+            })
+          }
+        })
+    }
+  }, [orderIdsString, isDentist])
+
+  const handleUpdateCadista = async (orderId: string, cadistaId: string | null) => {
+    setCadistaAssignments((prev) => ({
+      ...prev,
+      [orderId]: {
+        ...prev[orderId],
+        cadista_id: cadistaId,
+        cadista_service_id: null,
+        cadista_price: null,
+      },
+    }))
+    await supabase
+      .from('orders' as any)
+      .update({
+        cadista_id: cadistaId,
+        cadista_service_id: null,
+        cadista_price: null,
+      })
+      .eq('id', orderId)
+  }
+
+  const handleUpdateCadistaService = async (
+    orderId: string,
+    cadistaId: string,
+    serviceId: string | null,
+  ) => {
+    const service = cadistaServices.find((s) => s.id === serviceId)
+    const price = service ? service.price : null
+
+    setCadistaAssignments((prev) => ({
+      ...prev,
+      [orderId]: { ...prev[orderId], cadista_service_id: serviceId, cadista_price: price },
+    }))
+    await supabase
+      .from('orders' as any)
+      .update({
+        cadista_service_id: serviceId,
+        cadista_price: price,
+      })
+      .eq('id', orderId)
+  }
 
   const visibleOrders = useMemo(() => {
     let filtered = orders
@@ -802,6 +885,129 @@ export default function KanbanPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                              </div>
+                            )}
+
+                            {!isDentist && (
+                              <div
+                                className={cn(
+                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
+                                  o.isAdjustmentReturn
+                                    ? 'border-yellow-500/30'
+                                    : 'border-slate-100 dark:border-border/50',
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onDragStart={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                }}
+                              >
+                                <Label
+                                  className={cn(
+                                    'text-[9px] uppercase font-bold tracking-wider',
+                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                  )}
+                                >
+                                  Cadista
+                                </Label>
+                                <Select
+                                  value={cadistaAssignments[o.id]?.cadista_id || 'none'}
+                                  onValueChange={(val) =>
+                                    handleUpdateCadista(o.id, val === 'none' ? null : val)
+                                  }
+                                >
+                                  <SelectTrigger
+                                    className={cn(
+                                      'h-7 text-[10px] font-bold uppercase',
+                                      o.isAdjustmentReturn
+                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
+                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
+                                    )}
+                                  >
+                                    <SelectValue placeholder="SELECIONAR CADISTA" />
+                                  </SelectTrigger>
+                                  <SelectContent className="z-[110]">
+                                    <SelectItem
+                                      value="none"
+                                      className="text-[10px] uppercase font-bold text-muted-foreground"
+                                    >
+                                      NENHUM
+                                    </SelectItem>
+                                    {cadistas.map((c) => (
+                                      <SelectItem
+                                        key={c.id}
+                                        value={c.id}
+                                        className="text-[10px] uppercase font-bold"
+                                      >
+                                        {c.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                {cadistaAssignments[o.id]?.cadista_id && (
+                                  <>
+                                    <Label
+                                      className={cn(
+                                        'text-[9px] uppercase font-bold tracking-wider mt-1',
+                                        o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                      )}
+                                    >
+                                      Serviço Cadista
+                                    </Label>
+                                    <Select
+                                      value={cadistaAssignments[o.id]?.cadista_service_id || 'none'}
+                                      onValueChange={(val) =>
+                                        handleUpdateCadistaService(
+                                          o.id,
+                                          cadistaAssignments[o.id].cadista_id,
+                                          val === 'none' ? null : val,
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        className={cn(
+                                          'h-7 text-[10px] font-bold uppercase',
+                                          o.isAdjustmentReturn
+                                            ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
+                                            : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
+                                        )}
+                                      >
+                                        <SelectValue placeholder="SELECIONAR SERVIÇO" />
+                                      </SelectTrigger>
+                                      <SelectContent className="z-[110]">
+                                        <SelectItem
+                                          value="none"
+                                          className="text-[10px] uppercase font-bold text-muted-foreground"
+                                        >
+                                          NENHUM
+                                        </SelectItem>
+                                        {cadistaServices
+                                          .filter(
+                                            (s) =>
+                                              s.cadista_id === cadistaAssignments[o.id].cadista_id,
+                                          )
+                                          .map((s) => (
+                                            <SelectItem
+                                              key={s.id}
+                                              value={s.id}
+                                              className="text-[10px] uppercase font-bold"
+                                            >
+                                              {s.name}
+                                            </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </>
+                                )}
+
+                                {cadistaAssignments[o.id]?.cadista_price != null &&
+                                  cadistaAssignments[o.id]?.cadista_price > 0 && (
+                                    <div className="text-[10px] font-bold text-emerald-600 mt-1 text-right">
+                                      Custo: {formatBRL(cadistaAssignments[o.id].cadista_price)}
+                                    </div>
+                                  )}
                               </div>
                             )}
 
