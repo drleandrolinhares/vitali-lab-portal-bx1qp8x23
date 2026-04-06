@@ -69,10 +69,10 @@ export default function OrderDetails() {
     }
   }, [order?.id, order?.history])
 
-  if (!order) return <div className="p-8 text-center">Pedido não encontrado.</div>
-
-  const actualHistory = historyItems.length > 0 ? historyItems : order.history
-  const processedHistory = processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
+  const actualHistory = historyItems.length > 0 ? historyItems : order?.history || []
+  const processedHistory = order
+    ? processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
+    : []
 
   const additionalCostNum = parseFloat(additionalCostValue) || 0
 
@@ -112,6 +112,8 @@ export default function OrderDetails() {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [additionalCostDesc, additionalCostValue, isDirty])
+
+  if (!order) return <div className="p-8 text-center">Pedido não encontrado.</div>
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
