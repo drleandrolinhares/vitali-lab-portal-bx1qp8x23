@@ -1045,6 +1045,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const addKanbanStage = async (name: string, sector: string): Promise<boolean> => {
+    if (currentUser?.role !== 'master') return false
     const sectorStages = kanbanStages.filter(
       (s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === sector.toUpperCase(),
     )
@@ -1064,7 +1065,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     newName: string,
     sector: string,
   ) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
+    if (currentUser?.role !== 'master') return
     const trimmedNewName = newName.trim().toUpperCase()
 
     setKanbanStages((prev) => prev.map((s) => (s.id === id ? { ...s, name: trimmedNewName } : s)))
@@ -1085,6 +1086,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateKanbanStageDescription = async (id: string, description: string) => {
+    if (currentUser?.role !== 'master') return
     await supabase.from('kanban_stages').update({ description }).eq('id', id)
   }
 
@@ -1094,6 +1096,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fallbackName?: string,
     sector?: string,
   ) => {
+    if (currentUser?.role !== 'master') return
     if (fallbackName && sector) {
       await supabase
         .from('orders')
@@ -1114,7 +1117,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const reorderKanbanStages = async (reorderedStages: Stage[], sector: string) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
+    if (currentUser?.role !== 'master') return
     setKanbanStages((prev) => {
       const otherStages = prev.filter(
         (s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() !== sector.toUpperCase(),

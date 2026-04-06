@@ -66,6 +66,7 @@ export default function KanbanPage() {
 
   const navigate = useNavigate()
   const isAdmin = effectiveRole === 'admin' || effectiveRole === 'master'
+  const isMaster = effectiveRole === 'master'
   const isDentist = effectiveRole === 'dentist' || effectiveRole === 'laboratory'
 
   const availableSectors =
@@ -246,7 +247,7 @@ export default function KanbanPage() {
   const handleColumnDrop = (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!isAdmin) return
+    if (!isMaster) return
     const dragId = e.dataTransfer.getData('column-id')
     if (dragId && dragId !== targetStageId) {
       const oldIndex = activeStages.findIndex((s) => s.id === dragId)
@@ -503,15 +504,17 @@ export default function KanbanPage() {
               const isExpanded = expandedCols.has(`${activeLab}-${stage.id}`)
               const displayCols = isExpanded ? cols : cols.slice(0, 4)
               const hasMore = cols.length > 4
-              const isPendingCard = index === 0 || stage.name.trim().toUpperCase() === 'PENDÊNCIAS'
+              const isPendingCard =
+                stage.name.trim().toUpperCase() === 'PENDÊNCIAS' ||
+                stage.name.trim().toUpperCase() === 'PENDENCIAS'
               const isFirstStage = index === 0
 
               return (
                 <div
                   key={stage.id}
-                  draggable={isAdmin && !editingStageId}
+                  draggable={isMaster && !editingStageId}
                   onDragStart={(e) => {
-                    if (!isAdmin) return
+                    if (!isMaster) return
                     e.dataTransfer.setData('column-id', stage.id)
                     setTimeout(() => setDraggedStageId(stage.id), 0)
                   }}
@@ -536,7 +539,7 @@ export default function KanbanPage() {
                     setDragOverStageId(null)
                     const columnId = e.dataTransfer.getData('column-id')
                     if (columnId) {
-                      if (isAdmin) handleColumnDrop(e, stage.id)
+                      if (isMaster) handleColumnDrop(e, stage.id)
                     } else {
                       handleDrop(e, stage.name, activeLab)
                     }
@@ -569,7 +572,7 @@ export default function KanbanPage() {
                       />
                     ) : (
                       <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-                        {isAdmin && (
+                        {isMaster && (
                           <GripHorizontal
                             className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab shrink-0"
                             title="Arraste para reordenar"
@@ -577,7 +580,7 @@ export default function KanbanPage() {
                         )}
                         <h4
                           onClick={() => {
-                            if (isAdmin) {
+                            if (isMaster) {
                               setEditingStageId(stage.id)
                               setEditStageName(stage.name)
                             }
@@ -585,17 +588,17 @@ export default function KanbanPage() {
                           className={cn(
                             'font-semibold text-xs tracking-wide uppercase truncate flex items-center gap-1.5',
                             'text-slate-600 dark:text-muted-foreground',
-                            isAdmin && 'cursor-pointer',
-                            isAdmin && 'hover:text-primary transition-colors',
+                            isMaster && 'cursor-pointer',
+                            isMaster && 'hover:text-primary transition-colors',
                           )}
-                          title={isAdmin ? 'Clique para renomear' : ''}
+                          title={isMaster ? 'Clique para renomear' : ''}
                         >
                           {stage.name}
-                          {isAdmin && (
+                          {isMaster && (
                             <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                           )}
                         </h4>
-                        {(stage.description || isAdmin) && (
+                        {(stage.description || isMaster) && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -607,7 +610,7 @@ export default function KanbanPage() {
                                 )}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  if (isAdmin) {
+                                  if (isMaster) {
                                     setEditingDescStage(stage)
                                     setEditDescText(stage.description || '')
                                   }
@@ -632,7 +635,7 @@ export default function KanbanPage() {
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {isAdmin && (
+                        {isMaster && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -989,7 +992,7 @@ export default function KanbanPage() {
                 </div>
               )
             })}
-            {isAdmin && (
+            {isMaster && (
               <Button
                 variant="outline"
                 className="w-[300px] shrink-0 h-[100px] border-dashed border-2 flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors bg-slate-50/30"
