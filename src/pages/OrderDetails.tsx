@@ -30,39 +30,8 @@ export default function OrderDetails() {
   const order = orders.find((o) => o.id === id)
 
   const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
-  const [additionalCostDesc, setAdditionalCostDesc] = useState(
-    order?.custo_adicional_descricao || '',
-  )
-  const [additionalCostValue, setAdditionalCostValue] = useState(
-    order?.custo_adicional_valor?.toString() || '',
-  )
-
-  useEffect(() => {
-    if (order) {
-      setAdditionalCostDesc(order.custo_adicional_descricao || '')
-      setAdditionalCostValue(order.custo_adicional_valor?.toString() || '')
-    }
-  }, [order?.id, order?.custo_adicional_descricao, order?.custo_adicional_valor])
-
-  const handleSaveAdditionalCost = async () => {
-    if (!order) return
-    const val = parseFloat(additionalCostValue) || 0
-    await supabase
-      .from('orders')
-      .update({
-        custo_adicional_descricao: additionalCostDesc,
-        custo_adicional_valor: val,
-      } as any)
-      .eq('id', order.id)
-
-    useAppStore.setState((state: any) => ({
-      orders: state.orders.map((o: any) =>
-        o.id === order.id
-          ? { ...o, custo_adicional_descricao: additionalCostDesc, custo_adicional_valor: val }
-          : o,
-      ),
-    }))
-  }
+  const [additionalCostDesc, setAdditionalCostDesc] = useState('')
+  const [additionalCostValue, setAdditionalCostValue] = useState('')
 
   useEffect(() => {
     if (order?.id) {
@@ -264,7 +233,6 @@ export default function OrderDetails() {
                       placeholder="Ex: Material extra"
                       value={additionalCostDesc}
                       onChange={(e) => setAdditionalCostDesc(e.target.value)}
-                      onBlur={handleSaveAdditionalCost}
                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
@@ -279,7 +247,6 @@ export default function OrderDetails() {
                       placeholder="0.00"
                       value={additionalCostValue}
                       onChange={(e) => setAdditionalCostValue(e.target.value)}
-                      onBlur={handleSaveAdditionalCost}
                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
@@ -311,19 +278,9 @@ export default function OrderDetails() {
                   <span className="font-medium">-{order.dentistDiscount}%</span>
                 </div>
               )}
-              {(parseFloat(additionalCostValue) || 0) > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Custo Adicional</span>
-                  <span className="font-medium text-amber-600 dark:text-amber-500">
-                    {formatBRL(parseFloat(additionalCostValue) || 0)}
-                  </span>
-                </div>
-              )}
               <div className="flex justify-between items-center pt-2 border-t font-semibold">
                 <span>Total do Pedido</span>
-                <span className="text-primary">
-                  {formatBRL(order.basePrice + (parseFloat(additionalCostValue) || 0))}
-                </span>
+                <span className="text-primary">{formatBRL(order.basePrice)}</span>
               </div>
             </CardContent>
           </Card>
