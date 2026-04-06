@@ -278,9 +278,19 @@ export default function OrderDetails() {
                   <span className="font-medium">-{order.dentistDiscount}%</span>
                 </div>
               )}
+              {(parseFloat(additionalCostValue) || 0) > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Custo Adicional</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-500">
+                    {formatBRL(parseFloat(additionalCostValue) || 0)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-2 border-t font-semibold">
                 <span>Total do Pedido</span>
-                <span className="text-primary">{formatBRL(order.basePrice)}</span>
+                <span className="text-primary">
+                  {formatBRL(order.basePrice + (parseFloat(additionalCostValue) || 0))}
+                </span>
               </div>
             </CardContent>
           </Card>
