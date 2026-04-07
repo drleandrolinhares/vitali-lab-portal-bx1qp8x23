@@ -58,12 +58,15 @@ const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i)
 
 export default function AdminFinancial() {
   const {
+    currentUser,
     orders: storeOrders,
     priceList,
     kanbanStages,
     loading: storeLoading,
     refreshOrders,
   } = useAppStore()
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
 
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
@@ -86,6 +89,11 @@ export default function AdminFinancial() {
     `${new Date().getFullYear()}-${new Date().getMonth().toString().padStart(2, '0')}`,
   )
   const [billingDateRange, setBillingDateRange] = useState<DateRange | undefined>(undefined)
+
+  // Confirmation Modals
+  const [confirmCloseInvoiceOpen, setConfirmCloseInvoiceOpen] = useState(false)
+  const [confirmMarkAsPaidId, setConfirmMarkAsPaidId] = useState<string | null>(null)
+  const [confirmRevertPaidId, setConfirmRevertPaidId] = useState<string | null>(null)
 
   const monthYearOptions = useMemo(() => {
     const options = []
@@ -463,13 +471,14 @@ export default function AdminFinancial() {
     }
   }
 
-  const handleMarkAsPaid = async (id: string) => {
+  const executeMarkAsPaid = async () => {
+    if (!confirmMarkAsPaidId) return
     try {
       setIsSubmitting(true)
       const { error } = await supabase
         .from('settlements')
         .update({ status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', id)
+        .eq('id', confirmMarkAsPaidId)
 
       if (error) throw error
 
@@ -484,6 +493,33 @@ export default function AdminFinancial() {
       })
     } finally {
       setIsSubmitting(false)
+      setConfirmMarkAsPaidId(null)
+    }
+  }
+
+  const executeRevertPaid = async () => {
+    if (!confirmRevertPaidId) return
+    try {
+      setIsSubmitting(true)
+      const { error } = await supabase
+        .from('settlements')
+        .update({ status: 'pending', paid_at: null })
+        .eq('id', confirmRevertPaidId)
+
+      if (error) throw error
+
+      toast({ title: 'Fatura revertida para aguardando!' })
+      fetchData()
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        title: 'Erro ao reverter fatura',
+        description: error.message,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+      setConfirmRevertPaidId(null)
     }
   }
 
@@ -855,11 +891,25 @@ export default function AdminFinancial() {
                                       className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        handleMarkAsPaid(s.id)
+                                        setConfirmMarkAsPaidId(s.id)
                                       }}
                                       disabled={isSubmitting}
                                     >
                                       Dar Baixa
+                                    </Button>
+                                  )}
+                                  {isPaid && isAdmin && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs h-8 text-amber-600 border-amber-200 hover:bg-amber-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setConfirmRevertPaidId(s.id)
+                                      }}
+                                      disabled={isSubmitting}
+                                    >
+                                      Reverter Baixa
                                     </Button>
                                   )}
                                 </div>
@@ -1156,7 +1206,7 @@ export default function AdminFinancial() {
                 Cancelar
               </Button>
               <Button
-                onClick={handleConfirmInvoice}
+                onClick={() => setConfirmCloseInvoiceOpen(true)}
                 disabled={selectedOrderIds.length === 0 || isSubmitting}
                 className="gap-2"
               >
@@ -1164,6 +1214,97 @@ export default function AdminFinancial() {
                 Confirmar Fechamento
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CONFIRMATION DIALOGS */}
+      <Dialog open={confirmCloseInvoiceOpen} onOpenChange={setConfirmCloseInvoiceOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Fechamento</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-slate-600">
+            Tem certeza que deseja fechar a fatura com os {selectedOrderIds.length} pedidos
+            selecionados? Esta ação consolidará os valores e atualizará o status financeiro do
+            dentista.
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmCloseInvoiceOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmCloseInvoiceOpen(false)
+                handleConfirmInvoice()
+              }}
+              disabled={isSubmitting}
+            >
+              Sim, Fechar Fatura
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!confirmMarkAsPaidId}
+        onOpenChange={(open) => !open && setConfirmMarkAsPaidId(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Recebimento</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-slate-600">
+            Tem certeza que deseja dar baixa nesta fatura? O status passará para recebido.
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmMarkAsPaidId(null)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={executeMarkAsPaid}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Sim, Confirmar Recebimento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!confirmRevertPaidId}
+        onOpenChange={(open) => !open && setConfirmRevertPaidId(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reverter Fatura</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-slate-600">
+            Tem certeza que deseja desfazer o recebimento desta fatura? O status voltará para
+            "Aguardando".
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmRevertPaidId(null)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={executeRevertPaid} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Sim, Reverter para Aguardando
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

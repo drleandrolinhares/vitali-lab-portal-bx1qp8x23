@@ -60,16 +60,6 @@ export function SettlementDetailsDialog({
 
         <ScrollArea className="flex-1">
           <div className="p-4 sm:p-6 space-y-6">
-            {/* ALERT: READ-ONLY VIEW */}
-            <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-md border border-blue-100 flex items-center gap-2">
-              <FileText className="w-4 h-4 shrink-0 text-blue-600" />
-              <p>
-                <strong>Modo de Visualização:</strong> Os dados abaixo representam o registro exato
-                no momento do fechamento. Edições não são permitidas para preservar a integridade do
-                histórico financeiro.
-              </p>
-            </div>
-
             {/* Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="shadow-sm border-slate-200">
