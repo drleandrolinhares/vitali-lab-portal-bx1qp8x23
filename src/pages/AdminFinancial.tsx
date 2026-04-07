@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
+import { SettlementDetailsDialog } from '@/components/financial/SettlementDetailsDialog'
 import { useAppStore } from '@/stores/main'
 import { filterOrdersForFinancials, getOrderFinancials } from '@/lib/financial'
 
@@ -766,7 +767,11 @@ export default function AdminFinancial() {
                           const dentist = profiles.find((p) => p.id === s.dentist_id)
                           const isPaid = s.status === 'paid'
                           return (
-                            <TableRow key={s.id} className="hover:bg-slate-50/50">
+                            <TableRow
+                              key={s.id}
+                              className="hover:bg-slate-50/50 cursor-pointer"
+                              onClick={() => setViewInvoiceSettlement(s)}
+                            >
                               <TableCell className="pl-6 font-mono text-xs text-slate-500">
                                 {s.id.substring(0, 8)}
                               </TableCell>
@@ -802,7 +807,10 @@ export default function AdminFinancial() {
                                     variant="outline"
                                     size="sm"
                                     className="text-xs h-8"
-                                    onClick={() => setViewInvoiceSettlement(s)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setViewInvoiceSettlement(s)
+                                    }}
                                   >
                                     Ver Detalhes
                                   </Button>
@@ -811,7 +819,10 @@ export default function AdminFinancial() {
                                       variant="default"
                                       size="sm"
                                       className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                      onClick={() => handleMarkAsPaid(s.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleMarkAsPaid(s.id)
+                                      }}
                                       disabled={isSubmitting}
                                     >
                                       Dar Baixa
@@ -1136,17 +1147,11 @@ export default function AdminFinancial() {
 
       {/* EXISTING SETTLEMENT INVOICE PREVIEW */}
       {viewInvoiceSettlement && (
-        <InvoicePreviewDialog
+        <SettlementDetailsDialog
           open={!!viewInvoiceSettlement}
           onOpenChange={(open) => !open && setViewInvoiceSettlement(null)}
-          dentistName={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)?.name || ''}
-          clinicName={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)?.clinic || ''}
-          orders={viewInvoiceSettlement.orders_snapshot.map((o: any) => ({
-            ...o,
-            basePrice: o.clearedAmount || o.basePrice || o.price,
-            createdAt: o.createdAt || viewInvoiceSettlement.created_at,
-          }))}
-          totalAmount={viewInvoiceSettlement.amount}
+          settlement={viewInvoiceSettlement}
+          dentist={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)}
         />
       )}
     </div>
