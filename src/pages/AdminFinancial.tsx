@@ -22,7 +22,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency, cn } from '@/lib/utils'
 import { DateRange } from 'react-day-picker'
-import { endOfDay } from 'date-fns'
+import { endOfDay, format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { DatePickerWithRange } from '@/components/ui/date-range-picker'
 import {
   Loader2,
@@ -32,7 +33,10 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  CalendarIcon,
 } from 'lucide-react'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { SettlementDetailsDialog } from '@/components/financial/SettlementDetailsDialog'
@@ -94,6 +98,7 @@ export default function AdminFinancial() {
   const [confirmCloseInvoiceOpen, setConfirmCloseInvoiceOpen] = useState(false)
   const [confirmMarkAsPaidId, setConfirmMarkAsPaidId] = useState<string | null>(null)
   const [confirmRevertPaidId, setConfirmRevertPaidId] = useState<string | null>(null)
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
 
   const monthYearOptions = useMemo(() => {
     const options = []
@@ -236,8 +241,8 @@ export default function AdminFinancial() {
 
     settlements.forEach((s) => {
       if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
-      if (isSamePeriod(s.created_at)) {
-        if (s.status === 'paid') {
+      if (s.status === 'paid') {
+        if (isSamePeriod(s.paid_at || s.created_at)) {
           recebido += Number(s.amount || 0)
         }
       }
@@ -367,17 +372,29 @@ export default function AdminFinancial() {
       .filter((s) => {
         if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
 
-        const sDate = new Date(s.created_at)
+        const isPaid = s.status === 'paid'
+        const refDate = isPaid && s.paid_at ? new Date(s.paid_at) : new Date(s.created_at)
+
         const inPeriod =
-          sDate.getMonth().toString() === selectedMonth &&
-          sDate.getFullYear().toString() === selectedYear
+          refDate.getMonth().toString() === selectedMonth &&
+          refDate.getFullYear().toString() === selectedYear
 
         if (statusFilter === 'pending') return s.status === 'pending'
-        if (statusFilter === 'paid') return s.status === 'paid' && inPeriod
+        if (statusFilter === 'paid') return isPaid && inPeriod
 
         return inPeriod || s.status === 'pending'
       })
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort((a, b) => {
+        const dateA =
+          a.status === 'paid' && a.paid_at
+            ? new Date(a.paid_at).getTime()
+            : new Date(a.created_at).getTime()
+        const dateB =
+          b.status === 'paid' && b.paid_at
+            ? new Date(b.paid_at).getTime()
+            : new Date(b.created_at).getTime()
+        return dateB - dateA
+      })
   }, [settlements, selectedDentist, statusFilter, selectedMonth, selectedYear])
 
   const modalOrders = useMemo(() => {
@@ -477,7 +494,7 @@ export default function AdminFinancial() {
       setIsSubmitting(true)
       const { error } = await supabase
         .from('settlements')
-        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .update({ status: 'paid', paid_at: paymentDate.toISOString() })
         .eq('id', confirmMarkAsPaidId)
 
       if (error) throw error
@@ -812,6 +829,9 @@ export default function AdminFinancial() {
                           Data Fechamento
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-center">
+                          Data Pagamento
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
                           Status
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-right">
@@ -826,7 +846,7 @@ export default function AdminFinancial() {
                       {filteredSettlements.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center py-12 text-muted-foreground"
                           >
                             Nenhuma fatura encontrada.
@@ -855,6 +875,11 @@ export default function AdminFinancial() {
                               </TableCell>
                               <TableCell className="text-center font-medium text-slate-600">
                                 {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell className="text-center font-medium text-slate-600">
+                                {isPaid && s.paid_at
+                                  ? new Date(s.paid_at).toLocaleDateString('pt-BR')
+                                  : '-'}
                               </TableCell>
                               <TableCell className="text-center">
                                 <span
@@ -1252,19 +1277,56 @@ export default function AdminFinancial() {
 
       <Dialog
         open={!!confirmMarkAsPaidId}
-        onOpenChange={(open) => !open && setConfirmMarkAsPaidId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmMarkAsPaidId(null)
+            setPaymentDate(new Date())
+          }
+        }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md overflow-visible">
           <DialogHeader>
             <DialogTitle>Confirmar Recebimento</DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-slate-600">
-            Tem certeza que deseja dar baixa nesta fatura? O status passará para recebido.
+          <div className="py-4 text-slate-600 flex flex-col gap-4">
+            <p>Tem certeza que deseja dar baixa nesta fatura? O status passará para recebido.</p>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-900">Data do Pagamento</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !paymentDate && 'text-muted-foreground',
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {paymentDate ? (
+                      format(paymentDate, 'PPP', { locale: ptBR })
+                    ) : (
+                      <span>Selecione uma data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={paymentDate}
+                    onSelect={(d) => d && setPaymentDate(d)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button
               variant="ghost"
-              onClick={() => setConfirmMarkAsPaidId(null)}
+              onClick={() => {
+                setConfirmMarkAsPaidId(null)
+                setPaymentDate(new Date())
+              }}
               disabled={isSubmitting}
             >
               Cancelar
