@@ -880,26 +880,6 @@ export default function AdminFinancial() {
           value="faturamento"
           className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
         >
-          {/* Faturamento Tab Alert */}
-          <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-md border border-amber-200 flex items-start gap-3 flex-none shadow-sm mb-2">
-            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <p>
-                <strong className="uppercase tracking-wide text-amber-900 mr-2">
-                  Alerta Crítico de Não-Interferência:
-                </strong>
-                Esta aba é estritamente <strong>apenas leitura (read-only)</strong> e agora agrupa
-                as informações por <strong>Fatura Fechada</strong> por dentista, exatamente como na
-                aba de Faturas Fechadas.
-              </p>
-              <p className="text-amber-700">
-                Nenhuma regra de negócio, referência de faturamento ou lógica existente foi
-                alterada, garantindo total integridade e não interferência com as operações que já
-                funcionam perfeitamente no momento.
-              </p>
-            </div>
-          </div>
-
           {/* CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-none">
             <Card className="shadow-sm border-l-4 border-l-blue-500">
