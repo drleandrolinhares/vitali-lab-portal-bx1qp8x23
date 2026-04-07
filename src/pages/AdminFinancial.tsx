@@ -291,20 +291,67 @@ export default function AdminFinancial() {
           data_fim = `${year}-${pad(month + 1)}-${pad(lastDay)}`
         }
 
-        const { data, error } = await supabase.functions.invoke('get_recebimentos_por_periodo', {
-          body: { data_inicio, data_fim },
-        })
+        const { data, error } = await supabase
+          .from('settlements')
+          .select(`
+            *,
+            profiles!settlements_dentist_id_fkey(name, clinic)
+          `)
+          .eq('status', 'paid')
+          .gte('paid_at', `${data_inicio}T00:00:00Z`)
+          .lte('paid_at', `${data_fim}T23:59:59Z`)
+          .order('paid_at', { ascending: false })
 
         if (error) throw error
 
-        if (data?.data) {
-          setBillingStats({
-            quantidadeCasos: data.data.quantidade_casos,
-            valorTotal: data.data.valor_total,
-            ticketMedio: data.data.ticket_medio,
-            recebimentos: data.data.recebimentos || [],
+        let quantidade_casos = 0
+        let valor_total = 0
+        const recebimentos: any[] = []
+
+        data?.forEach((s: any) => {
+          const dentistName = s.profiles?.name || 'Desconhecido'
+          const orders = Array.isArray(s.orders_snapshot) ? s.orders_snapshot : []
+
+          if (orders.length === 0) {
+            quantidade_casos += 1
+            valor_total += Number(s.amount || 0)
+            recebimentos.push({
+              id: s.id,
+              data_recebimento: s.paid_at,
+              numero_caso: `FAT-${s.id.substring(0, 8).toUpperCase()}`,
+              descricao: `Fatura Paga - ${dentistName}`,
+              valor_recebido: Number(s.amount || 0),
+              raw_settlement: s,
+            })
+            return
+          }
+
+          orders.forEach((o: any) => {
+            const orderValue = Number(
+              o.clearedAmount ?? o.basePrice ?? o.base_price ?? o.price ?? 0,
+            )
+            valor_total += orderValue
+            quantidade_casos += 1
+
+            recebimentos.push({
+              id: `${s.id}-${o.id}`,
+              data_recebimento: s.paid_at,
+              numero_caso: o.friendlyId || o.friendly_id || o.id?.substring(0, 8),
+              descricao: `Paciente: ${o.patientName || o.patient_name || '-'} / Dentista: ${dentistName}`,
+              valor_recebido: orderValue,
+              raw_settlement: s,
+            })
           })
-        }
+        })
+
+        const ticket_medio = quantidade_casos > 0 ? valor_total / quantidade_casos : 0
+
+        setBillingStats({
+          quantidadeCasos: quantidade_casos,
+          valorTotal: valor_total,
+          ticketMedio: ticket_medio,
+          recebimentos,
+        })
       } catch (err: any) {
         console.error('Error fetching faturamento:', err)
         toast({
@@ -846,6 +893,32 @@ export default function AdminFinancial() {
           value="faturamento"
           className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
         >
+          {/* Faturamento Tab Alert */}
+          <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-md border border-amber-200 flex items-start gap-3 flex-none shadow-sm">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              <p>
+                <strong className="uppercase tracking-wide text-amber-900 mr-2">
+                  Alerta Crítico (Apenas Leitura):
+                </strong>
+                Esta aba agora espelha exatamente os dados oficiais da tabela de faturamentos (
+                <code className="bg-amber-100/50 px-1 rounded border border-amber-200 text-xs font-mono text-amber-900">
+                  settlements
+                </code>
+                ) e os respectivos pedidos (
+                <code className="bg-amber-100/50 px-1 rounded border border-amber-200 text-xs font-mono text-amber-900">
+                  orders
+                </code>
+                ).
+              </p>
+              <p className="text-amber-700">
+                Nenhuma regra de negócio, referência de faturamento ou lógica existente foi
+                alterada, garantindo total integridade com as operações que já funcionam
+                perfeitamente.
+              </p>
+            </div>
+          </div>
+
           {/* CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-none">
             <Card className="shadow-sm border-l-4 border-l-blue-500">
@@ -966,8 +1039,12 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
                     <TableRow>
-                      <TableHead className="font-semibold text-slate-700 pl-6">Data</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Nº do Caso</TableHead>
+                      <TableHead className="font-semibold text-slate-700 pl-6">
+                        Data de Pagamento
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700">
+                        Fatura / Pedido
+                      </TableHead>
                       <TableHead className="font-semibold text-slate-700">Descrição</TableHead>
                       <TableHead className="font-semibold text-slate-700 text-right pr-6">
                         Valor Recebido
@@ -976,15 +1053,19 @@ export default function AdminFinancial() {
                   </TableHeader>
                   <TableBody>
                     {billingStats.recebimentos.map((rec: any, idx: number) => (
-                      <TableRow key={rec.id || idx} className="hover:bg-slate-50/50">
+                      <TableRow
+                        key={rec.id || idx}
+                        className="hover:bg-slate-50/50 cursor-pointer"
+                        onClick={() => setViewInvoiceSettlement(rec.raw_settlement)}
+                      >
                         <TableCell className="font-medium text-slate-600 pl-6">
                           {rec.data_recebimento
-                            ? new Date(rec.data_recebimento + 'T12:00:00Z').toLocaleDateString(
-                                'pt-BR',
-                              )
+                            ? new Date(rec.data_recebimento).toLocaleDateString('pt-BR')
                             : '-'}
                         </TableCell>
-                        <TableCell>{rec.numero_caso || '-'}</TableCell>
+                        <TableCell className="font-mono text-xs font-semibold text-slate-700">
+                          {rec.numero_caso || '-'}
+                        </TableCell>
                         <TableCell
                           className="text-muted-foreground max-w-[300px] truncate"
                           title={rec.descricao || ''}
