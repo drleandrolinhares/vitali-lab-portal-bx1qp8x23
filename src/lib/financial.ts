@@ -75,6 +75,16 @@ export function calculateProcedureProfitability(procedure: any, hourlyCost: numb
   }
 }
 
+export function getOrderCompletionDate(order: any): string | null {
+  if (!order) return null
+
+  if (order.status === 'completed' || order.status === 'delivered') {
+    return order.updated_at || order.created_at || null
+  }
+
+  return null
+}
+
 export function generateMonthOptions(monthsToGenerate: number = 12) {
   const options = []
   const currentDate = new Date()
