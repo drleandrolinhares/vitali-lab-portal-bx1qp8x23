@@ -37,3 +37,60 @@ export function filterOrdersForFinancials(orders: any[], monthYear: string) {
   if (!orders || !Array.isArray(orders)) return []
   return orders
 }
+
+export function formatBRL(value: number | string | undefined | null): string {
+  if (value === null || value === undefined) return 'R$ 0,00'
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return 'R$ 0,00'
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(num)
+}
+
+export function computeHourlyCosts(costs: any[], totalMonthlyHours: number = 160): number {
+  if (!costs || !Array.isArray(costs)) return 0
+
+  const totalMonthlyCost = costs.reduce((acc, cost) => {
+    const val = Number(cost.amount) || 0
+    return acc + val
+  }, 0)
+
+  return totalMonthlyHours > 0 ? totalMonthlyCost / totalMonthlyHours : 0
+}
+
+export function calculateProcedureProfitability(procedure: any, hourlyCost: number) {
+  const price = Number(procedure.price || procedure.base_price) || 0
+  const durationHours = Number(procedure.estimated_hours) || 0
+  const materialCost = Number(procedure.material_cost) || 0
+  const totalCost = durationHours * hourlyCost + materialCost
+  const profit = price - totalCost
+  const margin = price > 0 ? (profit / price) * 100 : 0
+
+  return {
+    price,
+    totalCost,
+    profit,
+    margin,
+  }
+}
+
+export function generateMonthOptions(monthsToGenerate: number = 12) {
+  const options = []
+  const currentDate = new Date()
+
+  for (let i = 0; i < monthsToGenerate; i++) {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+
+    options.push({
+      value: `${year}-${month}`,
+      label: new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+        .format(d)
+        .replace(/^\w/, (c) => c.toUpperCase()),
+    })
+  }
+
+  return options
+}
