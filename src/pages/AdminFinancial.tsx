@@ -81,9 +81,24 @@ export default function AdminFinancial() {
   const [viewInvoiceSettlement, setViewInvoiceSettlement] = useState<any>(null)
 
   // Faturamento Metrics State
-  const [billingMonth, setBillingMonth] = useState<string>(new Date().getMonth().toString())
-  const [billingYear, setBillingYear] = useState<string>(new Date().getFullYear().toString())
+  const [billingPeriod, setBillingPeriod] = useState<string>(
+    `${new Date().getFullYear()}-${new Date().getMonth().toString().padStart(2, '0')}`,
+  )
   const [billingDateRange, setBillingDateRange] = useState<DateRange | undefined>(undefined)
+
+  const monthYearOptions = useMemo(() => {
+    const options = []
+    const currentDate = new Date()
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const month = d.getMonth()
+      const year = d.getFullYear()
+      const label = `${MONTHS[month].label} ${year}`
+      const value = `${year}-${month.toString().padStart(2, '0')}`
+      options.push({ label, value })
+    }
+    return options
+  }, [])
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -243,6 +258,7 @@ export default function AdminFinancial() {
     quantidadeCasos: 0,
     valorTotal: 0,
     ticketMedio: 0,
+    recebimentos: [] as any[],
   })
   const [loadingFaturamento, setLoadingFaturamento] = useState(false)
 
@@ -265,8 +281,9 @@ export default function AdminFinancial() {
             data_fim = data_inicio
           }
         } else {
-          const year = parseInt(billingYear)
-          const month = parseInt(billingMonth)
+          const [yearStr, monthStr] = billingPeriod.split('-')
+          const year = parseInt(yearStr)
+          const month = parseInt(monthStr)
           const pad = (n: number) => n.toString().padStart(2, '0')
           const lastDay = new Date(year, month + 1, 0).getDate()
           data_inicio = `${year}-${pad(month + 1)}-01`
@@ -284,6 +301,7 @@ export default function AdminFinancial() {
             quantidadeCasos: data.data.quantidade_casos,
             valorTotal: data.data.valor_total,
             ticketMedio: data.data.ticket_medio,
+            recebimentos: data.data.recebimentos || [],
           })
         }
       } catch (err: any) {
@@ -299,7 +317,7 @@ export default function AdminFinancial() {
     }
 
     fetchFaturamento()
-  }, [billingMonth, billingYear, billingDateRange])
+  }, [billingPeriod, billingDateRange])
 
   const filteredSettlements = useMemo(() => {
     return settlements
@@ -889,37 +907,19 @@ export default function AdminFinancial() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-500 font-medium">Mês/Ano:</span>
                 <Select
-                  value={billingMonth}
+                  value={billingPeriod}
                   onValueChange={(val) => {
-                    setBillingMonth(val)
+                    setBillingPeriod(val)
                     setBillingDateRange(undefined)
                   }}
                 >
-                  <SelectTrigger className="w-[140px] bg-white h-9 font-medium shadow-sm">
+                  <SelectTrigger className="w-[200px] bg-white h-9 font-medium shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={billingYear}
-                  onValueChange={(val) => {
-                    setBillingYear(val)
-                    setBillingDateRange(undefined)
-                  }}
-                >
-                  <SelectTrigger className="w-[100px] bg-white h-9 font-medium shadow-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YEARS.map((y) => (
-                      <SelectItem key={y} value={y}>
-                        {y}
+                    {monthYearOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -949,9 +949,51 @@ export default function AdminFinancial() {
             </div>
           </div>
 
-          <div className="flex-1 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-muted-foreground text-sm">
-            Selecione os filtros acima para visualizar as métricas de faturamento.
-          </div>
+          {billingStats.recebimentos.length > 0 ? (
+            <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
+              <div className="overflow-auto flex-1 bg-white">
+                <Table>
+                  <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+                    <TableRow>
+                      <TableHead className="font-semibold text-slate-700 pl-6">Data</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Nº do Caso</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Descrição</TableHead>
+                      <TableHead className="font-semibold text-slate-700 text-right pr-6">
+                        Valor Recebido
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {billingStats.recebimentos.map((rec: any, idx: number) => (
+                      <TableRow key={rec.id || idx} className="hover:bg-slate-50/50">
+                        <TableCell className="font-medium text-slate-600 pl-6">
+                          {rec.data_recebimento
+                            ? new Date(rec.data_recebimento + 'T12:00:00Z').toLocaleDateString(
+                                'pt-BR',
+                              )
+                            : '-'}
+                        </TableCell>
+                        <TableCell>{rec.numero_caso || '-'}</TableCell>
+                        <TableCell
+                          className="text-muted-foreground max-w-[300px] truncate"
+                          title={rec.descricao || ''}
+                        >
+                          {rec.descricao || '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-emerald-600 pr-6">
+                          {formatCurrency(rec.valor_recebido)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          ) : (
+            <div className="flex-1 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-muted-foreground text-sm">
+              Nenhum recebimento encontrado para o período selecionado.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

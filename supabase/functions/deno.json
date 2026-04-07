@@ -2,6 +2,6 @@
   "_versions": {
     "create-user": 28,
     "update-user": 25,
-    "get_recebimentos_por_periodo": 1
+    "get_recebimentos_por_periodo": 2
   }
 }
