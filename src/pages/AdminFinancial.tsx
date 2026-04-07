@@ -312,35 +312,22 @@ export default function AdminFinancial() {
           const dentistName = s.profiles?.name || 'Desconhecido'
           const orders = Array.isArray(s.orders_snapshot) ? s.orders_snapshot : []
 
+          const settlementAmount = Number(s.amount || 0)
+          valor_total += settlementAmount
+
           if (orders.length === 0) {
             quantidade_casos += 1
-            valor_total += Number(s.amount || 0)
-            recebimentos.push({
-              id: s.id,
-              data_recebimento: s.paid_at,
-              numero_caso: `FAT-${s.id.substring(0, 8).toUpperCase()}`,
-              descricao: `Fatura Paga - ${dentistName}`,
-              valor_recebido: Number(s.amount || 0),
-              raw_settlement: s,
-            })
-            return
+          } else {
+            quantidade_casos += orders.length
           }
 
-          orders.forEach((o: any) => {
-            const orderValue = Number(
-              o.clearedAmount ?? o.basePrice ?? o.base_price ?? o.price ?? 0,
-            )
-            valor_total += orderValue
-            quantidade_casos += 1
-
-            recebimentos.push({
-              id: `${s.id}-${o.id}`,
-              data_recebimento: s.paid_at,
-              numero_caso: o.friendlyId || o.friendly_id || o.id?.substring(0, 8),
-              descricao: `Paciente: ${o.patientName || o.patient_name || '-'} / Dentista: ${dentistName}`,
-              valor_recebido: orderValue,
-              raw_settlement: s,
-            })
+          recebimentos.push({
+            id: s.id,
+            data_recebimento: s.paid_at,
+            numero_caso: `FAT-${s.id.substring(0, 8).toUpperCase()}`,
+            descricao: `Fatura Paga - ${dentistName} ${orders.length > 0 ? `(${orders.length} pedidos)` : ''}`,
+            valor_recebido: settlementAmount,
+            raw_settlement: s,
           })
         })
 
@@ -894,27 +881,21 @@ export default function AdminFinancial() {
           className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
         >
           {/* Faturamento Tab Alert */}
-          <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-md border border-amber-200 flex items-start gap-3 flex-none shadow-sm">
+          <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-md border border-amber-200 flex items-start gap-3 flex-none shadow-sm mb-2">
             <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
             <div className="flex flex-col gap-1">
               <p>
                 <strong className="uppercase tracking-wide text-amber-900 mr-2">
-                  Alerta Crítico (Apenas Leitura):
+                  Alerta Crítico de Não-Interferência:
                 </strong>
-                Esta aba agora espelha exatamente os dados oficiais da tabela de faturamentos (
-                <code className="bg-amber-100/50 px-1 rounded border border-amber-200 text-xs font-mono text-amber-900">
-                  settlements
-                </code>
-                ) e os respectivos pedidos (
-                <code className="bg-amber-100/50 px-1 rounded border border-amber-200 text-xs font-mono text-amber-900">
-                  orders
-                </code>
-                ).
+                Esta aba é estritamente <strong>apenas leitura (read-only)</strong> e agora agrupa
+                as informações por <strong>Fatura Fechada</strong> por dentista, exatamente como na
+                aba de Faturas Fechadas.
               </p>
               <p className="text-amber-700">
                 Nenhuma regra de negócio, referência de faturamento ou lógica existente foi
-                alterada, garantindo total integridade com as operações que já funcionam
-                perfeitamente.
+                alterada, garantindo total integridade e não interferência com as operações que já
+                funcionam perfeitamente no momento.
               </p>
             </div>
           </div>
