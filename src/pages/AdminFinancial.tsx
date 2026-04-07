@@ -239,34 +239,67 @@ export default function AdminFinancial() {
     formattedSelectedMonthYear,
   ])
 
-  const billingStats = useMemo(() => {
-    const filtered = settlements.filter((s) => {
-      if (s.status !== 'paid') return false
-      if (!s.paid_at) return false
+  const [billingStats, setBillingStats] = useState({
+    quantidadeCasos: 0,
+    valorTotal: 0,
+    ticketMedio: 0,
+  })
+  const [loadingFaturamento, setLoadingFaturamento] = useState(false)
 
-      const paidDate = new Date(s.paid_at)
+  useEffect(() => {
+    const fetchFaturamento = async () => {
+      setLoadingFaturamento(true)
+      try {
+        let data_inicio = ''
+        let data_fim = ''
 
-      if (billingDateRange?.from) {
-        if (paidDate < billingDateRange.from) return false
-        if (billingDateRange.to && paidDate > endOfDay(billingDateRange.to)) return false
-        return true
-      } else {
-        return (
-          paidDate.getMonth().toString() === billingMonth &&
-          paidDate.getFullYear().toString() === billingYear
-        )
+        if (billingDateRange?.from) {
+          const formatStr = (d: Date) => {
+            const pad = (n: number) => n.toString().padStart(2, '0')
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+          }
+          data_inicio = formatStr(billingDateRange.from)
+          if (billingDateRange.to) {
+            data_fim = formatStr(billingDateRange.to)
+          } else {
+            data_fim = data_inicio
+          }
+        } else {
+          const year = parseInt(billingYear)
+          const month = parseInt(billingMonth)
+          const pad = (n: number) => n.toString().padStart(2, '0')
+          const lastDay = new Date(year, month + 1, 0).getDate()
+          data_inicio = `${year}-${pad(month + 1)}-01`
+          data_fim = `${year}-${pad(month + 1)}-${pad(lastDay)}`
+        }
+
+        const { data, error } = await supabase.functions.invoke('get_recebimentos_por_periodo', {
+          body: { data_inicio, data_fim },
+        })
+
+        if (error) throw error
+
+        if (data?.data) {
+          setBillingStats({
+            quantidadeCasos: data.data.quantidade_casos,
+            valorTotal: data.data.valor_total,
+            ticketMedio: data.data.ticket_medio,
+          })
+        }
+      } catch (err: any) {
+        console.error('Error fetching faturamento:', err)
+        toast({
+          title: 'Erro ao buscar faturamento',
+          description: err.message,
+          variant: 'destructive',
+        })
+      } finally {
+        setLoadingFaturamento(false)
       }
-    })
+    }
 
-    const valorTotal = filtered.reduce((sum, s) => sum + Number(s.amount || 0), 0)
-    const quantidadeCasos = filtered.reduce((sum, s) => {
-      const ordersCount = Array.isArray(s.orders_snapshot) ? s.orders_snapshot.length : 1
-      return sum + ordersCount
-    }, 0)
-    const ticketMedio = quantidadeCasos > 0 ? valorTotal / quantidadeCasos : 0
-
-    return { valorTotal, quantidadeCasos, ticketMedio }
-  }, [settlements, billingMonth, billingYear, billingDateRange])
+    fetchFaturamento()
+  }, [billingMonth, billingYear, billingDateRange])
 
   const filteredSettlements = useMemo(() => {
     return settlements
@@ -793,7 +826,11 @@ export default function AdminFinancial() {
                     Quantidade de Casos Recebidos
                   </p>
                   <h3 className="text-3xl font-bold text-blue-600">
-                    {billingStats.quantidadeCasos}
+                    {loadingFaturamento ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                    ) : (
+                      billingStats.quantidadeCasos
+                    )}
                   </h3>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-full">
@@ -809,7 +846,11 @@ export default function AdminFinancial() {
                     Valor Total Recebido
                   </p>
                   <h3 className="text-3xl font-bold text-emerald-600">
-                    {formatCurrency(billingStats.valorTotal)}
+                    {loadingFaturamento ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                    ) : (
+                      formatCurrency(billingStats.valorTotal)
+                    )}
                   </h3>
                 </div>
                 <div className="p-4 bg-emerald-50 rounded-full">
@@ -825,7 +866,11 @@ export default function AdminFinancial() {
                     Ticket Médio
                   </p>
                   <h3 className="text-3xl font-bold text-orange-600">
-                    {formatCurrency(billingStats.ticketMedio)}
+                    {loadingFaturamento ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-orange-600" />
+                    ) : (
+                      formatCurrency(billingStats.ticketMedio)
+                    )}
                   </h3>
                 </div>
                 <div className="p-4 bg-orange-50 rounded-full">
