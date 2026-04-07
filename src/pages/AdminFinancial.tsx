@@ -21,6 +21,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency, cn } from '@/lib/utils'
+import { DateRange } from 'react-day-picker'
+import { endOfDay } from 'date-fns'
+import { DatePickerWithRange } from '@/components/ui/date-range-picker'
 import {
   Loader2,
   Download,
@@ -76,6 +79,11 @@ export default function AdminFinancial() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [viewInvoiceSettlement, setViewInvoiceSettlement] = useState<any>(null)
+
+  // Faturamento Metrics State
+  const [billingMonth, setBillingMonth] = useState<string>(new Date().getMonth().toString())
+  const [billingYear, setBillingYear] = useState<string>(new Date().getFullYear().toString())
+  const [billingDateRange, setBillingDateRange] = useState<DateRange | undefined>(undefined)
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -230,6 +238,35 @@ export default function AdminFinancial() {
     kanbanStages,
     formattedSelectedMonthYear,
   ])
+
+  const billingStats = useMemo(() => {
+    const filtered = settlements.filter((s) => {
+      if (s.status !== 'paid') return false
+      if (!s.paid_at) return false
+
+      const paidDate = new Date(s.paid_at)
+
+      if (billingDateRange?.from) {
+        if (paidDate < billingDateRange.from) return false
+        if (billingDateRange.to && paidDate > endOfDay(billingDateRange.to)) return false
+        return true
+      } else {
+        return (
+          paidDate.getMonth().toString() === billingMonth &&
+          paidDate.getFullYear().toString() === billingYear
+        )
+      }
+    })
+
+    const valorTotal = filtered.reduce((sum, s) => sum + Number(s.amount || 0), 0)
+    const quantidadeCasos = filtered.reduce((sum, s) => {
+      const ordersCount = Array.isArray(s.orders_snapshot) ? s.orders_snapshot.length : 1
+      return sum + ordersCount
+    }, 0)
+    const ticketMedio = quantidadeCasos > 0 ? valorTotal / quantidadeCasos : 0
+
+    return { valorTotal, quantidadeCasos, ticketMedio }
+  }, [settlements, billingMonth, billingYear, billingDateRange])
 
   const filteredSettlements = useMemo(() => {
     return settlements
@@ -743,10 +780,133 @@ export default function AdminFinancial() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="faturamento" className="flex-1 m-0 data-[state=inactive]:hidden mt-4">
-          <Card className="h-full min-h-[400px] flex items-center justify-center text-muted-foreground border-dashed">
-            Módulo de Faturamento
-          </Card>
+        <TabsContent
+          value="faturamento"
+          className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
+        >
+          {/* CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-none">
+            <Card className="shadow-sm border-l-4 border-l-blue-500">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Quantidade de Casos Recebidos
+                  </p>
+                  <h3 className="text-3xl font-bold text-blue-600">
+                    {billingStats.quantidadeCasos}
+                  </h3>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-full">
+                  <Activity className="w-6 h-6 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-l-4 border-l-emerald-500">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Valor Total Recebido
+                  </p>
+                  <h3 className="text-3xl font-bold text-emerald-600">
+                    {formatCurrency(billingStats.valorTotal)}
+                  </h3>
+                </div>
+                <div className="p-4 bg-emerald-50 rounded-full">
+                  <Wallet className="w-6 h-6 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-l-4 border-l-orange-500">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Ticket Médio
+                  </p>
+                  <h3 className="text-3xl font-bold text-orange-600">
+                    {formatCurrency(billingStats.ticketMedio)}
+                  </h3>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-full">
+                  <BarChart3 className="w-6 h-6 text-orange-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* FILTERS */}
+          <div className="flex flex-col gap-2 flex-none">
+            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+              Filtros de Período
+            </h4>
+            <div className="flex flex-wrap items-center gap-4 bg-slate-50/80 p-4 rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500 font-medium">Mês/Ano:</span>
+                <Select
+                  value={billingMonth}
+                  onValueChange={(val) => {
+                    setBillingMonth(val)
+                    setBillingDateRange(undefined)
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] bg-white h-9 font-medium shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={billingYear}
+                  onValueChange={(val) => {
+                    setBillingYear(val)
+                    setBillingDateRange(undefined)
+                  }}
+                >
+                  <SelectTrigger className="w-[100px] bg-white h-9 font-medium shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEARS.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-px h-6 bg-slate-300 hidden md:block" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500 font-medium">Período Customizado:</span>
+                <DatePickerWithRange
+                  date={billingDateRange}
+                  setDate={setBillingDateRange}
+                  className="bg-white shadow-sm"
+                />
+                {billingDateRange && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBillingDateRange(undefined)}
+                    className="text-xs text-muted-foreground hover:text-slate-900 h-9 px-3"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-muted-foreground text-sm">
+            Selecione os filtros acima para visualizar as métricas de faturamento.
+          </div>
         </TabsContent>
       </Tabs>
 
