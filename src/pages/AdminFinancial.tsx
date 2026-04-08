@@ -127,8 +127,7 @@ export default function AdminFinancial() {
       const [profilesRes, settlementsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, name, clinic, closing_date, payment_due_date')
-          .in('role', ['dentist', 'laboratory', 'master', 'admin'])
+          .select('id, name, clinic, closing_date, payment_due_date, role')
           .order('name'),
         supabase.from('settlements').select('*').order('created_at', { ascending: false }),
       ])
@@ -159,6 +158,15 @@ export default function AdminFinancial() {
 
   const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
   const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
+
+  const dropdownProfiles = useMemo(() => {
+    const ordersDentists = new Set(
+      Array.isArray(storeOrders) ? storeOrders.map((o: any) => o.dentist_id || o.dentistId) : [],
+    )
+    return profiles.filter(
+      (p) => p.role === 'dentist' || p.role === 'laboratory' || ordersDentists.has(p.id),
+    )
+  }, [profiles, storeOrders])
 
   const { summary, tableData } = useMemo(() => {
     let faturar = 0
@@ -384,13 +392,8 @@ export default function AdminFinancial() {
   const filteredSettlements = useMemo(() => {
     return settlements
       .filter((s) => {
-        // Verificar se é master/admin para ver TODOS os dados
-        const userProfile = profiles.find((p) => p.id === auth.uid())
-        const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin'
-
         // Se não é master/admin E selecionou um dentista específico, filtra
-        if (!isMasterOrAdmin && selectedDentist !== 'all' && s.dentist_id !== selectedDentist)
-          return false
+        if (!isAdmin && selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
 
         const isPaid = s.status === 'paid'
         const refDate = isPaid && s.paid_at ? new Date(s.paid_at) : new Date(s.created_at)
@@ -594,7 +597,7 @@ export default function AdminFinancial() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Dentistas</SelectItem>
-                {profiles.map((p) => (
+                {dropdownProfiles.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>
