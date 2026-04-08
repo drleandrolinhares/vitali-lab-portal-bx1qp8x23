@@ -128,7 +128,7 @@ export default function AdminFinancial() {
         supabase
           .from('profiles')
           .select('id, name, clinic, closing_date, payment_due_date')
-          .eq('role', 'dentist')
+          .in('role', ['dentist', 'laboratory', 'master', 'admin'])
           .order('name'),
         supabase.from('settlements').select('*').order('created_at', { ascending: false }),
       ])
@@ -217,7 +217,22 @@ export default function AdminFinancial() {
         pipeline += o.finalTotal || 0
       }
 
-      if (!o.dentistId || !map.has(o.dentistId)) return
+      if (!o.dentistId) return
+
+      if (!map.has(o.dentistId)) {
+        map.set(o.dentistId, {
+          id: o.dentistId,
+          name: 'Usuário Desconhecido',
+          clinic: '',
+          closing_date: null,
+          payment_due_date: null,
+          finalizadosMes: 0,
+          emProducao: 0,
+          readyToInvoiceCount: 0,
+          unsettledOrders: [],
+        })
+      }
+
       const dentistData = map.get(o.dentistId)
 
       if (isCompleted && !o.settlementId) {
