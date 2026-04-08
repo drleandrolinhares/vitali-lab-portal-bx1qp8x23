@@ -156,9 +156,6 @@ export default function AdminFinancial() {
     fetchData()
   }, [])
 
-  const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
-  const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
-
   const dropdownProfiles = useMemo(() => {
     const ordersDentists = new Set(
       Array.isArray(storeOrders) ? storeOrders.map((o: any) => o.dentist_id || o.dentistId) : [],
@@ -194,8 +191,7 @@ export default function AdminFinancial() {
     const safePriceList = Array.isArray(priceList) ? priceList : []
     const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-    const monthFilteredOrders = filterOrdersForFinancials(safeOrders, formattedSelectedMonthYear)
-    const displayOrders = monthFilteredOrders.map((o) =>
+    const displayOrders = safeOrders.map((o) =>
       getOrderFinancials(o, safePriceList, safeKanbanStages),
     )
 
@@ -211,13 +207,22 @@ export default function AdminFinancial() {
       }
     })
 
+    const isSamePeriod = (dateVal: string | null) => {
+      if (!dateVal) return false
+      const d = new Date(dateVal)
+      return (
+        d.getMonth().toString() === selectedMonth && d.getFullYear().toString() === selectedYear
+      )
+    }
+
     verifiedDisplayOrders.forEach((o) => {
       if (selectedDentist !== 'all' && o.dentistId !== selectedDentist) return
 
       const isCompleted = o.status === 'completed' || o.status === 'delivered'
       const isCancelled = o.status === 'cancelled'
+      const inPeriod = isSamePeriod(o.createdAt)
 
-      if (isCompleted && !o.settlementId) {
+      if (isCompleted && !o.settlementId && inPeriod) {
         faturar += o.finalTotal || 0
       }
 
@@ -243,7 +248,7 @@ export default function AdminFinancial() {
 
       const dentistData = map.get(o.dentistId)
 
-      if (isCompleted && !o.settlementId) {
+      if (isCompleted && !o.settlementId && inPeriod) {
         dentistData.finalizadosMes += o.finalTotal || 0
         dentistData.readyToInvoiceCount += 1
         dentistData.unsettledOrders.push(o)
@@ -253,14 +258,6 @@ export default function AdminFinancial() {
         dentistData.emProducao += o.finalTotal || 0
       }
     })
-
-    const isSamePeriod = (dateVal: string | null) => {
-      if (!dateVal) return false
-      const d = new Date(dateVal)
-      return (
-        d.getMonth().toString() === selectedMonth && d.getFullYear().toString() === selectedYear
-      )
-    }
 
     settlements.forEach((s) => {
       if (s.status === 'paid') {
@@ -287,7 +284,6 @@ export default function AdminFinancial() {
     selectedDentist,
     priceList,
     kanbanStages,
-    formattedSelectedMonthYear,
   ])
 
   const [billingStats, setBillingStats] = useState({
