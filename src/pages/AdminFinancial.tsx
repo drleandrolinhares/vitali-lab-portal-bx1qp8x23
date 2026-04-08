@@ -196,10 +196,9 @@ export default function AdminFinancial() {
     )
 
     const verifiedDisplayOrders = displayOrders.map((order) => {
-      const discount = order.dentistDiscount || 0
-      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
-      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
-      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
+      // Usa estritamente o basePrice do banco de dados para preservar o histórico financeiro real.
+      // A recálculo causava divergências com os valores reais da base.
+      const finalBasePrice = Number(order.basePrice) || 0
       return {
         ...order,
         basePrice: finalBasePrice,
