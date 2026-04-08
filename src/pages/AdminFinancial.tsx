@@ -41,7 +41,7 @@ import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { SettlementDetailsDialog } from '@/components/financial/SettlementDetailsDialog'
 import { useAppStore } from '@/stores/main'
-import { filterOrdersForFinancials, getOrderFinancials } from '@/lib/financial'
+import { getOrderFinancials } from '@/lib/financial'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
