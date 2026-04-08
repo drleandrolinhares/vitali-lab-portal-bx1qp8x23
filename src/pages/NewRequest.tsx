@@ -115,7 +115,7 @@ export default function NewRequest() {
         const { data } = await supabase
           .from('profiles')
           .select('id, name')
-          .in('role', ['dentist', 'laboratory'])
+          .in('role', ['dentist', 'laboratory', 'admin', 'master'])
           .eq('is_active', true)
         if (data) {
           const sorted = data
