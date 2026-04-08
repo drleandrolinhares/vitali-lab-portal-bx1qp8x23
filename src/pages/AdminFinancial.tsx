@@ -255,7 +255,6 @@ export default function AdminFinancial() {
     }
 
     settlements.forEach((s) => {
-      if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
       if (s.status === 'paid') {
         if (isSamePeriod(s.paid_at || s.created_at)) {
           recebido += Number(s.amount || 0)
@@ -385,8 +384,6 @@ export default function AdminFinancial() {
   const filteredSettlements = useMemo(() => {
     return settlements
       .filter((s) => {
-        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
-
         const isPaid = s.status === 'paid'
         const refDate = isPaid && s.paid_at ? new Date(s.paid_at) : new Date(s.created_at)
 
