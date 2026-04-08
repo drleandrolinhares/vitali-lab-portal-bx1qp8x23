@@ -384,6 +384,14 @@ export default function AdminFinancial() {
   const filteredSettlements = useMemo(() => {
     return settlements
       .filter((s) => {
+        // Verificar se é master/admin para ver TODOS os dados
+        const userProfile = profiles.find((p) => p.id === auth.uid())
+        const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin'
+
+        // Se não é master/admin E selecionou um dentista específico, filtra
+        if (!isMasterOrAdmin && selectedDentist !== 'all' && s.dentist_id !== selectedDentist)
+          return false
+
         const isPaid = s.status === 'paid'
         const refDate = isPaid && s.paid_at ? new Date(s.paid_at) : new Date(s.created_at)
 
