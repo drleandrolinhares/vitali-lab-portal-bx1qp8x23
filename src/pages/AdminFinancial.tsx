@@ -18,13 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { formatCurrency, cn } from '@/lib/utils'
-import { DateRange } from 'react-day-picker'
-import { endOfDay, format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import { DatePickerWithRange } from '@/components/ui/date-range-picker'
+import { Label } from '@/components/ui/label'
+import { formatCurrency } from '@/lib/utils'
 import {
   Loader2,
   Download,
@@ -33,15 +36,11 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
-  CalendarIcon,
 } from 'lucide-react'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
-import { SettlementDetailsDialog } from '@/components/financial/SettlementDetailsDialog'
 import { useAppStore } from '@/stores/main'
-import { getOrderFinancials } from '@/lib/financial'
+import { filterOrdersForFinancials, getOrderFinancials } from '@/lib/financial'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -62,7 +61,6 @@ const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i)
 
 export default function AdminFinancial() {
   const {
-    currentUser,
     orders: storeOrders,
     priceList,
     kanbanStages,
@@ -70,12 +68,9 @@ export default function AdminFinancial() {
     refreshOrders,
   } = useAppStore()
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
-
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedDentist, setSelectedDentist] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('pending')
 
   const [loadingSettlements, setLoadingSettlements] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
@@ -86,33 +81,14 @@ export default function AdminFinancial() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [viewInvoiceSettlement, setViewInvoiceSettlement] = useState<any>(null)
 
-  // Faturamento Metrics State
-  const [billingPeriod, setBillingPeriod] = useState<string>(
-    `${new Date().getFullYear()}-${new Date().getMonth().toString().padStart(2, '0')}`,
-  )
-  const [billingDateRange, setBillingDateRange] = useState<DateRange | undefined>(undefined)
+  // Inner Tabs State
+  const [activeInnerTab, setActiveInnerTab] = useState('producao')
 
-  // Confirmation Modals
-  const [confirmCloseInvoiceOpen, setConfirmCloseInvoiceOpen] = useState(false)
-  const [confirmMarkAsPaidId, setConfirmMarkAsPaidId] = useState<string | null>(null)
-  const [confirmRevertPaidId, setConfirmRevertPaidId] = useState<string | null>(null)
-  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
-
-  const monthYearOptions = useMemo(() => {
-    const options = []
-    const currentDate = new Date()
-    for (let i = 0; i < 24; i++) {
-      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const month = d.getMonth()
-      const year = d.getFullYear()
-      const label = `${MONTHS[month].label} ${year}`
-      const value = `${year}-${month.toString().padStart(2, '0')}`
-      options.push({ label, value })
-    }
-    return options
-  }, [])
+  // Receive Payment State
+  const [receiveInvoiceId, setReceiveInvoiceId] = useState<string | null>(null)
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [isReceiving, setIsReceiving] = useState(false)
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -122,14 +98,18 @@ export default function AdminFinancial() {
         error: sessionError,
       } = await supabase.auth.getSession()
 
-      if (sessionError || !session) return
+      if (sessionError || !session) {
+        // Redirection and cleanup is handled by useAuth
+        return
+      }
 
       const [profilesRes, settlementsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, name, clinic, closing_date, payment_due_date, role')
+          .select('id, name, clinic, closing_date, payment_due_date')
+          .eq('role', 'dentist')
           .order('name'),
-        supabase.from('settlements').select('*').order('created_at', { ascending: false }),
+        supabase.from('settlements').select('id, amount, created_at, dentist_id, status, paid_at'),
       ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -140,11 +120,15 @@ export default function AdminFinancial() {
     } catch (error: any) {
       console.error('Error fetching financial data:', error)
       if (
-        !error?.message?.toLowerCase().includes('refresh token') &&
-        !error?.message?.includes('session_not_found') &&
-        error?.code !== 'PGRST301' &&
-        error?.code !== '401'
+        error?.message?.toLowerCase().includes('refresh token') ||
+        error?.message?.includes('session_not_found') ||
+        error?.message?.includes('refresh_token_not_found') ||
+        error?.code === 'PGRST301' || // JWT expired
+        error?.code === '401'
       ) {
+        // App handleSessionExpiration will be invoked elsewhere, we just abort quietly
+        console.warn('Session expired during AdminFinancial fetch')
+      } else {
         toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
       }
     } finally {
@@ -156,14 +140,8 @@ export default function AdminFinancial() {
     fetchData()
   }, [])
 
-  const dropdownProfiles = useMemo(() => {
-    const ordersDentists = new Set(
-      Array.isArray(storeOrders) ? storeOrders.map((o: any) => o.dentist_id || o.dentistId) : [],
-    )
-    return profiles.filter(
-      (p) => p.role === 'dentist' || p.role === 'laboratory' || ordersDentists.has(p.id),
-    )
-  }, [profiles, storeOrders])
+  const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
+  const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
 
   const { summary, tableData } = useMemo(() => {
     let faturar = 0
@@ -191,65 +169,55 @@ export default function AdminFinancial() {
     const safePriceList = Array.isArray(priceList) ? priceList : []
     const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-    const verifiedDisplayOrders = safeOrders.map((o) =>
+    const monthFilteredOrders = filterOrdersForFinancials(safeOrders, formattedSelectedMonthYear)
+    const displayOrders = monthFilteredOrders.map((o) =>
       getOrderFinancials(o, safePriceList, safeKanbanStages),
     )
 
-    const isSamePeriod = (dateVal: string | null) => {
-      if (!dateVal) return false
-      const d = new Date(dateVal)
-      return (
-        d.getMonth().toString() === selectedMonth && d.getFullYear().toString() === selectedYear
-      )
-    }
+    const verifiedDisplayOrders = displayOrders.map((order) => {
+      const discount = order.dentistDiscount || 0
+      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
+      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
+      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
+      return {
+        ...order,
+        basePrice: finalBasePrice,
+      }
+    })
 
     verifiedDisplayOrders.forEach((o) => {
       if (selectedDentist !== 'all' && o.dentistId !== selectedDentist) return
 
       const isCompleted = o.status === 'completed' || o.status === 'delivered'
       const isCancelled = o.status === 'cancelled'
-      const inPeriod = isSamePeriod(o.createdAt)
 
-      if (isCompleted && !o.settlementId && inPeriod) {
-        faturar += o.finalTotal || 0
+      if (isCompleted && !o.settlementId) {
+        faturar += o.basePrice || 0
       }
 
       if (!isCompleted && !isCancelled) {
-        pipeline += o.finalTotal || 0
+        pipeline += o.basePrice || 0
       }
 
-      if (!o.dentistId) return
-
-      if (!map.has(o.dentistId)) {
-        map.set(o.dentistId, {
-          id: o.dentistId,
-          name: 'Usuário Desconhecido',
-          clinic: '',
-          closing_date: null,
-          payment_due_date: null,
-          finalizadosMes: 0,
-          emProducao: 0,
-          readyToInvoiceCount: 0,
-          unsettledOrders: [],
-        })
-      }
-
+      if (!o.dentistId || !map.has(o.dentistId)) return
       const dentistData = map.get(o.dentistId)
 
-      if (isCompleted && !o.settlementId && inPeriod) {
-        dentistData.finalizadosMes += o.finalTotal || 0
+      if (isCompleted && !o.settlementId) {
+        dentistData.finalizadosMes += o.basePrice || 0
         dentistData.readyToInvoiceCount += 1
         dentistData.unsettledOrders.push(o)
       }
 
       if (!isCompleted && !isCancelled) {
-        dentistData.emProducao += o.finalTotal || 0
+        dentistData.emProducao += o.basePrice || 0
       }
     })
 
     settlements.forEach((s) => {
-      if (s.status === 'paid') {
-        if (isSamePeriod(s.paid_at || s.created_at)) {
+      if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
+      if (s.status === 'paid' && s.paid_at) {
+        const [year, month] = s.paid_at.split('T')[0].split('-')
+        if ((parseInt(month, 10) - 1).toString() === selectedMonth && year === selectedYear) {
           recebido += Number(s.amount || 0)
         }
       }
@@ -259,9 +227,32 @@ export default function AdminFinancial() {
       .filter((d) => d.finalizadosMes > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0)
       .sort((a, b) => b.finalizadosMes - a.finalizadosMes)
 
+    const closedInvoicesList = settlements
+      .filter((s) => {
+        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
+
+        if (s.status !== 'paid') return true
+
+        if (s.paid_at) {
+          const [year, month] = s.paid_at.split('T')[0].split('-')
+          return (parseInt(month, 10) - 1).toString() === selectedMonth && year === selectedYear
+        }
+        return false
+      })
+      .map((s) => {
+        const dentist = map.get(s.dentist_id)
+        return {
+          ...s,
+          dentistName: dentist?.name || 'Desconhecido',
+          dentistClinic: dentist?.clinic || '',
+        }
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
     return {
       summary: { faturar, pipeline, recebido, inadimplencia },
       tableData: activeTableData,
+      closedInvoicesData: closedInvoicesList,
     }
   }, [
     profiles,
@@ -272,137 +263,8 @@ export default function AdminFinancial() {
     selectedDentist,
     priceList,
     kanbanStages,
+    formattedSelectedMonthYear,
   ])
-
-  const [billingStats, setBillingStats] = useState({
-    quantidadeCasos: 0,
-    valorTotal: 0,
-    ticketMedio: 0,
-    recebimentos: [] as any[],
-  })
-  const [loadingFaturamento, setLoadingFaturamento] = useState(false)
-
-  useEffect(() => {
-    const fetchFaturamento = async () => {
-      setLoadingFaturamento(true)
-      try {
-        let data_inicio = ''
-        let data_fim = ''
-
-        if (billingDateRange?.from) {
-          const formatStr = (d: Date) => {
-            const pad = (n: number) => n.toString().padStart(2, '0')
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-          }
-          data_inicio = formatStr(billingDateRange.from)
-          if (billingDateRange.to) {
-            data_fim = formatStr(billingDateRange.to)
-          } else {
-            data_fim = data_inicio
-          }
-        } else {
-          const [yearStr, monthStr] = billingPeriod.split('-')
-          const year = parseInt(yearStr)
-          const month = parseInt(monthStr)
-          const pad = (n: number) => n.toString().padStart(2, '0')
-          const lastDay = new Date(year, month + 1, 0).getDate()
-          data_inicio = `${year}-${pad(month + 1)}-01`
-          data_fim = `${year}-${pad(month + 1)}-${pad(lastDay)}`
-        }
-
-        const { data, error } = await supabase
-          .from('settlements')
-          .select(`
-            *,
-            profiles!settlements_dentist_id_fkey(name, clinic)
-          `)
-          .eq('status', 'paid')
-          .gte('paid_at', `${data_inicio}T00:00:00Z`)
-          .lte('paid_at', `${data_fim}T23:59:59Z`)
-          .order('paid_at', { ascending: false })
-
-        if (error) throw error
-
-        let quantidade_casos = 0
-        let valor_total = 0
-        const recebimentos: any[] = []
-
-        data?.forEach((s: any) => {
-          const dentistName = s.profiles?.name || 'Desconhecido'
-          const orders = Array.isArray(s.orders_snapshot) ? s.orders_snapshot : []
-
-          const settlementAmount = Number(s.amount || 0)
-          valor_total += settlementAmount
-
-          if (orders.length === 0) {
-            quantidade_casos += 1
-          } else {
-            quantidade_casos += orders.length
-          }
-
-          recebimentos.push({
-            id: s.id,
-            data_recebimento: s.paid_at,
-            numero_caso: `FAT-${s.id.substring(0, 8).toUpperCase()}`,
-            descricao: `Fatura Paga - ${dentistName} ${orders.length > 0 ? `(${orders.length} pedidos)` : ''}`,
-            valor_recebido: settlementAmount,
-            raw_settlement: s,
-          })
-        })
-
-        const ticket_medio = quantidade_casos > 0 ? valor_total / quantidade_casos : 0
-
-        setBillingStats({
-          quantidadeCasos: quantidade_casos,
-          valorTotal: valor_total,
-          ticketMedio: ticket_medio,
-          recebimentos,
-        })
-      } catch (err: any) {
-        console.error('Error fetching faturamento:', err)
-        toast({
-          title: 'Erro ao buscar faturamento',
-          description: err.message,
-          variant: 'destructive',
-        })
-      } finally {
-        setLoadingFaturamento(false)
-      }
-    }
-
-    fetchFaturamento()
-  }, [billingPeriod, billingDateRange])
-
-  const filteredSettlements = useMemo(() => {
-    return settlements
-      .filter((s) => {
-        // Se não é master/admin E selecionou um dentista específico, filtra
-        if (!isAdmin && selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
-
-        const isPaid = s.status === 'paid'
-        const refDate = isPaid && s.paid_at ? new Date(s.paid_at) : new Date(s.created_at)
-
-        const inPeriod =
-          refDate.getMonth().toString() === selectedMonth &&
-          refDate.getFullYear().toString() === selectedYear
-
-        if (statusFilter === 'pending') return s.status === 'pending'
-        if (statusFilter === 'paid') return isPaid && inPeriod
-
-        return inPeriod || s.status === 'pending'
-      })
-      .sort((a, b) => {
-        const dateA =
-          a.status === 'paid' && a.paid_at
-            ? new Date(a.paid_at).getTime()
-            : new Date(a.created_at).getTime()
-        const dateB =
-          b.status === 'paid' && b.paid_at
-            ? new Date(b.paid_at).getTime()
-            : new Date(b.created_at).getTime()
-        return dateB - dateA
-      })
-  }, [settlements, selectedDentist, statusFilter, selectedMonth, selectedYear])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
@@ -451,7 +313,7 @@ export default function AdminFinancial() {
     try {
       const ordersToSettle = modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))
       const totalAmount = ordersToSettle.reduce(
-        (sum: number, o: any) => sum + (o.finalTotal || 0),
+        (sum: number, o: any) => sum + (o.basePrice || 0),
         0,
       )
 
@@ -460,8 +322,7 @@ export default function AdminFinancial() {
         friendlyId: o.friendlyId,
         patientName: o.patientName,
         workType: o.workType,
-        clearedAmount: o.finalTotal,
-        createdAt: o.createdAt,
+        clearedAmount: o.basePrice,
       }))
 
       const { data, error } = await supabase
@@ -470,6 +331,7 @@ export default function AdminFinancial() {
           dentist_id: manualInvoiceDentist,
           amount: totalAmount,
           orders_snapshot: snapshot,
+          status: 'pending',
         })
         .select('id')
         .single()
@@ -487,6 +349,7 @@ export default function AdminFinancial() {
       fetchData()
       refreshOrders()
       setManualInvoiceDentist(null)
+      setActiveInnerTab('faturas')
     } catch (err: any) {
       console.error(err)
       toast({ title: 'Erro ao fechar fatura', description: err.message, variant: 'destructive' })
@@ -495,55 +358,30 @@ export default function AdminFinancial() {
     }
   }
 
-  const executeMarkAsPaid = async () => {
-    if (!confirmMarkAsPaidId) return
+  const handleConfirmReceive = async () => {
+    if (!receiveInvoiceId || !paymentDate) return
+    setIsReceiving(true)
     try {
-      setIsSubmitting(true)
+      const isoDate = new Date(`${paymentDate}T12:00:00`).toISOString()
       const { error } = await supabase
         .from('settlements')
-        .update({ status: 'paid', paid_at: paymentDate.toISOString() })
-        .eq('id', confirmMarkAsPaidId)
+        .update({ status: 'paid', paid_at: isoDate })
+        .eq('id', receiveInvoiceId)
 
       if (error) throw error
 
-      toast({ title: 'Fatura marcada como recebida!' })
+      toast({ title: 'Recebimento confirmado com sucesso!' })
       fetchData()
-    } catch (error: any) {
-      console.error(error)
+      setReceiveInvoiceId(null)
+    } catch (err: any) {
+      console.error(err)
       toast({
-        title: 'Erro ao atualizar fatura',
-        description: error.message,
+        title: 'Erro ao confirmar recebimento',
+        description: err.message,
         variant: 'destructive',
       })
     } finally {
-      setIsSubmitting(false)
-      setConfirmMarkAsPaidId(null)
-    }
-  }
-
-  const executeRevertPaid = async () => {
-    if (!confirmRevertPaidId) return
-    try {
-      setIsSubmitting(true)
-      const { error } = await supabase
-        .from('settlements')
-        .update({ status: 'pending', paid_at: null })
-        .eq('id', confirmRevertPaidId)
-
-      if (error) throw error
-
-      toast({ title: 'Fatura revertida para aguardando!' })
-      fetchData()
-    } catch (error: any) {
-      console.error(error)
-      toast({
-        title: 'Erro ao reverter fatura',
-        description: error.message,
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmitting(false)
-      setConfirmRevertPaidId(null)
+      setIsReceiving(false)
     }
   }
 
@@ -581,7 +419,7 @@ export default function AdminFinancial() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Dentistas</SelectItem>
-                {dropdownProfiles.map((p) => (
+                {profiles.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>
@@ -709,7 +547,11 @@ export default function AdminFinancial() {
           </div>
 
           {/* INNER TABS */}
-          <Tabs defaultValue="producao" className="flex-1 flex flex-col min-h-0">
+          <Tabs
+            value={activeInnerTab}
+            onValueChange={setActiveInnerTab}
+            className="flex-1 flex flex-col min-h-0"
+          >
             <TabsList className="w-fit flex-none">
               <TabsTrigger
                 value="producao"
@@ -809,37 +651,22 @@ export default function AdminFinancial() {
               value="faturas"
               className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4"
             >
-              <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden bg-slate-50/50">
-                <div className="p-3 border-b flex items-center justify-between bg-white flex-none">
-                  <div className="flex items-center gap-2">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[220px] h-8 text-xs font-medium bg-slate-50">
-                        <SelectValue placeholder="Status da Fatura" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as Faturas (Mês)</SelectItem>
-                        <SelectItem value="pending">Aguardando Pagamento (Todas)</SelectItem>
-                        <SelectItem value="paid">Recebidas (Mês)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
                 <div className="overflow-auto flex-1 bg-white">
                   <Table>
                     <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
                       <TableRow>
-                        <TableHead className="font-semibold text-slate-700 pl-6 w-24">ID</TableHead>
-                        <TableHead className="font-semibold text-slate-700">
+                        <TableHead className="font-semibold text-slate-700 pl-6">
                           Dentista / Clínica
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-center">
-                          Data Fechamento
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Data Pagamento
+                          Data de Fechamento
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-center">
                           Status
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-center">
+                          Data do Pagamento
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-right">
                           Valor
@@ -850,105 +677,62 @@ export default function AdminFinancial() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSettlements.length === 0 ? (
+                      {closedInvoicesData.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center py-12 text-muted-foreground"
                           >
-                            Nenhuma fatura encontrada.
+                            Nenhuma fatura encontrada para o período e filtros selecionados.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredSettlements.map((s) => {
-                          const dentist = profiles.find((p) => p.id === s.dentist_id)
-                          const isPaid = s.status === 'paid'
-                          return (
-                            <TableRow
-                              key={s.id}
-                              className="hover:bg-slate-50/50 cursor-pointer"
-                              onClick={() => setViewInvoiceSettlement(s)}
-                            >
-                              <TableCell className="pl-6 font-mono text-xs text-slate-500">
-                                {s.id.substring(0, 8)}
-                              </TableCell>
-                              <TableCell>
-                                <p className="font-semibold text-slate-900">
-                                  {dentist?.name || 'Desconhecido'}
+                        closedInvoicesData.map((invoice) => (
+                          <TableRow key={invoice.id} className="hover:bg-slate-50/50">
+                            <TableCell className="pl-6">
+                              <p className="font-semibold text-slate-900">{invoice.dentistName}</p>
+                              {invoice.dentistClinic && (
+                                <p className="text-xs text-muted-foreground">
+                                  {invoice.dentistClinic}
                                 </p>
-                                {dentist?.clinic && (
-                                  <p className="text-xs text-muted-foreground">{dentist.clinic}</p>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center font-medium text-slate-600">
-                                {new Date(s.created_at).toLocaleDateString('pt-BR')}
-                              </TableCell>
-                              <TableCell className="text-center font-medium text-slate-600">
-                                {isPaid && s.paid_at
-                                  ? new Date(s.paid_at).toLocaleDateString('pt-BR')
-                                  : '-'}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span
-                                  className={cn(
-                                    'inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                                    isPaid
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : 'bg-amber-100 text-amber-700',
-                                  )}
-                                >
-                                  {isPaid ? 'Recebido' : 'Aguardando'}
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center font-medium text-slate-600">
+                              {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {invoice.status === 'paid' ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                  Recebido
                                 </span>
-                              </TableCell>
-                              <TableCell className="text-right font-bold text-slate-900">
-                                {formatCurrency(s.amount)}
-                              </TableCell>
-                              <TableCell className="text-right pr-6">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-8"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setViewInvoiceSettlement(s)
-                                    }}
-                                  >
-                                    Ver Detalhes
-                                  </Button>
-                                  {!isPaid && (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setConfirmMarkAsPaidId(s.id)
-                                      }}
-                                      disabled={isSubmitting}
-                                    >
-                                      Dar Baixa
-                                    </Button>
-                                  )}
-                                  {isPaid && isAdmin && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="text-xs h-8 text-amber-600 border-amber-200 hover:bg-amber-50"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setConfirmRevertPaidId(s.id)
-                                      }}
-                                      disabled={isSubmitting}
-                                    >
-                                      Reverter Baixa
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                  Pendente
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center font-medium text-slate-600">
+                              {invoice.paid_at
+                                ? new Date(invoice.paid_at).toLocaleDateString('pt-BR')
+                                : '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-slate-900">
+                              {formatCurrency(invoice.amount)}
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                              {invoice.status !== 'paid' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setReceiveInvoiceId(invoice.id)}
+                                  className="text-xs font-semibold text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                >
+                                  CONFIRMAR RECEBIMENTO
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
@@ -958,177 +742,10 @@ export default function AdminFinancial() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent
-          value="faturamento"
-          className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
-        >
-          {/* CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-none">
-            <Card className="shadow-sm border-l-4 border-l-blue-500">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Quantidade de Casos Recebidos
-                  </p>
-                  <h3 className="text-3xl font-bold text-blue-600">
-                    {loadingFaturamento ? (
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                    ) : (
-                      billingStats.quantidadeCasos
-                    )}
-                  </h3>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-full">
-                  <Activity className="w-6 h-6 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-l-4 border-l-emerald-500">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Valor Total Recebido
-                  </p>
-                  <h3 className="text-3xl font-bold text-emerald-600">
-                    {loadingFaturamento ? (
-                      <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                    ) : (
-                      formatCurrency(billingStats.valorTotal)
-                    )}
-                  </h3>
-                </div>
-                <div className="p-4 bg-emerald-50 rounded-full">
-                  <Wallet className="w-6 h-6 text-emerald-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-l-4 border-l-orange-500">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Ticket Médio
-                  </p>
-                  <h3 className="text-3xl font-bold text-orange-600">
-                    {loadingFaturamento ? (
-                      <Loader2 className="w-6 h-6 animate-spin text-orange-600" />
-                    ) : (
-                      formatCurrency(billingStats.ticketMedio)
-                    )}
-                  </h3>
-                </div>
-                <div className="p-4 bg-orange-50 rounded-full">
-                  <BarChart3 className="w-6 h-6 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* FILTERS */}
-          <div className="flex flex-col gap-2 flex-none">
-            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-              Filtros de Período
-            </h4>
-            <div className="flex flex-wrap items-center gap-4 bg-slate-50/80 p-4 rounded-lg border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500 font-medium">Mês/Ano:</span>
-                <Select
-                  value={billingPeriod}
-                  onValueChange={(val) => {
-                    setBillingPeriod(val)
-                    setBillingDateRange(undefined)
-                  }}
-                >
-                  <SelectTrigger className="w-[200px] bg-white h-9 font-medium shadow-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {monthYearOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-px h-6 bg-slate-300 hidden md:block" />
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500 font-medium">Período Customizado:</span>
-                <DatePickerWithRange
-                  date={billingDateRange}
-                  setDate={setBillingDateRange}
-                  className="bg-white shadow-sm"
-                />
-                {billingDateRange && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setBillingDateRange(undefined)}
-                    className="text-xs text-muted-foreground hover:text-slate-900 h-9 px-3"
-                  >
-                    Limpar
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {billingStats.recebimentos.length > 0 ? (
-            <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
-              <div className="overflow-auto flex-1 bg-white">
-                <Table>
-                  <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                    <TableRow>
-                      <TableHead className="font-semibold text-slate-700 pl-6">
-                        Data de Pagamento
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700">
-                        Fatura / Pedido
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700">Descrição</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-right pr-6">
-                        Valor Recebido
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {billingStats.recebimentos.map((rec: any, idx: number) => (
-                      <TableRow
-                        key={rec.id || idx}
-                        className="hover:bg-slate-50/50 cursor-pointer"
-                        onClick={() => setViewInvoiceSettlement(rec.raw_settlement)}
-                      >
-                        <TableCell className="font-medium text-slate-600 pl-6">
-                          {rec.data_recebimento
-                            ? new Date(rec.data_recebimento).toLocaleDateString('pt-BR')
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-semibold text-slate-700">
-                          {rec.numero_caso || '-'}
-                        </TableCell>
-                        <TableCell
-                          className="text-muted-foreground max-w-[300px] truncate"
-                          title={rec.descricao || ''}
-                        >
-                          {rec.descricao || '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-emerald-600 pr-6">
-                          {formatCurrency(rec.valor_recebido)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          ) : (
-            <div className="flex-1 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-muted-foreground text-sm">
-              Nenhum recebimento encontrado para o período selecionado.
-            </div>
-          )}
+        <TabsContent value="faturamento" className="flex-1 m-0 data-[state=inactive]:hidden mt-4">
+          <Card className="h-full min-h-[400px] flex items-center justify-center text-muted-foreground border-dashed">
+            Módulo de Faturamento
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -1188,15 +805,10 @@ export default function AdminFinancial() {
                             - {o.patientName}
                           </span>
                         )}
-                        {Number(o.custo_adicional_valor) > 0 && (
-                          <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                            + Custo Adic.
-                          </span>
-                        )}
                       </TableCell>
                       <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(o.finalTotal || 0)}
+                        {formatCurrency(o.basePrice || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1221,7 +833,7 @@ export default function AdminFinancial() {
                 {formatCurrency(
                   modalOrders
                     .filter((o: any) => selectedOrderIds.includes(o.id))
-                    .reduce((sum: number, o: any) => sum + (o.finalTotal || 0), 0),
+                    .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0),
                 )}
               </span>
             </div>
@@ -1238,7 +850,7 @@ export default function AdminFinancial() {
                 Cancelar
               </Button>
               <Button
-                onClick={() => setConfirmCloseInvoiceOpen(true)}
+                onClick={handleConfirmInvoice}
                 disabled={selectedOrderIds.length === 0 || isSubmitting}
                 className="gap-2"
               >
@@ -1250,160 +862,46 @@ export default function AdminFinancial() {
         </DialogContent>
       </Dialog>
 
-      {/* CONFIRMATION DIALOGS */}
-      <Dialog open={confirmCloseInvoiceOpen} onOpenChange={setConfirmCloseInvoiceOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar Fechamento</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-slate-600">
-            Tem certeza que deseja fechar a fatura com os {selectedOrderIds.length} pedidos
-            selecionados? Esta ação consolidará os valores e atualizará o status financeiro do
-            dentista.
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmCloseInvoiceOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                setConfirmCloseInvoiceOpen(false)
-                handleConfirmInvoice()
-              }}
-              disabled={isSubmitting}
-            >
-              Sim, Fechar Fatura
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!confirmMarkAsPaidId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setConfirmMarkAsPaidId(null)
-            setPaymentDate(new Date())
-          }
-        }}
-      >
-        <DialogContent className="max-w-md overflow-visible">
+      {/* RECEIVE PAYMENT MODAL */}
+      <Dialog open={!!receiveInvoiceId} onOpenChange={(open) => !open && setReceiveInvoiceId(null)}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Recebimento</DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-slate-600 flex flex-col gap-4">
-            <p>Tem certeza que deseja dar baixa nesta fatura? O status passará para recebido.</p>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-900">Data do Pagamento</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !paymentDate && 'text-muted-foreground',
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {paymentDate ? (
-                      format(paymentDate, 'PPP', { locale: ptBR })
-                    ) : (
-                      <span>Selecione uma data</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={paymentDate}
-                    onSelect={(d) => d && setPaymentDate(d)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Data do Pagamento</Label>
+              <input
+                type="date"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setConfirmMarkAsPaidId(null)
-                setPaymentDate(new Date())
-              }}
-              disabled={isSubmitting}
-            >
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReceiveInvoiceId(null)}>
               Cancelar
             </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={executeMarkAsPaid}
-              disabled={isSubmitting}
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Sim, Confirmar Recebimento
+            <Button onClick={handleConfirmReceive} disabled={isReceiving || !paymentDate}>
+              {isReceiving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar Recebimento
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!confirmRevertPaidId}
-        onOpenChange={(open) => !open && setConfirmRevertPaidId(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reverter Fatura</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-slate-600">
-            Tem certeza que deseja desfazer o recebimento desta fatura? O status voltará para
-            "Aguardando".
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmRevertPaidId(null)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={executeRevertPaid} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Sim, Reverter para Aguardando
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* INVOICE PREVIEW / PDF MODAL (MANUAL INVOICE) */}
+      {/* INVOICE PREVIEW / PDF MODAL */}
       {manualInvoiceDentist && (
         <InvoicePreviewDialog
           open={previewOpen}
           onOpenChange={setPreviewOpen}
           dentistName={profiles.find((p) => p.id === manualInvoiceDentist)?.name || ''}
           clinicName={profiles.find((p) => p.id === manualInvoiceDentist)?.clinic || ''}
-          orders={modalOrders
-            .filter((o: any) => selectedOrderIds.includes(o.id))
-            .map((o: any) => ({
-              ...o,
-              basePrice: o.finalTotal,
-            }))}
+          orders={modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))}
           totalAmount={modalOrders
             .filter((o: any) => selectedOrderIds.includes(o.id))
-            .reduce((sum: number, o: any) => sum + (o.finalTotal || 0), 0)}
-        />
-      )}
-
-      {/* EXISTING SETTLEMENT INVOICE PREVIEW */}
-      {viewInvoiceSettlement && (
-        <SettlementDetailsDialog
-          open={!!viewInvoiceSettlement}
-          onOpenChange={(open) => !open && setViewInvoiceSettlement(null)}
-          settlement={viewInvoiceSettlement}
-          dentist={profiles.find((p) => p.id === viewInvoiceSettlement.dentist_id)}
+            .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0)}
         />
       )}
     </div>
