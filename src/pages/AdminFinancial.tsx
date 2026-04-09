@@ -32,7 +32,6 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { useAppStore } from '@/stores/main'
-import { getOrderFinancials } from '@/lib/financial'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -52,13 +51,7 @@ const MONTHS = [
 const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
 export default function AdminFinancial() {
-  const {
-    orders: storeOrders,
-    priceList,
-    kanbanStages,
-    loading: storeLoading,
-    refreshOrders,
-  } = useAppStore()
+  const { loading: storeLoading, refreshOrders } = useAppStore()
 
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
@@ -67,6 +60,7 @@ export default function AdminFinancial() {
   const [loadingSettlements, setLoadingSettlements] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
   const [settlements, setSettlements] = useState<any[]>([])
+  const [directOrders, setDirectOrders] = useState<any[]>([])
 
   // Modal State
   const [manualInvoiceDentist, setManualInvoiceDentist] = useState<string | null>(null)
@@ -86,20 +80,27 @@ export default function AdminFinancial() {
         return
       }
 
-      const [profilesRes, settlementsRes] = await Promise.all([
+      const [profilesRes, settlementsRes, ordersRes] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, name, clinic, closing_date, payment_due_date')
-          .eq('role', 'dentist')
+          .in('role', ['dentist', 'laboratory'])
           .order('name'),
         supabase.from('settlements').select('id, amount, created_at, dentist_id, status, paid_at'),
+        supabase
+          .from('orders')
+          .select(
+            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type',
+          ),
       ])
 
       if (profilesRes.error) throw profilesRes.error
       if (settlementsRes.error) throw settlementsRes.error
+      if (ordersRes.error) throw ordersRes.error
 
       if (profilesRes.data) setProfiles(profilesRes.data)
       if (settlementsRes.data) setSettlements(settlementsRes.data)
+      if (ordersRes.data) setDirectOrders(ordersRes.data)
     } catch (error: any) {
       console.error('Error fetching financial data:', error)
       if (
@@ -147,50 +148,39 @@ export default function AdminFinancial() {
       })
     })
 
-    const safeOrders = Array.isArray(storeOrders) ? storeOrders : []
-    const safePriceList = Array.isArray(priceList) ? priceList : []
-    const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
-
-    const displayOrders = safeOrders.map((o) =>
-      getOrderFinancials(o, safePriceList, safeKanbanStages),
-    )
-
-    const verifiedDisplayOrders = displayOrders.map((order) => {
-      const discount = order.dentistDiscount || 0
-      const expectedTotal = order.unitPrice * order.quantity * (1 - discount / 100)
-      const isCorrect = Math.abs((order.basePrice || 0) - expectedTotal) < 0.01
-      const finalBasePrice = isCorrect ? order.basePrice : expectedTotal
-      return {
-        ...order,
-        basePrice: finalBasePrice,
-      }
-    })
-
-    verifiedDisplayOrders.forEach((o) => {
-      if (selectedDentist !== 'all' && o.dentistId !== selectedDentist) return
+    directOrders.forEach((o) => {
+      if (selectedDentist !== 'all' && o.dentist_id !== selectedDentist) return
 
       const isCompleted = o.status === 'completed' || o.status === 'delivered'
       const isCancelled = o.status === 'cancelled'
+      const basePrice = Number(o.base_price || 0)
 
-      if (isCompleted && !o.settlementId) {
-        faturar += o.basePrice || 0
+      if (isCompleted && !o.settlement_id) {
+        faturar += basePrice
       }
 
       if (!isCompleted && !isCancelled) {
-        pipeline += o.basePrice || 0
+        pipeline += basePrice
       }
 
-      if (!o.dentistId || !map.has(o.dentistId)) return
-      const dentistData = map.get(o.dentistId)
+      if (!o.dentist_id || !map.has(o.dentist_id)) return
+      const dentistData = map.get(o.dentist_id)
 
-      if (isCompleted && !o.settlementId) {
-        dentistData.aFaturar += o.basePrice || 0
+      if (isCompleted && !o.settlement_id) {
+        dentistData.aFaturar += basePrice
         dentistData.readyToInvoiceCount += 1
-        dentistData.unsettledOrders.push(o)
+        dentistData.unsettledOrders.push({
+          id: o.id,
+          friendlyId: o.friendly_id,
+          patientName: o.patient_name,
+          workType: o.work_type,
+          basePrice: basePrice,
+          createdAt: o.created_at,
+        })
       }
 
       if (!isCompleted && !isCancelled) {
-        dentistData.emProducao += o.basePrice || 0
+        dentistData.emProducao += basePrice
       }
     })
 
@@ -212,16 +202,7 @@ export default function AdminFinancial() {
       summary: { faturar, pipeline, recebido, inadimplencia },
       tableData: activeTableData,
     }
-  }, [
-    profiles,
-    storeOrders,
-    settlements,
-    selectedMonth,
-    selectedYear,
-    selectedDentist,
-    priceList,
-    kanbanStages,
-  ])
+  }, [profiles, directOrders, settlements, selectedMonth, selectedYear, selectedDentist])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
