@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/utils'
 import {
   Loader2,
@@ -377,154 +378,202 @@ export default function AdminFinancial() {
         </div>
       </div>
 
-      {/* CONTENT */}
-      <div className="flex-1 flex flex-col min-h-0 mt-4 gap-6">
-        {/* SUMMARY CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
-          <Card className="shadow-sm border-l-4 border-l-blue-500">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <p
-                  className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
-                  title="Trabalhos Concluídos a Faturar"
-                >
-                  Trabalhos Concluídos a Faturar
-                </p>
-                <h3 className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(summary.faturar)}
-                </h3>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-full flex-none">
-                <Wallet className="w-5 h-5 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
+      <Tabs defaultValue="painel" className="flex-1 flex flex-col min-h-0 mt-4 gap-6">
+        <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent flex-none">
+          <TabsTrigger
+            value="painel"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 font-medium text-muted-foreground data-[state=active]:text-primary"
+          >
+            Painel Gerencial
+          </TabsTrigger>
+          <TabsTrigger
+            value="faturamento"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 font-medium text-muted-foreground data-[state=active]:text-primary"
+          >
+            Faturamento
+          </TabsTrigger>
+        </TabsList>
 
-          <Card className="shadow-sm border-l-4 border-l-amber-500">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <p
-                  className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
-                  title="Trabalhos em Pipeline de Produção"
-                >
-                  Trabalhos em Pipeline de Produção
-                </p>
-                <h3 className="text-2xl font-bold text-amber-600">
-                  {formatCurrency(summary.pipeline)}
-                </h3>
-              </div>
-              <div className="p-3 bg-amber-50 rounded-full flex-none">
-                <Activity className="w-5 h-5 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent
+          value="painel"
+          className="flex-1 flex flex-col min-h-0 mt-0 gap-6 data-[state=inactive]:hidden"
+        >
+          {/* SUMMARY CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
+            <Card className="shadow-sm border-l-4 border-l-blue-500">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p
+                    className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
+                    title="Trabalhos Concluídos a Faturar"
+                  >
+                    Trabalhos Concluídos a Faturar
+                  </p>
+                  <h3 className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(summary.faturar)}
+                  </h3>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-full flex-none">
+                  <Wallet className="w-5 h-5 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-sm border-l-4 border-l-emerald-500">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
-                  Recebido
-                </p>
-                <h3 className="text-2xl font-bold text-emerald-600">
-                  {formatCurrency(summary.recebido)}
-                </h3>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-full flex-none">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="shadow-sm border-l-4 border-l-amber-500">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p
+                    className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
+                    title="Trabalhos em Pipeline de Produção"
+                  >
+                    Trabalhos em Pipeline de Produção
+                  </p>
+                  <h3 className="text-2xl font-bold text-amber-600">
+                    {formatCurrency(summary.pipeline)}
+                  </h3>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-full flex-none">
+                  <Activity className="w-5 h-5 text-amber-500" />
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-sm border-l-4 border-l-red-500">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
-                  Inadimplência
-                </p>
-                <h3 className="text-2xl font-bold text-red-600">
-                  {formatCurrency(summary.inadimplencia)}
-                </h3>
-              </div>
-              <div className="p-3 bg-red-50 rounded-full flex-none">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="shadow-sm border-l-4 border-l-emerald-500">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
+                    Recebido
+                  </p>
+                  <h3 className="text-2xl font-bold text-emerald-600">
+                    {formatCurrency(summary.recebido)}
+                  </h3>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-full flex-none">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* PRODUCAO TABLE */}
-        <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
-          <div className="overflow-auto flex-1 bg-white">
-            <Table>
-              <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                <TableRow>
-                  <TableHead className="font-semibold text-slate-700 pl-6">
-                    Dentista / Clínica
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">
-                    Data de Fechamento
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">
-                    Data de Pagamento
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">
-                    A Faturar (R$)
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">
-                    Em Produção (Pipeline) (R$)
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right pr-6">
-                    Ações
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tableData.length === 0 ? (
+            <Card className="shadow-sm border-l-4 border-l-red-500">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
+                    Inadimplência
+                  </p>
+                  <h3 className="text-2xl font-bold text-red-600">
+                    {formatCurrency(summary.inadimplencia)}
+                  </h3>
+                </div>
+                <div className="p-3 bg-red-50 rounded-full flex-none">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* PRODUCAO TABLE */}
+          <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
+            <div className="overflow-auto flex-1 bg-white">
+              <Table>
+                <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Nenhum dado encontrado.
-                    </TableCell>
+                    <TableHead className="font-semibold text-slate-700 pl-6">
+                      Dentista / Clínica
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">
+                      Data de Fechamento
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-center">
+                      Data de Pagamento
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">
+                      A Faturar (R$)
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right">
+                      Em Produção (Pipeline) (R$)
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right pr-6">
+                      Ações
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  tableData.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-slate-50/50">
-                      <TableCell className="pl-6">
-                        <p className="font-semibold text-slate-900">{row.name}</p>
-                        {row.clinic && (
-                          <p className="text-xs text-muted-foreground">{row.clinic}</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-medium text-slate-600">
-                        {row.closing_date ? `Dia ${row.closing_date}` : '-'}
-                      </TableCell>
-                      <TableCell className="text-center font-medium text-slate-600">
-                        {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-blue-600">
-                        {formatCurrency(row.aFaturar)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-amber-600">
-                        {formatCurrency(row.emProducao)}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setManualInvoiceDentist(row.id)}
-                          disabled={row.readyToInvoiceCount === 0}
-                          className="text-xs font-semibold"
-                        >
-                          FECHAR FATURA MANUAL
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {tableData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        Nenhum dado encontrado.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    tableData.map((row) => (
+                      <TableRow key={row.id} className="hover:bg-slate-50/50">
+                        <TableCell className="pl-6">
+                          <p className="font-semibold text-slate-900">{row.name}</p>
+                          {row.clinic && (
+                            <p className="text-xs text-muted-foreground">{row.clinic}</p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center font-medium text-slate-600">
+                          {row.closing_date ? `Dia ${row.closing_date}` : '-'}
+                        </TableCell>
+                        <TableCell className="text-center font-medium text-slate-600">
+                          {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-blue-600">
+                          {formatCurrency(row.aFaturar)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-amber-600">
+                          {formatCurrency(row.emProducao)}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setManualInvoiceDentist(row.id)}
+                            disabled={row.readyToInvoiceCount === 0}
+                            className="text-xs font-semibold"
+                          >
+                            FECHAR FATURA MANUAL
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent
+          value="faturamento"
+          className="flex-1 flex flex-col min-h-0 mt-0 gap-6 data-[state=inactive]:hidden"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg text-slate-800">Faturas Fechadas</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
+                <Wallet className="w-8 h-8 mb-2 opacity-50" />
+                <p className="font-medium">Em breve</p>
+                <p className="text-sm">Gestão e listagem de faturas fechadas.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg text-slate-800">Histórico de Recebimentos</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
+                <CheckCircle2 className="w-8 h-8 mb-2 opacity-50" />
+                <p className="font-medium">Em breve</p>
+                <p className="text-sm">Acompanhamento de todos os recebimentos.</p>
+              </CardContent>
+            </Card>
           </div>
-        </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* MANUAL INVOICE MODAL */}
       <Dialog
