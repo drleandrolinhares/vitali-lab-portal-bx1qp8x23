@@ -32,7 +32,7 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { useAppStore } from '@/stores/main'
-import { filterOrdersForFinancials, getOrderFinancials } from '@/lib/financial'
+import { getOrderFinancials } from '@/lib/financial'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -83,7 +83,6 @@ export default function AdminFinancial() {
       } = await supabase.auth.getSession()
 
       if (sessionError || !session) {
-        // Redirection and cleanup is handled by useAuth
         return
       }
 
@@ -107,10 +106,9 @@ export default function AdminFinancial() {
         error?.message?.toLowerCase().includes('refresh token') ||
         error?.message?.includes('session_not_found') ||
         error?.message?.includes('refresh_token_not_found') ||
-        error?.code === 'PGRST301' || // JWT expired
+        error?.code === 'PGRST301' ||
         error?.code === '401'
       ) {
-        // App handleSessionExpiration will be invoked elsewhere, we just abort quietly
         console.warn('Session expired during AdminFinancial fetch')
       } else {
         toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
@@ -142,7 +140,7 @@ export default function AdminFinancial() {
         clinic: p.clinic,
         closing_date: p.closing_date,
         payment_due_date: p.payment_due_date,
-        finalizadosMes: 0,
+        aFaturar: 0,
         emProducao: 0,
         readyToInvoiceCount: 0,
         unsettledOrders: [],
@@ -153,8 +151,7 @@ export default function AdminFinancial() {
     const safePriceList = Array.isArray(priceList) ? priceList : []
     const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-    const monthFilteredOrders = filterOrdersForFinancials(safeOrders, formattedSelectedMonthYear)
-    const displayOrders = monthFilteredOrders.map((o) =>
+    const displayOrders = safeOrders.map((o) =>
       getOrderFinancials(o, safePriceList, safeKanbanStages),
     )
 
@@ -187,7 +184,7 @@ export default function AdminFinancial() {
       const dentistData = map.get(o.dentistId)
 
       if (isCompleted && !o.settlementId) {
-        dentistData.finalizadosMes += o.basePrice || 0
+        dentistData.aFaturar += o.basePrice || 0
         dentistData.readyToInvoiceCount += 1
         dentistData.unsettledOrders.push(o)
       }
@@ -208,8 +205,8 @@ export default function AdminFinancial() {
     })
 
     const activeTableData = Array.from(map.values())
-      .filter((d) => d.finalizadosMes > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0)
-      .sort((a, b) => b.finalizadosMes - a.finalizadosMes)
+      .filter((d) => d.aFaturar > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0)
+      .sort((a, b) => b.aFaturar - a.aFaturar)
 
     return {
       summary: { faturar, pipeline, recebido, inadimplencia },
@@ -224,7 +221,6 @@ export default function AdminFinancial() {
     selectedDentist,
     priceList,
     kanbanStages,
-    formattedSelectedMonthYear,
   ])
 
   const modalOrders = useMemo(() => {
@@ -246,9 +242,9 @@ export default function AdminFinancial() {
 
   const handleExport = () => {
     let csv =
-      'Dentista / Clínica,Data de Fechamento,Data de Pagamento,Finalizados no Mês (R$),Em Produção (Pipeline) (R$)\n'
+      'Dentista / Clínica,Data de Fechamento,Data de Pagamento,A Faturar (R$),Em Produção (Pipeline) (R$)\n'
     tableData.forEach((d) => {
-      csv += `"${d.name} ${d.clinic ? `/ ${d.clinic}` : ''}",${d.closing_date || ''},${d.payment_due_date || ''},${d.finalizadosMes},${d.emProducao}\n`
+      csv += `"${d.name} ${d.clinic ? `/ ${d.clinic}` : ''}",${d.closing_date || ''},${d.payment_due_date || ''},${d.aFaturar},${d.emProducao}\n`
     })
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -486,7 +482,7 @@ export default function AdminFinancial() {
                     Data de Pagamento
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 text-right">
-                    Finalizados no Mês (R$)
+                    A Faturar (R$)
                   </TableHead>
                   <TableHead className="font-semibold text-slate-700 text-right">
                     Em Produção (Pipeline) (R$)
@@ -500,7 +496,7 @@ export default function AdminFinancial() {
                 {tableData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Nenhum dado encontrado para o período e filtros selecionados.
+                      Nenhum dado encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -519,7 +515,7 @@ export default function AdminFinancial() {
                         {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
                       </TableCell>
                       <TableCell className="text-right font-medium text-blue-600">
-                        {formatCurrency(row.finalizadosMes)}
+                        {formatCurrency(row.aFaturar)}
                       </TableCell>
                       <TableCell className="text-right font-medium text-amber-600">
                         {formatCurrency(row.emProducao)}
