@@ -211,9 +211,12 @@ export default function AdminFinancial() {
     }
   }, [profiles, directOrders, settlements, selectedMonth, selectedYear, selectedDentist])
 
-  const closedInvoices = useMemo(() => {
+  const pendingInvoices = useMemo(() => {
     return settlements
-      .filter((s) => selectedDentist === 'all' || s.dentist_id === selectedDentist)
+      .filter(
+        (s) =>
+          s.status !== 'paid' && (selectedDentist === 'all' || s.dentist_id === selectedDentist),
+      )
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
         return {
@@ -223,6 +226,27 @@ export default function AdminFinancial() {
         }
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [settlements, profiles, selectedDentist])
+
+  const paidInvoices = useMemo(() => {
+    return settlements
+      .filter(
+        (s) =>
+          s.status === 'paid' && (selectedDentist === 'all' || s.dentist_id === selectedDentist),
+      )
+      .map((s) => {
+        const dentist = profiles.find((p) => p.id === s.dentist_id)
+        return {
+          ...s,
+          dentistName: dentist?.name || 'Desconhecido',
+          clinic: dentist?.clinic || '',
+        }
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.paid_at || b.created_at).getTime() -
+          new Date(a.paid_at || a.created_at).getTime(),
+      )
   }, [settlements, profiles, selectedDentist])
 
   const modalOrders = useMemo(() => {
@@ -567,27 +591,29 @@ export default function AdminFinancial() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
             <Card className="shadow-sm border-slate-200 flex flex-col min-h-0">
               <CardHeader>
-                <CardTitle className="text-lg text-slate-800">Faturas Fechadas</CardTitle>
+                <CardTitle className="text-lg text-slate-800">
+                  Faturas Fechadas (Pendentes)
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-6">Data</TableHead>
+                      <TableHead className="pl-6">Data Fechamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right pr-6">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {closedInvoices.length === 0 ? (
+                    {pendingInvoices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                          Nenhuma fatura fechada encontrada.
+                          Nenhuma fatura pendente encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      closedInvoices.map((invoice) => (
+                      pendingInvoices.map((invoice) => (
                         <TableRow key={invoice.id} className="hover:bg-slate-50/50">
                           <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
                             {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
@@ -600,14 +626,10 @@ export default function AdminFinancial() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={invoice.status === 'paid' ? 'default' : 'secondary'}
-                              className={
-                                invoice.status === 'paid'
-                                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                              }
+                              variant="secondary"
+                              className="bg-amber-100 text-amber-800 hover:bg-amber-200"
                             >
-                              {invoice.status === 'paid' ? 'Pago' : 'Pendente'}
+                              Pendente
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-medium pr-6 text-slate-900">
@@ -625,10 +647,53 @@ export default function AdminFinancial() {
               <CardHeader>
                 <CardTitle className="text-lg text-slate-800">Histórico de Recebimentos</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center flex-1 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
-                <CheckCircle2 className="w-8 h-8 mb-2 opacity-50" />
-                <p className="font-medium">Em breve</p>
-                <p className="text-sm">Acompanhamento de todos os recebimentos.</p>
+              <CardContent className="flex-1 overflow-auto p-0">
+                <Table>
+                  <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead className="pl-6">Data Pagamento</TableHead>
+                      <TableHead>Dentista / Clínica</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right pr-6">Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paidInvoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                          Nenhum recebimento encontrado.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paidInvoices.map((invoice) => (
+                        <TableRow key={invoice.id} className="hover:bg-slate-50/50">
+                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
+                            {invoice.paid_at
+                              ? new Date(invoice.paid_at).toLocaleDateString('pt-BR')
+                              : new Date(invoice.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium text-slate-900">{invoice.dentistName}</p>
+                            {invoice.clinic && (
+                              <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="default"
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
+                              Pago
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium pr-6 text-slate-900">
+                            {formatCurrency(invoice.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </div>
