@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import {
   Loader2,
@@ -209,6 +210,20 @@ export default function AdminFinancial() {
       tableData: activeTableData,
     }
   }, [profiles, directOrders, settlements, selectedMonth, selectedYear, selectedDentist])
+
+  const closedInvoices = useMemo(() => {
+    return settlements
+      .filter((s) => selectedDentist === 'all' || s.dentist_id === selectedDentist)
+      .map((s) => {
+        const dentist = profiles.find((p) => p.id === s.dentist_id)
+        return {
+          ...s,
+          dentistName: dentist?.name || 'Desconhecido',
+          clinic: dentist?.clinic || '',
+        }
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [settlements, profiles, selectedDentist])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
@@ -549,23 +564,68 @@ export default function AdminFinancial() {
           value="faturamento"
           className="flex-1 flex flex-col min-h-0 mt-0 gap-6 data-[state=inactive]:hidden"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-            <Card className="shadow-sm border-slate-200">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+            <Card className="shadow-sm border-slate-200 flex flex-col min-h-0">
               <CardHeader>
                 <CardTitle className="text-lg text-slate-800">Faturas Fechadas</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
-                <Wallet className="w-8 h-8 mb-2 opacity-50" />
-                <p className="font-medium">Em breve</p>
-                <p className="text-sm">Gestão e listagem de faturas fechadas.</p>
+              <CardContent className="flex-1 overflow-auto p-0">
+                <Table>
+                  <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead className="pl-6">Data</TableHead>
+                      <TableHead>Dentista / Clínica</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right pr-6">Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {closedInvoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                          Nenhuma fatura fechada encontrada.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      closedInvoices.map((invoice) => (
+                        <TableRow key={invoice.id} className="hover:bg-slate-50/50">
+                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
+                            {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium text-slate-900">{invoice.dentistName}</p>
+                            {invoice.clinic && (
+                              <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                              className={
+                                invoice.status === 'paid'
+                                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                              }
+                            >
+                              {invoice.status === 'paid' ? 'Pago' : 'Pendente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium pr-6 text-slate-900">
+                            {formatCurrency(invoice.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-slate-200">
+            <Card className="shadow-sm border-slate-200 flex flex-col min-h-0">
               <CardHeader>
                 <CardTitle className="text-lg text-slate-800">Histórico de Recebimentos</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
+              <CardContent className="flex flex-col items-center justify-center flex-1 text-center text-muted-foreground bg-slate-50/50 border border-dashed rounded-lg mx-6 mb-6">
                 <CheckCircle2 className="w-8 h-8 mb-2 opacity-50" />
                 <p className="font-medium">Em breve</p>
                 <p className="text-sm">Acompanhamento de todos os recebimentos.</p>
