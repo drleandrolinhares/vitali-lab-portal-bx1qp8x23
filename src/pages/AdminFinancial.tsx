@@ -10,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -18,15 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import { formatCurrency } from '@/lib/utils'
 import {
   Loader2,
@@ -82,14 +74,6 @@ export default function AdminFinancial() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  // Inner Tabs State
-  const [activeInnerTab, setActiveInnerTab] = useState('producao')
-
-  // Receive Payment State
-  const [receiveInvoiceId, setReceiveInvoiceId] = useState<string | null>(null)
-  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0])
-  const [isReceiving, setIsReceiving] = useState(false)
-
   const fetchData = async () => {
     setLoadingSettlements(true)
     try {
@@ -143,7 +127,7 @@ export default function AdminFinancial() {
   const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
   const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
 
-  const { summary, tableData, closedInvoicesData } = useMemo(() => {
+  const { summary, tableData } = useMemo(() => {
     let faturar = 0
     let pipeline = 0
     let recebido = 0
@@ -227,32 +211,9 @@ export default function AdminFinancial() {
       .filter((d) => d.finalizadosMes > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0)
       .sort((a, b) => b.finalizadosMes - a.finalizadosMes)
 
-    const closedInvoicesList = settlements
-      .filter((s) => {
-        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
-
-        if (s.status !== 'paid') return true
-
-        if (s.paid_at) {
-          const [year, month] = s.paid_at.split('T')[0].split('-')
-          return (parseInt(month, 10) - 1).toString() === selectedMonth && year === selectedYear
-        }
-        return false
-      })
-      .map((s) => {
-        const dentist = map.get(s.dentist_id)
-        return {
-          ...s,
-          dentistName: dentist?.name || 'Desconhecido',
-          dentistClinic: dentist?.clinic || '',
-        }
-      })
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
     return {
       summary: { faturar, pipeline, recebido, inadimplencia },
       tableData: activeTableData,
-      closedInvoicesData: closedInvoicesList,
     }
   }, [
     profiles,
@@ -349,39 +310,11 @@ export default function AdminFinancial() {
       fetchData()
       refreshOrders()
       setManualInvoiceDentist(null)
-      setActiveInnerTab('faturas')
     } catch (err: any) {
       console.error(err)
       toast({ title: 'Erro ao fechar fatura', description: err.message, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const handleConfirmReceive = async () => {
-    if (!receiveInvoiceId || !paymentDate) return
-    setIsReceiving(true)
-    try {
-      const isoDate = new Date(`${paymentDate}T12:00:00`).toISOString()
-      const { error } = await supabase
-        .from('settlements')
-        .update({ status: 'paid', paid_at: isoDate })
-        .eq('id', receiveInvoiceId)
-
-      if (error) throw error
-
-      toast({ title: 'Recebimento confirmado com sucesso!' })
-      fetchData()
-      setReceiveInvoiceId(null)
-    } catch (err: any) {
-      console.error(err)
-      toast({
-        title: 'Erro ao confirmar recebimento',
-        description: err.message,
-        variant: 'destructive',
-      })
-    } finally {
-      setIsReceiving(false)
     }
   }
 
@@ -462,292 +395,154 @@ export default function AdminFinancial() {
         </div>
       </div>
 
-      {/* OUTER TABS */}
-      <Tabs defaultValue="receber" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="w-fit flex-none">
-          <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
-          <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
-        </TabsList>
-
-        <TabsContent
-          value="receber"
-          className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4 gap-6"
-        >
-          {/* SUMMARY CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
-            <Card className="shadow-sm border-l-4 border-l-blue-500">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex-1 pr-4">
-                  <p
-                    className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
-                    title="Trabalhos Concluídos a Faturar"
-                  >
-                    Trabalhos Concluídos a Faturar
-                  </p>
-                  <h3 className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(summary.faturar)}
-                  </h3>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-full flex-none">
-                  <Wallet className="w-5 h-5 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-l-4 border-l-amber-500">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex-1 pr-4">
-                  <p
-                    className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
-                    title="Trabalhos em Pipeline de Produção"
-                  >
-                    Trabalhos em Pipeline de Produção
-                  </p>
-                  <h3 className="text-2xl font-bold text-amber-600">
-                    {formatCurrency(summary.pipeline)}
-                  </h3>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-full flex-none">
-                  <Activity className="w-5 h-5 text-amber-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-l-4 border-l-emerald-500">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex-1 pr-4">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
-                    Recebido
-                  </p>
-                  <h3 className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(summary.recebido)}
-                  </h3>
-                </div>
-                <div className="p-3 bg-emerald-50 rounded-full flex-none">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-l-4 border-l-red-500">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex-1 pr-4">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
-                    Inadimplência
-                  </p>
-                  <h3 className="text-2xl font-bold text-red-600">
-                    {formatCurrency(summary.inadimplencia)}
-                  </h3>
-                </div>
-                <div className="p-3 bg-red-50 rounded-full flex-none">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* INNER TABS */}
-          <Tabs
-            value={activeInnerTab}
-            onValueChange={setActiveInnerTab}
-            className="flex-1 flex flex-col min-h-0"
-          >
-            <TabsList className="w-fit flex-none">
-              <TabsTrigger
-                value="producao"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                Produção em R$
-              </TabsTrigger>
-              <TabsTrigger
-                value="faturas"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                Faturas Fechadas
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent
-              value="producao"
-              className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4"
-            >
-              <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
-                <div className="overflow-auto flex-1 bg-white">
-                  <Table>
-                    <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                      <TableRow>
-                        <TableHead className="font-semibold text-slate-700 pl-6">
-                          Dentista / Clínica
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Data de Fechamento
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Data de Pagamento
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-right">
-                          Finalizados no Mês (R$)
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-right">
-                          Em Produção (Pipeline) (R$)
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-right pr-6">
-                          Ações
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tableData.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-12 text-muted-foreground"
-                          >
-                            Nenhum dado encontrado para o período e filtros selecionados.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        tableData.map((row) => (
-                          <TableRow key={row.id} className="hover:bg-slate-50/50">
-                            <TableCell className="pl-6">
-                              <p className="font-semibold text-slate-900">{row.name}</p>
-                              {row.clinic && (
-                                <p className="text-xs text-muted-foreground">{row.clinic}</p>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center font-medium text-slate-600">
-                              {row.closing_date ? `Dia ${row.closing_date}` : '-'}
-                            </TableCell>
-                            <TableCell className="text-center font-medium text-slate-600">
-                              {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-blue-600">
-                              {formatCurrency(row.finalizadosMes)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-amber-600">
-                              {formatCurrency(row.emProducao)}
-                            </TableCell>
-                            <TableCell className="text-right pr-6">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setManualInvoiceDentist(row.id)}
-                                disabled={row.readyToInvoiceCount === 0}
-                                className="text-xs font-semibold"
-                              >
-                                FECHAR FATURA MANUAL
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            </TabsContent>
-
-            <TabsContent
-              value="faturas"
-              className="flex-1 flex flex-col min-h-0 m-0 data-[state=inactive]:hidden mt-4"
-            >
-              <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
-                <div className="overflow-auto flex-1 bg-white">
-                  <Table>
-                    <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                      <TableRow>
-                        <TableHead className="font-semibold text-slate-700 pl-6">
-                          Dentista / Clínica
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Data de Fechamento
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Status
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-center">
-                          Data do Pagamento
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-right">
-                          Valor
-                        </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-right pr-6">
-                          Ações
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {closedInvoicesData.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-12 text-muted-foreground"
-                          >
-                            Nenhuma fatura encontrada para o período e filtros selecionados.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        closedInvoicesData.map((invoice) => (
-                          <TableRow key={invoice.id} className="hover:bg-slate-50/50">
-                            <TableCell className="pl-6">
-                              <p className="font-semibold text-slate-900">{invoice.dentistName}</p>
-                              {invoice.dentistClinic && (
-                                <p className="text-xs text-muted-foreground">
-                                  {invoice.dentistClinic}
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center font-medium text-slate-600">
-                              {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {invoice.status === 'paid' ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                  Recebido
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                  Pendente
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center font-medium text-slate-600">
-                              {invoice.paid_at
-                                ? new Date(invoice.paid_at).toLocaleDateString('pt-BR')
-                                : '-'}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-slate-900">
-                              {formatCurrency(invoice.amount)}
-                            </TableCell>
-                            <TableCell className="text-right pr-6">
-                              {invoice.status !== 'paid' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setReceiveInvoiceId(invoice.id)}
-                                  className="text-xs font-semibold text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                                >
-                                  CONFIRMAR RECEBIMENTO
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
-
-        <TabsContent value="faturamento" className="flex-1 m-0 data-[state=inactive]:hidden mt-4">
-          <Card className="h-full min-h-[400px] flex items-center justify-center text-muted-foreground border-dashed">
-            Módulo de Faturamento
+      {/* CONTENT */}
+      <div className="flex-1 flex flex-col min-h-0 mt-4 gap-6">
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
+          <Card className="shadow-sm border-l-4 border-l-blue-500">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex-1 pr-4">
+                <p
+                  className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
+                  title="Trabalhos Concluídos a Faturar"
+                >
+                  Trabalhos Concluídos a Faturar
+                </p>
+                <h3 className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(summary.faturar)}
+                </h3>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full flex-none">
+                <Wallet className="w-5 h-5 text-blue-500" />
+              </div>
+            </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
+          <Card className="shadow-sm border-l-4 border-l-amber-500">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex-1 pr-4">
+                <p
+                  className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 line-clamp-2 min-h-[32px] flex items-center"
+                  title="Trabalhos em Pipeline de Produção"
+                >
+                  Trabalhos em Pipeline de Produção
+                </p>
+                <h3 className="text-2xl font-bold text-amber-600">
+                  {formatCurrency(summary.pipeline)}
+                </h3>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-full flex-none">
+                <Activity className="w-5 h-5 text-amber-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-l-4 border-l-emerald-500">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex-1 pr-4">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
+                  Recebido
+                </p>
+                <h3 className="text-2xl font-bold text-emerald-600">
+                  {formatCurrency(summary.recebido)}
+                </h3>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-full flex-none">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-l-4 border-l-red-500">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex-1 pr-4">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 min-h-[32px] flex items-center">
+                  Inadimplência
+                </p>
+                <h3 className="text-2xl font-bold text-red-600">
+                  {formatCurrency(summary.inadimplencia)}
+                </h3>
+              </div>
+              <div className="p-3 bg-red-50 rounded-full flex-none">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* PRODUCAO TABLE */}
+        <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-slate-200 overflow-hidden">
+          <div className="overflow-auto flex-1 bg-white">
+            <Table>
+              <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+                <TableRow>
+                  <TableHead className="font-semibold text-slate-700 pl-6">
+                    Dentista / Clínica
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-center">
+                    Data de Fechamento
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-center">
+                    Data de Pagamento
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-right">
+                    Finalizados no Mês (R$)
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-right">
+                    Em Produção (Pipeline) (R$)
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-right pr-6">
+                    Ações
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tableData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      Nenhum dado encontrado para o período e filtros selecionados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  tableData.map((row) => (
+                    <TableRow key={row.id} className="hover:bg-slate-50/50">
+                      <TableCell className="pl-6">
+                        <p className="font-semibold text-slate-900">{row.name}</p>
+                        {row.clinic && (
+                          <p className="text-xs text-muted-foreground">{row.clinic}</p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center font-medium text-slate-600">
+                        {row.closing_date ? `Dia ${row.closing_date}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-center font-medium text-slate-600">
+                        {row.payment_due_date ? `Dia ${row.payment_due_date}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-blue-600">
+                        {formatCurrency(row.finalizadosMes)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-amber-600">
+                        {formatCurrency(row.emProducao)}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setManualInvoiceDentist(row.id)}
+                          disabled={row.readyToInvoiceCount === 0}
+                          className="text-xs font-semibold"
+                        >
+                          FECHAR FATURA MANUAL
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      </div>
 
       {/* MANUAL INVOICE MODAL */}
       <Dialog
@@ -859,35 +654,6 @@ export default function AdminFinancial() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* RECEIVE PAYMENT MODAL */}
-      <Dialog open={!!receiveInvoiceId} onOpenChange={(open) => !open && setReceiveInvoiceId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Recebimento</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Data do Pagamento</Label>
-              <input
-                type="date"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setReceiveInvoiceId(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirmReceive} disabled={isReceiving || !paymentDate}>
-              {isReceiving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Confirmar Recebimento
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
