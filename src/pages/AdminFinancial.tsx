@@ -230,10 +230,18 @@ export default function AdminFinancial() {
 
   const paidInvoices = useMemo(() => {
     return settlements
-      .filter(
-        (s) =>
-          s.status === 'paid' && (selectedDentist === 'all' || s.dentist_id === selectedDentist),
-      )
+      .filter((s) => {
+        if (s.status !== 'paid') return false
+        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
+
+        const dateStr = s.paid_at || s.created_at
+        if (!dateStr) return false
+
+        const [year, month] = dateStr.split('T')[0].split('-')
+        const itemMonth = (parseInt(month, 10) - 1).toString()
+
+        return itemMonth === selectedMonth && year === selectedYear
+      })
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
         return {
@@ -247,7 +255,7 @@ export default function AdminFinancial() {
           new Date(b.paid_at || b.created_at).getTime() -
           new Date(a.paid_at || a.created_at).getTime(),
       )
-  }, [settlements, profiles, selectedDentist])
+  }, [settlements, profiles, selectedDentist, selectedMonth, selectedYear])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
