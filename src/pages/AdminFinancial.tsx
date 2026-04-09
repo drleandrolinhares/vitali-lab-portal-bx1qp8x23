@@ -191,20 +191,9 @@ export default function AdminFinancial() {
     const safePriceList = Array.isArray(priceList) ? priceList : []
     const safeKanbanStages = Array.isArray(kanbanStages) ? kanbanStages : []
 
-    const displayOrders = safeOrders.map((o) =>
+    const verifiedDisplayOrders = safeOrders.map((o) =>
       getOrderFinancials(o, safePriceList, safeKanbanStages),
     )
-
-    const verifiedDisplayOrders = displayOrders.map((order) => {
-      // Usa estritamente o basePrice do banco de dados para preservar o histórico financeiro real.
-      // A recálculo causava divergências com os valores reais da base.
-      const finalBasePrice = Number(order.basePrice) || 0
-      return {
-        ...order,
-        basePrice: finalBasePrice,
-        finalTotal: finalBasePrice + (Number(order.custo_adicional_valor) || 0),
-      }
-    })
 
     const isSamePeriod = (dateVal: string | null) => {
       if (!dateVal) return false
