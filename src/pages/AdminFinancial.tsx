@@ -143,7 +143,7 @@ export default function AdminFinancial() {
   const monthStr = (parseInt(selectedMonth) + 1).toString().padStart(2, '0')
   const formattedSelectedMonthYear = `${selectedYear}-${monthStr}`
 
-  const { summary, tableData } = useMemo(() => {
+  const { summary, tableData, closedInvoicesData } = useMemo(() => {
     let faturar = 0
     let pipeline = 0
     let recebido = 0
