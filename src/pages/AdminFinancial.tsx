@@ -155,7 +155,12 @@ export default function AdminFinancial() {
       const isCancelled = o.status === 'cancelled'
       const basePrice = Number(o.base_price || 0)
 
-      if (isCompleted && !o.settlement_id) {
+      const orderDate = new Date(o.created_at)
+      const orderMonth = orderDate.getMonth().toString()
+      const orderYear = orderDate.getFullYear().toString()
+      const isSelectedPeriod = orderMonth === selectedMonth && orderYear === selectedYear
+
+      if (isCompleted && !o.settlement_id && isSelectedPeriod) {
         faturar += basePrice
       }
 
@@ -166,7 +171,7 @@ export default function AdminFinancial() {
       if (!o.dentist_id || !map.has(o.dentist_id)) return
       const dentistData = map.get(o.dentist_id)
 
-      if (isCompleted && !o.settlement_id) {
+      if (isCompleted && !o.settlement_id && isSelectedPeriod) {
         dentistData.aFaturar += basePrice
         dentistData.readyToInvoiceCount += 1
         dentistData.unsettledOrders.push({
