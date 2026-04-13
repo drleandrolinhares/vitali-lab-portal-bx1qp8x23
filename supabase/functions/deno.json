@@ -1,7 +1,7 @@
 {
   "_versions": {
-    "create-user": 28,
-    "update-user": 25,
+    "create-user": 29,
+    "update-user": 26,
     "get_recebimentos_por_periodo": 2,
     "diagnostic_leandro_duplicates": 1
   }

@@ -87,7 +87,10 @@ export const MODULES: Module[] = [
   {
     id: 'settings',
     label: 'Configurações / Usuários',
-    actions: [],
+    actions: [
+      { id: 'create_users', label: 'Criar Novos Usuários' },
+      { id: 'manage_permissions', label: 'Gerenciar Permissões de Usuários' },
+    ],
   },
   {
     id: 'individual_financial_dash',
@@ -122,6 +125,22 @@ export function RolePermissionsPanel() {
         ROLES.forEach((r) => {
           initialPerms[r.id] = parsed[r.id] || {}
         })
+
+        if (initialPerms.admin) {
+          if (!initialPerms.admin.settings) {
+            initialPerms.admin.settings = { access: true, actions: {} }
+          }
+          if (!initialPerms.admin.settings.actions) {
+            initialPerms.admin.settings.actions = {}
+          }
+          if (initialPerms.admin.settings.actions.create_users === undefined) {
+            initialPerms.admin.settings.actions.create_users = true
+          }
+          if (initialPerms.admin.settings.actions.manage_permissions === undefined) {
+            initialPerms.admin.settings.actions.manage_permissions = true
+          }
+        }
+
         setPerms(initialPerms)
       } catch (e) {
         console.error('Failed to parse role_permissions_v2', e)
@@ -131,6 +150,17 @@ export function RolePermissionsPanel() {
       ROLES.forEach((r) => {
         initialPerms[r.id] = {}
       })
+
+      if (initialPerms.admin) {
+        initialPerms.admin.settings = {
+          access: true,
+          actions: {
+            create_users: true,
+            manage_permissions: true,
+          },
+        }
+      }
+
       setPerms(initialPerms)
     }
   }, [appSettings])

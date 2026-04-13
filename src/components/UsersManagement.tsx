@@ -166,6 +166,17 @@ export function UsersManagement() {
   const isCurrentUserMaster = actualUserRole === 'master'
   const isMasterOrAdmin = actualUserRole === 'master' || actualUserRole === 'admin'
 
+  const canCreateUsers =
+    actualUserRole === 'master' ||
+    (actualUserRole === 'admin' &&
+      currentUser?.permissions?.settings?.actions?.create_users !== false)
+  const canManagePermissions =
+    actualUserRole === 'master' ||
+    (actualUserRole === 'admin' &&
+      currentUser?.permissions?.settings?.actions?.manage_permissions !== false)
+
+  const showPermissionsTab = canManagePermissions || (!editingUser && canCreateUsers)
+
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -200,13 +211,28 @@ export function UsersManagement() {
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
 
   const effectivePerms = useMemo(() => {
-    if (selectedPerms !== null) return selectedPerms
-    try {
-      const defaults = JSON.parse(appSettings['role_permissions_v2'] || '{}')
-      return defaults[formData.role] || {}
-    } catch {
-      return {}
+    let perms = selectedPerms
+    if (perms === null) {
+      try {
+        const defaults = JSON.parse(appSettings['role_permissions_v2'] || '{}')
+        perms = defaults[formData.role] || {}
+      } catch {
+        perms = {}
+      }
     }
+
+    if (formData.role === 'admin') {
+      const cloned = JSON.parse(JSON.stringify(perms))
+      if (!cloned.settings) cloned.settings = { access: true, actions: {} }
+      if (!cloned.settings.actions) cloned.settings.actions = {}
+      if (cloned.settings.actions.create_users === undefined)
+        cloned.settings.actions.create_users = true
+      if (cloned.settings.actions.manage_permissions === undefined)
+        cloned.settings.actions.manage_permissions = true
+      return cloned
+    }
+
+    return perms
   }, [selectedPerms, appSettings, formData.role])
 
   useEffect(() => {
@@ -526,7 +552,9 @@ export function UsersManagement() {
         }
 
         if (selectedPerms !== null && !deepEqual(selectedPerms, normalizedUserPerms)) {
-          payload.permissions = selectedPerms
+          if (showPermissionsTab) {
+            payload.permissions = selectedPerms
+          }
         }
 
         if (
@@ -751,7 +779,7 @@ export function UsersManagement() {
   }
 
   const updateAccess = (moduleId: string, checked: boolean) => {
-    if (!isMasterOrAdmin) return
+    if (!showPermissionsTab) return
     setSelectedPerms((prev) => {
       const source = prev ?? effectivePerms
       const newPerms = JSON.parse(JSON.stringify(source || {}))
@@ -762,7 +790,7 @@ export function UsersManagement() {
   }
 
   const updateAction = (moduleId: string, actionId: string, checked: boolean) => {
-    if (!isMasterOrAdmin) return
+    if (!showPermissionsTab) return
     setSelectedPerms((prev) => {
       const source = prev ?? effectivePerms
       const newPerms = JSON.parse(JSON.stringify(source || {}))
@@ -790,7 +818,7 @@ export function UsersManagement() {
   }, [effectivePerms, visibleModules])
 
   const handleToggleAllPerms = (checked: boolean) => {
-    if (!isMasterOrAdmin) return
+    if (!showPermissionsTab) return
     const allPerms: Record<string, any> = {}
     if (checked) {
       visibleModules.forEach((mod) => {
@@ -891,7 +919,7 @@ export function UsersManagement() {
                 <SelectItem value="todos">Todos</SelectItem>
               </SelectContent>
             </Select>
-            {isMasterOrAdmin && (
+            {canCreateUsers && (
               <Button
                 onClick={() => openModal()}
                 className="bg-[#0f172a] hover:bg-[#1e293b] text-white shrink-0 uppercase text-xs font-bold tracking-wider"
@@ -1312,12 +1340,14 @@ export function UsersManagement() {
                   >
                     Perfil de Usuário
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="permissoes"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
-                  >
-                    Configurações de permissão
-                  </TabsTrigger>
+                  {showPermissionsTab && (
+                    <TabsTrigger
+                      value="permissoes"
+                      className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-3 font-semibold text-muted-foreground"
+                    >
+                      Configurações de permissão
+                    </TabsTrigger>
+                  )}
                   {formData.role === 'laboratory' && isCurrentUserMaster && (
                     <TabsTrigger
                       value="precos"
@@ -1993,134 +2023,144 @@ export function UsersManagement() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="permissoes" className="mt-0">
-                  {formData.role === 'master' && (
-                    <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-3">
-                      <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-bold text-primary">
-                          Acesso Total e Irrestrito
-                        </h4>
-                        <p className="text-xs text-primary/80 mt-1">
-                          Este usuário possui acesso MASTER. Todas as funções e visualizações estão
-                          liberadas de forma irrestrita.
-                        </p>
+                {showPermissionsTab && (
+                  <TabsContent value="permissoes" className="mt-0">
+                    {formData.role === 'master' && (
+                      <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-3">
+                        <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-bold text-primary">
+                            Acesso Total e Irrestrito
+                          </h4>
+                          <p className="text-xs text-primary/80 mt-1">
+                            Este usuário possui acesso MASTER. Todas as funções e visualizações
+                            estão liberadas de forma irrestrita.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="mb-6">
-                    <h3 className="text-lg font-bold">Configurações Específicas de Permissão</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Personalize os acessos deste usuário. Estas configurações sobrepõem as
-                      permissões padrão do Perfil.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-xl mb-6">
-                    <div>
-                      <h4 className="font-bold text-sm">Permissões Globais</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Conceder todas as permissões de acesso ao sistema de uma vez.
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold">Configurações Específicas de Permissão</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Personalize os acessos deste usuário. Estas configurações sobrepõem as
+                        permissões padrão do Perfil.
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg shadow-sm border">
-                      <span className="text-xs font-bold uppercase text-muted-foreground">
-                        MARCAR TODAS
-                      </span>
-                      <Switch
-                        checked={formData.role === 'master' ? true : isAllPermsSelected}
-                        onCheckedChange={handleToggleAllPerms}
-                        disabled={!isMasterOrAdmin || formData.role === 'master' || saving}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="space-y-4">
-                    {visibleModules.map((mod) => {
-                      const hasAccess =
-                        formData.role === 'master' ? true : effectivePerms[mod.id]?.access || false
-                      return (
-                        <Card key={mod.id} className="shadow-none">
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-sm uppercase">{mod.label}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground font-medium">
-                                  Permitir Acesso
-                                </span>
-                                <Switch
-                                  checked={hasAccess}
-                                  onCheckedChange={(c) => updateAccess(mod.id, c)}
-                                  disabled={
-                                    !isMasterOrAdmin || formData.role === 'master' || saving
-                                  }
-                                />
+                    <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-xl mb-6">
+                      <div>
+                        <h4 className="font-bold text-sm">Permissões Globais</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Conceder todas as permissões de acesso ao sistema de uma vez.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg shadow-sm border">
+                        <span className="text-xs font-bold uppercase text-muted-foreground">
+                          MARCAR TODAS
+                        </span>
+                        <Switch
+                          checked={formData.role === 'master' ? true : isAllPermsSelected}
+                          onCheckedChange={handleToggleAllPerms}
+                          disabled={!showPermissionsTab || formData.role === 'master' || saving}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {visibleModules.map((mod) => {
+                        const hasAccess =
+                          formData.role === 'master'
+                            ? true
+                            : effectivePerms[mod.id]?.access || false
+                        return (
+                          <Card key={mod.id} className="shadow-none">
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-sm uppercase">{mod.label}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground font-medium">
+                                    Permitir Acesso
+                                  </span>
+                                  <Switch
+                                    checked={hasAccess}
+                                    onCheckedChange={(c) => updateAccess(mod.id, c)}
+                                    disabled={
+                                      !showPermissionsTab || formData.role === 'master' || saving
+                                    }
+                                  />
+                                </div>
                               </div>
-                            </div>
-                            {mod.actions && mod.actions.length > 0 && hasAccess && (
-                              <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-primary/30 ml-1">
-                                {mod.actions.length > 1 && (
-                                  <div className="flex justify-between items-center pb-2 border-b border-muted/30">
-                                    <span className="text-xs font-bold uppercase text-muted-foreground">
-                                      MARCAR TODAS
-                                    </span>
-                                    <Switch
-                                      checked={
-                                        formData.role === 'master'
-                                          ? true
-                                          : mod.actions.every(
-                                              (act) => effectivePerms[mod.id]?.actions?.[act.id],
+                              {mod.actions && mod.actions.length > 0 && hasAccess && (
+                                <div className="mt-4 pt-4 border-t space-y-3 pl-2 border-l-2 border-primary/30 ml-1">
+                                  {mod.actions.length > 1 && (
+                                    <div className="flex justify-between items-center pb-2 border-b border-muted/30">
+                                      <span className="text-xs font-bold uppercase text-muted-foreground">
+                                        MARCAR TODAS
+                                      </span>
+                                      <Switch
+                                        checked={
+                                          formData.role === 'master'
+                                            ? true
+                                            : mod.actions.every(
+                                                (act) => effectivePerms[mod.id]?.actions?.[act.id],
+                                              )
+                                        }
+                                        onCheckedChange={(c) => {
+                                          if (!showPermissionsTab) return
+                                          setSelectedPerms((prev) => {
+                                            const source = prev ?? effectivePerms
+                                            const newPerms = JSON.parse(
+                                              JSON.stringify(source || {}),
                                             )
-                                      }
-                                      onCheckedChange={(c) => {
-                                        if (!isMasterOrAdmin) return
-                                        setSelectedPerms((prev) => {
-                                          const source = prev ?? effectivePerms
-                                          const newPerms = JSON.parse(JSON.stringify(source || {}))
-                                          if (!newPerms[mod.id])
-                                            newPerms[mod.id] = { access: true, actions: {} }
-                                          mod.actions.forEach((act) => {
-                                            if (!newPerms[mod.id].actions)
-                                              newPerms[mod.id].actions = {}
-                                            newPerms[mod.id].actions[act.id] = c
+                                            if (!newPerms[mod.id])
+                                              newPerms[mod.id] = { access: true, actions: {} }
+                                            mod.actions.forEach((act) => {
+                                              if (!newPerms[mod.id].actions)
+                                                newPerms[mod.id].actions = {}
+                                              newPerms[mod.id].actions[act.id] = c
+                                            })
+                                            return newPerms
                                           })
-                                          return newPerms
-                                        })
-                                      }}
-                                      disabled={
-                                        !isMasterOrAdmin || formData.role === 'master' || saving
-                                      }
-                                    />
-                                  </div>
-                                )}
-                                {mod.actions.map((act) => (
-                                  <div
-                                    key={act.id}
-                                    className="flex justify-between items-center text-sm"
-                                  >
-                                    <span>{act.label}</span>
-                                    <Switch
-                                      checked={
-                                        formData.role === 'master'
-                                          ? true
-                                          : effectivePerms[mod.id]?.actions?.[act.id] || false
-                                      }
-                                      onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
-                                      disabled={
-                                        !isMasterOrAdmin || formData.role === 'master' || saving
-                                      }
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                </TabsContent>
+                                        }}
+                                        disabled={
+                                          !showPermissionsTab ||
+                                          formData.role === 'master' ||
+                                          saving
+                                        }
+                                      />
+                                    </div>
+                                  )}
+                                  {mod.actions.map((act) => (
+                                    <div
+                                      key={act.id}
+                                      className="flex justify-between items-center text-sm"
+                                    >
+                                      <span>{act.label}</span>
+                                      <Switch
+                                        checked={
+                                          formData.role === 'master'
+                                            ? true
+                                            : effectivePerms[mod.id]?.actions?.[act.id] || false
+                                        }
+                                        onCheckedChange={(c) => updateAction(mod.id, act.id, c)}
+                                        disabled={
+                                          !showPermissionsTab ||
+                                          formData.role === 'master' ||
+                                          saving
+                                        }
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </TabsContent>
+                )}
 
                 {formData.role === 'laboratory' && isCurrentUserMaster && (
                   <TabsContent value="precos" className="mt-0">
