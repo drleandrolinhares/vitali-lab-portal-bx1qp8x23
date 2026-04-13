@@ -53,7 +53,9 @@ const MONTHS = [
 const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
 export default function AdminFinancial() {
-  const { loading: storeLoading, refreshOrders } = useAppStore()
+  const { currentUser, loading: storeLoading, refreshOrders } = useAppStore()
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
 
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
@@ -69,6 +71,12 @@ export default function AdminFinancial() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+
+  // Receive Settlement State
+  const [receiveSettlement, setReceiveSettlement] = useState<any | null>(null)
+  const [receiveDate, setReceiveDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [receiveNote, setReceiveNote] = useState<string>('')
+  const [isReceiving, setIsReceiving] = useState(false)
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -88,7 +96,9 @@ export default function AdminFinancial() {
           .select('id, name, clinic, closing_date, payment_due_date')
           .in('role', ['dentist', 'laboratory'])
           .order('name'),
-        supabase.from('settlements').select('id, amount, created_at, dentist_id, status, paid_at'),
+        supabase
+          .from('settlements')
+          .select('id, amount, created_at, dentist_id, status, paid_at, orders_snapshot, note'),
         supabase
           .from('orders')
           .select(
@@ -296,6 +306,38 @@ export default function AdminFinancial() {
   const handleToggleOrder = (id: string, checked: boolean) => {
     if (checked) setSelectedOrderIds((prev) => [...prev, id])
     else setSelectedOrderIds((prev) => prev.filter((x) => x !== id))
+  }
+
+  const handleConfirmReceive = async () => {
+    if (!receiveSettlement || !receiveDate) return
+    setIsReceiving(true)
+    try {
+      const { error } = await supabase
+        .from('settlements')
+        .update({
+          status: 'paid',
+          paid_at: new Date(receiveDate + 'T12:00:00Z').toISOString(),
+          note: receiveNote,
+        })
+        .eq('id', receiveSettlement.id)
+
+      if (error) throw error
+
+      toast({ title: 'Recebimento confirmado com sucesso!' })
+      fetchData()
+      setReceiveSettlement(null)
+      setReceiveDate(new Date().toISOString().split('T')[0])
+      setReceiveNote('')
+    } catch (err: any) {
+      console.error(err)
+      toast({
+        title: 'Erro ao confirmar recebimento',
+        description: err.message,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsReceiving(false)
+    }
   }
 
   const handleConfirmInvoice = async () => {
@@ -610,13 +652,14 @@ export default function AdminFinancial() {
                       <TableHead className="pl-6">Data Fechamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right pr-6">Valor</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-right pr-6">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pendingInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           Nenhuma fatura pendente encontrada.
                         </TableCell>
                       </TableRow>
@@ -640,8 +683,25 @@ export default function AdminFinancial() {
                               Pendente
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium pr-6 text-slate-900">
+                          <TableCell className="text-right font-medium text-slate-900">
                             {formatCurrency(invoice.amount)}
+                          </TableCell>
+                          <TableCell className="text-right pr-6">
+                            {isAdmin && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setReceiveSettlement(invoice)
+                                  setReceiveDate(new Date().toISOString().split('T')[0])
+                                  setReceiveNote('')
+                                }}
+                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                              >
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                RECEBER
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
@@ -693,6 +753,14 @@ export default function AdminFinancial() {
                             >
                               Pago
                             </Badge>
+                            {invoice.note && (
+                              <p
+                                className="text-[10px] text-muted-foreground mt-1 truncate max-w-[120px]"
+                                title={invoice.note}
+                              >
+                                {invoice.note}
+                              </p>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-medium pr-6 text-slate-900">
                             {formatCurrency(invoice.amount)}
@@ -834,6 +902,117 @@ export default function AdminFinancial() {
             .reduce((sum: number, o: any) => sum + (o.basePrice || 0), 0)}
         />
       )}
+
+      {/* RECEIVE SETTLEMENT MODAL */}
+      <Dialog
+        open={!!receiveSettlement}
+        onOpenChange={(open) => !open && setReceiveSettlement(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>Confirmar Recebimento de Fatura</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-6 space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-slate-800">
+                  Pedidos Inclusos ({receiveSettlement?.orders_snapshot?.length || 0})
+                </h4>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-slate-500">Dentista / Clínica</p>
+                  <p className="font-bold text-slate-900">{receiveSettlement?.dentistName}</p>
+                </div>
+              </div>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Paciente</TableHead>
+                      <TableHead>Trabalho</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receiveSettlement?.orders_snapshot?.map((o: any, idx: number) => (
+                      <TableRow key={o.id || idx}>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {o.friendlyId || o.id?.substring(0, 8) || '-'}
+                        </TableCell>
+                        <TableCell>{o.patientName || '-'}</TableCell>
+                        <TableCell>{o.workType || '-'}</TableCell>
+                        <TableCell className="text-right font-medium text-slate-900">
+                          {formatCurrency(o.clearedAmount || o.basePrice || 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!receiveSettlement?.orders_snapshot ||
+                      receiveSettlement.orders_snapshot.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                          Nenhum pedido encontrado no snapshot.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                  Data de Pagamento
+                </label>
+                <input
+                  type="date"
+                  value={receiveDate}
+                  onChange={(e) => setReceiveDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                  Detalhes / Observações
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: PIX, Transferência, Dinheiro..."
+                  value={receiveNote}
+                  onChange={(e) => setReceiveNote(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 bg-slate-50 border-t flex justify-between items-center shrink-0">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Valor Total a Receber
+              </span>
+              <span className="text-2xl font-bold text-emerald-600">
+                {formatCurrency(receiveSettlement?.amount || 0)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setReceiveSettlement(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmReceive}
+                disabled={isReceiving || !receiveDate}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isReceiving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Confirmar Recebimento
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
