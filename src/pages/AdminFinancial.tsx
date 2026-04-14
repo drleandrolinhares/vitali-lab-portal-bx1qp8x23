@@ -712,8 +712,18 @@ export default function AdminFinancial() {
             </Card>
 
             <Card className="shadow-sm border-slate-200 flex flex-col min-h-0">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="text-lg text-slate-800">Histórico de Recebimentos</CardTitle>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Total no Período
+                  </span>
+                  <span className="text-lg font-bold text-emerald-600">
+                    {formatCurrency(
+                      paidInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0),
+                    )}
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
                 <Table>
