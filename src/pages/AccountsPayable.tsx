@@ -317,12 +317,22 @@ export default function AccountsPayable() {
                         >
                           {item.dre_category}
                         </div>
-                        <div className="col-span-1 md:col-span-3 text-sm truncate font-medium">
-                          {item.description}
-                          {item.installment_total > 1 && (
-                            <span className="ml-1.5 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {item.installment_current}/{item.installment_total}
-                            </span>
+                        <div className="col-span-1 md:col-span-3 text-sm truncate flex flex-col justify-center">
+                          <div className="font-medium truncate">
+                            {item.description}
+                            {item.installment_total > 1 && (
+                              <span className="ml-1.5 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                {item.installment_current}/{item.installment_total}
+                              </span>
+                            )}
+                          </div>
+                          {item.observations && (
+                            <div
+                              className="text-xs text-muted-foreground truncate mt-0.5"
+                              title={item.observations}
+                            >
+                              {item.observations}
+                            </div>
                           )}
                         </div>
                         <div

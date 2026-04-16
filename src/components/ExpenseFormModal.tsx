@@ -58,6 +58,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
     amount: '',
     type: 'unica',
     installments_count: 2,
+    observations: '',
   })
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
             : '',
           type: 'unica',
           installments_count: 2,
+          observations: expenseToEdit.observations || '',
         })
         setInstallments([])
       } else {
@@ -94,6 +96,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
           amount: '',
           type: 'unica',
           installments_count: 2,
+          observations: '',
         })
         setInstallments([])
       }
@@ -151,6 +154,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
       payment_method: formData.payment_method,
       cost_center: formData.classification,
       status: expenseToEdit ? expenseToEdit.status : 'pending',
+      observations: formData.observations || null,
     }
 
     if (formData.type === 'unica' || expenseToEdit) {
@@ -288,6 +292,17 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
                 Define a linha correspondente no relatório DRE.
               </p>
             </div>
+
+            <div className="space-y-2 col-span-1 md:col-span-2">
+              <Label>Observações (Opcional)</Label>
+              <textarea
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Anotações adicionais, histórico, etc..."
+                value={formData.observations}
+                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label>Categoria Interna (Opcional)</Label>
               <Input
