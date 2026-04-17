@@ -22,7 +22,7 @@ export default function AuditTrail() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (currentUser?.role !== 'admin') return
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') return
 
     const fetchLogs = async () => {
       const { data, error } = await supabase
@@ -43,7 +43,7 @@ export default function AuditTrail() {
     fetchLogs()
   }, [currentUser])
 
-  if (currentUser?.role !== 'admin') {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'master') {
     return <Navigate to="/" replace />
   }
 

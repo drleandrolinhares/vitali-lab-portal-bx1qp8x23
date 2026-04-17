@@ -41,7 +41,8 @@ export default function DRECategories() {
   }>({ name: '', type: 'fixed' })
   const [isSaving, setIsSaving] = useState(false)
 
-  if (currentUser?.role !== 'admin') return <Navigate to="/" replace />
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'master')
+    return <Navigate to="/" replace />
 
   const getTypeLabel = (type: string) => {
     if (type === 'revenue') return 'Receita'
