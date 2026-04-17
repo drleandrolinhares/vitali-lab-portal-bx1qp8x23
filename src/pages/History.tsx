@@ -20,6 +20,7 @@ import {
   Clock,
   MonitorPlay,
   Minimize2,
+  RefreshCw,
 } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
