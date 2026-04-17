@@ -1,8 +1,12 @@
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
+import { DatePickerWithRange } from '@/components/ui/date-range-picker'
+import { DateRange } from 'react-day-picker'
 import {
   PlusCircle,
   ArrowRight,
@@ -13,79 +17,176 @@ import {
   Clock,
   RefreshCw,
   Inbox,
+  AlertTriangle,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import {
+  format,
+  startOfMonth,
+  endOfDay,
+  startOfDay,
+  isWithinInterval,
+  isSameDay,
+  differenceInDays,
+  addDays,
+  differenceInMonths,
+  addMonths,
+  subDays,
+} from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { formatBRL, getOrderFinancials } from '@/lib/financial'
-import { useMemo } from 'react'
+import { formatBRL } from '@/lib/financial'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 
 export default function AdminDashboard() {
-  const { orders, currentUser, pendingUsers, loading } = useAppStore()
+  const { orders, pendingUsers, loading } = useAppStore()
 
-  const activeOrders = orders.filter(
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfDay(new Date()),
+  })
+
+  const [repetitions, setRepetitions] = useState<any[]>([])
+  const [loadingReps, setLoadingReps] = useState(true)
+
+  useEffect(() => {
+    async function fetchReps() {
+      setLoadingReps(true)
+      const { data } = await supabase
+        .from('order_repetitions')
+        .select('id, estimated_loss, logged_at')
+      if (data) setRepetitions(data)
+      setLoadingReps(false)
+    }
+    fetchReps()
+  }, [])
+
+  const filteredOrders = useMemo(() => {
+    if (!dateRange?.from) return orders
+    return orders.filter((o) => {
+      const d = new Date(o.createdAt)
+      if (dateRange.to) {
+        return isWithinInterval(d, {
+          start: startOfDay(dateRange.from),
+          end: endOfDay(dateRange.to),
+        })
+      }
+      return isSameDay(d, dateRange.from)
+    })
+  }, [orders, dateRange])
+
+  const filteredRepetitions = useMemo(() => {
+    if (!dateRange?.from) return repetitions
+    return repetitions.filter((r) => {
+      const d = new Date(r.logged_at)
+      if (dateRange.to) {
+        return isWithinInterval(d, {
+          start: startOfDay(dateRange.from),
+          end: endOfDay(dateRange.to),
+        })
+      }
+      return isSameDay(d, dateRange.from)
+    })
+  }, [repetitions, dateRange])
+
+  const activeOrders = filteredOrders.filter(
     (o) => o.status !== 'delivered' && o.status !== 'completed' && o.status !== 'cancelled',
   )
 
+  const completedOrders = filteredOrders.filter(
+    (o) => o.status === 'completed' || o.status === 'delivered',
+  )
+
+  const repetitionsCount = filteredRepetitions.length
+  const repetitionsLoss = filteredRepetitions.reduce(
+    (sum, r) => sum + (Number(r.estimated_loss) || 0),
+    0,
+  )
+
   const recentOrders = useMemo(() => {
-    return [...orders]
+    return [...filteredOrders]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5)
-  }, [orders])
+  }, [filteredOrders])
 
   const stats = [
     {
-      label: 'Casos Ativos',
+      label: 'Casos em Produção',
       value: activeOrders.length,
       icon: Activity,
       color: 'text-primary',
     },
     {
-      label: 'Pendentes de Ciente',
-      value: orders.filter((o) => !o.isAcknowledged).length,
-      icon: Clock,
-      color: 'text-amber-500',
-    },
-    {
-      label: 'Concluídos (Mês)',
-      value: orders.filter(
-        (o) =>
-          (o.status === 'completed' || o.status === 'delivered') &&
-          new Date(o.createdAt).getMonth() === new Date().getMonth(),
-      ).length,
+      label: 'Casos Concluídos',
+      value: completedOrders.length,
       icon: CheckCircle2,
       color: 'text-emerald-500',
     },
     {
-      label: 'Aprovações Pendentes',
-      value: pendingUsers.length,
-      icon: Users,
-      color: 'text-blue-500',
+      label: 'Repetições (Retornos)',
+      value: repetitionsCount,
+      subValue: `Prejuízo: ${formatBRL(repetitionsLoss)}`,
+      icon: AlertTriangle,
+      color: 'text-rose-500',
+    },
+    {
+      label: 'Pendentes de Ciente',
+      value: filteredOrders.filter((o) => !o.isAcknowledged).length,
+      icon: Clock,
+      color: 'text-amber-500',
     },
   ]
 
   const chartData = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date()
-      d.setDate(d.getDate() - (6 - i))
-      return {
-        date: format(d, 'yyyy-MM-dd'),
-        label: format(d, 'dd/MM'),
-        count: 0,
+    let start: Date
+    let end: Date
+
+    if (!dateRange?.from) {
+      start = subDays(new Date(), 30)
+      end = new Date()
+    } else {
+      start = dateRange.from
+      end = dateRange.to || dateRange.from
+    }
+
+    const days = differenceInDays(end, start)
+
+    if (days <= 31) {
+      const data = []
+      for (let i = 0; i <= days; i++) {
+        const d = addDays(start, i)
+        data.push({
+          date: format(d, 'yyyy-MM-dd'),
+          label: format(d, 'dd/MM'),
+          count: 0,
+        })
       }
-    })
-
-    orders.forEach((o) => {
-      const oDate = format(new Date(o.createdAt), 'yyyy-MM-dd')
-      const day = last7Days.find((d) => d.date === oDate)
-      if (day) day.count++
-    })
-
-    return last7Days
-  }, [orders])
+      filteredOrders.forEach((o) => {
+        const oDate = format(new Date(o.createdAt), 'yyyy-MM-dd')
+        const day = data.find((d) => d.date === oDate)
+        if (day) day.count++
+      })
+      return data
+    } else {
+      const data = []
+      const months = differenceInMonths(end, start)
+      for (let i = 0; i <= months; i++) {
+        const d = addMonths(start, i)
+        data.push({
+          date: format(d, 'yyyy-MM'),
+          label: format(d, 'MMM/yy', { locale: ptBR }),
+          count: 0,
+        })
+      }
+      filteredOrders.forEach((o) => {
+        const oDate = format(new Date(o.createdAt), 'yyyy-MM')
+        const month = data.find((d) => d.date === oDate)
+        if (month) month.count++
+      })
+      return data
+    }
+  }, [filteredOrders, dateRange])
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto py-2">
@@ -96,24 +197,50 @@ export default function AdminDashboard() {
             Visão geral do laboratório e métricas rápidas.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto h-11">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+          <DatePickerWithRange
+            date={dateRange}
+            setDate={setDateRange}
+            className="w-full sm:w-auto"
+          />
+          <div className="flex w-full sm:w-auto gap-3 h-10">
+            <Button
+              asChild
+              variant="outline"
+              className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+            >
+              <Link to="/new-request?type=adjustment">
+                <RefreshCw className="w-5 h-5" /> Retorno{' '}
+                <span className="hidden lg:inline">para Ajustes</span>
+              </Link>
+            </Button>
+            <Button asChild className="flex-1 sm:flex-none h-full gap-2 shadow-sm">
+              <Link to="/new-request">
+                <PlusCircle className="w-5 h-5" /> Novo Pedido
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {pendingUsers.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-blue-800 dark:text-blue-300 px-4 py-3 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-3">
+            <Users className="w-5 h-5 shrink-0" />
+            <span className="font-medium text-sm sm:text-base">
+              Você tem {pendingUsers.length} usuário(s) aguardando aprovação de cadastro.
+            </span>
+          </div>
           <Button
             asChild
             variant="outline"
-            className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+            size="sm"
+            className="bg-white dark:bg-transparent shrink-0"
           >
-            <Link to="/new-request?type=adjustment">
-              <RefreshCw className="w-5 h-5" /> Retorno{' '}
-              <span className="hidden lg:inline">para Ajustes</span>
-            </Link>
-          </Button>
-          <Button asChild className="flex-1 sm:flex-none h-full gap-2 shadow-sm">
-            <Link to="/new-request">
-              <PlusCircle className="w-5 h-5" /> Novo Pedido
-            </Link>
+            <Link to="/users">Avaliar Usuários</Link>
           </Button>
         </div>
-      </div>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s, i) => (
@@ -125,10 +252,17 @@ export default function AdminDashboard() {
               <s.icon className={`h-5 w-5 ${s.color}`} />
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {loading || loadingReps ? (
                 <Skeleton className="h-10 w-16" />
               ) : (
-                <div className="text-4xl font-bold">{s.value}</div>
+                <div>
+                  <div className="text-4xl font-bold">{s.value}</div>
+                  {s.subValue && (
+                    <p className="text-xs font-medium text-muted-foreground mt-1 tracking-wide">
+                      {s.subValue}
+                    </p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -138,7 +272,7 @@ export default function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="shadow-subtle lg:col-span-2">
           <CardHeader>
-            <CardTitle>Entrada de Pedidos (Últimos 7 dias)</CardTitle>
+            <CardTitle>Entrada de Pedidos (Período Selecionado)</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -194,9 +328,9 @@ export default function AdminDashboard() {
         <CardHeader className="bg-muted/10 border-b">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Últimos Pedidos</CardTitle>
+              <CardTitle>Pedidos no Período</CardTitle>
               <CardDescription>
-                Os pedidos mais recentes que entraram no laboratório.
+                Lista de pedidos recentes conforme o filtro selecionado.
               </CardDescription>
             </div>
             <Button variant="link" asChild>
@@ -212,7 +346,9 @@ export default function AdminDashboard() {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : recentOrders.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado.</div>
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhum pedido encontrado no período.
+            </div>
           ) : (
             <div className="divide-y">
               {recentOrders.map((order) => (
