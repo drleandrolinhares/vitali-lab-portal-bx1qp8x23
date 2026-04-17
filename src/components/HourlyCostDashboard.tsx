@@ -24,7 +24,7 @@ export function HourlyCostDashboard() {
   }, [])
 
   const mergedSettings = useMemo(
-    () => ({ ...appSettings, ...dbSettings }),
+    () => ({ ...dbSettings, ...appSettings }),
     [appSettings, dbSettings],
   )
 
@@ -41,9 +41,12 @@ export function HourlyCostDashboard() {
             0,
           )
         }
+      } else {
+        totalFixedCosts = 32800
       }
     } catch (e) {
       console.error('Error parsing fixed items', e)
+      totalFixedCosts = 32800
     }
 
     if (mergedSettings['hourly_cost_monthly_hours']) {

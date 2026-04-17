@@ -154,7 +154,7 @@ export default function PriceList() {
   const [globalAttempted, setGlobalAttempted] = useState(false)
 
   const mergedSettings = useMemo(
-    () => ({ ...appSettings, ...dbSettings }),
+    () => ({ ...dbSettings, ...appSettings }),
     [appSettings, dbSettings],
   )
 
@@ -182,9 +182,12 @@ export default function PriceList() {
             0,
           )
         }
+      } else {
+        totalFixedCosts = 32800
       }
     } catch (e) {
       console.error('Error parsing fixed items', e)
+      totalFixedCosts = 32800
     }
 
     if (mergedSettings['hourly_cost_monthly_hours']) {
