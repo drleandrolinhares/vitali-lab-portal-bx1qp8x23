@@ -837,299 +837,89 @@ export default function KanbanPage() {
                                     : 'bg-primary/20 dark:bg-primary/40',
                               )}
                             />
-                            <div className="flex justify-between items-start mb-2 pl-1">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={cn(
-                                    'text-xs font-bold',
-                                    o.isAdjustmentReturn ? 'text-yellow-900' : 'text-slate-500',
-                                  )}
-                                >
-                                  {o.friendlyId}
-                                </span>
-                                {o.fileUrls && o.fileUrls.length > 0 && (
-                                  <Paperclip
+                            <div className="flex flex-col gap-2 relative pl-1">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0 pr-2">
+                                  <p
                                     className={cn(
-                                      'w-3 h-3 opacity-70',
-                                      o.isAdjustmentReturn ? 'text-yellow-900' : 'text-primary',
-                                    )}
-                                  />
-                                )}
-                              </div>
-                              <StatusBadge
-                                status={o.status}
-                                className="scale-[0.8] origin-top-right -mt-1.5 -mr-1.5"
-                              />
-                            </div>
-                            <p
-                              className={cn(
-                                'font-medium text-sm truncate pl-1',
-                                o.isAdjustmentReturn ? 'text-yellow-950 font-bold' : '',
-                              )}
-                            >
-                              {o.patientName}
-                            </p>
-                            <p
-                              className={cn(
-                                'text-xs mt-1 truncate pl-1',
-                                o.isAdjustmentReturn ? 'text-yellow-900' : 'text-slate-500',
-                              )}
-                            >
-                              {o.workType}
-                            </p>
-
-                            {isPendingCard && (
-                              <div className="mt-2.5 mb-0.5 bg-red-600 dark:bg-red-700 text-white text-[10px] font-bold px-2 py-1.5 rounded text-center uppercase tracking-wider shadow-sm w-full leading-tight">
-                                Aguardando Retorno do Dentista
-                              </div>
-                            )}
-
-                            {isFirstStage && !isDentist && (
-                              <div
-                                className={cn(
-                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
-                                  o.isAdjustmentReturn
-                                    ? 'border-yellow-500/30'
-                                    : 'border-slate-100 dark:border-border/50',
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onDragStart={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                }}
-                              >
-                                <Label
-                                  className={cn(
-                                    'text-[9px] uppercase font-bold tracking-wider',
-                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
-                                  )}
-                                >
-                                  Mudar Laboratório
-                                </Label>
-                                <Select
-                                  value={o.sector?.toUpperCase()}
-                                  onValueChange={(val) => updateOrderSector(o.id, val)}
-                                >
-                                  <SelectTrigger
-                                    className={cn(
-                                      'h-7 text-[10px] font-bold uppercase',
+                                      'font-bold text-sm truncate leading-tight',
                                       o.isAdjustmentReturn
-                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
-                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
+                                        ? 'text-yellow-950'
+                                        : 'text-slate-800 dark:text-slate-200',
                                     )}
+                                    title={o.patientName}
                                   >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="z-[110]">
-                                    {availableSectors.map((s) => (
-                                      <SelectItem
-                                        key={s}
-                                        value={s}
-                                        className="text-[10px] uppercase font-bold"
-                                      >
-                                        {s}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-
-                            {canDragCards && (
-                              <div
-                                className={cn(
-                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
-                                  o.isAdjustmentReturn
-                                    ? 'border-yellow-500/30'
-                                    : 'border-slate-100 dark:border-border/50',
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onDragStart={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                }}
-                              >
-                                <Label
-                                  className={cn(
-                                    'text-[9px] uppercase font-bold tracking-wider',
-                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
-                                  )}
-                                >
-                                  Mover Etapa
-                                </Label>
-                                <Select
-                                  value={stage.name}
-                                  onValueChange={(val) => {
-                                    if (val && val !== stage.name) {
-                                      updateOrderKanbanStage(o.id, val)
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    className={cn(
-                                      'h-7 text-[10px] font-bold uppercase',
-                                      o.isAdjustmentReturn
-                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
-                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
-                                    )}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent className="z-[110]">
-                                    {activeStages.map((s) => (
-                                      <SelectItem
-                                        key={s.id}
-                                        value={s.name}
-                                        className="text-[10px] uppercase font-bold"
-                                      >
-                                        {s.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-
-                            {!isDentist && (
-                              <div
-                                className={cn(
-                                  'mt-3 pt-2 border-t flex flex-col gap-1.5',
-                                  o.isAdjustmentReturn
-                                    ? 'border-yellow-500/30'
-                                    : 'border-slate-100 dark:border-border/50',
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onDragStart={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                }}
-                              >
-                                <Label
-                                  className={cn(
-                                    'text-[9px] uppercase font-bold tracking-wider',
-                                    o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
-                                  )}
-                                >
-                                  Cadista
-                                </Label>
-                                <Select
-                                  value={cadistaAssignments[o.id]?.cadista_id || 'none'}
-                                  onValueChange={(val) =>
-                                    handleUpdateCadista(o.id, val === 'none' ? null : val)
-                                  }
-                                >
-                                  <SelectTrigger
-                                    className={cn(
-                                      'h-7 text-[10px] font-bold uppercase',
-                                      o.isAdjustmentReturn
-                                        ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
-                                        : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
-                                    )}
-                                  >
-                                    <SelectValue placeholder="SELECIONAR CADISTA" />
-                                  </SelectTrigger>
-                                  <SelectContent className="z-[110]">
-                                    <SelectItem
-                                      value="none"
-                                      className="text-[10px] uppercase font-bold text-muted-foreground"
-                                    >
-                                      NENHUM
-                                    </SelectItem>
-                                    {cadistas.map((c) => (
-                                      <SelectItem
-                                        key={c.id}
-                                        value={c.id}
-                                        className="text-[10px] uppercase font-bold"
-                                      >
-                                        {c.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-
-                                {cadistaAssignments[o.id]?.cadista_id && (
-                                  <>
-                                    <Label
+                                    {o.patientName}
+                                  </p>
+                                  {!isDentist && (
+                                    <p
                                       className={cn(
-                                        'text-[9px] uppercase font-bold tracking-wider mt-1',
-                                        o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
+                                        'text-[10px] truncate mt-0.5 font-medium',
+                                        o.isAdjustmentReturn
+                                          ? 'text-yellow-800'
+                                          : 'text-slate-500 dark:text-slate-400',
+                                      )}
+                                      title={o.dentistName}
+                                    >
+                                      Dr(a). {o.dentistName}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="shrink-0 flex items-center gap-1.5">
+                                  {o.isAdjustmentReturn && (
+                                    <span
+                                      className="w-2 h-2 rounded-full bg-yellow-500"
+                                      title="Retorno para Ajuste"
+                                    />
+                                  )}
+                                  <KanbanCardTimer order={o} currentStage={stage.name} />
+                                </div>
+                              </div>
+
+                              {isPendingCard && (
+                                <div className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-1 rounded text-center uppercase shadow-sm">
+                                  Aguardando Dentista
+                                </div>
+                              )}
+
+                              <div
+                                className="flex items-center gap-1.5 mt-1"
+                                onClick={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                              >
+                                {canDragCards && (
+                                  <Select
+                                    value={stage.name}
+                                    onValueChange={(val) => {
+                                      if (val && val !== stage.name) {
+                                        updateOrderKanbanStage(o.id, val)
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      className={cn(
+                                        'h-7 text-[9px] font-bold uppercase flex-1 px-2',
+                                        o.isAdjustmentReturn
+                                          ? 'bg-yellow-500/20 border-yellow-600/30 text-yellow-900 focus:ring-yellow-500'
+                                          : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-primary/30',
                                       )}
                                     >
-                                      Serviço Cadista
-                                    </Label>
-                                    <Select
-                                      value={cadistaAssignments[o.id]?.cadista_service_id || 'none'}
-                                      onValueChange={(val) =>
-                                        handleUpdateCadistaService(
-                                          o.id,
-                                          cadistaAssignments[o.id].cadista_id,
-                                          val === 'none' ? null : val,
-                                        )
-                                      }
-                                    >
-                                      <SelectTrigger
-                                        className={cn(
-                                          'h-7 text-[10px] font-bold uppercase',
-                                          o.isAdjustmentReturn
-                                            ? 'bg-yellow-500/30 border-yellow-600/50 text-yellow-900 focus:ring-yellow-500'
-                                            : 'bg-white dark:bg-background border-slate-200 focus:ring-primary/30',
-                                        )}
-                                      >
-                                        <SelectValue placeholder="SELECIONAR SERVIÇO" />
-                                      </SelectTrigger>
-                                      <SelectContent className="z-[110]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="z-[110]">
+                                      {activeStages.map((s) => (
                                         <SelectItem
-                                          value="none"
-                                          className="text-[10px] uppercase font-bold text-muted-foreground"
+                                          key={s.id}
+                                          value={s.name}
+                                          className="text-[10px] uppercase font-bold"
                                         >
-                                          NENHUM
+                                          {s.name}
                                         </SelectItem>
-                                        {cadistaServices
-                                          .filter(
-                                            (s) =>
-                                              s.cadista_id === cadistaAssignments[o.id].cadista_id,
-                                          )
-                                          .map((s) => (
-                                            <SelectItem
-                                              key={s.id}
-                                              value={s.id}
-                                              className="text-[10px] uppercase font-bold"
-                                            >
-                                              {s.name}
-                                            </SelectItem>
-                                          ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 )}
 
-                                {cadistaAssignments[o.id]?.cadista_price != null &&
-                                  cadistaAssignments[o.id]?.cadista_price > 0 && (
-                                    <div className="text-[10px] font-bold text-emerald-600 mt-1 text-right">
-                                      Custo: {formatBRL(cadistaAssignments[o.id].cadista_price)}
-                                    </div>
-                                  )}
-                              </div>
-                            )}
-
-                            <div
-                              className={cn(
-                                'flex justify-between items-center mt-3 pt-2 border-t gap-1',
-                                o.isAdjustmentReturn ? 'border-yellow-500/30' : '',
-                              )}
-                            >
-                              <div
-                                className={cn(
-                                  'text-[10px] font-medium truncate flex-1 pl-1',
-                                  o.isAdjustmentReturn ? 'text-yellow-800' : 'text-slate-400',
-                                )}
-                              >
-                                {!isDentist && o.dentistName}
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
                                 {!isDentist &&
                                   !stage.name.toUpperCase().includes('FINALIZADO') &&
                                   !stage.name.toUpperCase().includes('ENTREGUE') && (
@@ -1138,21 +928,20 @@ export default function KanbanPage() {
                                       size="sm"
                                       disabled={finishingOrderId === o.id}
                                       className={cn(
-                                        'h-[22px] px-2 py-0 text-[10px] font-bold',
+                                        'h-7 px-2 text-[9px] font-bold shrink-0',
                                         o.isAdjustmentReturn
-                                          ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/50'
+                                          ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/20'
                                           : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50',
                                       )}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         handleQuickFinish(o.id)
                                       }}
-                                      title="Mover para Finalizados e Entregues"
                                     >
                                       {finishingOrderId === o.id ? (
                                         <div
                                           className={cn(
-                                            'w-3 h-3 mr-1 border-[1.5px] border-t-transparent rounded-full animate-spin',
+                                            'w-3 h-3 border-[1.5px] border-t-transparent rounded-full animate-spin mr-1',
                                             o.isAdjustmentReturn
                                               ? 'border-yellow-900'
                                               : 'border-emerald-600',
@@ -1164,15 +953,13 @@ export default function KanbanPage() {
                                       Finalizar
                                     </Button>
                                   )}
-                                <KanbanCardTimer order={o} currentStage={stage.name} />
                               </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5 mt-3 w-full">
+
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 className={cn(
-                                  'w-full text-[10px] font-bold uppercase h-7 transition-colors px-1',
+                                  'w-full text-[10px] font-bold uppercase h-7 mt-1',
                                   o.isAdjustmentReturn
                                     ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
                                     : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
@@ -1185,42 +972,6 @@ export default function KanbanPage() {
                                 <ExternalLink className="w-3 h-3 mr-1 shrink-0" />
                                 <span className="truncate">ABRIR REQUISIÇÃO</span>
                               </Button>
-                              <div className="flex gap-1.5 w-full">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    'flex-1 text-[9px] font-bold uppercase h-7 transition-colors px-1',
-                                    o.isAdjustmentReturn
-                                      ? 'border-yellow-600 text-yellow-900 hover:bg-yellow-500'
-                                      : 'border-primary/20 text-primary hover:bg-primary/10',
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedFullQrOrder(o)
-                                  }}
-                                >
-                                  <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
-                                  <span className="truncate">QR PEDIDO</span>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    'flex-1 text-[9px] font-bold uppercase h-7 transition-colors px-1',
-                                    o.isAdjustmentReturn
-                                      ? 'border-yellow-600 text-yellow-900 hover:bg-yellow-500'
-                                      : 'border-primary/20 text-primary hover:bg-primary/10',
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedPrintQrOrder(o)
-                                  }}
-                                >
-                                  <QrCode className="w-2.5 h-2.5 mr-1 shrink-0" />
-                                  <span className="truncate">QR IMPRESSÃO</span>
-                                </Button>
-                              </div>
                             </div>
                           </div>
                         </TooltipTrigger>
