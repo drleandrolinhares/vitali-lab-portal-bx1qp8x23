@@ -45,6 +45,9 @@ export default function NewRequest() {
   const isRepetition = searchParams.get('type') === 'repetition'
   const [submitting, setSubmitting] = useState(false)
 
+  const [repetitionCause, setRepetitionCause] = useState<'dentist' | 'laboratory' | ''>('')
+  const [laudoResponsible, setLaudoResponsible] = useState('')
+
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
   const [dentistsList, setDentistsList] = useState<{ id: string; name: string }[]>([])
   const [scaleOpen, setScaleOpen] = useState(false)
@@ -297,6 +300,25 @@ export default function NewRequest() {
       return
     }
 
+    if (isRepetition) {
+      if (!repetitionCause) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, informe a causa da repetição (Erro do Dentista ou Laboratório).',
+          variant: 'destructive',
+        })
+        return
+      }
+      if (!laudoResponsible.trim()) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, informe o responsável pelo laudo.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     if (!isAdjustment) {
       if (!formData.workType || !formData.sector) return
 
@@ -402,8 +424,20 @@ export default function NewRequest() {
       }
     }
 
+    let basePriceToCharge = 0
+    if (isRepetition) {
+      if (repetitionCause === 'dentist') {
+        basePriceToCharge = estimatedLoss * 0.5
+      }
+    }
+
+    const finalObservations = isRepetition
+      ? `[LAUDO - ${repetitionCause === 'dentist' ? 'Erro do Dentista' : 'Erro do Laboratório'}] Responsável: ${laudoResponsible}\n\nObservações:\n${formData.observations}`
+      : formData.observations
+
     const success = await addOrder({
       ...formData,
+      observations: finalObservations,
       isAdjustmentReturn: isAdjustment,
       isRepetition,
       workType: isAdjustment ? 'AJUSTE' : formData.workType,
@@ -416,9 +450,9 @@ export default function NewRequest() {
       fileUrls,
       ...(isRepetition
         ? {
-            custo_adicional_descricao: 'REPETIÇÃO',
+            custo_adicional_descricao: `REPETIÇÃO - ${repetitionCause === 'dentist' ? 'Erro do Dentista' : 'Erro do Laboratório'}`,
             custo_adicional_valor: estimatedLoss,
-            basePrice: 0,
+            basePrice: basePriceToCharge,
           }
         : {}),
     })
@@ -453,7 +487,7 @@ export default function NewRequest() {
               </CardTitle>
               <CardDescription>
                 {isRepetition
-                  ? 'Registro de repetição interna. Este pedido não gerará cobrança para o dentista, mas computará o prejuízo estimado.'
+                  ? 'Registro de repetição interna com avaliação de responsabilidade. Defina o laudo para calcular os custos.'
                   : isAdjustment
                     ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
                     : 'Preencha os detalhes clínicos do paciente e especificações.'}
@@ -507,16 +541,60 @@ export default function NewRequest() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
             {isRepetition && (
-              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-4 rounded-xl flex items-start gap-3">
-                <RefreshCw className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-amber-800 dark:text-amber-400 font-semibold text-sm">
-                    Registro de Repetição
-                  </p>
-                  <p className="text-amber-700 dark:text-amber-500/80 text-xs mt-1">
-                    Este registro contabilizará os custos de retrabalho do laboratório. O valor
-                    faturado para o cliente será de R$ 0,00.
-                  </p>
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-5 rounded-xl space-y-6">
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-amber-800 dark:text-amber-400 font-semibold text-sm">
+                      Registro de Repetição Interna
+                    </p>
+                    <p className="text-amber-700 dark:text-amber-500/80 text-xs mt-1">
+                      Preencha os dados do laudo para determinar a responsabilidade e os custos
+                      aplicados.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Label className="uppercase font-bold text-xs text-amber-900 dark:text-amber-300">
+                    Causa da Repetição (Responsabilidade) *
+                  </Label>
+                  <RadioGroup
+                    value={repetitionCause}
+                    onValueChange={(v) => setRepetitionCause(v as any)}
+                    className="flex flex-col sm:flex-row gap-3"
+                  >
+                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-1">
+                      <RadioGroupItem value="laboratory" id="cause-lab" />
+                      <Label htmlFor="cause-lab" className="cursor-pointer font-medium flex-1">
+                        Erro do Laboratório{' '}
+                        <span className="text-muted-foreground font-normal block text-xs">
+                          Sem custo para o dentista
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-1">
+                      <RadioGroupItem value="dentist" id="cause-dentist" />
+                      <Label htmlFor="cause-dentist" className="cursor-pointer font-medium flex-1">
+                        Erro do Dentista{' '}
+                        <span className="text-muted-foreground font-normal block text-xs">
+                          Custo de 50% do valor base
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="uppercase font-bold text-xs text-amber-900 dark:text-amber-300">
+                    Responsável pelo Laudo *
+                  </Label>
+                  <Input
+                    placeholder="Nome do técnico responsável pela avaliação..."
+                    value={laudoResponsible}
+                    onChange={(e) => setLaudoResponsible(e.target.value)}
+                    className="bg-white dark:bg-background border-amber-200 dark:border-amber-800"
+                  />
                 </div>
               </div>
             )}
@@ -920,7 +998,7 @@ export default function NewRequest() {
                 )}
               >
                 {isRepetition
-                  ? 'MOTIVO DA REPETIÇÃO *'
+                  ? 'OBSERVAÇÕES DO LAUDO *'
                   : isAdjustment
                     ? 'QUAL O AJUSTE NECESSÁRIO? *'
                     : 'Observações Adicionais'}
@@ -928,7 +1006,7 @@ export default function NewRequest() {
               <Textarea
                 placeholder={
                   isRepetition
-                    ? 'Descreva detalhadamente o motivo pelo qual este trabalho está sendo repetido...'
+                    ? 'Descreva detalhadamente o caso e as observações do laudo...'
                     : isAdjustment
                       ? 'Descreva detalhadamente o ajuste que precisa ser feito...'
                       : 'Instruções sobre textura, formato...'
