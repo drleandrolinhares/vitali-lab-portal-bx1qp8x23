@@ -24,6 +24,16 @@ export default function Index() {
 
   const showGlobalInbox = checkPermission('inbox', 'view_all')
   const canCreateOrder = checkPermission('inbox', 'create_order') || effectiveRole === 'dentist'
+  const isInternalUser =
+    effectiveRole === 'admin' ||
+    effectiveRole === 'master' ||
+    effectiveRole === 'receptionist' ||
+    effectiveRole === 'technical_assistant' ||
+    effectiveRole === 'financial' ||
+    effectiveRole === 'relationship_manager'
+
+  const isRepetitionOrder = (o: any) =>
+    o.isRepetition || o.custo_adicional_descricao === 'REPETIÇÃO'
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || null
@@ -66,11 +76,19 @@ export default function Index() {
             <p className="text-muted-foreground">Bem-vindo(a), {currentUser?.name}!</p>
           </div>
           {canCreateOrder && (
-            <div className="flex gap-3 w-full sm:w-auto h-10">
+            <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto min-h-10">
+              {isInternalUser && (
+                <Button
+                  asChild
+                  className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
+                >
+                  <Link to="/new-request?type=repetition">Repetições</Link>
+                </Button>
+              )}
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+                className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
               >
                 <Link to="/new-request?type=adjustment">
                   <RefreshCw className="w-4 h-4 hidden sm:block" />
@@ -106,7 +124,11 @@ export default function Index() {
                       key={o.id}
                       className={cn(
                         'p-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group',
-                        o.isAdjustmentReturn ? 'bg-yellow-50/30 dark:bg-yellow-950/10' : '',
+                        o.isAdjustmentReturn
+                          ? 'bg-yellow-50/30 dark:bg-yellow-950/10'
+                          : isRepetitionOrder(o)
+                            ? 'bg-amber-50/30 dark:bg-amber-950/10'
+                            : '',
                       )}
                       onClick={() => {
                         setSelectedOrderId(o.id)
@@ -118,16 +140,21 @@ export default function Index() {
                           <span
                             className={cn(
                               'text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider',
-                              o.isAdjustmentReturn
+                              o.isAdjustmentReturn || isRepetitionOrder(o)
                                 ? 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300'
                                 : 'text-primary bg-primary/10',
                             )}
                           >
                             {o.friendlyId}
                           </span>
-                          {o.isAdjustmentReturn && (
+                          {o.isAdjustmentReturn && !isRepetitionOrder(o) && (
                             <span className="text-[10px] font-bold text-yellow-800 bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
                               Ajuste
+                            </span>
+                          )}
+                          {isRepetitionOrder(o) && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              Repetição
                             </span>
                           )}
                           <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
@@ -140,7 +167,7 @@ export default function Index() {
                         <p
                           className={cn(
                             'font-semibold text-lg transition-colors',
-                            o.isAdjustmentReturn
+                            o.isAdjustmentReturn || isRepetitionOrder(o)
                               ? 'text-yellow-950 dark:text-yellow-50'
                               : 'text-slate-800 dark:text-slate-100 group-hover:text-primary',
                           )}
@@ -150,7 +177,7 @@ export default function Index() {
                         <p
                           className={cn(
                             'text-sm mt-0.5 flex items-center flex-wrap gap-x-1.5',
-                            o.isAdjustmentReturn
+                            o.isAdjustmentReturn || isRepetitionOrder(o)
                               ? 'text-yellow-800 dark:text-yellow-200/80'
                               : 'text-slate-600 dark:text-slate-400',
                           )}
@@ -189,6 +216,16 @@ export default function Index() {
             <CardContent className="p-4 space-y-3">
               {canCreateOrder && (
                 <>
+                  {isInternalUser && (
+                    <Button
+                      asChild
+                      className="w-full justify-start bg-amber-500 hover:bg-amber-600 text-amber-950 font-semibold border-none"
+                    >
+                      <Link to="/new-request?type=repetition">
+                        <RefreshCw className="w-4 h-4 mr-2" /> Repetição de Trabalho
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     asChild
                     className="w-full justify-start text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-500 dark:hover:bg-yellow-900/30"
@@ -239,18 +276,26 @@ export default function Index() {
           </p>
         </div>
         {canCreateOrder && (
-          <div className="flex gap-3 w-full sm:w-auto h-10">
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto min-h-10">
+            {isInternalUser && (
+              <Button
+                asChild
+                className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
+              >
+                <Link to="/new-request?type=repetition">Repetições</Link>
+              </Button>
+            )}
             <Button
               asChild
               variant="outline"
-              className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+              className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
             >
               <Link to="/new-request?type=adjustment">
                 <RefreshCw className="w-4 h-4 hidden sm:block" />
                 Retorno <span className="hidden sm:inline">para Ajustes</span>
               </Link>
             </Button>
-            <Button asChild className="flex-1 sm:flex-none h-full">
+            <Button asChild className="flex-1 sm:flex-none h-10">
               <Link to="/new-request">Novo Pedido</Link>
             </Button>
           </div>
@@ -273,9 +318,11 @@ export default function Index() {
               key={order.id}
               className={cn(
                 'group transition-all shadow-sm cursor-pointer',
-                order.isAdjustmentReturn
-                  ? 'bg-yellow-50/50 border-yellow-300 hover:border-yellow-500 dark:bg-yellow-950/20 dark:border-yellow-900/50 dark:hover:border-yellow-700'
-                  : 'hover:border-primary/40',
+                isRepetitionOrder(order)
+                  ? 'bg-amber-50/50 border-amber-300 hover:border-amber-500 dark:bg-amber-950/20 dark:border-amber-900/50 dark:hover:border-amber-700'
+                  : order.isAdjustmentReturn
+                    ? 'bg-yellow-50/50 border-yellow-300 hover:border-yellow-500 dark:bg-yellow-950/20 dark:border-yellow-900/50 dark:hover:border-yellow-700'
+                    : 'hover:border-primary/40',
               )}
               onClick={() => {
                 setSelectedOrderId(order.id)
@@ -288,16 +335,21 @@ export default function Index() {
                     <span
                       className={cn(
                         'text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider',
-                        order.isAdjustmentReturn
+                        order.isAdjustmentReturn || isRepetitionOrder(order)
                           ? 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300'
                           : 'text-primary bg-primary/10',
                       )}
                     >
                       {order.friendlyId}
                     </span>
-                    {order.isAdjustmentReturn && (
+                    {order.isAdjustmentReturn && !isRepetitionOrder(order) && (
                       <span className="text-[10px] font-bold text-white bg-yellow-500 dark:bg-yellow-600 px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
                         Ajuste
+                      </span>
+                    )}
+                    {isRepetitionOrder(order) && (
+                      <span className="text-[10px] font-bold text-white bg-amber-500 dark:bg-amber-600 px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                        Repetição
                       </span>
                     )}
                     <StatusBadge status={order.status} className="scale-[0.8] origin-left" />
@@ -305,7 +357,7 @@ export default function Index() {
                   <h3
                     className={cn(
                       'font-semibold text-lg',
-                      order.isAdjustmentReturn
+                      order.isAdjustmentReturn || isRepetitionOrder(order)
                         ? 'text-yellow-950 dark:text-yellow-50'
                         : 'text-slate-800 dark:text-slate-100',
                     )}
@@ -315,7 +367,7 @@ export default function Index() {
                   <p
                     className={cn(
                       'text-sm flex items-center gap-1.5 mt-0.5',
-                      order.isAdjustmentReturn
+                      order.isAdjustmentReturn || isRepetitionOrder(order)
                         ? 'text-yellow-800 dark:text-yellow-200/80'
                         : 'text-slate-600 dark:text-slate-400',
                     )}

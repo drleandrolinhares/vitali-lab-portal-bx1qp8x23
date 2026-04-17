@@ -42,6 +42,7 @@ export default function NewRequest() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isAdjustment = searchParams.get('type') === 'adjustment'
+  const isRepetition = searchParams.get('type') === 'repetition'
   const [submitting, setSubmitting] = useState(false)
 
   const [availableWorkTypes, setAvailableWorkTypes] = useState<string[]>([])
@@ -132,7 +133,13 @@ export default function NewRequest() {
   }, [isInternalUser])
 
   useEffect(() => {
-    if (isAdjustment && patientSearch.length >= 3) {
+    if (!isInternalUser && isRepetition) {
+      navigate('/app')
+    }
+  }, [isInternalUser, isRepetition, navigate])
+
+  useEffect(() => {
+    if ((isAdjustment || isRepetition) && patientSearch.length >= 3) {
       const dentistIdToUse = isInternalUser
         ? formData.dentistId
         : Visualizando_Como_ID || currentUser?.id
@@ -163,6 +170,7 @@ export default function NewRequest() {
     }
   }, [
     isAdjustment,
+    isRepetition,
     patientSearch,
     isInternalUser,
     formData.dentistId,
@@ -302,7 +310,7 @@ export default function NewRequest() {
         return
       }
 
-      if (isSobreImplante) {
+      if (isSobreImplante && !isRepetition) {
         if (!formData.implantBrand) {
           toast({
             title: 'Atenção',
@@ -357,9 +365,47 @@ export default function NewRequest() {
       }
     }
 
+    // Calculate the expected loss price based on price list
+    let estimatedLoss = 0
+    if (isRepetition && formData.workType) {
+      let possibleItems = priceList.filter(
+        (p) => p.work_type === formData.workType && p.sector === formData.sector,
+      )
+      if (possibleItems.length === 0) {
+        possibleItems = priceList.filter((p) => p.work_type === formData.workType)
+      }
+
+      if (hasCustomPrices) {
+        const customItems = possibleItems.filter(
+          (p) => partnerPrices[p.id] && partnerPrices[p.id].is_enabled,
+        )
+        if (customItems.length > 0) possibleItems = customItems
+      }
+
+      const priceItem = possibleItems[0]
+      if (priceItem) {
+        if (
+          hasCustomPrices &&
+          partnerPrices[priceItem.id] &&
+          partnerPrices[priceItem.id].is_enabled
+        ) {
+          estimatedLoss = partnerPrices[priceItem.id].custom_price
+        } else {
+          estimatedLoss =
+            parseFloat(
+              priceItem.price
+                .replace(/[^\d.,]/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.'),
+            ) || 0
+        }
+      }
+    }
+
     const success = await addOrder({
       ...formData,
       isAdjustmentReturn: isAdjustment,
+      isRepetition,
       workType: isAdjustment ? 'AJUSTE' : formData.workType,
       sector: isAdjustment ? 'SOLUÇÕES CERÂMICAS' : formData.sector,
       material: isAdjustment ? 'N/A' : formData.material,
@@ -368,6 +414,13 @@ export default function NewRequest() {
       teeth: isAdjustment ? [] : selectedTeeth,
       arches: isAdjustment ? [] : selectedArches,
       fileUrls,
+      ...(isRepetition
+        ? {
+            custo_adicional_descricao: 'REPETIÇÃO',
+            custo_adicional_valor: estimatedLoss,
+            basePrice: 0,
+          }
+        : {}),
     })
     setSubmitting(false)
 
@@ -383,19 +436,44 @@ export default function NewRequest() {
           <CardTitle
             className={cn(
               'text-2xl uppercase tracking-tight font-bold',
-              isAdjustment ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary',
+              isRepetition
+                ? 'text-amber-600 dark:text-amber-500'
+                : isAdjustment
+                  ? 'text-yellow-600 dark:text-yellow-500'
+                  : 'text-primary',
             )}
           >
-            {isAdjustment ? 'NOVO PEDIDO DE AJUSTE' : 'NOVO PEDIDO VITALI LAB'}
+            {isRepetition
+              ? 'NOVO PEDIDO DE REPETIÇÃO'
+              : isAdjustment
+                ? 'NOVO PEDIDO DE AJUSTE'
+                : 'NOVO PEDIDO VITALI LAB'}
           </CardTitle>
           <CardDescription>
-            {isAdjustment
-              ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
-              : 'Preencha os detalhes clínicos do paciente e especificações.'}
+            {isRepetition
+              ? 'Registro de repetição interna. Este pedido não gerará cobrança para o dentista, mas computará o prejuízo estimado.'
+              : isAdjustment
+                ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
+                : 'Preencha os detalhes clínicos do paciente e especificações.'}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
+            {isRepetition && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-4 rounded-xl flex items-start gap-3">
+                <RefreshCw className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 dark:text-amber-400 font-semibold text-sm">
+                    Registro de Repetição
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-500/80 text-xs mt-1">
+                    Este registro contabilizará os custos de retrabalho do laboratório. O valor
+                    faturado para o cliente será de R$ 0,00.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {isAdjustment && (
               <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 p-4 rounded-xl flex items-start gap-3">
                 <RefreshCw className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
@@ -437,10 +515,17 @@ export default function NewRequest() {
               </div>
             )}
 
-            {isAdjustment ? (
+            {isAdjustment || isRepetition ? (
               <div className="space-y-2">
-                <Label className="uppercase font-semibold text-xs text-yellow-700 dark:text-yellow-500">
-                  NOME DO PACIENTE *
+                <Label
+                  className={cn(
+                    'uppercase font-semibold text-xs',
+                    isRepetition
+                      ? 'text-amber-700 dark:text-amber-500'
+                      : 'text-yellow-700 dark:text-yellow-500',
+                  )}
+                >
+                  NOME DO PACIENTE (BUSCAR NO HISTÓRICO) *
                 </Label>
                 <Popover open={patientOpen} onOpenChange={setPatientOpen}>
                   <PopoverTrigger asChild>
@@ -449,7 +534,10 @@ export default function NewRequest() {
                       role="combobox"
                       aria-expanded={patientOpen}
                       className={cn(
-                        'w-full justify-between h-12 text-lg font-medium border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
+                        'w-full justify-between h-12 text-lg font-medium',
+                        isRepetition
+                          ? 'border-amber-400 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                          : 'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
                         !formData.patientName && 'text-muted-foreground',
                       )}
                       disabled={isInternalUser && !formData.dentistId}
@@ -501,7 +589,12 @@ export default function NewRequest() {
                   </PopoverContent>
                 </Popover>
                 {isInternalUser && !formData.dentistId && (
-                  <p className="text-xs text-yellow-600 font-medium mt-1">
+                  <p
+                    className={cn(
+                      'text-xs font-medium mt-1',
+                      isRepetition ? 'text-amber-600' : 'text-yellow-600',
+                    )}
+                  >
                     Selecione um dentista primeiro para buscar os pacientes.
                   </p>
                 )}
@@ -772,25 +865,37 @@ export default function NewRequest() {
               <Label
                 className={cn(
                   'uppercase font-semibold',
-                  isAdjustment ? 'text-sm text-yellow-700 dark:text-yellow-500' : 'text-xs',
+                  isRepetition
+                    ? 'text-sm text-amber-700 dark:text-amber-500'
+                    : isAdjustment
+                      ? 'text-sm text-yellow-700 dark:text-yellow-500'
+                      : 'text-xs',
                 )}
               >
-                {isAdjustment ? 'QUAL O AJUSTE NECESSÁRIO? *' : 'Observações Adicionais'}
+                {isRepetition
+                  ? 'MOTIVO DA REPETIÇÃO *'
+                  : isAdjustment
+                    ? 'QUAL O AJUSTE NECESSÁRIO? *'
+                    : 'Observações Adicionais'}
               </Label>
               <Textarea
                 placeholder={
-                  isAdjustment
-                    ? 'Descreva detalhadamente o ajuste que precisa ser feito...'
-                    : 'Instruções sobre textura, formato...'
+                  isRepetition
+                    ? 'Descreva detalhadamente o motivo pelo qual este trabalho está sendo repetido...'
+                    : isAdjustment
+                      ? 'Descreva detalhadamente o ajuste que precisa ser feito...'
+                      : 'Instruções sobre textura, formato...'
                 }
                 className={cn(
                   'min-h-[100px]',
+                  isRepetition &&
+                    'border-amber-400 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-900/10',
                   isAdjustment &&
                     'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10',
                 )}
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-                required={isAdjustment}
+                required={isAdjustment || isRepetition}
               />
             </div>
 
@@ -904,12 +1009,21 @@ export default function NewRequest() {
               type="submit"
               className={cn(
                 'h-11 px-8 text-base',
+                isRepetition &&
+                  'bg-amber-500 hover:bg-amber-600 text-amber-950 dark:bg-amber-600 dark:hover:bg-amber-700 dark:text-amber-50',
                 isAdjustment &&
+                  !isRepetition &&
                   'bg-yellow-500 hover:bg-yellow-600 text-yellow-950 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:text-yellow-50',
               )}
               disabled={submitting}
             >
-              {submitting ? 'Enviando...' : isAdjustment ? 'Enviar Retorno' : 'Enviar Pedido'}
+              {submitting
+                ? 'Enviando...'
+                : isRepetition
+                  ? 'Registrar Repetição'
+                  : isAdjustment
+                    ? 'Enviar Retorno'
+                    : 'Enviar Pedido'}
             </Button>
           </CardFooter>
         </form>
