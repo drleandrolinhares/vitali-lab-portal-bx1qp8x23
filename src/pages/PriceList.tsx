@@ -151,19 +151,20 @@ export default function PriceList() {
       const globalInadimplency = parseLocalNum(getSetting('global_inadimplency'))
       const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
-      const { profitMargin } = calculateProcedureProfitability({
-        price: pNum,
-        executionTime: eTime,
-        cadistaCost: cVal,
-        materialCost: mVal,
-        costPerMinute: sharedCosts.costPerMinute,
-        globalCardFee,
-        globalCommission,
-        globalInadimplency,
-        globalTaxes,
-      })
+      const { profitMargin = 0 } =
+        calculateProcedureProfitability({
+          price: pNum,
+          executionTime: eTime,
+          cadistaCost: cVal,
+          materialCost: mVal,
+          costPerMinute: sharedCosts.costPerMinute,
+          globalCardFee,
+          globalCommission,
+          globalInadimplency,
+          globalTaxes,
+        }) || {}
 
-      return profitMargin
+      return profitMargin || 0
     },
     [getSetting, sharedCosts.costPerMinute],
   )
@@ -466,14 +467,14 @@ export default function PriceList() {
   const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
   const {
-    fixedCost,
-    cardFeeVal,
-    commissionVal,
-    inadimplencyVal,
-    taxesVal,
-    totalCosts,
-    profitVal,
-    profitMargin,
+    fixedCost = 0,
+    cardFeeVal = 0,
+    commissionVal = 0,
+    inadimplencyVal = 0,
+    taxesVal = 0,
+    totalCosts = 0,
+    profitVal = 0,
+    profitMargin = 0,
   } = calculateProcedureProfitability({
     price: priceNum,
     executionTime: execTime,
@@ -484,7 +485,7 @@ export default function PriceList() {
     globalCommission,
     globalInadimplency,
     globalTaxes,
-  })
+  }) || {}
 
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
@@ -652,7 +653,7 @@ export default function PriceList() {
                                 {item.category}
                               </span>
                             </div>
-                            <div className={badgeClass}>{margin.toFixed(1)}%</div>
+                            <div className={badgeClass}>{Number(margin || 0).toFixed(1)}%</div>
                           </div>
                         </TableCell>
                         <TableCell className="py-1.5">
@@ -1096,7 +1097,7 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(fixedCost)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          ({fixedCostPerc.toFixed(1)}%)
+                          ({Number(fixedCostPerc || 0).toFixed(1)}%)
                         </span>
                       </span>
                     </div>
@@ -1106,7 +1107,9 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(cadistaVal)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          ({priceNum > 0 ? ((cadistaVal / priceNum) * 100).toFixed(1) : 0}%)
+                          (
+                          {priceNum > 0 ? Number((cadistaVal / priceNum) * 100 || 0).toFixed(1) : 0}
+                          %)
                         </span>
                       </span>
                     </div>
@@ -1116,7 +1119,7 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(materialVal)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          ({materialCostPerc.toFixed(1)}%)
+                          ({Number(materialCostPerc || 0).toFixed(1)}%)
                         </span>
                       </span>
                     </div>
@@ -1167,9 +1170,9 @@ export default function PriceList() {
                   <div
                     className={cn(
                       'mt-6 p-4 rounded-lg border transition-colors',
-                      profitMargin >= 20
+                      (profitMargin || 0) >= 20
                         ? 'bg-emerald-600 border-emerald-700 text-white dark:bg-emerald-900 dark:border-emerald-950'
-                        : profitMargin >= 10
+                        : (profitMargin || 0) >= 10
                           ? 'bg-amber-500 border-amber-600 text-white dark:bg-amber-600 dark:border-amber-700'
                           : 'bg-red-600 border-red-700 text-white dark:bg-red-900 dark:border-red-950',
                     )}
@@ -1186,16 +1189,16 @@ export default function PriceList() {
                           Margem
                         </p>
                         <p className="text-xl font-bold flex items-center justify-end gap-1">
-                          {profitMargin >= 20 ? (
+                          {(profitMargin || 0) >= 20 ? (
                             <TrendingUp className="w-4 h-4" />
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          {profitMargin.toFixed(1)}%
+                          {Number(profitMargin || 0).toFixed(1)}%
                         </p>
                       </div>
                     </div>
-                    {profitMargin < 10 && (
+                    {(profitMargin || 0) < 10 && (
                       <div className="mt-3 pt-3 border-t border-white/20">
                         <p className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 uppercase">
                           <AlertTriangle className="w-4 h-4" />
