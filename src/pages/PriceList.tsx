@@ -62,15 +62,87 @@ const formatBRL = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
 const parseLocalNum = (val: string | number | null | undefined) => {
-  const parsed = parseFloat(String(val ?? '').replace(',', '.'))
+  if (val == null) return 0
+  const str = String(val).trim()
+  if (str === '') return 0
+
+  let normalized = str
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.')
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.')
+  }
+  const parsed = parseFloat(normalized)
   return !isNaN(parsed) ? parsed : 0
+}
+
+const safePerc = (val: any) => {
+  const n = Number(val)
+  return isNaN(n) ? '0.0' : n.toFixed(1)
 }
 
 const isInvalidNumber = (val: string | number | null | undefined) => {
   const str = String(val ?? '').trim()
   if (str === '') return true
-  const parsed = parseFloat(str.replace(',', '.'))
+
+  let normalized = str
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.')
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.')
+  }
+  const parsed = parseFloat(normalized)
   return isNaN(parsed) || parsed < 0
+}
+
+const safeCalcProfitability = (params: any) => {
+  try {
+    const res = calculateProcedureProfitability(params)
+    if (res && typeof res.profitMargin === 'number' && !isNaN(res.profitMargin)) {
+      return res
+    }
+  } catch (err) {
+    console.error('Error in calculateProcedureProfitability', err)
+  }
+
+  const {
+    price,
+    executionTime,
+    cadistaCost,
+    materialCost,
+    costPerMinute,
+    globalCardFee,
+    globalCommission,
+    globalInadimplency,
+    globalTaxes,
+  } = params
+
+  const p = Number(price) || 0
+  const et = Number(executionTime) || 0
+  const cc = Number(cadistaCost) || 0
+  const mc = Number(materialCost) || 0
+  const cpm = Number(costPerMinute) || 0
+
+  const fixedCost = et * cpm
+  const cardFeeVal = p * ((Number(globalCardFee) || 0) / 100)
+  const commissionVal = p * ((Number(globalCommission) || 0) / 100)
+  const inadimplencyVal = p * ((Number(globalInadimplency) || 0) / 100)
+  const taxesVal = p * ((Number(globalTaxes) || 0) / 100)
+
+  const totalCosts = fixedCost + cc + mc + cardFeeVal + commissionVal + inadimplencyVal + taxesVal
+  const profitVal = p - totalCosts
+  const profitMargin = p > 0 ? (profitVal / p) * 100 : 0
+
+  return {
+    fixedCost,
+    cardFeeVal,
+    commissionVal,
+    inadimplencyVal,
+    taxesVal,
+    totalCosts,
+    profitVal,
+    profitMargin,
+  }
 }
 
 export default function PriceList() {
@@ -88,7 +160,36 @@ export default function PriceList() {
   const [globalErrors, setGlobalErrors] = useState<Record<string, boolean>>({})
   const [globalAttempted, setGlobalAttempted] = useState(false)
 
-  const sharedCosts = useMemo(() => computeHourlyCosts(appSettings), [appSettings])
+  const sharedCosts = useMemo(() => {
+    try {
+      return computeHourlyCosts(appSettings) || {}
+    } catch (e) {
+      console.error('Error computing hourly costs', e)
+      return {}
+    }
+  }, [appSettings])
+
+  const safeCPM = useMemo(() => {
+    let cpm = sharedCosts?.costPerMinute
+    if (cpm === undefined || isNaN(Number(cpm))) cpm = sharedCosts?.cost_per_minute
+    if (cpm === undefined || isNaN(Number(cpm))) cpm = appSettings?.['hourly_cost_per_minute']
+    if (cpm === undefined || isNaN(Number(cpm))) cpm = appSettings?.['cost_per_minute']
+
+    if (!cpm) {
+      const fixedTotal = parseLocalNum(
+        appSettings['total_fixed_costs'] || appSettings['custo_fixo_total'],
+      )
+      const hoursMonth = parseLocalNum(
+        appSettings['operational_hours_per_month'] || appSettings['horas_operacionais_mes'],
+      )
+      if (fixedTotal > 0 && hoursMonth > 0) {
+        cpm = fixedTotal / (hoursMonth * 60)
+      }
+    }
+
+    const parsed = parseLocalNum(cpm)
+    return parsed > 0 ? parsed : 0
+  }, [sharedCosts, appSettings])
 
   const getSetting = useCallback(
     (key: string) => {
@@ -152,12 +253,12 @@ export default function PriceList() {
       const globalTaxes = parseLocalNum(getSetting('global_taxes'))
 
       const { profitMargin = 0 } =
-        calculateProcedureProfitability({
+        safeCalcProfitability({
           price: pNum,
           executionTime: eTime,
           cadistaCost: cVal,
           materialCost: mVal,
-          costPerMinute: sharedCosts.costPerMinute,
+          costPerMinute: safeCPM,
           globalCardFee,
           globalCommission,
           globalInadimplency,
@@ -166,7 +267,7 @@ export default function PriceList() {
 
       return profitMargin || 0
     },
-    [getSetting, sharedCosts.costPerMinute],
+    [getSetting, safeCPM],
   )
 
   const filteredPrices = useMemo(() => {
@@ -375,7 +476,7 @@ export default function PriceList() {
     }
 
     const execTimeForSave = parseLocalNum(formData.execution_time)
-    const calculatedFixedCost = execTimeForSave * sharedCosts.costPerMinute
+    const calculatedFixedCost = execTimeForSave * safeCPM
 
     const payload: any = {
       work_type: formData.work_type,
@@ -475,12 +576,12 @@ export default function PriceList() {
     totalCosts = 0,
     profitVal = 0,
     profitMargin = 0,
-  } = calculateProcedureProfitability({
+  } = safeCalcProfitability({
     price: priceNum,
     executionTime: execTime,
     cadistaCost: cadistaVal,
     materialCost: materialVal,
-    costPerMinute: sharedCosts.costPerMinute,
+    costPerMinute: safeCPM,
     globalCardFee,
     globalCommission,
     globalInadimplency,
@@ -489,6 +590,7 @@ export default function PriceList() {
 
   const fixedCostPerc = priceNum > 0 ? (fixedCost / priceNum) * 100 : 0
   const materialCostPerc = priceNum > 0 ? (materialVal / priceNum) * 100 : 0
+  const cadistaCostPerc = priceNum > 0 ? (cadistaVal / priceNum) * 100 : 0
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
@@ -653,7 +755,7 @@ export default function PriceList() {
                                 {item.category}
                               </span>
                             </div>
-                            <div className={badgeClass}>{Number(margin || 0).toFixed(1)}%</div>
+                            <div className={badgeClass}>{safePerc(margin)}%</div>
                           </div>
                         </TableCell>
                         <TableCell className="py-1.5">
@@ -668,10 +770,10 @@ export default function PriceList() {
                           {item.execution_time ? `${item.execution_time} min` : '-'}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground font-medium py-1.5 text-xs">
-                          {formatBRL(sharedCosts.costPerMinute)}
+                          {formatBRL(safeCPM)}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground py-1.5 text-xs">
-                          {formatBRL((item.execution_time || 0) * sharedCosts.costPerMinute)}
+                          {formatBRL((parseLocalNum(item.execution_time) || 0) * safeCPM)}
                         </TableCell>
                         <TableCell className="text-right pr-6 py-1.5 space-x-1">
                           <Button
@@ -1097,7 +1199,7 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(fixedCost)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          ({Number(fixedCostPerc || 0).toFixed(1)}%)
+                          ({safePerc(fixedCostPerc)}%)
                         </span>
                       </span>
                     </div>
@@ -1107,9 +1209,7 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(cadistaVal)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          (
-                          {priceNum > 0 ? Number((cadistaVal / priceNum) * 100 || 0).toFixed(1) : 0}
-                          %)
+                          ({safePerc(cadistaCostPerc)}%)
                         </span>
                       </span>
                     </div>
@@ -1119,7 +1219,7 @@ export default function PriceList() {
                       <span className="flex items-center gap-2">
                         - {formatBRL(materialVal)}{' '}
                         <span className="w-12 text-right text-[10px]">
-                          ({Number(materialCostPerc || 0).toFixed(1)}%)
+                          ({safePerc(materialCostPerc)}%)
                         </span>
                       </span>
                     </div>
@@ -1194,7 +1294,7 @@ export default function PriceList() {
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          {Number(profitMargin || 0).toFixed(1)}%
+                          {safePerc(profitMargin)}%
                         </p>
                       </div>
                     </div>
