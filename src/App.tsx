@@ -56,11 +56,13 @@ const RouteGuard = ({
 
   const home = currentUser.role === 'admin' || currentUser.role === 'master' ? '/dashboard' : '/app'
 
-  if (adminOnly && currentUser.role !== 'admin' && currentUser.role !== 'master') {
+  const isAdminOrMaster = currentUser.role === 'admin' || currentUser.role === 'master'
+
+  if (adminOnly && !isAdminOrMaster) {
     return <Navigate to={home} replace />
   }
 
-  if (module && !checkPermission(module, action)) {
+  if (module && !isAdminOrMaster && !checkPermission(module, action)) {
     return <Navigate to={home} replace />
   }
 
