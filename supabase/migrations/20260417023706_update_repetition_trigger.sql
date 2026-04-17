@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.handle_order_repetition()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$
+AS $$
 BEGIN
   -- A trigger roda BEFORE INSERT ou UPDATE em orders
   IF NEW.is_repetition = true THEN
@@ -28,4 +28,4 @@ BEGIN
 
   RETURN NEW;
 END;
-$function$
+$$;
