@@ -7,7 +7,7 @@ import { PlusCircle, ArrowRight, Activity, CheckCircle2, Clock, RefreshCw } from
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Logo } from '@/components/Logo'
-import { formatBRL, getOrderFinancials } from '@/lib/financial'
+import { formatBRL } from '@/lib/financial'
 import { useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -38,9 +38,15 @@ export function DentistDashboard() {
     (currentUser?.role === 'admin' || currentUser?.role === 'master') && !!Visualizando_Como_ID
   const displayName = isImpersonating ? Visualizando_Como_Name : currentUser?.name
 
-  const financialData = useMemo(() => orders.map((o) => getOrderFinancials(o)), [orders])
-  const pipelineTotal = financialData.reduce((acc, o) => acc + o.pipelineCost, 0)
-  const completedTotal = financialData.reduce((acc, o) => acc + o.completedCost, 0)
+  const pipelineTotal = useMemo(() => {
+    return activeOrders.reduce((acc, o) => acc + (Number(o.basePrice) || 0), 0)
+  }, [activeOrders])
+
+  const completedTotal = useMemo(() => {
+    return orders
+      .filter((o) => o.status === 'completed' || o.status === 'delivered')
+      .reduce((acc, o) => acc + (Number(o.basePrice) || 0), 0)
+  }, [orders])
 
   const rawWhatsappLink =
     (currentUser as any).whatsapp_group_link ||
