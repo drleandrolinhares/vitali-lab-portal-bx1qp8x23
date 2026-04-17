@@ -195,8 +195,4 @@ export default function DRECategories() {
               {isSaving ? 'Salvando...' : 'Salvar Categoria'}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
+        </DialogCont

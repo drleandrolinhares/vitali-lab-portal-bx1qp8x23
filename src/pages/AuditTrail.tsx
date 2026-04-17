@@ -162,9 +162,3 @@ export default function AuditTrail() {
                 )}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
