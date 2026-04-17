@@ -1,18 +1,40 @@
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign, Clock, Calculator } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 export function HourlyCostDashboard() {
   const { appSettings } = useAppStore()
+  const [dbSettings, setDbSettings] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const fetchDbSettings = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('*')
+        .in('key', ['hourly_cost_fixed_items', 'hourly_cost_monthly_hours'])
+
+      if (data) {
+        const s = data.reduce((acc: any, curr) => ({ ...acc, [curr.key]: curr.value }), {})
+        setDbSettings(s)
+      }
+    }
+    fetchDbSettings()
+  }, [])
+
+  const mergedSettings = useMemo(
+    () => ({ ...appSettings, ...dbSettings }),
+    [appSettings, dbSettings],
+  )
 
   const costs = useMemo(() => {
     let totalFixedCosts = 0
     let monthlyHours = 176
 
     try {
-      if (appSettings['hourly_cost_fixed_items']) {
-        const items = JSON.parse(appSettings['hourly_cost_fixed_items'])
+      if (mergedSettings['hourly_cost_fixed_items']) {
+        const items = JSON.parse(mergedSettings['hourly_cost_fixed_items'])
         if (Array.isArray(items)) {
           totalFixedCosts = items.reduce(
             (acc: number, curr: any) => acc + (Number(curr.value) || 0),
@@ -24,8 +46,8 @@ export function HourlyCostDashboard() {
       console.error('Error parsing fixed items', e)
     }
 
-    if (appSettings['hourly_cost_monthly_hours']) {
-      const parsedHours = Number(appSettings['hourly_cost_monthly_hours'])
+    if (mergedSettings['hourly_cost_monthly_hours']) {
+      const parsedHours = Number(mergedSettings['hourly_cost_monthly_hours'])
       if (!isNaN(parsedHours) && parsedHours > 0) {
         monthlyHours = parsedHours
       }
@@ -35,7 +57,7 @@ export function HourlyCostDashboard() {
     const costPerMinute = totalHourlyCost / 60
 
     return { totalFixedCosts, totalHourlyCost, costPerMinute }
-  }, [appSettings])
+  }, [mergedSettings])
 
   const safeFormat = (val: number) => {
     if (isNaN(val)) return 'R$ 0,00'

@@ -145,6 +145,7 @@ export default function PriceList() {
   const [globalConfigOpen, setGlobalConfigOpen] = useState(false)
   const [profitFilter, setProfitFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [dbSettings, setDbSettings] = useState<Record<string, string>>({})
 
   // Validation States
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({})
@@ -152,13 +153,29 @@ export default function PriceList() {
   const [globalErrors, setGlobalErrors] = useState<Record<string, boolean>>({})
   const [globalAttempted, setGlobalAttempted] = useState(false)
 
+  const mergedSettings = useMemo(
+    () => ({ ...appSettings, ...dbSettings }),
+    [appSettings, dbSettings],
+  )
+
+  useEffect(() => {
+    const fetchDbSettings = async () => {
+      const { data } = await supabase.from('app_settings').select('*')
+      if (data) {
+        const s = data.reduce((acc: any, curr) => ({ ...acc, [curr.key]: curr.value }), {})
+        setDbSettings(s)
+      }
+    }
+    fetchDbSettings()
+  }, [])
+
   const safeCPM = useMemo(() => {
     let totalFixedCosts = 0
     let monthlyHours = 176
 
     try {
-      if (appSettings['hourly_cost_fixed_items']) {
-        const items = JSON.parse(appSettings['hourly_cost_fixed_items'])
+      if (mergedSettings['hourly_cost_fixed_items']) {
+        const items = JSON.parse(mergedSettings['hourly_cost_fixed_items'])
         if (Array.isArray(items)) {
           totalFixedCosts = items.reduce(
             (acc: number, curr: any) => acc + (Number(curr.value) || 0),
@@ -170,8 +187,8 @@ export default function PriceList() {
       console.error('Error parsing fixed items', e)
     }
 
-    if (appSettings['hourly_cost_monthly_hours']) {
-      const parsedHours = Number(appSettings['hourly_cost_monthly_hours'])
+    if (mergedSettings['hourly_cost_monthly_hours']) {
+      const parsedHours = Number(mergedSettings['hourly_cost_monthly_hours'])
       if (!isNaN(parsedHours) && parsedHours > 0) {
         monthlyHours = parsedHours
       }
@@ -181,13 +198,13 @@ export default function PriceList() {
     const costPerMinute = totalHourlyCost / 60
 
     return isNaN(costPerMinute) ? 0 : costPerMinute
-  }, [appSettings])
+  }, [mergedSettings])
 
   const getSetting = useCallback(
     (key: string) => {
-      return appSettings[key] || ''
+      return mergedSettings[key] || ''
     },
-    [appSettings],
+    [mergedSettings],
   )
 
   const [configForm, setConfigForm] = useState({
@@ -293,8 +310,8 @@ export default function PriceList() {
   const availableMaterials = useMemo(() => {
     let list: string[] = []
     try {
-      if (appSettings['materials_list']) {
-        list = JSON.parse(appSettings['materials_list'])
+      if (mergedSettings['materials_list']) {
+        list = JSON.parse(mergedSettings['materials_list'])
       }
     } catch (e) {
       console.error('Failed to parse materials_list', e)
@@ -303,7 +320,7 @@ export default function PriceList() {
     return Array.from(new Set([...list, ...fromPriceList])).sort((a, b) =>
       a.localeCompare(b, 'pt-BR'),
     )
-  }, [appSettings, prices])
+  }, [mergedSettings, prices])
 
   const handleOpenGlobalConfig = () => {
     setGlobalErrors({})
@@ -340,6 +357,8 @@ export default function PriceList() {
     }
 
     await updateSettings(updates)
+
+    setDbSettings((prev) => ({ ...prev, ...updates }))
 
     toast({ title: 'Taxas globais salvas com sucesso!' })
     setGlobalConfigOpen(false)
