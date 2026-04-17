@@ -91,9 +91,20 @@ export default function KanbanPage() {
     : availableSectors[0]
 
   const activeStages = useMemo(() => {
-    return kanbanStages
+    const filtered = kanbanStages
       .filter((s) => (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase() === activeLab)
       .sort((a, b) => a.orderIndex - b.orderIndex)
+
+    const finalizados = filtered.filter(
+      (s) =>
+        s.name.toUpperCase().includes('FINALIZADO') || s.name.toUpperCase().includes('ENTREGUE'),
+    )
+    const prontos = filtered.filter(
+      (s) => s.name.toUpperCase().includes('PRONTO') && s.name.toUpperCase().includes('ENVIO'),
+    )
+    const others = filtered.filter((s) => !finalizados.includes(s) && !prontos.includes(s))
+
+    return [...others, ...prontos, ...finalizados]
   }, [kanbanStages, activeLab])
 
   const canDragCards =
