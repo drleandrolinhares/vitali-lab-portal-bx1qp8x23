@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -433,29 +433,76 @@ export default function NewRequest() {
     <div className="max-w-4xl mx-auto py-6">
       <Card className="shadow-elevation border-muted/60">
         <CardHeader className="bg-muted/30 border-b pb-6">
-          <CardTitle
-            className={cn(
-              'text-2xl uppercase tracking-tight font-bold',
-              isRepetition
-                ? 'text-amber-600 dark:text-amber-500'
-                : isAdjustment
-                  ? 'text-yellow-600 dark:text-yellow-500'
-                  : 'text-primary',
-            )}
-          >
-            {isRepetition
-              ? 'NOVO PEDIDO DE REPETIÇÃO'
-              : isAdjustment
-                ? 'NOVO PEDIDO DE AJUSTE'
-                : 'NOVO PEDIDO VITALI LAB'}
-          </CardTitle>
-          <CardDescription>
-            {isRepetition
-              ? 'Registro de repetição interna. Este pedido não gerará cobrança para o dentista, mas computará o prejuízo estimado.'
-              : isAdjustment
-                ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
-                : 'Preencha os detalhes clínicos do paciente e especificações.'}
-          </CardDescription>
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+            <div>
+              <CardTitle
+                className={cn(
+                  'text-2xl uppercase tracking-tight font-bold',
+                  isRepetition
+                    ? 'text-amber-600 dark:text-amber-500'
+                    : isAdjustment
+                      ? 'text-yellow-600 dark:text-yellow-500'
+                      : 'text-primary',
+                )}
+              >
+                {isRepetition
+                  ? 'NOVO PEDIDO DE REPETIÇÃO'
+                  : isAdjustment
+                    ? 'NOVO PEDIDO DE AJUSTE'
+                    : 'NOVO PEDIDO VITALI LAB'}
+              </CardTitle>
+              <CardDescription>
+                {isRepetition
+                  ? 'Registro de repetição interna. Este pedido não gerará cobrança para o dentista, mas computará o prejuízo estimado.'
+                  : isAdjustment
+                    ? 'Solicitação de retorno para ajustes ou correções (Sem custo).'
+                    : 'Preencha os detalhes clínicos do paciente e especificações.'}
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto shrink-0">
+              {isInternalUser && (
+                <Button
+                  asChild
+                  variant={isRepetition ? 'default' : 'outline'}
+                  className={cn(
+                    'flex-1 sm:flex-none h-10 font-bold shadow-sm',
+                    isRepetition
+                      ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 pointer-events-none'
+                      : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 dark:bg-transparent dark:border-amber-900/50 dark:text-amber-500 dark:hover:bg-amber-950/30',
+                  )}
+                >
+                  <Link to="/new-request?type=repetition">Repetições</Link>
+                </Button>
+              )}
+              <Button
+                asChild
+                variant={isAdjustment ? 'default' : 'outline'}
+                className={cn(
+                  'flex-1 sm:flex-none h-10 font-bold gap-2 shadow-sm',
+                  isAdjustment
+                    ? 'bg-yellow-500 hover:bg-yellow-600 text-yellow-950 pointer-events-none'
+                    : 'bg-white border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:bg-transparent dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30',
+                )}
+              >
+                <Link to="/new-request?type=adjustment">
+                  <RefreshCw className="w-4 h-4 hidden sm:block" /> Ajustes
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant={!isAdjustment && !isRepetition ? 'default' : 'outline'}
+                className={cn(
+                  'flex-1 sm:flex-none h-10 font-bold shadow-sm',
+                  !isAdjustment && !isRepetition
+                    ? 'pointer-events-none'
+                    : 'bg-white text-primary border-primary/20 hover:bg-primary/5 dark:bg-transparent dark:border-primary/50 dark:hover:bg-primary/20',
+                )}
+              >
+                <Link to="/new-request">Novo Pedido</Link>
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
@@ -1022,8 +1069,8 @@ export default function NewRequest() {
                 : isRepetition
                   ? 'Registrar Repetição'
                   : isAdjustment
-                    ? 'Enviar Retorno'
-                    : 'Enviar Pedido'}
+                    ? 'Enviar Ajuste'
+                    : 'Enviar Pedido'}{' '}
             </Button>
           </CardFooter>
         </form>

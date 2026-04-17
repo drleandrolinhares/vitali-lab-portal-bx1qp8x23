@@ -485,35 +485,60 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Select value={historySector} onValueChange={setHistorySector}>
-            <SelectTrigger className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border uppercase text-xs font-bold">
-              <Filter className="mr-2 h-4 w-4 opacity-50" />
-              <SelectValue placeholder="SELECIONAR LABORATÓRIO" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL" className="uppercase text-xs font-bold">
-                TODOS OS LABORATÓRIOS
-              </SelectItem>
-              <SelectItem value="SOLUÇÕES CERÂMICAS" className="uppercase text-xs font-bold">
-                SOLUÇÕES CERÂMICAS
-              </SelectItem>
-              <SelectItem value="STÚDIO ACRÍLICO" className="uppercase text-xs font-bold">
-                STÚDIO ACRÍLICO
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col xl:flex-row items-start xl:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-3 w-full xl:w-auto">
+            <Select value={historySector} onValueChange={setHistorySector}>
+              <SelectTrigger className="w-full md:w-[280px] justify-start text-left font-normal shadow-sm h-10 bg-background border-border uppercase text-xs font-bold">
+                <Filter className="mr-2 h-4 w-4 opacity-50" />
+                <SelectValue placeholder="SELECIONAR LABORATÓRIO" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL" className="uppercase text-xs font-bold">
+                  TODOS OS LABORATÓRIOS
+                </SelectItem>
+                <SelectItem value="SOLUÇÕES CERÂMICAS" className="uppercase text-xs font-bold">
+                  SOLUÇÕES CERÂMICAS
+                </SelectItem>
+                <SelectItem value="STÚDIO ACRÍLICO" className="uppercase text-xs font-bold">
+                  STÚDIO ACRÍLICO
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          {isCollaboratorOrAdmin && (
+            {isCollaboratorOrAdmin && (
+              <Button
+                variant="outline"
+                onClick={toggleTvMode}
+                className="h-10 w-full md:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-900/20 font-bold tracking-wider uppercase text-xs shadow-sm transition-all"
+              >
+                <MonitorPlay className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Modo TV</span>
+              </Button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto shrink-0">
+            {isCollaboratorOrAdmin && (
+              <Button
+                asChild
+                className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shadow-sm"
+              >
+                <Link to="/new-request?type=repetition">Repetições</Link>
+              </Button>
+            )}
             <Button
+              asChild
               variant="outline"
-              onClick={toggleTvMode}
-              className="h-10 w-full md:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-900/20 font-bold tracking-wider uppercase text-xs shadow-sm transition-all"
+              className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 font-bold shadow-sm"
             >
-              <MonitorPlay className="w-4 h-4 mr-2" />
-              Modo TV
+              <Link to="/new-request?type=adjustment">
+                <RefreshCw className="w-4 h-4 hidden sm:block" /> Ajustes
+              </Link>
             </Button>
-          )}
+            <Button asChild className="flex-1 sm:flex-none h-10 font-bold shadow-sm">
+              <Link to="/new-request">Novo Pedido</Link>
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -197,26 +197,31 @@ export default function AdminDashboard() {
             Visão geral do laboratório e métricas rápidas.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full xl:w-auto">
           <DatePickerWithRange
             date={dateRange}
             setDate={setDateRange}
-            className="w-full sm:w-auto"
+            className="w-full lg:w-auto shrink-0"
           />
-          <div className="flex w-full sm:w-auto gap-3 h-10">
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full lg:w-auto shrink-0">
+            <Button
+              asChild
+              className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shadow-sm"
+            >
+              <Link to="/new-request?type=repetition">Repetições</Link>
+            </Button>
             <Button
               asChild
               variant="outline"
-              className="flex-1 sm:flex-none h-full border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+              className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 font-bold shadow-sm"
             >
               <Link to="/new-request?type=adjustment">
-                <RefreshCw className="w-5 h-5" /> Retorno{' '}
-                <span className="hidden lg:inline">para Ajustes</span>
+                <RefreshCw className="w-4 h-4 hidden sm:block" /> Ajustes
               </Link>
             </Button>
-            <Button asChild className="flex-1 sm:flex-none h-full gap-2 shadow-sm">
+            <Button asChild className="flex-1 sm:flex-none h-10 font-bold shadow-sm">
               <Link to="/new-request">
-                <PlusCircle className="w-5 h-5" /> Novo Pedido
+                <PlusCircle className="w-4 h-4 mr-2 hidden sm:block" /> Novo Pedido
               </Link>
             </Button>
           </div>

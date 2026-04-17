@@ -70,17 +70,17 @@ export default function Index() {
 
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Meu Painel</h2>
             <p className="text-muted-foreground">Bem-vindo(a), {currentUser?.name}!</p>
           </div>
           {canCreateOrder && (
-            <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto min-h-10">
+            <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto shrink-0">
               {isInternalUser && (
                 <Button
                   asChild
-                  className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
+                  className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shadow-sm"
                 >
                   <Link to="/new-request?type=repetition">Repetições</Link>
                 </Button>
@@ -88,14 +88,14 @@ export default function Index() {
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+                className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 font-bold shadow-sm"
               >
                 <Link to="/new-request?type=adjustment">
                   <RefreshCw className="w-4 h-4 hidden sm:block" />
-                  Retorno <span className="hidden sm:inline">para Ajustes</span>
+                  Ajustes
                 </Link>
               </Button>
-              <Button asChild className="flex-1 sm:flex-none h-full">
+              <Button asChild className="flex-1 sm:flex-none h-10 font-bold shadow-sm">
                 <Link to="/new-request">Novo Pedido</Link>
               </Button>
             </div>
@@ -228,11 +228,11 @@ export default function Index() {
                   )}
                   <Button
                     asChild
-                    className="w-full justify-start text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-500 dark:hover:bg-yellow-900/30"
+                    className="w-full justify-start text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-500 dark:hover:bg-yellow-900/30 font-bold"
                     variant="outline"
                   >
                     <Link to="/new-request?type=adjustment">
-                      <RefreshCw className="w-4 h-4 mr-2" /> Retorno para Ajustes
+                      <RefreshCw className="w-4 h-4 mr-2" /> Ajustes
                     </Link>
                   </Button>
                   <Button asChild className="w-full justify-start" variant="outline">
@@ -266,7 +266,7 @@ export default function Index() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-primary flex items-center gap-2">
             <Inbox className="w-6 h-6" /> Caixa de Entrada
@@ -276,11 +276,11 @@ export default function Index() {
           </p>
         </div>
         {canCreateOrder && (
-          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto min-h-10">
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto shrink-0">
             {isInternalUser && (
               <Button
                 asChild
-                className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold"
+                className="flex-1 sm:flex-none h-10 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shadow-sm"
               >
                 <Link to="/new-request?type=repetition">Repetições</Link>
               </Button>
@@ -288,14 +288,14 @@ export default function Index() {
             <Button
               asChild
               variant="outline"
-              className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2"
+              className="flex-1 sm:flex-none h-10 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 font-bold shadow-sm"
             >
               <Link to="/new-request?type=adjustment">
                 <RefreshCw className="w-4 h-4 hidden sm:block" />
-                Retorno <span className="hidden sm:inline">para Ajustes</span>
+                Ajustes
               </Link>
             </Button>
-            <Button asChild className="flex-1 sm:flex-none h-10">
+            <Button asChild className="flex-1 sm:flex-none h-10 font-bold shadow-sm">
               <Link to="/new-request">Novo Pedido</Link>
             </Button>
           </div>

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAppStore } from '@/stores/main'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, subWeeks, addWeeks } from 'date-fns'
 import { toast } from '@/hooks/use-toast'
-import { Loader2, Plus, UserMinus, Settings } from 'lucide-react'
+import { Loader2, Plus, UserMinus, Settings, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 import { Booking, ScanSetting, ScanBlock, ViewType, ScanFilters } from '@/components/scan/types'
@@ -308,32 +308,62 @@ export default function ScanService() {
             Gerencie compromissos e acompanhe pedidos delegados.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {isAdmin && (
-            <>
+        <div className="flex flex-wrap xl:flex-nowrap items-center gap-3">
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto shrink-0">
+            {isStaff && (
               <Button
-                variant="outline"
-                onClick={() => setSettingsModalOpen(true)}
-                className="text-slate-600 font-bold uppercase text-xs h-11 px-4 gap-2 bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                title="Configurações"
+                asChild
+                className="flex-1 sm:flex-none h-11 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold uppercase text-xs shadow-sm"
               >
-                <Settings className="w-4 h-4" /> <span className="hidden sm:inline">Configs</span>
+                <Link to="/new-request?type=repetition">Repetições</Link>
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setBlockModal({ open: true })}
-                className="text-[#E11D48] border-[#E11D48]/20 hover:bg-[#E11D48]/10 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white shadow-sm transition-colors"
-              >
-                <UserMinus className="w-4 h-4" /> Bloqueio de Agendamentos
-              </Button>
-            </>
-          )}
-          <Button
-            onClick={() => handleOpenBooking()}
-            className="bg-[#E11D48] text-white hover:bg-[#BE123C] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Novo Registro
-          </Button>
+            )}
+            <Button
+              asChild
+              variant="outline"
+              className="flex-1 sm:flex-none h-11 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600/50 dark:text-yellow-500 dark:hover:bg-yellow-950/30 gap-2 font-bold uppercase text-xs shadow-sm"
+            >
+              <Link to="/new-request?type=adjustment">
+                <RefreshCw className="w-4 h-4 hidden sm:block" /> Ajustes
+              </Link>
+            </Button>
+            <Button
+              asChild
+              className="flex-1 sm:flex-none h-11 font-bold uppercase text-xs shadow-sm"
+            >
+              <Link to="/new-request">Novo Pedido</Link>
+            </Button>
+          </div>
+
+          <div className="w-px h-8 bg-slate-200 hidden xl:block mx-1"></div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+            {isAdmin && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setSettingsModalOpen(true)}
+                  className="flex-1 sm:flex-none text-slate-600 font-bold uppercase text-xs h-11 px-4 gap-2 bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                  title="Configurações"
+                >
+                  <Settings className="w-4 h-4" /> <span className="hidden sm:inline">Configs</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setBlockModal({ open: true })}
+                  className="flex-1 sm:flex-none text-[#E11D48] border-[#E11D48]/20 hover:bg-[#E11D48]/10 font-bold uppercase text-xs h-11 px-5 gap-2 bg-white shadow-sm transition-colors"
+                >
+                  <UserMinus className="w-4 h-4" /> Bloqueio
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={() => handleOpenBooking()}
+              className="flex-1 sm:flex-none bg-[#E11D48] text-white hover:bg-[#BE123C] font-bold uppercase text-xs h-11 px-6 gap-2 shadow-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Novo Registro
+            </Button>
+          </div>
         </div>
       </div>
 
