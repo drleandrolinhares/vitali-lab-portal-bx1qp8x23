@@ -816,13 +816,19 @@ export default function KanbanPage() {
                             }}
                             onClick={() => setSelectedOrderId(o.id)}
                             className={cn(
-                              'p-3.5 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
-                              o.isAdjustmentReturn
-                                ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600'
-                                : 'bg-white dark:bg-background border-slate-200 dark:border-border',
+                              'p-3 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                              o.isRepetition
+                                ? 'bg-red-600 border-red-700 hover:border-red-800 shadow-md dark:bg-red-700 dark:border-red-800 text-white'
+                                : o.isAdjustmentReturn
+                                  ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600'
+                                  : 'bg-white dark:bg-background border-slate-200 dark:border-border',
                               canDragCards &&
                                 !o.isAdjustmentReturn &&
+                                !o.isRepetition &&
                                 'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
+                              canDragCards &&
+                                (o.isAdjustmentReturn || o.isRepetition) &&
+                                'active:cursor-grabbing',
                               draggedCardId === o.id &&
                                 'opacity-50 scale-[0.98] border-dashed shadow-none',
                             )}
@@ -832,20 +838,24 @@ export default function KanbanPage() {
                                 'absolute left-0 top-0 bottom-0 w-1',
                                 isPendingCard
                                   ? 'bg-red-500/80 dark:bg-red-600/80'
-                                  : o.isAdjustmentReturn
-                                    ? 'bg-yellow-600/50'
-                                    : 'bg-primary/20 dark:bg-primary/40',
+                                  : o.isRepetition
+                                    ? 'bg-white/30'
+                                    : o.isAdjustmentReturn
+                                      ? 'bg-yellow-600/50'
+                                      : 'bg-primary/20 dark:bg-primary/40',
                               )}
                             />
-                            <div className="flex flex-col gap-2 relative pl-1">
+                            <div className="flex flex-col gap-1.5 relative pl-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0 pr-2">
                                   <p
                                     className={cn(
                                       'font-bold text-sm truncate leading-tight',
-                                      o.isAdjustmentReturn
-                                        ? 'text-yellow-950'
-                                        : 'text-slate-800 dark:text-slate-200',
+                                      o.isRepetition
+                                        ? 'text-white'
+                                        : o.isAdjustmentReturn
+                                          ? 'text-yellow-950'
+                                          : 'text-slate-800 dark:text-slate-200',
                                     )}
                                     title={o.patientName}
                                   >
@@ -854,10 +864,12 @@ export default function KanbanPage() {
                                   {!isDentist && (
                                     <p
                                       className={cn(
-                                        'text-[10px] truncate mt-0.5 font-medium',
-                                        o.isAdjustmentReturn
-                                          ? 'text-yellow-800'
-                                          : 'text-slate-500 dark:text-slate-400',
+                                        'text-[10px] truncate font-medium',
+                                        o.isRepetition
+                                          ? 'text-red-100'
+                                          : o.isAdjustmentReturn
+                                            ? 'text-yellow-800'
+                                            : 'text-slate-500 dark:text-slate-400',
                                       )}
                                       title={o.dentistName}
                                     >
@@ -865,14 +877,36 @@ export default function KanbanPage() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="shrink-0 flex items-center gap-1.5">
-                                  {o.isAdjustmentReturn && (
-                                    <span
-                                      className="w-2 h-2 rounded-full bg-yellow-500"
-                                      title="Retorno para Ajuste"
-                                    />
+                                <div
+                                  className={cn(
+                                    'shrink-0 flex flex-col items-end gap-1',
+                                    o.isRepetition ? 'text-white' : '',
                                   )}
-                                  <KanbanCardTimer order={o} currentStage={stage.name} />
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    {o.isRepetition && (
+                                      <span
+                                        className="text-[9px] font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-wider"
+                                        title="Repetição"
+                                      >
+                                        REPETIÇÃO
+                                      </span>
+                                    )}
+                                    {o.isAdjustmentReturn && (
+                                      <span
+                                        className="w-2 h-2 rounded-full bg-yellow-500"
+                                        title="Retorno para Ajuste"
+                                      />
+                                    )}
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      'text-[10px] font-medium',
+                                      o.isRepetition ? 'opacity-90' : '',
+                                    )}
+                                  >
+                                    <KanbanCardTimer order={o} currentStage={stage.name} />
+                                  </div>
                                 </div>
                               </div>
 
@@ -899,9 +933,11 @@ export default function KanbanPage() {
                                     <SelectTrigger
                                       className={cn(
                                         'h-7 text-[9px] font-bold uppercase flex-1 px-2',
-                                        o.isAdjustmentReturn
-                                          ? 'bg-yellow-500/20 border-yellow-600/30 text-yellow-900 focus:ring-yellow-500'
-                                          : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-primary/30',
+                                        o.isRepetition
+                                          ? 'bg-red-700/50 border-red-500/50 text-white focus:ring-red-400'
+                                          : o.isAdjustmentReturn
+                                            ? 'bg-yellow-500/20 border-yellow-600/30 text-yellow-900 focus:ring-yellow-500'
+                                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-primary/30',
                                       )}
                                     >
                                       <SelectValue />
@@ -929,9 +965,11 @@ export default function KanbanPage() {
                                       disabled={finishingOrderId === o.id}
                                       className={cn(
                                         'h-7 px-2 text-[9px] font-bold shrink-0',
-                                        o.isAdjustmentReturn
-                                          ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/20'
-                                          : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50',
+                                        o.isRepetition
+                                          ? 'border-white/30 text-white hover:bg-white/20 hover:text-white bg-white/10'
+                                          : o.isAdjustmentReturn
+                                            ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/20'
+                                            : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50',
                                       )}
                                       onClick={(e) => {
                                         e.stopPropagation()
@@ -960,9 +998,11 @@ export default function KanbanPage() {
                                 size="sm"
                                 className={cn(
                                   'w-full text-[10px] font-bold uppercase h-7 mt-1',
-                                  o.isAdjustmentReturn
-                                    ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
-                                    : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
+                                  o.isRepetition
+                                    ? 'bg-red-800/80 text-white hover:bg-red-900 border border-red-900/50'
+                                    : o.isAdjustmentReturn
+                                      ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
+                                      : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
                                 )}
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -980,16 +1020,23 @@ export default function KanbanPage() {
                           sideOffset={8}
                           className={cn(
                             'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
-                            o.isAdjustmentReturn
-                              ? 'bg-yellow-500 text-yellow-950 border-yellow-600'
-                              : 'bg-primary',
+                            o.isRepetition
+                              ? 'bg-red-600 text-white border-red-700'
+                              : o.isAdjustmentReturn
+                                ? 'bg-yellow-500 text-yellow-950 border-yellow-600'
+                                : 'bg-primary',
                           )}
                         >
                           <div className="space-y-2">
                             <div>
                               <p className="font-bold text-sm leading-tight">{o.patientName}</p>
                               <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
-                                {o.friendlyId} {o.isAdjustmentReturn ? ' (AJUSTE)' : ''}
+                                {o.friendlyId}{' '}
+                                {o.isRepetition
+                                  ? ' (REPETIÇÃO)'
+                                  : o.isAdjustmentReturn
+                                    ? ' (AJUSTE)'
+                                    : ''}
                               </p>
                             </div>
                             <div className="text-xs space-y-1 opacity-90">
@@ -1020,9 +1067,11 @@ export default function KanbanPage() {
                               <div
                                 className={cn(
                                   'mt-2 pt-2 border-t text-xs',
-                                  o.isAdjustmentReturn
-                                    ? 'border-yellow-700/30'
-                                    : 'border-primary-foreground/20',
+                                  o.isRepetition
+                                    ? 'border-white/20'
+                                    : o.isAdjustmentReturn
+                                      ? 'border-yellow-700/30'
+                                      : 'border-primary-foreground/20',
                                 )}
                               >
                                 <p className="font-semibold mb-1">Observações:</p>
