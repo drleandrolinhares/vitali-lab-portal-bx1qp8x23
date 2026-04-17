@@ -1,12 +1,46 @@
 import { useAppStore } from '@/stores/main'
-import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign, Clock, Calculator } from 'lucide-react'
-import { computeHourlyCosts } from '@/lib/financial'
+import { useMemo } from 'react'
 
 export function HourlyCostDashboard() {
   const { appSettings } = useAppStore()
-  const costs = computeHourlyCosts(appSettings)
+
+  const costs = useMemo(() => {
+    let totalFixedCosts = 0
+    let monthlyHours = 176
+
+    try {
+      if (appSettings['hourly_cost_fixed_items']) {
+        const items = JSON.parse(appSettings['hourly_cost_fixed_items'])
+        if (Array.isArray(items)) {
+          totalFixedCosts = items.reduce(
+            (acc: number, curr: any) => acc + (Number(curr.value) || 0),
+            0,
+          )
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing fixed items', e)
+    }
+
+    if (appSettings['hourly_cost_monthly_hours']) {
+      const parsedHours = Number(appSettings['hourly_cost_monthly_hours'])
+      if (!isNaN(parsedHours) && parsedHours > 0) {
+        monthlyHours = parsedHours
+      }
+    }
+
+    const totalHourlyCost = totalFixedCosts / monthlyHours
+    const costPerMinute = totalHourlyCost / 60
+
+    return { totalFixedCosts, totalHourlyCost, costPerMinute }
+  }, [appSettings])
+
+  const safeFormat = (val: number) => {
+    if (isNaN(val)) return 'R$ 0,00'
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+  }
 
   return (
     <div className="grid gap-3 md:grid-cols-3 mb-4 px-1">
@@ -19,7 +53,7 @@ export function HourlyCostDashboard() {
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <div className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-300">
-            {formatCurrency(costs.totalFixedCosts)}
+            {safeFormat(costs.totalFixedCosts)}
           </div>
         </CardContent>
       </Card>
@@ -32,7 +66,7 @@ export function HourlyCostDashboard() {
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
-            {formatCurrency(costs.totalHourlyCost)}
+            {safeFormat(costs.totalHourlyCost)}
           </div>
         </CardContent>
       </Card>
@@ -45,7 +79,7 @@ export function HourlyCostDashboard() {
         </CardHeader>
         <CardContent className="p-3 pt-2">
           <div className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(costs.costPerMinute)}
+            {safeFormat(costs.costPerMinute)}
           </div>
         </CardContent>
       </Card>

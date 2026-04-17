@@ -50,7 +50,6 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { HourlyCostDashboard } from '@/components/HourlyCostDashboard'
-import { calculateProcedureProfitability, computeHourlyCosts } from '@/lib/financial'
 
 interface StageInput {
   name: string
@@ -58,8 +57,10 @@ interface StageInput {
   kanban_stage: string
 }
 
-const formatBRL = (val: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+const formatBRL = (val: number) => {
+  if (isNaN(val)) return 'R$ 0,00'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+}
 
 const parseLocalNum = (val: string | number | null | undefined) => {
   if (val == null) return 0
@@ -96,15 +97,6 @@ const isInvalidNumber = (val: string | number | null | undefined) => {
 }
 
 const safeCalcProfitability = (params: any) => {
-  try {
-    const res = calculateProcedureProfitability(params)
-    if (res && typeof res.profitMargin === 'number' && !isNaN(res.profitMargin)) {
-      return res
-    }
-  } catch (err) {
-    console.error('Error in calculateProcedureProfitability', err)
-  }
-
   const {
     price,
     executionTime,
@@ -160,36 +152,36 @@ export default function PriceList() {
   const [globalErrors, setGlobalErrors] = useState<Record<string, boolean>>({})
   const [globalAttempted, setGlobalAttempted] = useState(false)
 
-  const sharedCosts = useMemo(() => {
-    try {
-      return computeHourlyCosts(appSettings) || {}
-    } catch (e) {
-      console.error('Error computing hourly costs', e)
-      return {}
-    }
-  }, [appSettings])
-
   const safeCPM = useMemo(() => {
-    let cpm = sharedCosts?.costPerMinute
-    if (cpm === undefined || isNaN(Number(cpm))) cpm = sharedCosts?.cost_per_minute
-    if (cpm === undefined || isNaN(Number(cpm))) cpm = appSettings?.['hourly_cost_per_minute']
-    if (cpm === undefined || isNaN(Number(cpm))) cpm = appSettings?.['cost_per_minute']
+    let totalFixedCosts = 0
+    let monthlyHours = 176
 
-    if (!cpm) {
-      const fixedTotal = parseLocalNum(
-        appSettings['total_fixed_costs'] || appSettings['custo_fixo_total'],
-      )
-      const hoursMonth = parseLocalNum(
-        appSettings['operational_hours_per_month'] || appSettings['horas_operacionais_mes'],
-      )
-      if (fixedTotal > 0 && hoursMonth > 0) {
-        cpm = fixedTotal / (hoursMonth * 60)
+    try {
+      if (appSettings['hourly_cost_fixed_items']) {
+        const items = JSON.parse(appSettings['hourly_cost_fixed_items'])
+        if (Array.isArray(items)) {
+          totalFixedCosts = items.reduce(
+            (acc: number, curr: any) => acc + (Number(curr.value) || 0),
+            0,
+          )
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing fixed items', e)
+    }
+
+    if (appSettings['hourly_cost_monthly_hours']) {
+      const parsedHours = Number(appSettings['hourly_cost_monthly_hours'])
+      if (!isNaN(parsedHours) && parsedHours > 0) {
+        monthlyHours = parsedHours
       }
     }
 
-    const parsed = parseLocalNum(cpm)
-    return parsed > 0 ? parsed : 0
-  }, [sharedCosts, appSettings])
+    const totalHourlyCost = totalFixedCosts / monthlyHours
+    const costPerMinute = totalHourlyCost / 60
+
+    return isNaN(costPerMinute) ? 0 : costPerMinute
+  }, [appSettings])
 
   const getSetting = useCallback(
     (key: string) => {
