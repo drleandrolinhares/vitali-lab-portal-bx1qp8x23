@@ -819,15 +819,15 @@ export default function KanbanPage() {
                               'p-3 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
                               o.isRepetition
                                 ? 'bg-red-600 border-red-700 hover:border-red-800 shadow-md dark:bg-red-700 dark:border-red-800 text-white'
-                                : o.isAdjustmentReturn
-                                  ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600'
+                                : o.isAdjustmentReturn || isPendingCard
+                                  ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600 text-yellow-950'
                                   : 'bg-white dark:bg-background border-slate-200 dark:border-border',
                               canDragCards &&
-                                !o.isAdjustmentReturn &&
+                                !(o.isAdjustmentReturn || isPendingCard) &&
                                 !o.isRepetition &&
                                 'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
                               canDragCards &&
-                                (o.isAdjustmentReturn || o.isRepetition) &&
+                                (o.isAdjustmentReturn || isPendingCard || o.isRepetition) &&
                                 'active:cursor-grabbing',
                               draggedCardId === o.id &&
                                 'opacity-50 scale-[0.98] border-dashed shadow-none',
@@ -836,13 +836,11 @@ export default function KanbanPage() {
                             <div
                               className={cn(
                                 'absolute left-0 top-0 bottom-0 w-1',
-                                isPendingCard
-                                  ? 'bg-red-500/80 dark:bg-red-600/80'
-                                  : o.isRepetition
-                                    ? 'bg-white/30'
-                                    : o.isAdjustmentReturn
-                                      ? 'bg-yellow-600/50'
-                                      : 'bg-primary/20 dark:bg-primary/40',
+                                o.isRepetition
+                                  ? 'bg-white/30'
+                                  : o.isAdjustmentReturn || isPendingCard
+                                    ? 'bg-yellow-600/50'
+                                    : 'bg-primary/20 dark:bg-primary/40',
                               )}
                             />
                             <div className="flex flex-col gap-1.5 relative pl-1">
@@ -853,7 +851,7 @@ export default function KanbanPage() {
                                       'font-bold text-sm truncate leading-tight',
                                       o.isRepetition
                                         ? 'text-white'
-                                        : o.isAdjustmentReturn
+                                        : o.isAdjustmentReturn || isPendingCard
                                           ? 'text-yellow-950'
                                           : 'text-slate-800 dark:text-slate-200',
                                     )}
@@ -867,7 +865,7 @@ export default function KanbanPage() {
                                         'text-[10px] truncate font-medium',
                                         o.isRepetition
                                           ? 'text-red-100'
-                                          : o.isAdjustmentReturn
+                                          : o.isAdjustmentReturn || isPendingCard
                                             ? 'text-yellow-800'
                                             : 'text-slate-500 dark:text-slate-400',
                                       )}
@@ -892,9 +890,9 @@ export default function KanbanPage() {
                                         REPETIÇÃO
                                       </span>
                                     )}
-                                    {o.isAdjustmentReturn && (
+                                    {(o.isAdjustmentReturn || isPendingCard) && !o.isRepetition && (
                                       <span
-                                        className="w-2 h-2 rounded-full bg-yellow-500"
+                                        className="w-2 h-2 rounded-full bg-yellow-600 dark:bg-yellow-500"
                                         title="Retorno para Ajuste"
                                       />
                                     )}
@@ -935,7 +933,7 @@ export default function KanbanPage() {
                                         'h-7 text-[9px] font-bold uppercase flex-1 px-2',
                                         o.isRepetition
                                           ? 'bg-red-700/50 border-red-500/50 text-white focus:ring-red-400'
-                                          : o.isAdjustmentReturn
+                                          : o.isAdjustmentReturn || isPendingCard
                                             ? 'bg-yellow-500/20 border-yellow-600/30 text-yellow-900 focus:ring-yellow-500'
                                             : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-primary/30',
                                       )}
@@ -967,7 +965,7 @@ export default function KanbanPage() {
                                         'h-7 px-2 text-[9px] font-bold shrink-0',
                                         o.isRepetition
                                           ? 'border-white/30 text-white hover:bg-white/20 hover:text-white bg-white/10'
-                                          : o.isAdjustmentReturn
+                                          : o.isAdjustmentReturn || isPendingCard
                                             ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/20'
                                             : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-500 dark:hover:bg-emerald-900/50',
                                       )}
@@ -980,7 +978,7 @@ export default function KanbanPage() {
                                         <div
                                           className={cn(
                                             'w-3 h-3 border-[1.5px] border-t-transparent rounded-full animate-spin mr-1',
-                                            o.isAdjustmentReturn
+                                            o.isAdjustmentReturn || isPendingCard
                                               ? 'border-yellow-900'
                                               : 'border-emerald-600',
                                           )}
@@ -1000,7 +998,7 @@ export default function KanbanPage() {
                                   'w-full text-[10px] font-bold uppercase h-7 mt-1',
                                   o.isRepetition
                                     ? 'bg-red-800/80 text-white hover:bg-red-900 border border-red-900/50'
-                                    : o.isAdjustmentReturn
+                                    : o.isAdjustmentReturn || isPendingCard
                                       ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
                                       : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
                                 )}
@@ -1022,7 +1020,7 @@ export default function KanbanPage() {
                             'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
                             o.isRepetition
                               ? 'bg-red-600 text-white border-red-700'
-                              : o.isAdjustmentReturn
+                              : o.isAdjustmentReturn || isPendingCard
                                 ? 'bg-yellow-500 text-yellow-950 border-yellow-600'
                                 : 'bg-primary',
                           )}
@@ -1036,7 +1034,9 @@ export default function KanbanPage() {
                                   ? ' (REPETIÇÃO)'
                                   : o.isAdjustmentReturn
                                     ? ' (AJUSTE)'
-                                    : ''}
+                                    : isPendingCard
+                                      ? ' (PENDÊNCIA)'
+                                      : ''}
                               </p>
                             </div>
                             <div className="text-xs space-y-1 opacity-90">
@@ -1069,7 +1069,7 @@ export default function KanbanPage() {
                                   'mt-2 pt-2 border-t text-xs',
                                   o.isRepetition
                                     ? 'border-white/20'
-                                    : o.isAdjustmentReturn
+                                    : o.isAdjustmentReturn || isPendingCard
                                       ? 'border-yellow-700/30'
                                       : 'border-primary-foreground/20',
                                 )}
