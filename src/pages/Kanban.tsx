@@ -119,6 +119,18 @@ export default function KanbanPage() {
     ].includes(effectiveRole || '') ||
       checkPermission('kanban', 'move_cards'))
 
+  const checkCanMoveStage = (stageName: string) => {
+    if (!canDragCards) return false
+    if (isAdmin || isMaster) return true
+    if (
+      currentUser?.authorized_kanban_stages &&
+      Array.isArray(currentUser.authorized_kanban_stages)
+    ) {
+      return currentUser.authorized_kanban_stages.includes(stageName)
+    }
+    return true
+  }
+
   const canFilterDentist = checkPermission('kanban', 'filter_dentist')
   const showDentistFilter = !isDentist && canFilterDentist
   const canCreateOrder = checkPermission('inbox', 'create_order') || isDentist
@@ -423,7 +435,15 @@ export default function KanbanPage() {
     if (cardId) {
       const o = orders.find((x) => x.id === cardId)
       if (o && (o.sector || '').toUpperCase() === sector.toUpperCase() && o.kanbanStage !== stage) {
-        updateOrderKanbanStage(cardId, stage)
+        if (!checkCanMoveStage(o.kanbanStage)) {
+          toast({
+            title: 'Acesso Negado',
+            description: 'MOVIMENTAÇÃO NÃO PERMITIDA PARA SEU USUÁRIO',
+            variant: 'destructive',
+          })
+        } else {
+          updateOrderKanbanStage(cardId, stage)
+        }
       }
     }
     setDraggedCardId(null)
@@ -684,6 +704,7 @@ export default function KanbanPage() {
                 stage.name.trim().toUpperCase() === 'PENDÊNCIAS' ||
                 stage.name.trim().toUpperCase() === 'PENDENCIAS'
               const isFirstStage = index === 0
+              const isStageAllowed = checkCanMoveStage(stage.name)
 
               return (
                 <div
@@ -822,6 +843,15 @@ export default function KanbanPage() {
                             draggable={canDragCards}
                             onDragStart={(e) => {
                               if (!canDragCards) return
+                              if (!isStageAllowed) {
+                                e.preventDefault()
+                                toast({
+                                  title: 'Acesso Negado',
+                                  description: 'MOVIMENTAÇÃO NÃO PERMITIDA PARA SEU USUÁRIO',
+                                  variant: 'destructive',
+                                })
+                                return
+                              }
                               e.stopPropagation()
                               e.dataTransfer.setData('card-id', o.id)
                               e.dataTransfer.setData('card-sector', o.sector)
@@ -947,12 +977,24 @@ export default function KanbanPage() {
                                   <Select
                                     value={stage.name}
                                     onValueChange={(val) => {
+                                      if (!isStageAllowed) return
                                       if (val && val !== stage.name) {
                                         updateOrderKanbanStage(o.id, val)
                                       }
                                     }}
                                   >
                                     <SelectTrigger
+                                      onPointerDown={(e) => {
+                                        if (!isStageAllowed) {
+                                          e.preventDefault()
+                                          toast({
+                                            title: 'Acesso Negado',
+                                            description:
+                                              'MOVIMENTAÇÃO NÃO PERMITIDA PARA SEU USUÁRIO',
+                                            variant: 'destructive',
+                                          })
+                                        }
+                                      }}
                                       className={cn(
                                         'h-6 text-[9px] font-bold uppercase flex-1 px-2',
                                         checkIsRepetition(o)
@@ -996,6 +1038,15 @@ export default function KanbanPage() {
                                       )}
                                       onClick={(e) => {
                                         e.stopPropagation()
+                                        if (!isStageAllowed) {
+                                          toast({
+                                            title: 'Acesso Negado',
+                                            description:
+                                              'MOVIMENTAÇÃO NÃO PERMITIDA PARA SEU USUÁRIO',
+                                            variant: 'destructive',
+                                          })
+                                          return
+                                        }
                                         handleQuickFinish(o.id)
                                       }}
                                     >

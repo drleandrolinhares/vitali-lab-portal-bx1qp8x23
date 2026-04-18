@@ -26,6 +26,7 @@ export interface User {
   pix_type?: string
   bank_name?: string
   allowed_sectors?: string[]
+  authorized_kanban_stages?: string[] | null
 }
 
 export interface Stage {

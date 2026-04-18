@@ -140,7 +140,7 @@ const deepEqual = (obj1: any, obj2: any): boolean => {
 }
 
 export function UsersManagement() {
-  const { currentUser, logAudit, appSettings, setVisualizando_Como } = useAppStore()
+  const { currentUser, logAudit, appSettings, setVisualizando_Como, kanbanStages } = useAppStore()
   const navigate = useNavigate()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -206,6 +206,8 @@ export function UsersManagement() {
     clinic_contact_phone: '',
     whatsapp_group_link: '',
     allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
+    restrict_kanban_stages: false,
+    authorized_kanban_stages: [] as string[],
   })
 
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
@@ -362,6 +364,9 @@ export function UsersManagement() {
         clinic_contact_phone: user.clinic_contact_phone || '',
         whatsapp_group_link: user.whatsapp_group_link || '',
         allowed_sectors: user.allowed_sectors || ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
+        restrict_kanban_stages:
+          user.authorized_kanban_stages !== null && user.authorized_kanban_stages !== undefined,
+        authorized_kanban_stages: user.authorized_kanban_stages || [],
       })
       let initialPerms = user.permissions
       if (Array.isArray(initialPerms) || !initialPerms || Object.keys(initialPerms).length === 0) {
@@ -399,6 +404,8 @@ export function UsersManagement() {
         clinic_contact_phone: '',
         whatsapp_group_link: '',
         allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
+        restrict_kanban_stages: false,
+        authorized_kanban_stages: [],
       })
       setSelectedPerms(null)
     }
@@ -546,6 +553,16 @@ export function UsersManagement() {
           payload.allowed_sectors = formData.allowed_sectors
         }
 
+        const authorized_kanban_stages_payload = formData.restrict_kanban_stages
+          ? formData.authorized_kanban_stages
+          : null
+        if (
+          JSON.stringify(authorized_kanban_stages_payload) !==
+          JSON.stringify(editingUser.authorized_kanban_stages ?? null)
+        ) {
+          payload.authorized_kanban_stages = authorized_kanban_stages_payload
+        }
+
         let normalizedUserPerms = editingUser.permissions
         if (Array.isArray(normalizedUserPerms) || !normalizedUserPerms) {
           normalizedUserPerms = {}
@@ -600,6 +617,9 @@ export function UsersManagement() {
           permissions: selectedPerms || {},
           assigned_dentists: formData.assigned_dentists,
           allowed_sectors: formData.allowed_sectors,
+          authorized_kanban_stages: formData.restrict_kanban_stages
+            ? formData.authorized_kanban_stages
+            : null,
           password: formData.password,
           requires_password_change: true,
           closing_date: sanitizeString(formData.closing_date),
@@ -1898,7 +1918,111 @@ export function UsersManagement() {
                     'financial',
                     'relationship_manager',
                   ].includes(formData.role) && (
-                    <div className="mt-8 mb-8">
+                    <div className="mt-8 mb-8 space-y-8">
+                      <div>
+                        <div className="mb-4">
+                          <h3 className="text-lg font-bold flex items-center gap-2">
+                            <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded">
+                              K
+                            </span>{' '}
+                            Etapas Autorizadas no Kanban
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Defina em quais etapas este usuário pode realizar movimentações. Se
+                            desativado, o usuário poderá mover cards em qualquer etapa.
+                          </p>
+                        </div>
+                        <div className="border rounded-xl bg-background overflow-hidden p-4">
+                          <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+                            <Switch
+                              checked={formData.restrict_kanban_stages}
+                              onCheckedChange={(c) =>
+                                setFormData({ ...formData, restrict_kanban_stages: c })
+                              }
+                              disabled={!isMasterOrAdmin || saving}
+                            />
+                            <Label
+                              className="font-bold text-sm cursor-pointer"
+                              onClick={() => {
+                                if (isMasterOrAdmin && !saving)
+                                  setFormData({
+                                    ...formData,
+                                    restrict_kanban_stages: !formData.restrict_kanban_stages,
+                                  })
+                              }}
+                            >
+                              Restringir movimentação de cards por etapa
+                            </Label>
+                          </div>
+
+                          {formData.restrict_kanban_stages && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {Array.from(new Set(kanbanStages.map((s) => s.name))).map(
+                                (stageName) => (
+                                  <div
+                                    key={stageName}
+                                    className={cn(
+                                      'flex items-center gap-3 p-2.5 border rounded-lg transition-colors',
+                                      formData.authorized_kanban_stages.includes(stageName)
+                                        ? 'border-primary bg-primary/5'
+                                        : 'hover:bg-muted/30',
+                                      isMasterOrAdmin && !saving
+                                        ? 'cursor-pointer'
+                                        : 'opacity-80 cursor-not-allowed',
+                                    )}
+                                    onClick={() => {
+                                      if (isMasterOrAdmin && !saving) {
+                                        setFormData((prev) => {
+                                          const current = prev.authorized_kanban_stages
+                                          return {
+                                            ...prev,
+                                            authorized_kanban_stages: current.includes(stageName)
+                                              ? current.filter((s) => s !== stageName)
+                                              : [...current, stageName],
+                                          }
+                                        })
+                                      }
+                                    }}
+                                  >
+                                    <Checkbox
+                                      checked={formData.authorized_kanban_stages.includes(
+                                        stageName,
+                                      )}
+                                      onCheckedChange={(c) => {
+                                        if (isMasterOrAdmin && !saving) {
+                                          setFormData((prev) => {
+                                            const current = prev.authorized_kanban_stages
+                                            return {
+                                              ...prev,
+                                              authorized_kanban_stages: c
+                                                ? [...current, stageName]
+                                                : current.filter((s) => s !== stageName),
+                                            }
+                                          })
+                                        }
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      disabled={!isMasterOrAdmin || saving}
+                                    />
+                                    <span
+                                      className="font-bold text-xs uppercase tracking-wide truncate"
+                                      title={stageName}
+                                    >
+                                      {stageName}
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                              {kanbanStages.length === 0 && (
+                                <p className="text-sm text-muted-foreground col-span-full">
+                                  Nenhuma etapa cadastrada no sistema.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="mb-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                           <Microscope className="w-5 h-5 text-primary" /> Permissão de Laboratórios
