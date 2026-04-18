@@ -60,6 +60,7 @@ export default function AdminFinancial() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedDentist, setSelectedDentist] = useState<string>('all')
+  const [showOnlyReadyToInvoice, setShowOnlyReadyToInvoice] = useState(true)
 
   const [loadingSettlements, setLoadingSettlements] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
@@ -231,7 +232,12 @@ export default function AdminFinancial() {
     })
 
     const activeTableData = Array.from(map.values())
-      .filter((d) => d.aFaturar > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0)
+      .filter((d) => {
+        if (showOnlyReadyToInvoice) {
+          return d.aFaturar > 0 || d.readyToInvoiceCount > 0
+        }
+        return d.aFaturar > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0
+      })
       .sort((a, b) => b.aFaturar - a.aFaturar)
 
     return {
@@ -246,6 +252,7 @@ export default function AdminFinancial() {
     selectedMonth,
     selectedYear,
     selectedDentist,
+    showOnlyReadyToInvoice,
   ])
 
   const pendingInvoices = useMemo(() => {
@@ -608,9 +615,23 @@ export default function AdminFinancial() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[200px]">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm px-3 py-1.5 h-10">
+            <Checkbox
+              id="show-ready"
+              checked={showOnlyReadyToInvoice}
+              onCheckedChange={(c) => setShowOnlyReadyToInvoice(!!c)}
+            />
+            <label
+              htmlFor="show-ready"
+              className="text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap"
+            >
+              Apenas Prontos p/ Faturar
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[200px] h-10">
             <Select value={selectedDentist} onValueChange={setSelectedDentist}>
-              <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 font-medium">
+              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full font-medium">
                 <SelectValue placeholder="Todos os Dentistas" />
               </SelectTrigger>
               <SelectContent>
@@ -624,13 +645,13 @@ export default function AdminFinancial() {
             </Select>
           </div>
 
-          <Button variant="outline" onClick={handleExport} className="gap-2 bg-white">
+          <Button variant="outline" onClick={handleExport} className="gap-2 bg-white h-10">
             <Download className="w-4 h-4" /> Exportar
           </Button>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 h-10">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 h-8 font-medium">
+              <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 h-full font-medium">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -641,9 +662,9 @@ export default function AdminFinancial() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="w-px h-4 bg-slate-200" />
+            <div className="w-px h-5 bg-slate-200" />
             <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[100px] border-none shadow-none focus:ring-0 h-8 font-medium">
+              <SelectTrigger className="w-[100px] border-none shadow-none focus:ring-0 h-full font-medium">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
