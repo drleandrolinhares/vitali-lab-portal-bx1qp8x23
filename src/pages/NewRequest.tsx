@@ -473,7 +473,7 @@ export default function NewRequest() {
                 className={cn(
                   'text-2xl uppercase tracking-tight font-bold',
                   isRepetition
-                    ? 'text-amber-600 dark:text-amber-500'
+                    ? 'text-red-600 dark:text-red-500'
                     : isAdjustment
                       ? 'text-yellow-600 dark:text-yellow-500'
                       : 'text-primary',
@@ -502,8 +502,8 @@ export default function NewRequest() {
                   className={cn(
                     'flex-1 sm:flex-none h-10 font-bold shadow-sm',
                     isRepetition
-                      ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 pointer-events-none'
-                      : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 dark:bg-transparent dark:border-amber-900/50 dark:text-amber-500 dark:hover:bg-amber-950/30',
+                      ? 'bg-red-600 hover:bg-red-700 text-white pointer-events-none'
+                      : 'bg-white text-red-700 border-red-200 hover:bg-red-50 hover:text-red-800 dark:bg-transparent dark:border-red-900/50 dark:text-red-500 dark:hover:bg-red-950/30',
                   )}
                 >
                   <Link to="/new-request?type=repetition">Repetições</Link>
@@ -541,14 +541,14 @@ export default function NewRequest() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8 pt-8">
             {isRepetition && (
-              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-5 rounded-xl space-y-6">
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-5 rounded-xl space-y-6">
                 <div className="flex items-start gap-3">
-                  <RefreshCw className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                  <RefreshCw className="w-5 h-5 text-red-600 dark:text-red-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-amber-800 dark:text-amber-400 font-semibold text-sm">
+                    <p className="text-red-800 dark:text-red-400 font-semibold text-sm">
                       Registro de Repetição Interna
                     </p>
-                    <p className="text-amber-700 dark:text-amber-500/80 text-xs mt-1">
+                    <p className="text-red-700 dark:text-red-500/80 text-xs mt-1">
                       Preencha os dados do laudo para determinar a responsabilidade e os custos
                       aplicados.
                     </p>
@@ -556,7 +556,7 @@ export default function NewRequest() {
                 </div>
 
                 <div className="space-y-3 pt-2">
-                  <Label className="uppercase font-bold text-xs text-amber-900 dark:text-amber-300">
+                  <Label className="uppercase font-bold text-xs text-red-900 dark:text-red-300">
                     Causa da Repetição (Responsabilidade) *
                   </Label>
                   <RadioGroup
@@ -564,7 +564,7 @@ export default function NewRequest() {
                     onValueChange={(v) => setRepetitionCause(v as any)}
                     className="flex flex-col sm:flex-row gap-3"
                   >
-                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-1">
+                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-red-200 dark:border-red-800 flex-1">
                       <RadioGroupItem value="laboratory" id="cause-lab" />
                       <Label htmlFor="cause-lab" className="cursor-pointer font-medium flex-1">
                         Erro do Laboratório{' '}
@@ -573,7 +573,7 @@ export default function NewRequest() {
                         </span>
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-amber-200 dark:border-amber-800 flex-1">
+                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-red-200 dark:border-red-800 flex-1">
                       <RadioGroupItem value="dentist" id="cause-dentist" />
                       <Label htmlFor="cause-dentist" className="cursor-pointer font-medium flex-1">
                         Erro do Dentista{' '}
@@ -586,14 +586,14 @@ export default function NewRequest() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="uppercase font-bold text-xs text-amber-900 dark:text-amber-300">
+                  <Label className="uppercase font-bold text-xs text-red-900 dark:text-red-300">
                     Responsável pelo Laudo *
                   </Label>
                   <Input
                     placeholder="Nome do técnico responsável pela avaliação..."
                     value={laudoResponsible}
                     onChange={(e) => setLaudoResponsible(e.target.value)}
-                    className="bg-white dark:bg-background border-amber-200 dark:border-amber-800"
+                    className="bg-white dark:bg-background border-red-200 dark:border-red-800"
                   />
                 </div>
               </div>
@@ -646,7 +646,7 @@ export default function NewRequest() {
                   className={cn(
                     'uppercase font-semibold text-xs',
                     isRepetition
-                      ? 'text-amber-700 dark:text-amber-500'
+                      ? 'text-red-700 dark:text-red-500'
                       : 'text-yellow-700 dark:text-yellow-500',
                   )}
                 >
@@ -661,7 +661,7 @@ export default function NewRequest() {
                       className={cn(
                         'w-full justify-between h-12 text-lg font-medium',
                         isRepetition
-                          ? 'border-amber-400 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                          ? 'border-red-400 focus-visible:ring-red-500 bg-red-50/30 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20'
                           : 'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
                         !formData.patientName && 'text-muted-foreground',
                       )}
@@ -717,7 +717,7 @@ export default function NewRequest() {
                   <p
                     className={cn(
                       'text-xs font-medium mt-1',
-                      isRepetition ? 'text-amber-600' : 'text-yellow-600',
+                      isRepetition ? 'text-red-600' : 'text-yellow-600',
                     )}
                   >
                     Selecione um dentista primeiro para buscar os pacientes.
@@ -991,7 +991,7 @@ export default function NewRequest() {
                 className={cn(
                   'uppercase font-semibold',
                   isRepetition
-                    ? 'text-sm text-amber-700 dark:text-amber-500'
+                    ? 'text-sm text-red-700 dark:text-red-500'
                     : isAdjustment
                       ? 'text-sm text-yellow-700 dark:text-yellow-500'
                       : 'text-xs',
@@ -1014,7 +1014,7 @@ export default function NewRequest() {
                 className={cn(
                   'min-h-[100px]',
                   isRepetition &&
-                    'border-amber-400 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-900/10',
+                    'border-red-400 focus-visible:ring-red-500 bg-red-50/30 dark:bg-red-900/10',
                   isAdjustment &&
                     'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10',
                 )}
@@ -1135,7 +1135,7 @@ export default function NewRequest() {
               className={cn(
                 'h-11 px-8 text-base',
                 isRepetition &&
-                  'bg-amber-500 hover:bg-amber-600 text-amber-950 dark:bg-amber-600 dark:hover:bg-amber-700 dark:text-amber-50',
+                  'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white',
                 isAdjustment &&
                   !isRepetition &&
                   'bg-yellow-500 hover:bg-yellow-600 text-yellow-950 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:text-yellow-50',

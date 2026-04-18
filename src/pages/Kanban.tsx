@@ -816,9 +816,9 @@ export default function KanbanPage() {
                             }}
                             onClick={() => setSelectedOrderId(o.id)}
                             className={cn(
-                              'p-3 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
+                              'p-2.5 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
                               o.isRepetition
-                                ? 'bg-red-600 border-red-700 hover:border-red-800 shadow-md dark:bg-red-700 dark:border-red-800 text-white'
+                                ? 'bg-red-600 border-red-700 hover:border-red-800 shadow-md dark:bg-red-600 dark:border-red-700 text-white'
                                 : o.isAdjustmentReturn || isPendingCard
                                   ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600 text-yellow-950'
                                   : 'bg-white dark:bg-background border-slate-200 dark:border-border',
@@ -843,12 +843,12 @@ export default function KanbanPage() {
                                     : 'bg-primary/20 dark:bg-primary/40',
                               )}
                             />
-                            <div className="flex flex-col gap-1.5 relative pl-1">
+                            <div className="flex flex-col gap-1 relative pl-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0 pr-2">
                                   <p
                                     className={cn(
-                                      'font-bold text-sm truncate leading-tight',
+                                      'font-bold text-xs truncate leading-tight',
                                       o.isRepetition
                                         ? 'text-white'
                                         : o.isAdjustmentReturn || isPendingCard
@@ -862,7 +862,7 @@ export default function KanbanPage() {
                                   {!isDentist && (
                                     <p
                                       className={cn(
-                                        'text-[10px] truncate font-medium',
+                                        'text-[9px] truncate font-medium',
                                         o.isRepetition
                                           ? 'text-red-100'
                                           : o.isAdjustmentReturn || isPendingCard
@@ -877,14 +877,14 @@ export default function KanbanPage() {
                                 </div>
                                 <div
                                   className={cn(
-                                    'shrink-0 flex flex-col items-end gap-1',
+                                    'shrink-0 flex flex-col items-end gap-0.5',
                                     o.isRepetition ? 'text-white' : '',
                                   )}
                                 >
                                   <div className="flex items-center gap-1.5">
                                     {o.isRepetition && (
                                       <span
-                                        className="text-[9px] font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-wider"
+                                        className="text-[8px] font-black bg-red-800 border border-red-500/50 px-1.5 py-0.5 rounded text-white tracking-wider shadow-sm"
                                         title="Repetição"
                                       >
                                         REPETIÇÃO
@@ -899,7 +899,7 @@ export default function KanbanPage() {
                                   </div>
                                   <div
                                     className={cn(
-                                      'text-[10px] font-medium',
+                                      'text-[9px] font-medium',
                                       o.isRepetition ? 'opacity-90' : '',
                                     )}
                                   >
@@ -915,7 +915,7 @@ export default function KanbanPage() {
                               )}
 
                               <div
-                                className="flex items-center gap-1.5 mt-1"
+                                className="flex items-center gap-1.5 mt-0.5"
                                 onClick={(e) => e.stopPropagation()}
                                 onPointerDown={(e) => e.stopPropagation()}
                               >
@@ -930,7 +930,7 @@ export default function KanbanPage() {
                                   >
                                     <SelectTrigger
                                       className={cn(
-                                        'h-7 text-[9px] font-bold uppercase flex-1 px-2',
+                                        'h-6 text-[9px] font-bold uppercase flex-1 px-2',
                                         o.isRepetition
                                           ? 'bg-red-700/50 border-red-500/50 text-white focus:ring-red-400'
                                           : o.isAdjustmentReturn || isPendingCard
@@ -962,7 +962,7 @@ export default function KanbanPage() {
                                       size="sm"
                                       disabled={finishingOrderId === o.id}
                                       className={cn(
-                                        'h-7 px-2 text-[9px] font-bold shrink-0',
+                                        'h-6 px-2 text-[9px] font-bold shrink-0',
                                         o.isRepetition
                                           ? 'border-white/30 text-white hover:bg-white/20 hover:text-white bg-white/10'
                                           : o.isAdjustmentReturn || isPendingCard
@@ -995,9 +995,9 @@ export default function KanbanPage() {
                                 variant="secondary"
                                 size="sm"
                                 className={cn(
-                                  'w-full text-[10px] font-bold uppercase h-7 mt-1',
+                                  'w-full text-[9px] font-bold uppercase h-6 mt-1',
                                   o.isRepetition
-                                    ? 'bg-red-800/80 text-white hover:bg-red-900 border border-red-900/50'
+                                    ? 'bg-white text-red-700 hover:bg-red-50 border-white font-extrabold'
                                     : o.isAdjustmentReturn || isPendingCard
                                       ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
                                       : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10',
