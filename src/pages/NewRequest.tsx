@@ -289,7 +289,15 @@ export default function NewRequest() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.patientName) return
+
+    if (!formData.patientName) {
+      toast({
+        title: 'Atenção',
+        description: 'Por favor, informe o nome do paciente.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (isInternalUser && !formData.dentistId) {
       toast({
@@ -320,7 +328,23 @@ export default function NewRequest() {
     }
 
     if (!isAdjustment) {
-      if (!formData.workType || !formData.sector) return
+      if (!formData.sector) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, selecione o setor do laboratório.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!formData.workType) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, selecione o tipo de trabalho.',
+          variant: 'destructive',
+        })
+        return
+      }
 
       if (!formData.material) {
         toast({
@@ -453,6 +477,7 @@ export default function NewRequest() {
             custo_adicional_descricao: `REPETIÇÃO - ${repetitionCause === 'dentist' ? 'Erro do Dentista' : 'Erro do Laboratório'}`,
             custo_adicional_valor: estimatedLoss,
             basePrice: basePriceToCharge,
+            dreCategory: repetitionCause === 'dentist' ? 'Receita' : 'Custo Operacional',
           }
         : {}),
     })
