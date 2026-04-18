@@ -123,7 +123,7 @@ export default function OrderDetails() {
     }))
 
   const combinedHistory = [...processedSystemHistory, ...manualNotes].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   )
 
   const additionalCostNum = parseFloat(additionalCostValue) || 0

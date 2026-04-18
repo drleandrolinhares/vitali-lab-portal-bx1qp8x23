@@ -104,7 +104,26 @@ export function OrderDetailsSheet({
       (order.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase(),
   )
   const actualHistory = historyItems.length > 0 ? historyItems : order.history
-  const processedHistory = processOrderHistory(actualHistory, sectorStages, order.kanbanStage)
+
+  const systemHistory = actualHistory.filter((h) => h.status !== 'NOTA_MANUAL')
+  const processedSystemHistory = processOrderHistory(systemHistory, sectorStages, order.kanbanStage)
+
+  const manualNotes = actualHistory
+    .filter((h) => h.status === 'NOTA_MANUAL')
+    .map((h: any) => ({
+      id: h.id,
+      stageName: `Anotação de Usuário`,
+      date: h.date || h.created_at,
+      durationStr: '-',
+      note: h.note,
+      isCurrent: false,
+      direction: 'none' as const,
+      isManual: true,
+    }))
+
+  const processedHistory = [...processedSystemHistory, ...manualNotes].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  )
 
   return (
     <>
@@ -214,10 +233,14 @@ export function OrderDetailsSheet({
                         'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
                         item.isCurrent
                           ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted text-muted-foreground border-border',
+                          : (item as any).isManual
+                            ? 'bg-amber-100 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                            : 'bg-muted text-muted-foreground border-border',
                       )}
                     >
-                      {item.direction === 'backward' ? (
+                      {(item as any).isManual ? (
+                        <FileText className="w-3 h-3" />
+                      ) : item.direction === 'backward' ? (
                         <ArrowLeft className="w-3.5 h-3.5" />
                       ) : item.direction === 'forward' ? (
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -234,13 +257,22 @@ export function OrderDetailsSheet({
                             {format(new Date(item.date), "dd/MM 'às' HH:mm")}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
-                          <Clock className="w-3 h-3" />
-                          {item.durationStr}
-                        </div>
+                        {!(item as any).isManual && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
+                            <Clock className="w-3 h-3" />
+                            {item.durationStr}
+                          </div>
+                        )}
                       </div>
                       {item.note && !item.note.startsWith('Movido para') && (
-                        <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
+                        <p
+                          className={cn(
+                            'text-xs mt-2 p-2 rounded-md border',
+                            (item as any).isManual
+                              ? 'bg-amber-50/50 text-amber-900 border-amber-100 dark:bg-amber-900/10 dark:text-amber-200 dark:border-amber-900/30'
+                              : 'text-muted-foreground bg-muted/30 border-border/40',
+                          )}
+                        >
                           {item.note}
                         </p>
                       )}
