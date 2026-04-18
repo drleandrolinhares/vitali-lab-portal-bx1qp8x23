@@ -435,7 +435,18 @@ export default function KanbanPage() {
     if (cardId) {
       const o = orders.find((x) => x.id === cardId)
       if (o && (o.sector || '').toUpperCase() === sector.toUpperCase() && o.kanbanStage !== stage) {
-        if (!checkCanMoveStage(o.kanbanStage)) {
+        const oldStageObj = activeStages.find((s) => s.name === o.kanbanStage)
+        const newStageObj = activeStages.find((s) => s.name === stage)
+        const oldIndex = oldStageObj ? activeStages.indexOf(oldStageObj) : -1
+        const newIndex = newStageObj ? activeStages.indexOf(newStageObj) : -1
+
+        if (oldIndex !== -1 && newIndex !== -1 && newIndex < oldIndex && !isMaster) {
+          toast({
+            title: 'Ação Bloqueada',
+            description: 'Não é permitido retroceder etapas.',
+            variant: 'destructive',
+          })
+        } else if (!checkCanMoveStage(o.kanbanStage)) {
           toast({
             title: 'Acesso Negado',
             description: 'MOVIMENTAÇÃO NÃO PERMITIDA PARA SEU USUÁRIO',
@@ -979,6 +990,31 @@ export default function KanbanPage() {
                                     onValueChange={(val) => {
                                       if (!isStageAllowed) return
                                       if (val && val !== stage.name) {
+                                        const oldStageObj = activeStages.find(
+                                          (s) => s.name === stage.name,
+                                        )
+                                        const newStageObj = activeStages.find((s) => s.name === val)
+                                        const oldIndex = oldStageObj
+                                          ? activeStages.indexOf(oldStageObj)
+                                          : -1
+                                        const newIndex = newStageObj
+                                          ? activeStages.indexOf(newStageObj)
+                                          : -1
+
+                                        if (
+                                          oldIndex !== -1 &&
+                                          newIndex !== -1 &&
+                                          newIndex < oldIndex &&
+                                          !isMaster
+                                        ) {
+                                          toast({
+                                            title: 'Ação Bloqueada',
+                                            description: 'Não é permitido retroceder etapas.',
+                                            variant: 'destructive',
+                                          })
+                                          return
+                                        }
+
                                         updateOrderKanbanStage(o.id, val)
                                       }
                                     }}
