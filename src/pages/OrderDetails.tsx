@@ -30,7 +30,11 @@ export default function OrderDetails() {
 
   const order = orders.find((o) => o.id === id)
 
-  const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
+  const [historyItems, setHistoryItems] = useState<(OrderHistory & { createdByName?: string })[]>(
+    [],
+  )
+  const [newNote, setNewNote] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
   const [additionalCostDesc, setAdditionalCostDesc] = useState('')
   const [additionalCostValue, setAdditionalCostValue] = useState('')
   const [isSavingCost, setIsSavingCost] = useState(false)
@@ -43,36 +47,84 @@ export default function OrderDetails() {
     }
   }, [order?.custo_adicional_descricao, order?.custo_adicional_valor, isDirty])
 
-  useEffect(() => {
-    if (order?.id) {
-      const fetchHistory = async () => {
-        const { data, error } = await supabase
-          .from('order_history')
-          .select('*')
-          .eq('order_id', order.id)
-          .order('created_at', { ascending: true })
+  const fetchHistory = async () => {
+    if (!order?.id) return
+    const { data, error } = await supabase
+      .from('order_history')
+      .select('*, created_by_profile:profiles(name)')
+      .eq('order_id', order.id)
+      .order('created_at', { ascending: true })
 
-        if (data && !error) {
-          setHistoryItems(
-            data.map((h: any) => ({
-              id: h.id,
-              status: h.status,
-              date: h.created_at,
-              note: h.note,
-            })),
-          )
-        } else {
-          setHistoryItems(order.history || [])
-        }
-      }
-      fetchHistory()
+    if (data && !error) {
+      setHistoryItems(
+        data.map((h: any) => ({
+          id: h.id,
+          status: h.status,
+          date: h.created_at,
+          note: h.note,
+          createdByName:
+            h.created_by_profile?.name ||
+            (Array.isArray(h.created_by_profile) ? h.created_by_profile[0]?.name : undefined),
+        })),
+      )
+    } else {
+      setHistoryItems(order.history || [])
     }
+  }
+
+  useEffect(() => {
+    fetchHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.id, order?.history])
 
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !order) return
+    setIsAddingNote(true)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const { error } = await supabase.from('order_history').insert({
+        order_id: order.id,
+        status: 'NOTA_MANUAL',
+        note: newNote.trim(),
+        created_by: user?.id,
+      } as any)
+
+      if (error) throw error
+
+      toast({ title: 'Anotação adicionada com sucesso!' })
+      setNewNote('')
+      fetchHistory()
+    } catch (error) {
+      toast({ title: 'Erro ao adicionar anotação', variant: 'destructive' })
+    } finally {
+      setIsAddingNote(false)
+    }
+  }
+
   const actualHistory = historyItems.length > 0 ? historyItems : order?.history || []
-  const processedHistory = order
-    ? processOrderHistory(actualHistory, kanbanStages, order.kanbanStage)
+  const systemHistory = actualHistory.filter((h) => h.status !== 'NOTA_MANUAL')
+  const processedSystemHistory = order
+    ? processOrderHistory(systemHistory, kanbanStages, order.kanbanStage)
     : []
+
+  const manualNotes = actualHistory
+    .filter((h) => h.status === 'NOTA_MANUAL')
+    .map((h) => ({
+      id: h.id,
+      stageName: `Anotação de ${h.createdByName || 'Usuário'}`,
+      date: h.date,
+      durationStr: '-',
+      note: h.note,
+      isCurrent: false,
+      direction: 'none' as const,
+      isManual: true,
+    }))
+
+  const combinedHistory = [...processedSystemHistory, ...manualNotes].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
 
   const additionalCostNum = parseFloat(additionalCostValue) || 0
 
@@ -369,19 +421,45 @@ export default function OrderDetails() {
                 <Activity className="w-5 h-5 text-primary" /> Histórico de Etapas
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="new-note" className="text-xs font-medium">
+                  Adicionar Anotação
+                </Label>
+                <textarea
+                  id="new-note"
+                  placeholder="Ex: Liguei para o dentista para informar que..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={handleAddNote}
+                    disabled={isAddingNote || !newNote.trim()}
+                  >
+                    {isAddingNote ? 'Adicionando...' : 'Adicionar Evento'}
+                  </Button>
+                </div>
+              </div>
+
               <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-px before:bg-border">
-                {processedHistory.map((item) => (
+                {combinedHistory.map((item) => (
                   <div key={item.id} className="relative flex items-start gap-4">
                     <div
                       className={cn(
                         'absolute left-0 mt-0.5 w-6 h-6 rounded-full ring-4 ring-background z-10 flex items-center justify-center border',
                         item.isCurrent
                           ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted text-muted-foreground border-border',
+                          : (item as any).isManual
+                            ? 'bg-amber-100 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                            : 'bg-muted text-muted-foreground border-border',
                       )}
                     >
-                      {item.direction === 'backward' ? (
+                      {(item as any).isManual ? (
+                        <FileText className="w-3 h-3" />
+                      ) : item.direction === 'backward' ? (
                         <ArrowLeft className="w-3.5 h-3.5" />
                       ) : item.direction === 'forward' ? (
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -398,13 +476,22 @@ export default function OrderDetails() {
                             {format(new Date(item.date), "dd/MM 'às' HH:mm")}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
-                          <Clock className="w-3 h-3" />
-                          {item.durationStr}
-                        </div>
+                        {!(item as any).isManual && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium bg-muted/40 px-2 py-1 rounded-md text-muted-foreground whitespace-nowrap border border-border/50">
+                            <Clock className="w-3 h-3" />
+                            {item.durationStr}
+                          </div>
+                        )}
                       </div>
                       {item.note && !item.note.startsWith('Movido para') && (
-                        <p className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border border-border/40">
+                        <p
+                          className={cn(
+                            'text-xs mt-2 p-2 rounded-md border',
+                            (item as any).isManual
+                              ? 'bg-amber-50/50 text-amber-900 border-amber-100 dark:bg-amber-900/10 dark:text-amber-200 dark:border-amber-900/30'
+                              : 'text-muted-foreground bg-muted/30 border-border/40',
+                          )}
+                        >
                           {item.note}
                         </p>
                       )}
