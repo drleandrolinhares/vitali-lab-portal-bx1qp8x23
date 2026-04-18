@@ -44,6 +44,7 @@ export default function NewRequest() {
   const isAdjustment = searchParams.get('type') === 'adjustment'
   const isRepetition = searchParams.get('type') === 'repetition'
   const [submitting, setSubmitting] = useState(false)
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
 
   const [repetitionCause, setRepetitionCause] = useState<'dentist' | 'laboratory' | ''>('')
   const [laudoResponsible, setLaudoResponsible] = useState('')
@@ -289,6 +290,7 @@ export default function NewRequest() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setHasAttemptedSubmit(true)
 
     if (!formData.patientName) {
       toast({
@@ -563,7 +565,7 @@ export default function NewRequest() {
             </div>
           </div>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <CardContent className="space-y-8 pt-8">
             {isRepetition && (
               <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-5 rounded-xl space-y-6">
@@ -589,7 +591,14 @@ export default function NewRequest() {
                     onValueChange={(v) => setRepetitionCause(v as any)}
                     className="flex flex-col sm:flex-row gap-3"
                   >
-                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-red-200 dark:border-red-800 flex-1">
+                    <div
+                      className={cn(
+                        'flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border flex-1',
+                        hasAttemptedSubmit && !repetitionCause
+                          ? 'border-red-500'
+                          : 'border-red-200 dark:border-red-800',
+                      )}
+                    >
                       <RadioGroupItem value="laboratory" id="cause-lab" />
                       <Label htmlFor="cause-lab" className="cursor-pointer font-medium flex-1">
                         Erro do Laboratório{' '}
@@ -598,7 +607,14 @@ export default function NewRequest() {
                         </span>
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border border-red-200 dark:border-red-800 flex-1">
+                    <div
+                      className={cn(
+                        'flex items-center space-x-3 bg-white dark:bg-background p-3 rounded-lg border flex-1',
+                        hasAttemptedSubmit && !repetitionCause
+                          ? 'border-red-500'
+                          : 'border-red-200 dark:border-red-800',
+                      )}
+                    >
                       <RadioGroupItem value="dentist" id="cause-dentist" />
                       <Label htmlFor="cause-dentist" className="cursor-pointer font-medium flex-1">
                         Erro do Dentista{' '}
@@ -618,7 +634,12 @@ export default function NewRequest() {
                     placeholder="Nome do técnico responsável pela avaliação..."
                     value={laudoResponsible}
                     onChange={(e) => setLaudoResponsible(e.target.value)}
-                    className="bg-white dark:bg-background border-red-200 dark:border-red-800"
+                    className={cn(
+                      'bg-white dark:bg-background border-red-200 dark:border-red-800',
+                      hasAttemptedSubmit &&
+                        !laudoResponsible.trim() &&
+                        'border-red-500 focus-visible:ring-red-500',
+                    )}
                   />
                 </div>
               </div>
@@ -651,7 +672,14 @@ export default function NewRequest() {
                   }}
                   required
                 >
-                  <SelectTrigger className="h-11 bg-background">
+                  <SelectTrigger
+                    className={cn(
+                      'h-11 bg-background',
+                      hasAttemptedSubmit &&
+                        !formData.dentistId &&
+                        'border-red-500 focus:ring-red-500',
+                    )}
+                  >
                     <SelectValue placeholder="Selecione um dentista..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -689,6 +717,9 @@ export default function NewRequest() {
                           ? 'border-red-400 focus-visible:ring-red-500 bg-red-50/30 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20'
                           : 'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
                         !formData.patientName && 'text-muted-foreground',
+                        hasAttemptedSubmit &&
+                          !formData.patientName &&
+                          'border-red-600 ring-2 ring-red-600',
                       )}
                       disabled={isInternalUser && !formData.dentistId}
                     >
@@ -759,7 +790,12 @@ export default function NewRequest() {
                   placeholder="Ex: João da Silva"
                   value={formData.patientName}
                   onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                  className="h-12 text-lg font-medium"
+                  className={cn(
+                    'h-12 text-lg font-medium',
+                    hasAttemptedSubmit &&
+                      !formData.patientName &&
+                      'border-red-500 focus-visible:ring-red-500',
+                  )}
                 />
               </div>
             )}
@@ -803,7 +839,14 @@ export default function NewRequest() {
                       onValueChange={(v) => setFormData({ ...formData, sector: v })}
                       required
                     >
-                      <SelectTrigger className="h-11">
+                      <SelectTrigger
+                        className={cn(
+                          'h-11',
+                          hasAttemptedSubmit &&
+                            !formData.sector &&
+                            'border-red-500 focus:ring-red-500',
+                        )}
+                      >
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -820,7 +863,14 @@ export default function NewRequest() {
                       required
                       disabled={!formData.sector || availableWorkTypes.length === 0}
                     >
-                      <SelectTrigger className="h-11">
+                      <SelectTrigger
+                        className={cn(
+                          'h-11',
+                          hasAttemptedSubmit &&
+                            !formData.workType &&
+                            'border-red-500 focus:ring-red-500',
+                        )}
+                      >
                         <SelectValue
                           placeholder={
                             !formData.sector
@@ -880,7 +930,13 @@ export default function NewRequest() {
                       <Input
                         value={formData.material}
                         readOnly
-                        className="h-11 bg-muted cursor-not-allowed font-medium text-muted-foreground"
+                        className={cn(
+                          'h-11 bg-muted cursor-not-allowed font-medium text-muted-foreground',
+                          hasAttemptedSubmit &&
+                            !isAdjustment &&
+                            !formData.material &&
+                            'border-red-500 focus-visible:ring-red-500',
+                        )}
                         placeholder="Auto-preenchido..."
                       />
                     </div>
@@ -971,7 +1027,16 @@ export default function NewRequest() {
                           onValueChange={(v) => setFormData({ ...formData, implantBrand: v })}
                           required={isSobreImplante}
                         >
-                          <SelectTrigger className="h-11 bg-background border-primary/30 focus:border-primary">
+                          <SelectTrigger
+                            className={cn(
+                              'h-11 bg-background border-primary/30 focus:border-primary',
+                              hasAttemptedSubmit &&
+                                isSobreImplante &&
+                                !isRepetition &&
+                                !formData.implantBrand &&
+                                'border-red-500 focus:ring-red-500',
+                            )}
+                          >
                             <SelectValue
                               placeholder={
                                 availableImplantBrands.length === 0
@@ -1001,9 +1066,16 @@ export default function NewRequest() {
                           onChange={(e) =>
                             setFormData({ ...formData, implantType: e.target.value })
                           }
-                          className="h-11 bg-background border-primary/30 focus:border-primary"
+                          className={cn(
+                            'h-11 bg-background border-primary/30 focus:border-primary',
+                            hasAttemptedSubmit &&
+                              isSobreImplante &&
+                              !isRepetition &&
+                              !formData.implantType &&
+                              'border-red-500 focus-visible:ring-red-500',
+                          )}
                           required={isSobreImplante}
-                        />
+                        />{' '}
                       </div>
                     </div>
                   )}
@@ -1042,6 +1114,10 @@ export default function NewRequest() {
                     'border-red-400 focus-visible:ring-red-500 bg-red-50/30 dark:bg-red-900/10',
                   isAdjustment &&
                     'border-yellow-400 focus-visible:ring-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10',
+                  hasAttemptedSubmit &&
+                    (isAdjustment || isRepetition) &&
+                    !formData.observations &&
+                    'border-red-500 focus-visible:ring-red-500',
                 )}
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}

@@ -374,6 +374,28 @@ export default function KanbanPage() {
     [deleteStageData, orders, activeLab],
   )
 
+  const checkIsRepetition = (o: any) => {
+    if (o.isRepetition === true || o.is_repetition === true) return true
+    const obs = typeof o.observations === 'string' ? o.observations.toUpperCase() : ''
+    const addDesc =
+      typeof o.custo_adicional_descricao === 'string'
+        ? o.custo_adicional_descricao.toUpperCase()
+        : ''
+    return (
+      obs.includes('REPETIÇÃO') ||
+      obs.includes('REPETICAO') ||
+      obs.includes('ERRO DO DENTISTA') ||
+      obs.includes('ERRO DO LABORATÓRIO') ||
+      obs.includes('ERRO DO LABORATORIO') ||
+      obs.includes('[LAUDO - ') ||
+      addDesc.includes('REPETIÇÃO') ||
+      addDesc.includes('REPETICAO') ||
+      addDesc.includes('ERRO DO DENTISTA') ||
+      addDesc.includes('ERRO DO LABORATÓRIO') ||
+      addDesc.includes('ERRO DO LABORATORIO')
+    )
+  }
+
   const handleColumnDrop = (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault()
     e.stopPropagation()
@@ -817,17 +839,17 @@ export default function KanbanPage() {
                             onClick={() => setSelectedOrderId(o.id)}
                             className={cn(
                               'p-2.5 rounded-lg border shadow-sm transition-all relative overflow-hidden cursor-pointer',
-                              o.isRepetition
+                              checkIsRepetition(o)
                                 ? 'bg-red-600 border-red-700 hover:border-red-800 shadow-md dark:bg-red-600 dark:border-red-700 text-white'
                                 : o.isAdjustmentReturn || isPendingCard
                                   ? 'bg-yellow-400 border-yellow-500 hover:border-yellow-600 shadow-md dark:bg-yellow-500/90 dark:border-yellow-600 text-yellow-950'
                                   : 'bg-white dark:bg-background border-slate-200 dark:border-border',
                               canDragCards &&
                                 !(o.isAdjustmentReturn || isPendingCard) &&
-                                !o.isRepetition &&
+                                !checkIsRepetition(o) &&
                                 'active:cursor-grabbing hover:border-primary/50 hover:shadow-md',
                               canDragCards &&
-                                (o.isAdjustmentReturn || isPendingCard || o.isRepetition) &&
+                                (o.isAdjustmentReturn || isPendingCard || checkIsRepetition(o)) &&
                                 'active:cursor-grabbing',
                               draggedCardId === o.id &&
                                 'opacity-50 scale-[0.98] border-dashed shadow-none',
@@ -836,20 +858,20 @@ export default function KanbanPage() {
                             <div
                               className={cn(
                                 'absolute left-0 top-0 bottom-0 w-1',
-                                o.isRepetition
+                                checkIsRepetition(o)
                                   ? 'bg-white/30'
                                   : o.isAdjustmentReturn || isPendingCard
                                     ? 'bg-yellow-600/50'
                                     : 'bg-primary/20 dark:bg-primary/40',
                               )}
-                            />
+                            />{' '}
                             <div className="flex flex-col gap-1 relative pl-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0 pr-2">
                                   <p
                                     className={cn(
                                       'font-bold text-xs truncate leading-tight',
-                                      o.isRepetition
+                                      checkIsRepetition(o)
                                         ? 'text-white'
                                         : o.isAdjustmentReturn || isPendingCard
                                           ? 'text-yellow-950'
@@ -863,7 +885,7 @@ export default function KanbanPage() {
                                     <p
                                       className={cn(
                                         'text-[9px] truncate font-medium',
-                                        o.isRepetition
+                                        checkIsRepetition(o)
                                           ? 'text-red-100'
                                           : o.isAdjustmentReturn || isPendingCard
                                             ? 'text-yellow-800'
@@ -878,11 +900,11 @@ export default function KanbanPage() {
                                 <div
                                   className={cn(
                                     'shrink-0 flex flex-col items-end gap-0.5',
-                                    o.isRepetition ? 'text-white' : '',
+                                    checkIsRepetition(o) ? 'text-white' : '',
                                   )}
                                 >
                                   <div className="flex items-center gap-1.5">
-                                    {o.isRepetition && (
+                                    {checkIsRepetition(o) && (
                                       <span
                                         className="text-[8px] font-black bg-red-800 border border-red-500/50 px-1.5 py-0.5 rounded text-white tracking-wider shadow-sm"
                                         title="Repetição"
@@ -890,19 +912,21 @@ export default function KanbanPage() {
                                         REPETIÇÃO
                                       </span>
                                     )}
-                                    {(o.isAdjustmentReturn || isPendingCard) && !o.isRepetition && (
-                                      <span
-                                        className="w-2 h-2 rounded-full bg-yellow-600 dark:bg-yellow-500"
-                                        title="Retorno para Ajuste"
-                                      />
-                                    )}
+                                    {(o.isAdjustmentReturn || isPendingCard) &&
+                                      !checkIsRepetition(o) && (
+                                        <span
+                                          className="w-2 h-2 rounded-full bg-yellow-600 dark:bg-yellow-500"
+                                          title="Retorno para Ajuste"
+                                        />
+                                      )}
                                   </div>
                                   <div
                                     className={cn(
                                       'text-[9px] font-medium',
-                                      o.isRepetition ? 'opacity-90' : '',
+                                      checkIsRepetition(o) ? 'opacity-90' : '',
                                     )}
                                   >
+                                    {' '}
                                     <KanbanCardTimer order={o} currentStage={stage.name} />
                                   </div>
                                 </div>
@@ -931,13 +955,14 @@ export default function KanbanPage() {
                                     <SelectTrigger
                                       className={cn(
                                         'h-6 text-[9px] font-bold uppercase flex-1 px-2',
-                                        o.isRepetition
+                                        checkIsRepetition(o)
                                           ? 'bg-red-700/50 border-red-500/50 text-white focus:ring-red-400'
                                           : o.isAdjustmentReturn || isPendingCard
                                             ? 'bg-yellow-500/20 border-yellow-600/30 text-yellow-900 focus:ring-yellow-500'
                                             : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-primary/30',
                                       )}
                                     >
+                                      {' '}
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="z-[110]">
@@ -963,7 +988,7 @@ export default function KanbanPage() {
                                       disabled={finishingOrderId === o.id}
                                       className={cn(
                                         'h-6 px-2 text-[9px] font-bold shrink-0',
-                                        o.isRepetition
+                                        checkIsRepetition(o)
                                           ? 'border-white/30 text-white hover:bg-white/20 hover:text-white bg-white/10'
                                           : o.isAdjustmentReturn || isPendingCard
                                             ? 'border-yellow-600 text-yellow-800 hover:bg-yellow-500 hover:text-yellow-950 bg-yellow-500/20'
@@ -996,7 +1021,7 @@ export default function KanbanPage() {
                                 size="sm"
                                 className={cn(
                                   'w-full text-[9px] font-bold uppercase h-6 mt-1',
-                                  o.isRepetition
+                                  checkIsRepetition(o)
                                     ? 'bg-white text-red-700 hover:bg-red-50 border-white font-extrabold'
                                     : o.isAdjustmentReturn || isPendingCard
                                       ? 'bg-yellow-500 text-yellow-950 hover:bg-yellow-600 border border-yellow-600'
@@ -1018,7 +1043,7 @@ export default function KanbanPage() {
                           sideOffset={8}
                           className={cn(
                             'text-primary-foreground border-primary shadow-xl z-[100] w-64 p-3 animate-in fade-in-0 zoom-in-95',
-                            o.isRepetition
+                            checkIsRepetition(o)
                               ? 'bg-red-600 text-white border-red-700'
                               : o.isAdjustmentReturn || isPendingCard
                                 ? 'bg-yellow-500 text-yellow-950 border-yellow-600'
@@ -1030,7 +1055,7 @@ export default function KanbanPage() {
                               <p className="font-bold text-sm leading-tight">{o.patientName}</p>
                               <p className="text-[11px] font-medium opacity-80 uppercase tracking-wider mt-0.5">
                                 {o.friendlyId}{' '}
-                                {o.isRepetition
+                                {checkIsRepetition(o)
                                   ? ' (REPETIÇÃO)'
                                   : o.isAdjustmentReturn
                                     ? ' (AJUSTE)'
@@ -1038,7 +1063,7 @@ export default function KanbanPage() {
                                       ? ' (PENDÊNCIA)'
                                       : ''}
                               </p>
-                            </div>
+                            </div>{' '}
                             <div className="text-xs space-y-1 opacity-90">
                               {!isDentist && (
                                 <p>
@@ -1067,13 +1092,14 @@ export default function KanbanPage() {
                               <div
                                 className={cn(
                                   'mt-2 pt-2 border-t text-xs',
-                                  o.isRepetition
+                                  checkIsRepetition(o)
                                     ? 'border-white/20'
                                     : o.isAdjustmentReturn || isPendingCard
                                       ? 'border-yellow-700/30'
                                       : 'border-primary-foreground/20',
                                 )}
                               >
+                                {' '}
                                 <p className="font-semibold mb-1">Observações:</p>
                                 <p className="opacity-90 line-clamp-4 leading-relaxed">
                                   {o.observations}
