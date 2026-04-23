@@ -90,6 +90,9 @@ export interface Order {
   settlementId?: string | null
   isAdjustmentReturn?: boolean
   isRepetition?: boolean
+  cadistaId?: string | null
+  maquiagemId?: string | null
+  acabamentoId?: string | null
   custo_adicional_descricao?: string | null
   custo_adicional_valor?: number | null
   createdBy?: {

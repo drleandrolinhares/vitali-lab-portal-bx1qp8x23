@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/StatusBadge'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   ArrowLeft,
   Calendar,
   FileText,
@@ -14,6 +21,7 @@ import {
   ArrowRight,
   Circle,
   DollarSign,
+  Users,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -26,13 +34,19 @@ import { toast } from '@/hooks/use-toast'
 export default function OrderDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { orders, kanbanStages } = useAppStore()
+  const { orders, kanbanStages, currentUser } = useAppStore()
 
   const order = orders.find((o) => o.id === id)
 
   const [historyItems, setHistoryItems] = useState<(OrderHistory & { createdByName?: string })[]>(
     [],
   )
+  const [cadistaId, setCadistaId] = useState<string>('none')
+  const [maquiagemId, setMaquiagemId] = useState<string>('none')
+  const [acabamentoId, setAcabamentoId] = useState<string>('none')
+  const [cadistas, setCadistas] = useState<any[]>([])
+  const [colaboradores, setColaboradores] = useState<any[]>([])
+  const [isLoadingProduction, setIsLoadingProduction] = useState(false)
   const [newNote, setNewNote] = useState('')
   const [isAddingNote, setIsAddingNote] = useState(false)
   const [additionalCostDesc, setAdditionalCostDesc] = useState('')
@@ -76,6 +90,54 @@ export default function OrderDetails() {
     fetchHistory()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.id, order?.history])
+
+  useEffect(() => {
+    const fetchProductionData = async () => {
+      if (!order?.id) return
+      setIsLoadingProduction(true)
+      const { data } = await supabase
+        .from('orders')
+        .select('cadista_id, maquiagem_id, acabamento_id')
+        .eq('id', order.id)
+        .single()
+      if (data) {
+        setCadistaId(data.cadista_id || 'none')
+        setMaquiagemId(data.maquiagem_id || 'none')
+        setAcabamentoId(data.acabamento_id || 'none')
+      }
+
+      const { data: cadData } = await supabase.from('cadistas').select('*').eq('is_active', true)
+      if (cadData) setCadistas(cadData)
+
+      const { data: colabData } = await supabase
+        .from('profiles')
+        .select('id, name, role')
+        .in('role', ['admin', 'master', 'laboratory', 'technical_assistant'])
+        .eq('is_active', true)
+      if (colabData) setColaboradores(colabData)
+      setIsLoadingProduction(false)
+    }
+    fetchProductionData()
+  }, [order?.id])
+
+  const handleUpdateProduction = async (field: string, value: string) => {
+    if (!order?.id) return
+    const val = value === 'none' ? null : value
+    const { error } = await supabase
+      .from('orders')
+      .update({ [field]: val })
+      .eq('id', order.id)
+    if (error) {
+      toast({ title: 'Erro ao atualizar produção', variant: 'destructive' })
+    } else {
+      toast({ title: 'Produção atualizada!' })
+      if (field === 'cadista_id') setCadistaId(value)
+      if (field === 'maquiagem_id') setMaquiagemId(value)
+      if (field === 'acabamento_id') setAcabamentoId(value)
+    }
+  }
+
+  const isInternalUser = currentUser?.role !== 'dentist'
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !order) return
@@ -376,6 +438,80 @@ export default function OrderDetails() {
               </div>
             </CardContent>
           </Card>
+
+          {isInternalUser && (
+            <Card className="shadow-subtle h-fit overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-muted/20">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" /> Produção Interna
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Cadista</Label>
+                    <Select
+                      value={cadistaId}
+                      onValueChange={(val) => handleUpdateProduction('cadista_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {cadistas.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Maquiagem</Label>
+                    <Select
+                      value={maquiagemId}
+                      onValueChange={(val) => handleUpdateProduction('maquiagem_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {colaboradores.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Acabamento</Label>
+                    <Select
+                      value={acabamentoId}
+                      onValueChange={(val) => handleUpdateProduction('acabamento_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {colaboradores.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">

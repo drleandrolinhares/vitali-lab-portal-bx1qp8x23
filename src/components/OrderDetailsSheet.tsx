@@ -22,8 +22,17 @@ import {
   Paperclip,
   Download,
   DollarSign,
+  Users,
 } from 'lucide-react'
 import { Order, OrderHistory } from '@/lib/types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { useAppStore } from '@/stores/main'
 import { cn, processOrderHistory } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
@@ -60,6 +69,13 @@ export function OrderDetailsSheet({
   const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
+  const [cadistaId, setCadistaId] = useState<string>('none')
+  const [maquiagemId, setMaquiagemId] = useState<string>('none')
+  const [acabamentoId, setAcabamentoId] = useState<string>('none')
+  const [cadistas, setCadistas] = useState<any[]>([])
+  const [colaboradores, setColaboradores] = useState<any[]>([])
+  const [isLoadingProduction, setIsLoadingProduction] = useState(false)
+
   useEffect(() => {
     if (isOpen && order?.id) {
       const fetchHistory = async () => {
@@ -83,11 +99,54 @@ export function OrderDetailsSheet({
         }
       }
       fetchHistory()
+
+      const fetchProductionData = async () => {
+        setIsLoadingProduction(true)
+        const { data } = await supabase
+          .from('orders')
+          .select('cadista_id, maquiagem_id, acabamento_id')
+          .eq('id', order.id)
+          .single()
+        if (data) {
+          setCadistaId(data.cadista_id || 'none')
+          setMaquiagemId(data.maquiagem_id || 'none')
+          setAcabamentoId(data.acabamento_id || 'none')
+        }
+
+        const { data: cadData } = await supabase.from('cadistas').select('*').eq('is_active', true)
+        if (cadData) setCadistas(cadData)
+
+        const { data: colabData } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .in('role', ['admin', 'master', 'laboratory', 'technical_assistant'])
+          .eq('is_active', true)
+        if (colabData) setColaboradores(colabData)
+        setIsLoadingProduction(false)
+      }
+      fetchProductionData()
     } else {
       setHistoryItems([])
       setIsDeleteDialogOpen(false)
+      setCadistaId('none')
+      setMaquiagemId('none')
+      setAcabamentoId('none')
     }
   }, [isOpen, order?.id, order?.history])
+
+  const handleUpdateProduction = async (field: string, value: string) => {
+    if (!order?.id) return
+    const val = value === 'none' ? null : value
+    const { error } = await supabase
+      .from('orders')
+      .update({ [field]: val })
+      .eq('id', order.id)
+    if (!error) {
+      if (field === 'cadista_id') setCadistaId(value)
+      if (field === 'maquiagem_id') setMaquiagemId(value)
+      if (field === 'acabamento_id') setAcabamentoId(value)
+    }
+  }
 
   const handleDelete = async () => {
     if (!order) return
@@ -107,6 +166,8 @@ export function OrderDetailsSheet({
 
   const systemHistory = actualHistory.filter((h) => h.status !== 'NOTA_MANUAL')
   const processedSystemHistory = processOrderHistory(systemHistory, sectorStages, order.kanbanStage)
+
+  const isInternalUser = currentUser?.role !== 'dentist'
 
   const manualNotes = actualHistory
     .filter((h) => h.status === 'NOTA_MANUAL')
@@ -205,6 +266,76 @@ export function OrderDetailsSheet({
                 </div>
               </div>
             </div>
+
+            {isInternalUser && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <Users className="w-4 h-4 text-primary" /> Produção Interna
+                </h4>
+                <div className="bg-muted/30 p-4 rounded-xl border border-border/50 space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Cadista</Label>
+                    <Select
+                      value={cadistaId}
+                      onValueChange={(val) => handleUpdateProduction('cadista_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {cadistas.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Maquiagem</Label>
+                    <Select
+                      value={maquiagemId}
+                      onValueChange={(val) => handleUpdateProduction('maquiagem_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {colaboradores.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Acabamento</Label>
+                    <Select
+                      value={acabamentoId}
+                      onValueChange={(val) => handleUpdateProduction('acabamento_id', val)}
+                      disabled={isLoadingProduction}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não atribuído</SelectItem>
+                        {colaboradores.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
