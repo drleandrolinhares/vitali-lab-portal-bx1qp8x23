@@ -208,8 +208,9 @@ export function UsersManagement() {
     allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
     restrict_kanban_stages: false,
     authorized_kanban_stages: [] as string[],
+    can_do_maquiagem: false,
+    can_do_acabamento: false,
   })
-
   const [selectedPerms, setSelectedPerms] = useState<Record<string, any> | null>(null)
 
   const effectivePerms = useMemo(() => {
@@ -367,6 +368,8 @@ export function UsersManagement() {
         restrict_kanban_stages:
           user.authorized_kanban_stages !== null && user.authorized_kanban_stages !== undefined,
         authorized_kanban_stages: user.authorized_kanban_stages || [],
+        can_do_maquiagem: user.permissions?.can_do_maquiagem || false,
+        can_do_acabamento: user.permissions?.can_do_acabamento || false,
       })
       let initialPerms = user.permissions
       if (Array.isArray(initialPerms) || !initialPerms || Object.keys(initialPerms).length === 0) {
@@ -406,6 +409,8 @@ export function UsersManagement() {
         allowed_sectors: ['SOLUÇÕES CERÂMICAS', 'STÚDIO ACRÍLICO'],
         restrict_kanban_stages: false,
         authorized_kanban_stages: [],
+        can_do_maquiagem: false,
+        can_do_acabamento: false,
       })
       setSelectedPerms(null)
     }
@@ -568,10 +573,15 @@ export function UsersManagement() {
           normalizedUserPerms = {}
         }
 
-        if (selectedPerms !== null && !deepEqual(selectedPerms, normalizedUserPerms)) {
-          if (showPermissionsTab) {
-            payload.permissions = selectedPerms
-          }
+        let finalPerms =
+          selectedPerms !== null && showPermissionsTab
+            ? { ...selectedPerms }
+            : { ...normalizedUserPerms }
+        finalPerms.can_do_maquiagem = formData.can_do_maquiagem
+        finalPerms.can_do_acabamento = formData.can_do_acabamento
+
+        if (!deepEqual(finalPerms, normalizedUserPerms)) {
+          payload.permissions = finalPerms
         }
 
         if (
@@ -614,7 +624,11 @@ export function UsersManagement() {
           has_access_schedule: formData.has_access_schedule,
           can_move_kanban_cards: formData.can_move_kanban_cards,
           is_active: formData.is_active,
-          permissions: selectedPerms || {},
+          permissions: {
+            ...(selectedPerms || {}),
+            can_do_maquiagem: formData.can_do_maquiagem,
+            can_do_acabamento: formData.can_do_acabamento,
+          },
           assigned_dentists: formData.assigned_dentists,
           allowed_sectors: formData.allowed_sectors,
           authorized_kanban_stages: formData.restrict_kanban_stages
@@ -2020,6 +2034,82 @@ export function UsersManagement() {
                               )}
                             </div>
                           )}
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                          <Users className="w-5 h-5 text-primary" /> Atuação na Produção Interna
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione em quais listas de produção este colaborador deve aparecer
+                          dentro dos detalhes do pedido.
+                        </p>
+                      </div>
+                      <div className="border rounded-xl bg-background overflow-hidden p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                        <div
+                          className={cn(
+                            'flex items-center gap-3 p-3 border rounded-lg transition-colors',
+                            formData.can_do_maquiagem
+                              ? 'border-primary bg-primary/5'
+                              : 'hover:bg-muted/30',
+                            canManagePermissions && !saving
+                              ? 'cursor-pointer'
+                              : 'opacity-80 cursor-not-allowed',
+                          )}
+                          onClick={() => {
+                            if (canManagePermissions && !saving) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                can_do_maquiagem: !prev.can_do_maquiagem,
+                              }))
+                            }
+                          }}
+                        >
+                          <Checkbox
+                            checked={formData.can_do_maquiagem}
+                            onCheckedChange={(c) => {
+                              if (canManagePermissions && !saving)
+                                setFormData((prev) => ({ ...prev, can_do_maquiagem: !!c }))
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={!canManagePermissions || saving}
+                          />
+                          <span className="font-bold text-sm uppercase tracking-wide">
+                            Maquiagem
+                          </span>
+                        </div>
+                        <div
+                          className={cn(
+                            'flex items-center gap-3 p-3 border rounded-lg transition-colors',
+                            formData.can_do_acabamento
+                              ? 'border-primary bg-primary/5'
+                              : 'hover:bg-muted/30',
+                            canManagePermissions && !saving
+                              ? 'cursor-pointer'
+                              : 'opacity-80 cursor-not-allowed',
+                          )}
+                          onClick={() => {
+                            if (canManagePermissions && !saving) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                can_do_acabamento: !prev.can_do_acabamento,
+                              }))
+                            }
+                          }}
+                        >
+                          <Checkbox
+                            checked={formData.can_do_acabamento}
+                            onCheckedChange={(c) => {
+                              if (canManagePermissions && !saving)
+                                setFormData((prev) => ({ ...prev, can_do_acabamento: !!c }))
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={!canManagePermissions || saving}
+                          />
+                          <span className="font-bold text-sm uppercase tracking-wide">
+                            Acabamento
+                          </span>
                         </div>
                       </div>
 

@@ -111,8 +111,15 @@ export default function OrderDetails() {
 
       const { data: colabData } = await supabase
         .from('profiles')
-        .select('id, name, role')
-        .in('role', ['admin', 'master', 'laboratory', 'technical_assistant'])
+        .select('id, name, role, permissions')
+        .in('role', [
+          'admin',
+          'master',
+          'receptionist',
+          'technical_assistant',
+          'financial',
+          'relationship_manager',
+        ])
         .eq('is_active', true)
       if (colabData) setColaboradores(colabData)
       setIsLoadingProduction(false)
@@ -480,11 +487,13 @@ export default function OrderDetails() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Não atribuído</SelectItem>
-                        {colaboradores.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
+                        {colaboradores
+                          .filter((c) => c.permissions?.can_do_maquiagem || c.id === maquiagemId)
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -500,11 +509,13 @@ export default function OrderDetails() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Não atribuído</SelectItem>
-                        {colaboradores.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
+                        {colaboradores
+                          .filter((c) => c.permissions?.can_do_acabamento || c.id === acabamentoId)
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
