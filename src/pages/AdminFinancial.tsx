@@ -94,6 +94,9 @@ export default function AdminFinancial() {
   const [receiveInstallmentMethod, setReceiveInstallmentMethod] = useState<string>('')
   const [isReceivingInstallment, setIsReceivingInstallment] = useState(false)
 
+  // Pipeline Details Modal State
+  const [pipelineDentist, setPipelineDentist] = useState<string | null>(null)
+
   const fetchData = async () => {
     setLoadingSettlements(true)
     try {
@@ -118,7 +121,7 @@ export default function AdminFinancial() {
         supabase
           .from('orders')
           .select(
-            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type',
+            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage',
           ),
         supabase.from('billing_installments').select('*'),
       ])
@@ -163,6 +166,7 @@ export default function AdminFinancial() {
         emProducao: 0,
         readyToInvoiceCount: 0,
         unsettledOrders: [],
+        pipelineOrders: [],
       })
     })
 
@@ -204,6 +208,15 @@ export default function AdminFinancial() {
 
       if (!isCompleted && !isCancelled) {
         dentistData.emProducao += basePrice
+        dentistData.pipelineOrders.push({
+          id: o.id,
+          friendlyId: o.friendly_id,
+          patientName: o.patient_name,
+          workType: o.work_type,
+          kanbanStage: o.kanban_stage,
+          basePrice: basePrice,
+          createdAt: o.created_at,
+        })
       }
     })
 
@@ -828,7 +841,17 @@ export default function AdminFinancial() {
                           {formatCurrency(row.aFaturar)}
                         </TableCell>
                         <TableCell className="text-right font-medium text-amber-600">
-                          {formatCurrency(row.emProducao)}
+                          {row.emProducao > 0 ? (
+                            <Button
+                              variant="link"
+                              className="text-amber-600 font-bold p-0 h-auto hover:text-amber-700"
+                              onClick={() => setPipelineDentist(row.id)}
+                            >
+                              {formatCurrency(row.emProducao)}
+                            </Button>
+                          ) : (
+                            formatCurrency(row.emProducao)
+                          )}
                         </TableCell>
                         <TableCell className="text-right pr-6">
                           <Button
@@ -1468,6 +1491,78 @@ export default function AdminFinancial() {
                 Confirmar Recebimento
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIPELINE DETAILS MODAL */}
+      <Dialog open={!!pipelineDentist} onOpenChange={(open) => !open && setPipelineDentist(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>
+              Trabalhos em Pipeline - {profiles.find((p) => p.id === pipelineDentist)?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-6">
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Pedido</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Trabalho</TableHead>
+                    <TableHead>Etapa</TableHead>
+                    <TableHead className="text-right">Valor Estimado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData
+                    .find((d) => d.id === pipelineDentist)
+                    ?.pipelineOrders.map((o: any) => (
+                      <TableRow key={o.id}>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {o.friendlyId || o.id.substring(0, 8)}
+                        </TableCell>
+                        <TableCell>{o.patientName || '-'}</TableCell>
+                        <TableCell>{o.workType || '-'}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-50 text-amber-700 border-amber-200"
+                          >
+                            {o.kanbanStage || 'Em Produção'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(o.basePrice || 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {(!tableData.find((d) => d.id === pipelineDentist)?.pipelineOrders ||
+                    tableData.find((d) => d.id === pipelineDentist)?.pipelineOrders.length ===
+                      0) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        Nenhum pedido em pipeline para este dentista.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <div className="px-6 py-4 bg-slate-50 border-t flex justify-between items-center shrink-0">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Total em Produção
+              </span>
+              <span className="text-2xl font-bold text-amber-600">
+                {formatCurrency(tableData.find((d) => d.id === pipelineDentist)?.emProducao || 0)}
+              </span>
+            </div>
+            <Button variant="outline" onClick={() => setPipelineDentist(null)}>
+              Fechar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
