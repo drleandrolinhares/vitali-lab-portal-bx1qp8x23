@@ -313,7 +313,19 @@ export default function FinancialPage() {
                         concludedOrders.map((o) => (
                           <TableRow key={o.id} className="hover:bg-muted/30">
                             <TableCell className="pl-6 font-medium text-primary">
-                              {o.friendlyId}
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span>{o.friendlyId}</span>
+                                  {o.isRepetition && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-[10px] uppercase px-1.5 py-0 h-4"
+                                    >
+                                      Repetição
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="font-semibold">{o.patientName}</TableCell>
                             <TableCell className="text-muted-foreground">{o.workType}</TableCell>
@@ -359,7 +371,19 @@ export default function FinancialPage() {
                         pipelineOrders.map((o) => (
                           <TableRow key={o.id} className="hover:bg-muted/30">
                             <TableCell className="pl-6 font-medium text-primary">
-                              {o.friendlyId}
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span>{o.friendlyId}</span>
+                                  {o.isRepetition && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-[10px] uppercase px-1.5 py-0 h-4"
+                                    >
+                                      Repetição
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="font-semibold">{o.patientName}</TableCell>
                             <TableCell>
@@ -473,9 +497,19 @@ export default function FinancialPage() {
                             className="border-b last:border-0 hover:bg-muted/5 print:border-b print:border-gray-200"
                           >
                             <TableCell className="py-3 px-4 print:px-0">
-                              <span className="font-medium text-foreground block">
-                                {s.patientName || 'N/A'}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground block">
+                                  {s.patientName || 'N/A'}
+                                </span>
+                                {s.isRepetition && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-[10px] uppercase px-1.5 py-0 h-4 print:border print:border-red-500 print:text-red-500 print:bg-transparent"
+                                  >
+                                    Repetição
+                                  </Badge>
+                                )}
+                              </div>
                               <span className="text-xs text-muted-foreground">
                                 {s.friendlyId || '-'}
                               </span>

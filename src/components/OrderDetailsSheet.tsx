@@ -200,8 +200,13 @@ export function OrderDetailsSheet({
           <SheetHeader>
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1 pr-4">
-                <SheetTitle className="text-xl text-slate-900 dark:text-slate-100">
+                <SheetTitle className="text-xl text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   Pedido {order.friendlyId}
+                  {order.isRepetition && (
+                    <div className="bg-destructive text-destructive-foreground text-[10px] uppercase font-bold px-2 py-0.5 rounded-md">
+                      Repetição
+                    </div>
+                  )}
                 </SheetTitle>
                 <SheetDescription className="text-sm text-slate-500">
                   {order.patientName} - {order.dentistName}

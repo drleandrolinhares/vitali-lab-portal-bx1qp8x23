@@ -121,7 +121,7 @@ export default function AdminFinancial() {
         supabase
           .from('orders')
           .select(
-            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage',
+            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition',
           ),
         supabase.from('billing_installments').select('*'),
       ])
@@ -203,6 +203,7 @@ export default function AdminFinancial() {
           workType: o.work_type,
           basePrice: basePrice,
           createdAt: o.created_at,
+          isRepetition: o.is_repetition,
         })
       }
 
@@ -216,6 +217,7 @@ export default function AdminFinancial() {
           kanbanStage: o.kanban_stage,
           basePrice: basePrice,
           createdAt: o.created_at,
+          isRepetition: o.is_repetition,
         })
       }
     })
@@ -514,6 +516,7 @@ export default function AdminFinancial() {
         patientName: o.patientName,
         workType: o.workType,
         clearedAmount: o.basePrice,
+        isRepetition: o.isRepetition,
       }))
 
       const isInstallment = paymentType === 'installment'
@@ -1237,11 +1240,21 @@ export default function AdminFinancial() {
                           />
                         </TableCell>
                         <TableCell className="font-medium whitespace-nowrap">
-                          {o.friendlyId || o.id.substring(0, 8)}
+                          <div className="flex items-center gap-2">
+                            <span>{o.friendlyId || o.id.substring(0, 8)}</span>
+                            {o.isRepetition && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] uppercase px-1.5 py-0 h-4"
+                              >
+                                Repetição
+                              </Badge>
+                            )}
+                          </div>
                           {o.patientName && (
-                            <span className="text-muted-foreground font-normal ml-2">
-                              - {o.patientName}
-                            </span>
+                            <div className="text-muted-foreground font-normal text-xs mt-0.5">
+                              {o.patientName}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
@@ -1419,7 +1432,17 @@ export default function AdminFinancial() {
                     {receiveSettlement?.orders_snapshot?.map((o: any, idx: number) => (
                       <TableRow key={o.id || idx}>
                         <TableCell className="font-medium whitespace-nowrap">
-                          {o.friendlyId || o.id?.substring(0, 8) || '-'}
+                          <div className="flex items-center gap-2">
+                            <span>{o.friendlyId || o.id?.substring(0, 8) || '-'}</span>
+                            {o.isRepetition && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] uppercase px-1.5 py-0 h-4"
+                              >
+                                Repetição
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{o.patientName || '-'}</TableCell>
                         <TableCell>{o.workType || '-'}</TableCell>
@@ -1521,7 +1544,17 @@ export default function AdminFinancial() {
                     ?.pipelineOrders.map((o: any) => (
                       <TableRow key={o.id}>
                         <TableCell className="font-medium whitespace-nowrap">
-                          {o.friendlyId || o.id.substring(0, 8)}
+                          <div className="flex items-center gap-2">
+                            <span>{o.friendlyId || o.id.substring(0, 8)}</span>
+                            {o.isRepetition && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] uppercase px-1.5 py-0 h-4"
+                              >
+                                Repetição
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{o.patientName || '-'}</TableCell>
                         <TableCell>{o.workType || '-'}</TableCell>

@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import {
   ChartContainer,
   ChartTooltip,
@@ -337,9 +338,19 @@ export default function HistoryPage() {
                     className="bg-slate-800/60 p-4 rounded-xl border border-rose-500/20 flex flex-col gap-2 hover:bg-slate-800 transition-colors"
                   >
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-lg font-bold text-slate-100 leading-tight">
-                        {o.patientName}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-lg font-bold text-slate-100 leading-tight">
+                          {o.patientName}
+                        </span>
+                        {o.isRepetition && (
+                          <Badge
+                            variant="destructive"
+                            className="text-[10px] uppercase px-1.5 py-0 h-4 w-fit bg-red-600/80 hover:bg-red-600/80 text-white border-none"
+                          >
+                            Repetição
+                          </Badge>
+                        )}
+                      </div>
                       <span
                         className={cn(
                           'text-xs font-black px-2 py-1 rounded-md shrink-0',
@@ -399,9 +410,19 @@ export default function HistoryPage() {
                     className="bg-slate-800/60 p-4 rounded-xl border border-amber-500/20 flex flex-col gap-2 hover:bg-slate-800 transition-colors"
                   >
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-lg font-bold text-slate-100 leading-tight">
-                        {o.patientName}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-lg font-bold text-slate-100 leading-tight">
+                          {o.patientName}
+                        </span>
+                        {o.isRepetition && (
+                          <Badge
+                            variant="destructive"
+                            className="text-[10px] uppercase px-1.5 py-0 h-4 w-fit bg-red-600/80 hover:bg-red-600/80 text-white border-none"
+                          >
+                            Repetição
+                          </Badge>
+                        )}
+                      </div>
                       <span
                         className={cn(
                           'text-xs font-black px-2 py-1 rounded-md shrink-0',
@@ -620,7 +641,19 @@ export default function HistoryPage() {
                 <TableBody>
                   {filtered.map((order, index) => (
                     <TableRow key={`${order.id}-${index}`}>
-                      <TableCell className="pl-6 font-medium">{order.friendlyId}</TableCell>
+                      <TableCell className="pl-6 font-medium">
+                        <div className="flex flex-col items-start gap-1">
+                          <span>{order.friendlyId}</span>
+                          {order.isRepetition && (
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] uppercase px-1.5 py-0 h-4"
+                            >
+                              Repetição
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       {showDentistCol && <TableCell>{order.dentistName}</TableCell>}
                       <TableCell>{order.patientName}</TableCell>
                       <TableCell>{order.workType}</TableCell>
