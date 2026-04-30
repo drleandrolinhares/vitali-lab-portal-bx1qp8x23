@@ -30,6 +30,7 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  Plus,
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
@@ -97,6 +98,19 @@ export default function AdminFinancial() {
 
   // Pipeline Details Modal State
   const [pipelineDentist, setPipelineDentist] = useState<string | null>(null)
+
+  // Manual Receivable State
+  const [manualReceivableOpen, setManualReceivableOpen] = useState(false)
+  const [manualRecDentist, setManualRecDentist] = useState<string>('')
+  const [manualRecAmount, setManualRecAmount] = useState<string>('')
+  const [manualRecNote, setManualRecNote] = useState<string>('')
+  const [manualRecType, setManualRecType] = useState<'single' | 'installment'>('installment')
+  const [manualRecInstallments, setManualRecInstallments] = useState<string>('8')
+  const [manualRecInterval, setManualRecInterval] = useState<string>('30')
+  const [manualRecFirstDueDate, setManualRecFirstDueDate] = useState<string>(
+    new Date().toISOString().split('T')[0],
+  )
+  const [isSubmittingManualRec, setIsSubmittingManualRec] = useState(false)
 
   const fetchData = async () => {
     setLoadingSettlements(true)
@@ -566,6 +580,94 @@ export default function AdminFinancial() {
     }
   }
 
+  const handleConfirmManualReceivable = async () => {
+    if (!manualRecDentist || !manualRecAmount || !manualRecNote) {
+      toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' })
+      return
+    }
+
+    setIsSubmittingManualRec(true)
+    try {
+      const totalAmount = parseFloat(manualRecAmount)
+      const count = manualRecType === 'installment' ? parseInt(manualRecInstallments) || 1 : 1
+
+      const snapshot = [
+        {
+          id: `MANUAL-${Date.now()}`,
+          friendlyId: 'AVULSO',
+          patientName: '-',
+          workType: manualRecNote,
+          clearedAmount: totalAmount,
+          isRepetition: false,
+        },
+      ]
+
+      const { data: settlementData, error } = await supabase
+        .from('settlements')
+        .insert({
+          dentist_id: manualRecDentist,
+          amount: totalAmount,
+          orders_snapshot: snapshot,
+          status: manualRecType === 'installment' ? 'installment_plan' : 'pending',
+          total_installments: count,
+          note: manualRecNote,
+        })
+        .select('id')
+        .single()
+
+      if (error) throw error
+
+      if (manualRecType === 'installment') {
+        const interval = parseInt(manualRecInterval) || 30
+        const installmentValue = totalAmount / count
+
+        const inserts = []
+        let currentInstNum = 1
+        const baseDate = manualRecFirstDueDate
+          ? new Date(manualRecFirstDueDate + 'T12:00:00Z')
+          : new Date()
+
+        for (let i = 0; i < count; i++) {
+          const dueDate = new Date(baseDate)
+          dueDate.setDate(dueDate.getDate() + interval * i)
+
+          inserts.push({
+            dentist_id: manualRecDentist,
+            settlement_id: settlementData.id,
+            total_amount: totalAmount,
+            installment_value: installmentValue,
+            total_installments: count,
+            remaining_installments: count - currentInstNum + 1,
+            installment_number: currentInstNum,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'pending',
+            note: `Parcela ${i + 1}/${count} - ${manualRecNote}`,
+          })
+          currentInstNum++
+        }
+
+        const { error: instError } = await supabase.from('billing_installments').insert(inserts)
+        if (instError) throw instError
+      }
+
+      toast({ title: 'Lançamento avulso criado com sucesso!' })
+      fetchData()
+      setManualReceivableOpen(false)
+
+      setManualRecDentist('')
+      setManualRecAmount('')
+      setManualRecNote('')
+      setManualRecType('installment')
+      setManualRecInstallments('8')
+      setManualRecFirstDueDate(new Date().toISOString().split('T')[0])
+    } catch (err: any) {
+      console.error(err)
+      toast({ title: 'Erro ao criar lançamento', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsSubmittingManualRec(false)
+    }
+  }
+
   const handleConfirmReceiveInstallment = async () => {
     if (!receiveInstallment || !receiveInstallmentDate) return
     setIsReceivingInstallment(true)
@@ -746,6 +848,14 @@ export default function AdminFinancial() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={() => setManualReceivableOpen(true)}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-10"
+          >
+            <Plus className="w-4 h-4" />
+            Lançamento a Receber
+          </Button>
+
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm px-3 py-1.5 h-10">
             <Checkbox
               id="show-ready"
@@ -1725,6 +1835,131 @@ export default function AdminFinancial() {
             </div>
             <Button variant="outline" onClick={() => setPipelineDentist(null)}>
               Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MANUAL RECEIVABLE MODAL */}
+      <Dialog open={manualReceivableOpen} onOpenChange={setManualReceivableOpen}>
+        <DialogContent className="max-w-xl flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>Novo Lançamento Avulso a Receber</DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 space-y-4 flex-1 overflow-auto">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Dentista / Cliente</label>
+              <Select value={manualRecDentist} onValueChange={setManualRecDentist}>
+                <SelectTrigger className="w-full h-10 bg-white border-slate-300 focus:ring-emerald-500">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} {p.clinic ? `(${p.clinic})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Descrição / Referência</label>
+              <input
+                type="text"
+                value={manualRecNote}
+                onChange={(e) => setManualRecNote(e.target.value)}
+                placeholder="Ex: Acerto de Sociedade"
+                className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Valor Total (R$)</label>
+              <input
+                type="number"
+                value={manualRecAmount}
+                onChange={(e) => setManualRecAmount(e.target.value)}
+                placeholder="0.00"
+                className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <label className="text-sm font-bold text-slate-700">Forma de Cobrança</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={manualRecType === 'single' ? 'default' : 'outline'}
+                  onClick={() => setManualRecType('single')}
+                  className="flex-1 shadow-sm h-10"
+                >
+                  Cobrança Única
+                </Button>
+                <Button
+                  variant={manualRecType === 'installment' ? 'default' : 'outline'}
+                  onClick={() => setManualRecType('installment')}
+                  className="flex-1 shadow-sm h-10"
+                >
+                  Parcelada
+                </Button>
+              </div>
+            </div>
+
+            {manualRecType === 'installment' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Nº de Parcelas
+                  </label>
+                  <input
+                    type="number"
+                    value={manualRecInstallments}
+                    onChange={(e) => setManualRecInstallments(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                    min="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Primeiro Vencimento
+                  </label>
+                  <input
+                    type="date"
+                    value={manualRecFirstDueDate}
+                    onChange={(e) => setManualRecFirstDueDate(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Intervalo (Dias)
+                  </label>
+                  <input
+                    type="number"
+                    value={manualRecInterval}
+                    onChange={(e) => setManualRecInterval(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                    min="1"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 py-4 bg-slate-50 border-t flex justify-end items-center gap-2 shrink-0">
+            <Button variant="ghost" onClick={() => setManualReceivableOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmManualReceivable}
+              disabled={
+                isSubmittingManualRec || !manualRecDentist || !manualRecAmount || !manualRecNote
+              }
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isSubmittingManualRec && <Loader2 className="w-4 h-4 animate-spin" />}
+              Salvar Lançamento
             </Button>
           </div>
         </DialogContent>
