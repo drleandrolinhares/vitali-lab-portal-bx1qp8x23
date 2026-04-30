@@ -53,7 +53,7 @@ const MONTHS = [
 const YEARS = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
 export default function AdminFinancial() {
-  const { currentUser, loading: storeLoading, refreshOrders } = useAppStore()
+  const { currentUser, loading: storeLoading, refreshOrders, selectedLab } = useAppStore()
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
 
@@ -121,7 +121,7 @@ export default function AdminFinancial() {
         supabase
           .from('orders')
           .select(
-            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition',
+            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition, sector',
           ),
         supabase.from('billing_installments').select('*'),
       ])
@@ -153,6 +153,9 @@ export default function AdminFinancial() {
     let recebido = 0
     const inadimplencia = 0
 
+    const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+    const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
+
     const map = new Map<string, any>()
     profiles.forEach((p) => {
       if (selectedDentist !== 'all' && p.id !== selectedDentist) return
@@ -172,6 +175,10 @@ export default function AdminFinancial() {
 
     directOrders.forEach((o) => {
       if (selectedDentist !== 'all' && o.dentist_id !== selectedDentist) return
+      if (isLabSelected) {
+        const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase().replace('STUDIO', 'STÚDIO')
+        if (oSector !== selSector) return
+      }
 
       const isCompleted = o.status === 'completed' || o.status === 'delivered'
       const isCancelled = o.status === 'cancelled'
@@ -224,6 +231,20 @@ export default function AdminFinancial() {
 
     settlements.forEach((s) => {
       if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
+
+      if (isLabSelected) {
+        const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+        if (ordersForSettlement.length > 0) {
+          const hasSector = ordersForSettlement.some((o) => {
+            const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+              .toUpperCase()
+              .replace('STUDIO', 'STÚDIO')
+            return oSector === selSector
+          })
+          if (!hasSector) return
+        }
+      }
+
       if (
         s.status === 'paid' &&
         s.paid_at &&
@@ -238,6 +259,20 @@ export default function AdminFinancial() {
 
     installments.forEach((i) => {
       if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return
+
+      if (isLabSelected) {
+        const ordersForSettlement = directOrders.filter((o) => o.settlement_id === i.settlement_id)
+        if (ordersForSettlement.length > 0) {
+          const hasSector = ordersForSettlement.some((o) => {
+            const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+              .toUpperCase()
+              .replace('STUDIO', 'STÚDIO')
+            return oSector === selSector
+          })
+          if (!hasSector) return
+        }
+      }
+
       if (i.status === 'paid' && i.paid_at) {
         const [year, month] = i.paid_at.split('T')[0].split('-')
         if ((parseInt(month, 10) - 1).toString() === selectedMonth && year === selectedYear) {
@@ -268,16 +303,33 @@ export default function AdminFinancial() {
     selectedYear,
     selectedDentist,
     showOnlyReadyToInvoice,
+    selectedLab,
   ])
 
   const pendingInvoices = useMemo(() => {
+    const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+    const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
+
     return settlements
-      .filter(
-        (s) =>
-          s.status === 'pending' &&
-          (!s.total_installments || s.total_installments === 1) &&
-          (selectedDentist === 'all' || s.dentist_id === selectedDentist),
-      )
+      .filter((s) => {
+        if (s.status !== 'pending') return false
+        if (s.total_installments && s.total_installments > 1) return false
+        if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
+
+        if (isLabSelected) {
+          const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return false
+          }
+        }
+        return true
+      })
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
         return {
@@ -287,14 +339,30 @@ export default function AdminFinancial() {
         }
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [settlements, profiles, selectedDentist])
+  }, [settlements, profiles, selectedDentist, selectedLab, directOrders])
 
   const paidInvoices = useMemo(() => {
+    const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+    const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
+
     return settlements
       .filter((s) => {
         if (s.status !== 'paid') return false
         if (s.total_installments && s.total_installments > 1) return false
         if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
+
+        if (isLabSelected) {
+          const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return false
+          }
+        }
 
         const dateStr = s.paid_at || s.created_at
         if (!dateStr) return false
@@ -317,14 +385,41 @@ export default function AdminFinancial() {
           new Date(b.paid_at || b.created_at).getTime() -
           new Date(a.paid_at || a.created_at).getTime(),
       )
-  }, [settlements, profiles, selectedDentist, selectedMonth, selectedYear])
+  }, [
+    settlements,
+    profiles,
+    selectedDentist,
+    selectedMonth,
+    selectedYear,
+    selectedLab,
+    directOrders,
+  ])
 
   const pendingInstallments = useMemo(() => {
+    const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+    const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
+
     return installments
-      .filter(
-        (i) =>
-          i.status !== 'paid' && (selectedDentist === 'all' || i.dentist_id === selectedDentist),
-      )
+      .filter((i) => {
+        if (i.status === 'paid') return false
+        if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return false
+
+        if (isLabSelected) {
+          const ordersForSettlement = directOrders.filter(
+            (o) => o.settlement_id === i.settlement_id,
+          )
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return false
+          }
+        }
+        return true
+      })
       .map((i) => {
         const dentist = profiles.find((p) => p.id === i.dentist_id)
         return {
@@ -338,14 +433,33 @@ export default function AdminFinancial() {
           new Date(a.due_date || a.created_at).getTime() -
           new Date(b.due_date || b.created_at).getTime(),
       )
-  }, [installments, profiles, selectedDentist])
+  }, [installments, profiles, selectedDentist, selectedLab, directOrders])
 
   const paidInstallments = useMemo(() => {
+    const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+    const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
+
     return installments
-      .filter(
-        (i) =>
-          i.status === 'paid' && (selectedDentist === 'all' || i.dentist_id === selectedDentist),
-      )
+      .filter((i) => {
+        if (i.status !== 'paid') return false
+        if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return false
+
+        if (isLabSelected) {
+          const ordersForSettlement = directOrders.filter(
+            (o) => o.settlement_id === i.settlement_id,
+          )
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return false
+          }
+        }
+        return true
+      })
       .map((i) => {
         const dentist = profiles.find((p) => p.id === i.dentist_id)
         return {
@@ -359,7 +473,7 @@ export default function AdminFinancial() {
           new Date(b.paid_at || b.created_at).getTime() -
           new Date(a.paid_at || a.created_at).getTime(),
       )
-  }, [installments, profiles, selectedDentist])
+  }, [installments, profiles, selectedDentist, selectedLab, directOrders])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
