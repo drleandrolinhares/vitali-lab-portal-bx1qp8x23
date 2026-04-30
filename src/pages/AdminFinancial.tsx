@@ -34,6 +34,7 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { useAppStore } from '@/stores/main'
+import AccountsPayable from './AccountsPayable'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -829,6 +830,12 @@ export default function AdminFinancial() {
           >
             Gestão de Parcelamentos
           </TabsTrigger>
+          <TabsTrigger
+            value="despesas"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 font-medium text-muted-foreground data-[state=active]:text-primary"
+          >
+            Lançamentos (A Pagar)
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent
@@ -1297,6 +1304,15 @@ export default function AdminFinancial() {
                 </Table>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="despesas"
+          className="flex-1 flex flex-col min-h-0 mt-0 gap-6 data-[state=inactive]:hidden"
+        >
+          <div className="bg-white rounded-lg p-0 md:p-6 border border-slate-200 overflow-auto flex-1 shadow-sm">
+            <AccountsPayable />
           </div>
         </TabsContent>
       </Tabs>

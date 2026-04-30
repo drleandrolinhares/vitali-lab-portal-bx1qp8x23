@@ -59,6 +59,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
     type: 'unica',
     installments_count: 2,
     observations: '',
+    reference_month: '',
   })
 
   useEffect(() => {
@@ -78,6 +79,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
           type: 'unica',
           installments_count: 2,
           observations: expenseToEdit.observations || '',
+          reference_month: '',
         })
         setInstallments([])
       } else {
@@ -97,6 +99,7 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
           type: 'unica',
           installments_count: 2,
           observations: '',
+          reference_month: '',
         })
         setInstallments([])
       }
@@ -167,6 +170,9 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
     } else if (formData.type === 'parcelada') {
       entries = installments.map((i) => ({
         ...base,
+        description: formData.reference_month
+          ? `${formData.description} - Parcela ${i.installment_current}/${formData.installments_count} ref. ${formData.reference_month}`
+          : formData.description,
         due_date: i.due_date,
         amount: Number(i.amount.replace(/[^0-9,-]+/g, '').replace(',', '.')),
         installment_current: i.installment_current,
@@ -360,6 +366,16 @@ export function ExpenseFormModal({ open, onOpenChange, onSave, expenseToEdit }: 
                   onChange={(e) =>
                     setFormData({ ...formData, installments_count: parseInt(e.target.value) || 2 })
                   }
+                />
+              </div>
+            )}
+            {formData.type === 'parcelada' && !expenseToEdit && (
+              <div className="space-y-2">
+                <Label>Mês/Ano de Referência (Opcional)</Label>
+                <Input
+                  placeholder="Ex: Setembro/25"
+                  value={formData.reference_month}
+                  onChange={(e) => setFormData({ ...formData, reference_month: e.target.value })}
                 />
               </div>
             )}

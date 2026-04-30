@@ -156,13 +156,15 @@ export default function AccountsPayable() {
     <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Contas a Pagar</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-primary">
+            Contas a Pagar / Lançamentos Manuais
+          </h2>
           <p className="text-muted-foreground text-sm">
-            Gerencie despesas, parcelamentos e contas recorrentes.
+            Gerencie despesas, registre faturas de laboratório, parcelamentos e contas recorrentes.
           </p>
         </div>
         <Button onClick={handleNewAccount}>
-          <Plus className="w-4 h-4 mr-2" /> Nova Conta
+          <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
         </Button>
       </div>
 
@@ -242,13 +244,21 @@ export default function AccountsPayable() {
           <div className="divide-y">
             {groups.map(([dateStr, items]) => (
               <div key={dateStr} className="flex flex-col md:flex-row">
-                <div className="w-full md:w-20 md:border-r bg-muted/10 flex md:flex-col items-center justify-center md:justify-start pt-2 md:pt-4 px-2 border-b md:border-b-0 py-2 md:py-0">
-                  <span className="text-lg md:text-2xl font-bold">
-                    {format(parseISO(dateStr), 'dd')}
-                  </span>
-                  <span className="text-xs md:text-sm uppercase text-muted-foreground ml-2 md:ml-0">
-                    {format(parseISO(dateStr), 'MMM', { locale: ptBR })}
-                  </span>
+                <div className="w-full md:w-28 md:border-r bg-muted/10 flex md:flex-col items-center justify-center md:justify-start pt-2 md:pt-4 px-2 border-b md:border-b-0 py-2 md:py-0 relative group">
+                  <div className="flex items-center md:flex-col">
+                    <span className="text-lg md:text-2xl font-bold">
+                      {format(parseISO(dateStr), 'dd')}
+                    </span>
+                    <span className="text-xs md:text-sm uppercase text-muted-foreground ml-2 md:ml-0">
+                      {format(parseISO(dateStr), 'MMM', { locale: ptBR })}
+                    </span>
+                  </div>
+                  <div
+                    className="ml-auto md:ml-0 md:mt-2 text-[11px] font-bold text-slate-700 bg-white/60 px-2 py-1 rounded border shadow-sm"
+                    title="Total no dia"
+                  >
+                    {formatBRL(items.reduce((sum, item) => sum + Number(item.amount), 0))}
+                  </div>
                 </div>
                 <div className="flex-1 flex flex-col divide-y">
                   {items.map((item) => {
