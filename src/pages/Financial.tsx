@@ -109,6 +109,13 @@ export default function FinancialPage() {
     })
   }, [displayOrders])
 
+  const monthInstallments = useMemo(() => {
+    return installments.filter((inst) => {
+      if (!inst.due_date) return false
+      return inst.due_date.startsWith(selectedMonth)
+    })
+  }, [installments, selectedMonth])
+
   useEffect(() => {
     let isMounted = true
 
@@ -196,13 +203,6 @@ export default function FinancialPage() {
 
   const totalConcluded = concludedOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
   const totalPipeline = pipelineOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
-
-  const monthInstallments = useMemo(() => {
-    return installments.filter((inst) => {
-      if (!inst.due_date) return false
-      return inst.due_date.startsWith(selectedMonth)
-    })
-  }, [installments, selectedMonth])
 
   const totalReceivables = monthInstallments.reduce(
     (acc, inst) => acc + (Number(inst.installment_value) || 0),
