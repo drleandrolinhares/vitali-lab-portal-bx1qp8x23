@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Plus,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
@@ -89,12 +91,17 @@ export default function AdminFinancial() {
   const [isReceiving, setIsReceiving] = useState(false)
 
   // Receive Installment State
-  const [receiveInstallment, setReceiveInstallment] = useState<any | null>(null)
+  const [receiveInstallmentGroup, setReceiveInstallmentGroup] = useState<any[] | null>(null)
   const [receiveInstallmentDate, setReceiveInstallmentDate] = useState<string>(
     new Date().toISOString().split('T')[0],
   )
   const [receiveInstallmentMethod, setReceiveInstallmentMethod] = useState<string>('')
   const [isReceivingInstallment, setIsReceivingInstallment] = useState(false)
+  const [expandedInstGroups, setExpandedInstGroups] = useState<Record<string, boolean>>({})
+
+  const toggleInstGroup = (key: string) => {
+    setExpandedInstGroups((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   // Pipeline Details Modal State
   const [pipelineDentist, setPipelineDentist] = useState<string | null>(null)
@@ -450,6 +457,33 @@ export default function AdminFinancial() {
       )
   }, [installments, profiles, selectedDentist, selectedLab, directOrders])
 
+  const groupedPendingInstallments = useMemo(() => {
+    const groups = new Map<string, any>()
+    pendingInstallments.forEach((inst) => {
+      const dateKey = inst.due_date || 'sem-data'
+      const key = `${inst.dentist_id}_${dateKey}`
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          dentist_id: inst.dentist_id,
+          dentistName: inst.dentistName,
+          clinic: inst.clinic,
+          due_date: inst.due_date,
+          items: [],
+          total_value: 0,
+        })
+      }
+      const group = groups.get(key)
+      group.items.push(inst)
+      group.total_value += Number(inst.installment_value || 0)
+    })
+    return Array.from(groups.values()).sort((a, b) => {
+      const dateA = a.due_date ? new Date(a.due_date).getTime() : 0
+      const dateB = b.due_date ? new Date(b.due_date).getTime() : 0
+      return dateA - dateB
+    })
+  }, [pendingInstallments])
+
   const paidInstallments = useMemo(() => {
     const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
     const selSector = isLabSelected ? selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO') : ''
@@ -669,9 +703,12 @@ export default function AdminFinancial() {
   }
 
   const handleConfirmReceiveInstallment = async () => {
-    if (!receiveInstallment || !receiveInstallmentDate) return
+    if (!receiveInstallmentGroup || !receiveInstallmentDate || receiveInstallmentGroup.length === 0)
+      return
     setIsReceivingInstallment(true)
     try {
+      const idsToUpdate = receiveInstallmentGroup.map((i: any) => i.id)
+
       const { error } = await supabase
         .from('billing_installments')
         .update({
@@ -679,36 +716,41 @@ export default function AdminFinancial() {
           paid_at: new Date(receiveInstallmentDate + 'T12:00:00Z').toISOString(),
           payment_method: receiveInstallmentMethod,
         })
-        .eq('id', receiveInstallment.id)
+        .in('id', idsToUpdate)
 
       if (error) throw error
 
-      const { data: pendingSiblings } = await supabase
-        .from('billing_installments')
-        .select('id')
-        .eq('settlement_id', receiveInstallment.settlement_id)
-        .neq('status', 'paid')
-        .neq('id', receiveInstallment.id)
+      const settlementIds = [
+        ...new Set(receiveInstallmentGroup.map((i: any) => i.settlement_id).filter(Boolean)),
+      ]
 
-      if (pendingSiblings && pendingSiblings.length === 0) {
-        await supabase
-          .from('settlements')
-          .update({
-            status: 'paid',
-            paid_at: new Date(receiveInstallmentDate + 'T12:00:00Z').toISOString(),
-          })
-          .eq('id', receiveInstallment.settlement_id)
+      for (const sid of settlementIds) {
+        const { data: pendingSiblings } = await supabase
+          .from('billing_installments')
+          .select('id')
+          .eq('settlement_id', sid)
+          .neq('status', 'paid')
+
+        if (pendingSiblings && pendingSiblings.length === 0) {
+          await supabase
+            .from('settlements')
+            .update({
+              status: 'paid',
+              paid_at: new Date(receiveInstallmentDate + 'T12:00:00Z').toISOString(),
+            })
+            .eq('id', sid)
+        }
       }
 
-      toast({ title: 'Parcela recebida com sucesso!' })
+      toast({ title: 'Parcela(s) recebida(s) com sucesso!' })
       fetchData()
-      setReceiveInstallment(null)
+      setReceiveInstallmentGroup(null)
       setReceiveInstallmentDate(new Date().toISOString().split('T')[0])
       setReceiveInstallmentMethod('')
     } catch (err: any) {
       console.error(err)
       toast({
-        title: 'Erro ao receber parcela',
+        title: 'Erro ao receber parcela(s)',
         description: err.message,
         variant: 'destructive',
       })
@@ -1269,63 +1311,122 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-6">Vencimento</TableHead>
+                      <TableHead className="w-[50px] pl-6"></TableHead>
+                      <TableHead>Vencimento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
-                      <TableHead>Parcela</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Parcelas</TableHead>
+                      <TableHead className="text-right">Valor Total</TableHead>
                       <TableHead className="text-right pr-6">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pendingInstallments.length === 0 ? (
+                    {groupedPendingInstallments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                           Nenhuma parcela pendente encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pendingInstallments.map((inst) => (
-                        <TableRow key={inst.id} className="hover:bg-slate-50/50">
-                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
-                            {inst.due_date
-                              ? new Date(inst.due_date + 'T12:00:00Z').toLocaleDateString('pt-BR')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <p className="font-medium text-slate-900">{inst.dentistName}</p>
-                            {inst.clinic && (
-                              <p className="text-xs text-muted-foreground">{inst.clinic}</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
-                              className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                            >
-                              {inst.note || `${inst.installment_number}/${inst.total_installments}`}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-slate-900">
-                            {formatCurrency(inst.installment_value)}
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            {isAdmin && (
+                      groupedPendingInstallments.map((group) => (
+                        <Fragment key={group.key}>
+                          <TableRow
+                            className="hover:bg-slate-50/50 cursor-pointer"
+                            onClick={() => toggleInstGroup(group.key)}
+                          >
+                            <TableCell className="pl-6 w-[50px]">
                               <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setReceiveInstallment(inst)
-                                  setReceiveInstallmentDate(new Date().toISOString().split('T')[0])
-                                  setReceiveInstallmentMethod('')
-                                }}
-                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 pointer-events-none"
                               >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                RECEBER
+                                {expandedInstGroups[group.key] ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
                               </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap font-medium text-slate-600">
+                              {group.due_date
+                                ? new Date(group.due_date + 'T12:00:00Z').toLocaleDateString(
+                                    'pt-BR',
+                                  )
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{group.dentistName}</p>
+                              {group.clinic && (
+                                <p className="text-xs text-muted-foreground">{group.clinic}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                {group.items.length}{' '}
+                                {group.items.length === 1 ? 'parcela' : 'parcelas'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-slate-900">
+                              {formatCurrency(group.total_value)}
+                            </TableCell>
+                            <TableCell
+                              className="text-right pr-6"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {isAdmin && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setReceiveInstallmentGroup(group.items)
+                                    setReceiveInstallmentDate(
+                                      new Date().toISOString().split('T')[0],
+                                    )
+                                    setReceiveInstallmentMethod('')
+                                  }}
+                                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  RECEBER
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          {expandedInstGroups[group.key] && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                <div className="pl-16 pr-6 py-4">
+                                  <Table className="bg-white rounded-md border text-sm shadow-sm">
+                                    <TableHeader className="bg-slate-100/50">
+                                      <TableRow>
+                                        <TableHead>Descrição / Observação</TableHead>
+                                        <TableHead>Nº Parcela</TableHead>
+                                        <TableHead className="text-right">Valor</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {group.items.map((item: any) => (
+                                        <TableRow key={item.id} className="hover:bg-slate-50">
+                                          <TableCell className="text-slate-600 font-medium">
+                                            {item.note || 'Lançamento'}
+                                          </TableCell>
+                                          <TableCell className="text-slate-500">
+                                            {item.installment_number
+                                              ? `${item.installment_number}/${item.total_installments}`
+                                              : '-'}
+                                          </TableCell>
+                                          <TableCell className="text-right font-medium text-slate-900">
+                                            {formatCurrency(item.installment_value)}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))
                     )}
                   </TableBody>
@@ -1967,19 +2068,24 @@ export default function AdminFinancial() {
 
       {/* RECEIVE INSTALLMENT MODAL */}
       <Dialog
-        open={!!receiveInstallment}
-        onOpenChange={(open) => !open && setReceiveInstallment(null)}
+        open={!!receiveInstallmentGroup}
+        onOpenChange={(open) => !open && setReceiveInstallmentGroup(null)}
       >
         <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle>Confirmar Recebimento - {receiveInstallment?.note}</DialogTitle>
+            <DialogTitle>Confirmar Recebimento em Lote</DialogTitle>
           </DialogHeader>
 
           <div className="p-6 space-y-4">
             <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border">
-              <span className="text-sm font-semibold text-slate-600">Valor da Parcela</span>
+              <span className="text-sm font-semibold text-slate-600">Valor Total</span>
               <span className="text-xl font-bold text-slate-900">
-                {formatCurrency(receiveInstallment?.installment_value || 0)}
+                {formatCurrency(
+                  receiveInstallmentGroup?.reduce(
+                    (sum, i) => sum + Number(i.installment_value || 0),
+                    0,
+                  ) || 0,
+                )}
               </span>
             </div>
 
@@ -2006,7 +2112,7 @@ export default function AdminFinancial() {
           </div>
 
           <div className="px-6 py-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
-            <Button variant="ghost" onClick={() => setReceiveInstallment(null)}>
+            <Button variant="ghost" onClick={() => setReceiveInstallmentGroup(null)}>
               Cancelar
             </Button>
             <Button
