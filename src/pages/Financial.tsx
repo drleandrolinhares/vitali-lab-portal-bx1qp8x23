@@ -28,6 +28,7 @@ import {
   History,
   CalendarDays,
   Loader2,
+  Wallet,
 } from 'lucide-react'
 import {
   getOrderFinancials,
@@ -39,6 +40,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Navigate } from 'react-router-dom'
+import { ReceivablesManager } from '@/components/financial/ReceivablesManager'
 
 export default function FinancialPage() {
   const {
@@ -51,6 +53,7 @@ export default function FinancialPage() {
     Visualizando_Como_ID,
   } = useAppStore()
   const [settlements, setSettlements] = useState<any[]>([])
+  const [installments, setInstallments] = useState<any[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   const monthOptions = useMemo(() => generateMonthOptions(), [])
@@ -138,6 +141,20 @@ export default function FinancialPage() {
         if (data) {
           setSettlements(data)
         }
+
+        let instQuery = supabase
+          .from('billing_installments')
+          .select('*, dentist:profiles!billing_installments_dentist_id_fkey(name)')
+          .order('due_date', { ascending: true })
+
+        if (effectiveRole === 'dentist' || effectiveRole === 'laboratory') {
+          instQuery = instQuery.eq('dentist_id', targetId)
+        }
+
+        const { data: instData, error: instError } = await instQuery
+        if (!instError && instData) {
+          setInstallments(instData)
+        }
       } catch (err) {
         if (!isMounted) return
         console.error('Network or unexpected error fetching settlements:', err)
@@ -179,6 +196,23 @@ export default function FinancialPage() {
 
   const totalConcluded = concludedOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
   const totalPipeline = pipelineOrders.reduce((acc, o) => acc + (o.basePrice || 0), 0)
+
+  const monthInstallments = useMemo(() => {
+    return installments.filter((inst) => {
+      if (!inst.due_date) return false
+      return inst.due_date.startsWith(selectedMonth)
+    })
+  }, [installments, selectedMonth])
+
+  const totalReceivables = monthInstallments.reduce(
+    (acc, inst) => acc + (Number(inst.installment_value) || 0),
+    0,
+  )
+  const totalConsolidated = totalConcluded + totalReceivables
+
+  const fetchAllData = () => {
+    window.location.reload()
+  }
 
   const handleExportCSV = (settlement: any) => {
     try {
@@ -242,34 +276,51 @@ export default function FinancialPage() {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6 print:hidden">
           <TabsTrigger value="overview">Visão Geral do Mês</TabsTrigger>
+          <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
           <TabsTrigger value="history">Histórico de Pagamentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 print:hidden">
-          <div className="grid gap-5 md:grid-cols-2 mb-8">
+          <div className="grid gap-5 md:grid-cols-3 mb-8">
             <Card className="shadow-subtle border-l-4 border-l-emerald-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Trabalhos Finalizados (
-                  {monthOptions.find((m) => m.value === selectedMonth)?.label})
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Serviços Lab. ({monthOptions.find((m) => m.value === selectedMonth)?.label})
                 </CardTitle>
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-emerald-600">
+                <div className="text-2xl font-bold text-emerald-600">
                   {formatBRL(totalConcluded)}
                 </div>
               </CardContent>
             </Card>
-            <Card className="shadow-subtle border-l-4 border-l-amber-500">
+
+            <Card className="shadow-subtle border-l-4 border-l-blue-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Trabalhos em Produção (Pipeline)
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Lançamentos Avulsos
                 </CardTitle>
-                <Activity className="w-4 h-4 text-amber-500" />
+                <Wallet className="w-4 h-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-foreground">{formatBRL(totalPipeline)}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatBRL(totalReceivables)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-subtle border-l-4 border-l-indigo-500 bg-indigo-50/50">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">
+                  Total a Receber (Consolidado)
+                </CardTitle>
+                <DollarSign className="w-4 h-4 text-indigo-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-indigo-700">
+                  {formatBRL(totalConsolidated)}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -404,6 +455,14 @@ export default function FinancialPage() {
               </Card>
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        <TabsContent value="receivables" className="space-y-6 print:hidden">
+          <ReceivablesManager
+            installments={installments}
+            onRefresh={fetchAllData}
+            readOnly={effectiveRole === 'dentist'}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
