@@ -1,11 +1,9 @@
 import { useAppStore } from '@/stores/main'
 import { UsersManagement } from '@/components/UsersManagement'
-import { RolePermissionsPanel } from '@/components/RolePermissionsPanel'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function UsersPage() {
   const { currentUser } = useAppStore()
-  const isMaster = currentUser?.role === 'master'
 
   return (
     <div className="max-w-6xl mx-auto py-6 space-y-6 animate-fade-in">
@@ -40,12 +38,6 @@ export default function UsersPage() {
       </Tabs>
 
       <UsersManagement />
-
-      {isMaster && (
-        <div className="pt-8 space-y-4 animate-fade-in-up">
-          <RolePermissionsPanel />
-        </div>
-      )}
     </div>
   )
 }
