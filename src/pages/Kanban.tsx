@@ -80,9 +80,21 @@ export default function KanbanPage() {
         setOrders((prev) =>
           prev.map((o) => {
             if (o.id === db.id) {
+              const newBasePrice = db.base_price || 0
+              const discount = o.dentistDiscount || 0
+              let newUnitPrice =
+                o.quantity > 0 && discount < 100
+                  ? newBasePrice / (1 - discount / 100) / o.quantity
+                  : 0
+
+              if (db.is_adjustment_return || (db.is_repetition && newBasePrice === 0)) {
+                newUnitPrice = 0
+              }
+
               return {
                 ...o,
-                basePrice: db.base_price,
+                basePrice: newBasePrice,
+                unitPrice: newUnitPrice,
                 isRepetition: db.is_repetition,
                 dreCategory: db.dre_category,
                 observations: db.observations,

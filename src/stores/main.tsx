@@ -496,6 +496,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             estruturaFixacao: o.estrutura_fixacao || 'SOBRE DENTE',
             settlementId: o.settlement_id,
             isAdjustmentReturn: o.is_adjustment_return || false,
+            isRepetition: o.is_repetition || false,
+            custo_adicional_descricao: o.custo_adicional_descricao,
+            custo_adicional_valor: o.custo_adicional_valor,
             createdBy: o.creator
               ? { id: o.created_by, name: o.creator.name, role: o.creator.role }
               : undefined,
@@ -636,37 +639,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let basePrice = o.basePrice || 0
       const discount = o.dentistDiscount || 0
 
-      if (
-        !o.isAdjustmentReturn &&
-        o.dentistRole !== 'laboratory' &&
-        priceList &&
-        priceList.length > 0
-      ) {
-        const priceItem =
-          priceList.find(
-            (p) => p.work_type === o.workType && (!p.sector || p.sector === o.sector),
-          ) || priceList.find((p) => p.work_type === o.workType)
-
-        if (priceItem && priceItem.price != null) {
-          const numericString = String(priceItem.price)
-            .replace(/[^\d,.-]/g, '')
-            .replace(/\./g, '')
-            .replace(',', '.')
-          const parsed = parseFloat(numericString)
-          if (!isNaN(parsed) && parsed > 0) {
-            unitPrice = parsed
-            basePrice = unitPrice * o.quantity * (1 - discount / 100)
-          }
-        }
-      }
-
-      if (unitPrice === 0 && o.quantity > 0 && !o.isAdjustmentReturn) {
+      if (unitPrice === 0 && o.quantity > 0 && !o.isAdjustmentReturn && !o.isRepetition) {
         unitPrice = discount < 100 ? basePrice / (1 - discount / 100) / o.quantity : 0
       }
 
-      if (o.isAdjustmentReturn) {
+      if (o.isAdjustmentReturn || (o.isRepetition && basePrice === 0)) {
         unitPrice = 0
-        basePrice = 0
       }
 
       const effectiveUnitPrice = unitPrice * (1 - discount / 100)

@@ -11,25 +11,26 @@ export function getOrderFinancials(order: any, priceList: any[], kanbanStages: a
     if (q > 0) quantity = q
   }
 
-  const dentistDiscount = order.profiles?.commercial_agreement || 0
-  const basePrice = Number(order.base_price) || 0
+  const dentistDiscount = order.profiles?.commercial_agreement || order.dentistDiscount || 0
+  const basePrice =
+    order.basePrice !== undefined ? Number(order.basePrice) : Number(order.base_price) || 0
   const unitPrice = basePrice / quantity
 
   return {
     ...order,
-    id: order.id,
-    dentistId: order.dentist_id,
+    id: order.id || order.id,
+    dentistId: order.dentist_id || order.dentistId,
     status: order.status,
     basePrice,
     dentistDiscount,
     unitPrice,
     quantity,
-    createdAt: order.created_at,
-    patientName: order.patient_name,
-    friendlyId: order.friendly_id,
-    workType: order.work_type,
-    custo_adicional_valor: order.custo_adicional_valor,
-    settlementId: order.settlement_id,
+    createdAt: order.created_at || order.createdAt,
+    patientName: order.patient_name || order.patientName,
+    friendlyId: order.friendly_id || order.friendlyId,
+    workType: order.work_type || order.workType,
+    custo_adicional_valor: order.custo_adicional_valor || order.custoAdicionalValor,
+    settlementId: order.settlement_id || order.settlementId,
   }
 }
 
