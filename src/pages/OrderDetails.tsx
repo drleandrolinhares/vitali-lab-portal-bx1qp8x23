@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/stores/main'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,9 +35,51 @@ import { toast } from '@/hooks/use-toast'
 export default function OrderDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { orders, kanbanStages, currentUser } = useAppStore()
+  const { orders: globalOrders, kanbanStages, currentUser } = useAppStore()
 
-  const order = orders.find((o) => o.id === id)
+  const initialOrder = useMemo(() => globalOrders.find((o) => o.id === id), [globalOrders, id])
+  const [order, setOrder] = useState<any>(initialOrder)
+
+  useEffect(() => {
+    if (initialOrder) {
+      setOrder((prev: any) => (prev ? { ...prev, ...initialOrder } : initialOrder))
+    }
+  }, [initialOrder])
+
+  useEffect(() => {
+    if (!id) return
+    const channel = supabase
+      .channel(`order-details-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` },
+        (payload) => {
+          const db = payload.new
+          setOrder((prev: any) => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              basePrice: db.base_price,
+              isRepetition: db.is_repetition,
+              dreCategory: db.dre_category,
+              observations: db.observations,
+              kanbanStage: db.kanban_stage,
+              status: db.status,
+              custo_adicional_descricao: db.custo_adicional_descricao,
+              custo_adicional_valor: db.custo_adicional_valor,
+              isAdjustmentReturn: db.is_adjustment_return,
+              cadistaId: db.cadista_id,
+              maquiagemId: db.maquiagem_id,
+              acabamentoId: db.acabamento_id,
+            }
+          })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [id])
 
   const [historyItems, setHistoryItems] = useState<(OrderHistory & { createdByName?: string })[]>(
     [],

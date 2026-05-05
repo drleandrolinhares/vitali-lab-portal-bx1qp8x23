@@ -48,7 +48,7 @@ import { formatBRL } from '@/lib/financial'
 
 export default function KanbanPage() {
   const {
-    orders,
+    orders: globalOrders,
     currentUser,
     effectiveRole,
     updateOrderKanbanStage,
@@ -65,6 +65,44 @@ export default function KanbanPage() {
     selectedLab,
     setSelectedLab,
   } = useAppStore()
+
+  const [orders, setOrders] = useState<Order[]>(globalOrders)
+
+  useEffect(() => {
+    setOrders(globalOrders)
+  }, [globalOrders])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('kanban-realtime-orders')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
+        const db = payload.new
+        setOrders((prev) =>
+          prev.map((o) => {
+            if (o.id === db.id) {
+              return {
+                ...o,
+                basePrice: db.base_price,
+                isRepetition: db.is_repetition,
+                dreCategory: db.dre_category,
+                observations: db.observations,
+                kanbanStage: db.kanban_stage,
+                status: db.status,
+                custo_adicional_descricao: db.custo_adicional_descricao,
+                custo_adicional_valor: db.custo_adicional_valor,
+                isAdjustmentReturn: db.is_adjustment_return,
+              }
+            }
+            return o
+          }),
+        )
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   const navigate = useNavigate()
   const isAdmin = effectiveRole === 'admin' || effectiveRole === 'master'
