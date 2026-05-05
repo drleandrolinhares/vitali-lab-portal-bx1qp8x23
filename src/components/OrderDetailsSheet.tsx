@@ -67,7 +67,7 @@ export function OrderDetailsSheet({
   setObsText,
   onSaveObs,
 }: Props) {
-  const { kanbanStages, currentUser, deleteOrder } = useAppStore()
+  const { kanbanStages, currentUser, deleteOrder, refreshOrders } = useAppStore()
   const [historyItems, setHistoryItems] = useState<OrderHistory[]>([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
@@ -145,19 +145,7 @@ export function OrderDetailsSheet({
         throw new Error('Falha de sincronia: O banco de dados rejeitou o valor calculado.')
       }
 
-      useAppStore.setState((state: any) => ({
-        orders: state.orders.map((o: any) =>
-          o.id === order.id
-            ? {
-                ...o,
-                basePrice: updatedOrder.base_price,
-                isRepetition: updatedOrder.is_repetition,
-                dreCategory: updatedOrder.dre_category,
-                custo_adicional_descricao: updatedOrder.custo_adicional_descricao,
-              }
-            : o,
-        ),
-      }))
+      refreshOrders()
 
       toast({
         title: 'Processamento Concluído',
