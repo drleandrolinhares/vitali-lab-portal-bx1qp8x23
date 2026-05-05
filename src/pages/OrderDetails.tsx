@@ -22,6 +22,7 @@ import {
   Circle,
   DollarSign,
   Users,
+  RefreshCw,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -53,6 +54,26 @@ export default function OrderDetails() {
   const [additionalCostValue, setAdditionalCostValue] = useState('')
   const [isSavingCost, setIsSavingCost] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
+  const [isReprocessing, setIsReprocessing] = useState(false)
+
+  const handleReprocessBilling = async () => {
+    if (!order) return
+    setIsReprocessing(true)
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_repetition: null })
+        .eq('id', order.id)
+
+      if (error) throw error
+
+      toast({ title: 'Regras reprocessadas com sucesso!' })
+    } catch (error) {
+      toast({ title: 'Erro ao reprocessar regras', variant: 'destructive' })
+    } finally {
+      setIsReprocessing(false)
+    }
+  }
 
   useEffect(() => {
     if (order && !isDirty) {
@@ -526,13 +547,25 @@ export default function OrderDetails() {
         </div>
 
         <div className="space-y-6">
-          <Card className="shadow-subtle h-fit border-l-4 border-l-primary">
-            <CardHeader>
+          <Card className="shadow-subtle h-fit border-l-4 border-l-primary overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-muted/20">
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-primary" /> Financeiro
               </CardTitle>
+              {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReprocessBilling}
+                  disabled={isReprocessing}
+                  className="h-8 text-xs bg-background"
+                >
+                  <RefreshCw className={cn('w-3 h-3 mr-2', isReprocessing && 'animate-spin')} />
+                  Reprocessar Regras
+                </Button>
+              )}
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Valor Unitário</span>
                 <span className="font-medium">{formatBRL(order.unitPrice || 0)}</span>

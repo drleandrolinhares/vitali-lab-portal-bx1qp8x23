@@ -23,6 +23,7 @@ import {
   Download,
   DollarSign,
   Users,
+  RefreshCw,
 } from 'lucide-react'
 import { Order, OrderHistory } from '@/lib/types'
 import {
@@ -37,6 +38,7 @@ import { useAppStore } from '@/stores/main'
 import { cn, processOrderHistory } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { formatBRL } from '@/lib/financial'
+import { toast } from '@/hooks/use-toast'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +77,26 @@ export function OrderDetailsSheet({
   const [cadistas, setCadistas] = useState<any[]>([])
   const [colaboradores, setColaboradores] = useState<any[]>([])
   const [isLoadingProduction, setIsLoadingProduction] = useState(false)
+  const [isReprocessing, setIsReprocessing] = useState(false)
+
+  const handleReprocessBilling = async () => {
+    if (!order) return
+    setIsReprocessing(true)
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_repetition: null })
+        .eq('id', order.id)
+
+      if (error) throw error
+
+      toast({ title: 'Regras reprocessadas com sucesso!' })
+    } catch (error) {
+      toast({ title: 'Erro ao reprocessar regras', variant: 'destructive' })
+    } finally {
+      setIsReprocessing(false)
+    }
+  }
 
   useEffect(() => {
     if (isOpen && order?.id) {
@@ -254,9 +276,23 @@ export function OrderDetailsSheet({
             )}
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                <DollarSign className="w-4 h-4 text-primary" /> Financeiro
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <DollarSign className="w-4 h-4 text-primary" /> Financeiro
+                </h4>
+                {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReprocessBilling}
+                    disabled={isReprocessing}
+                    className="h-7 text-xs px-2"
+                  >
+                    <RefreshCw className={cn('w-3 h-3 mr-1.5', isReprocessing && 'animate-spin')} />
+                    Reprocessar
+                  </Button>
+                )}
+              </div>
               <div className="bg-muted/30 p-4 rounded-xl border border-border/50 space-y-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Valor Unitário</span>
