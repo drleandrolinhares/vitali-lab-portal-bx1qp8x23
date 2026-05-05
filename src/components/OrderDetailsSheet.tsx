@@ -83,16 +83,92 @@ export function OrderDetailsSheet({
     if (!order) return
     setIsReprocessing(true)
     try {
-      const { error } = await supabase
+      const obs = (order.observations || '').toUpperCase()
+      const addDesc = (order.custo_adicional_descricao || '').toUpperCase()
+
+      const isRep =
+        obs.includes('REPETIÇÃO') ||
+        obs.includes('REPETICAO') ||
+        obs.includes('ERRO DO DENTISTA') ||
+        obs.includes('ERRO NO DENTISTA') ||
+        obs.includes('ERRO DO LABORATÓRIO') ||
+        obs.includes('ERRO DO LABORATORIO') ||
+        obs.includes('ERRO NO LABORATÓRIO') ||
+        obs.includes('ERRO NO LABORATORIO') ||
+        obs.includes('[LAUDO - ') ||
+        addDesc.includes('REPETIÇÃO') ||
+        addDesc.includes('REPETICAO') ||
+        addDesc.includes('ERRO DO DENTISTA') ||
+        addDesc.includes('ERRO NO DENTISTA') ||
+        addDesc.includes('ERRO DO LABORATÓRIO') ||
+        addDesc.includes('ERRO DO LABORATORIO') ||
+        addDesc.includes('ERRO NO LABORATÓRIO') ||
+        addDesc.includes('ERRO NO LABORATORIO')
+
+      let newBasePrice = order.basePrice
+      let newDreCategory = order.dreCategory
+      let newCustoDesc = order.custo_adicional_descricao
+
+      if (isRep) {
+        const isDentistError =
+          obs.includes('ERRO DO DENTISTA') ||
+          obs.includes('ERRO NO DENTISTA') ||
+          addDesc.includes('ERRO DO DENTISTA') ||
+          addDesc.includes('ERRO NO DENTISTA')
+
+        if (isDentistError) {
+          newDreCategory = 'Receita'
+        } else {
+          newBasePrice = 0
+          newDreCategory = 'Custo Operacional'
+        }
+        if (!newCustoDesc) {
+          newCustoDesc = 'REPETIÇÃO'
+        }
+      }
+
+      const { data: updatedOrder, error } = await supabase
         .from('orders')
-        .update({ is_repetition: null })
+        .update({
+          is_repetition: isRep ? true : null,
+          base_price: newBasePrice,
+          dre_category: newDreCategory,
+          custo_adicional_descricao: newCustoDesc,
+        })
         .eq('id', order.id)
+        .select()
+        .single()
 
       if (error) throw error
 
-      toast({ title: 'Regras reprocessadas com sucesso!' })
-    } catch (error) {
-      toast({ title: 'Erro ao reprocessar regras', variant: 'destructive' })
+      if (updatedOrder.base_price !== newBasePrice) {
+        throw new Error('Falha de sincronia: O banco de dados rejeitou o valor calculado.')
+      }
+
+      useAppStore.setState((state: any) => ({
+        orders: state.orders.map((o: any) =>
+          o.id === order.id
+            ? {
+                ...o,
+                basePrice: updatedOrder.base_price,
+                isRepetition: updatedOrder.is_repetition,
+                dreCategory: updatedOrder.dre_category,
+                custo_adicional_descricao: updatedOrder.custo_adicional_descricao,
+              }
+            : o,
+        ),
+      }))
+
+      toast({
+        title: 'Processamento Concluído',
+        description: `O valor do pedido foi atualizado para ${formatBRL(updatedOrder.base_price)}.`,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao reprocessar regras',
+        description: error.message || 'Falha ao atualizar banco de dados.',
+        variant: 'destructive',
+      })
     } finally {
       setIsReprocessing(false)
     }
