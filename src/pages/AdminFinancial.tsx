@@ -38,6 +38,8 @@ import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { useAppStore } from '@/stores/main'
 import AccountsPayable from './AccountsPayable'
+import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
+import { Order } from '@/lib/types'
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -108,6 +110,100 @@ export default function AdminFinancial() {
 
   // Manual Receivable State
   const [manualReceivableOpen, setManualReceivableOpen] = useState(false)
+
+  // Paid Invoices Expand State
+  const [expandedPaidInvoices, setExpandedPaidInvoices] = useState<Record<string, boolean>>({})
+
+  const togglePaidInvoice = (id: string) => {
+    setExpandedPaidInvoices((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  // Order Details Sheet State
+  const [selectedFullOrder, setSelectedFullOrder] = useState<Order | null>(null)
+  const [isOrderSheetOpen, setIsOrderSheetOpen] = useState(false)
+  const [orderObsText, setOrderObsText] = useState('')
+
+  const handleViewOrder = async (orderId: string) => {
+    try {
+      const { data: o, error } = await supabase
+        .from('orders')
+        .select(
+          '*, profiles!orders_dentist_id_fkey(name, clinic, commercial_agreement, role), creator:profiles!orders_created_by_fkey(id, name, role)',
+        )
+        .eq('id', orderId)
+        .single()
+
+      if (error) throw error
+
+      if (o) {
+        const dentistProfile = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles
+        const creatorProfile = Array.isArray(o.creator) ? o.creator[0] : o.creator
+
+        const mappedOrder: Order = {
+          id: o.id,
+          friendlyId: o.friendly_id,
+          patientName: o.patient_name,
+          patientCpf: o.patient_cpf,
+          patientBirthDate: o.patient_birth_date,
+          dentistId: o.dentist_id,
+          dentistName: dentistProfile?.name || 'Desconhecido',
+          dentistClinic: dentistProfile?.clinic || '',
+          dentistDiscount: dentistProfile?.commercial_agreement || 0,
+          dentistRole: dentistProfile?.role,
+          sector: o.sector,
+          kanbanStage: o.kanban_stage,
+          workType: o.work_type,
+          material: o.material,
+          teeth: o.tooth_or_arch?.teeth || [],
+          arches: o.tooth_or_arch?.arches || [],
+          shippingMethod: o.shipping_method,
+          observations: o.observations || '',
+          status: o.status,
+          dbStatus: o.status,
+          createdAt: o.created_at,
+          history: [],
+          clearedBalance: o.cleared_balance,
+          basePrice: o.base_price,
+          unitPrice:
+            o.base_price /
+            Math.max(
+              1,
+              (o.tooth_or_arch?.teeth?.length || 0) + (o.tooth_or_arch?.arches?.length || 0),
+            ),
+          quantity: Math.max(
+            1,
+            (o.tooth_or_arch?.teeth?.length || 0) + (o.tooth_or_arch?.arches?.length || 0),
+          ),
+          fileUrls: o.file_urls || [],
+          isRepetition: o.is_repetition,
+          createdBy: creatorProfile
+            ? { id: creatorProfile.id, name: creatorProfile.name, role: creatorProfile.role }
+            : undefined,
+        }
+
+        setSelectedFullOrder(mappedOrder)
+        setOrderObsText(o.observations || '')
+        setIsOrderSheetOpen(true)
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro ao buscar pedido', description: err.message, variant: 'destructive' })
+    }
+  }
+
+  const handleSaveOrderObs = async () => {
+    if (!selectedFullOrder) return
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ observations: orderObsText })
+        .eq('id', selectedFullOrder.id)
+      if (error) throw error
+      toast({ title: 'Observações salvas' })
+      setSelectedFullOrder({ ...selectedFullOrder, observations: orderObsText })
+    } catch (err: any) {
+      toast({ title: 'Erro ao salvar observação', variant: 'destructive' })
+    }
+  }
   const [manualRecDentist, setManualRecDentist] = useState<string>('')
   const [manualRecAmount, setManualRecAmount] = useState<string>('')
   const [manualRecNote, setManualRecNote] = useState<string>('')
@@ -1242,7 +1338,8 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-6">Data Pagamento</TableHead>
+                      <TableHead className="w-[50px] pl-6"></TableHead>
+                      <TableHead>Data Pagamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right pr-6">Valor</TableHead>
@@ -1251,44 +1348,127 @@ export default function AdminFinancial() {
                   <TableBody>
                     {paidInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           Nenhum recebimento único encontrado.
                         </TableCell>
                       </TableRow>
                     ) : (
                       paidInvoices.map((invoice) => (
-                        <TableRow key={invoice.id} className="hover:bg-slate-50/50">
-                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
-                            {invoice.paid_at
-                              ? new Date(invoice.paid_at).toLocaleDateString('pt-BR')
-                              : new Date(invoice.created_at).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            <p className="font-medium text-slate-900">{invoice.dentistName}</p>
-                            {invoice.clinic && (
-                              <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="default"
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                            >
-                              Pago
-                            </Badge>
-                            {invoice.note && (
-                              <p
-                                className="text-[10px] text-muted-foreground mt-1 truncate max-w-[120px]"
-                                title={invoice.note}
+                        <Fragment key={invoice.id}>
+                          <TableRow
+                            className="hover:bg-slate-50/50 cursor-pointer"
+                            onClick={() => togglePaidInvoice(invoice.id)}
+                          >
+                            <TableCell className="pl-6 w-[50px]">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 pointer-events-none"
                               >
-                                {invoice.note}
-                              </p>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium pr-6 text-slate-900">
-                            {formatCurrency(invoice.amount)}
-                          </TableCell>
-                        </TableRow>
+                                {expandedPaidInvoices[invoice.id] ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap font-medium text-slate-600">
+                              {invoice.paid_at
+                                ? new Date(invoice.paid_at).toLocaleDateString('pt-BR')
+                                : new Date(invoice.created_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{invoice.dentistName}</p>
+                              {invoice.clinic && (
+                                <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="default"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                              >
+                                Pago
+                              </Badge>
+                              {invoice.note && (
+                                <p
+                                  className="text-[10px] text-muted-foreground mt-1 truncate max-w-[120px]"
+                                  title={invoice.note}
+                                >
+                                  {invoice.note}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-medium pr-6 text-slate-900">
+                              {formatCurrency(invoice.amount)}
+                            </TableCell>
+                          </TableRow>
+                          {expandedPaidInvoices[invoice.id] && invoice.orders_snapshot && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={5} className="p-0 border-b-0">
+                                <div className="pl-16 pr-6 py-4">
+                                  <Table className="bg-white rounded-md border text-sm shadow-sm">
+                                    <TableHeader className="bg-slate-100/50">
+                                      <TableRow>
+                                        <TableHead>Pedido</TableHead>
+                                        <TableHead>Paciente</TableHead>
+                                        <TableHead>Trabalho</TableHead>
+                                        <TableHead className="text-right">Valor</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {Array.isArray(invoice.orders_snapshot) &&
+                                        invoice.orders_snapshot.map((o: any) => (
+                                          <TableRow key={o.id} className="hover:bg-slate-50">
+                                            <TableCell>
+                                              <Button
+                                                variant="link"
+                                                className="p-0 h-auto font-medium text-blue-600"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleViewOrder(o.id)
+                                                }}
+                                              >
+                                                {o.friendlyId || o.id.substring(0, 8)}
+                                              </Button>
+                                              {o.isRepetition && (
+                                                <Badge
+                                                  variant="destructive"
+                                                  className="ml-2 text-[10px] uppercase px-1.5 py-0 h-4"
+                                                >
+                                                  Repetição
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="text-slate-600 font-medium">
+                                              {o.patientName}
+                                            </TableCell>
+                                            <TableCell className="text-slate-500">
+                                              {o.workType || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-slate-900">
+                                              {formatCurrency(o.clearedAmount ?? o.basePrice ?? 0)}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      {(!Array.isArray(invoice.orders_snapshot) ||
+                                        invoice.orders_snapshot.length === 0) && (
+                                        <TableRow>
+                                          <TableCell
+                                            colSpan={4}
+                                            className="text-center text-muted-foreground py-4"
+                                          >
+                                            Nenhum pedido atrelado a este recebimento.
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))
                     )}
                   </TableBody>
@@ -2126,6 +2306,15 @@ export default function AdminFinancial() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <OrderDetailsSheet
+        isOpen={isOrderSheetOpen}
+        onClose={() => setIsOrderSheetOpen(false)}
+        order={selectedFullOrder}
+        obsText={orderObsText}
+        setObsText={setOrderObsText}
+        onSaveObs={handleSaveOrderObs}
+      />
     </div>
   )
 }
