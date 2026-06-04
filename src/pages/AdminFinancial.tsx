@@ -118,6 +118,15 @@ export default function AdminFinancial() {
     setExpandedPaidInvoices((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
+  // Pending Invoices Expand State
+  const [expandedPendingInvoices, setExpandedPendingInvoices] = useState<Record<string, boolean>>(
+    {},
+  )
+
+  const togglePendingInvoice = (id: string) => {
+    setExpandedPendingInvoices((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
   // Order Details Sheet State
   const [selectedFullOrder, setSelectedFullOrder] = useState<Order | null>(null)
   const [isOrderSheetOpen, setIsOrderSheetOpen] = useState(false)
@@ -1258,7 +1267,8 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-6">Data Fechamento</TableHead>
+                      <TableHead className="w-[50px] pl-6"></TableHead>
+                      <TableHead>Data Fechamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
@@ -1268,51 +1278,138 @@ export default function AdminFinancial() {
                   <TableBody>
                     {pendingInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                           Nenhuma fatura única pendente encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
                       pendingInvoices.map((invoice) => (
-                        <TableRow key={invoice.id} className="hover:bg-slate-50/50">
-                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
-                            {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            <p className="font-medium text-slate-900">{invoice.dentistName}</p>
-                            {invoice.clinic && (
-                              <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
-                              className="bg-amber-100 text-amber-800 hover:bg-amber-200"
-                            >
-                              Pendente
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-slate-900">
-                            {formatCurrency(invoice.amount)}
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            {isAdmin && (
+                        <Fragment key={invoice.id}>
+                          <TableRow
+                            className="hover:bg-slate-50/50 cursor-pointer"
+                            onClick={() => togglePendingInvoice(invoice.id)}
+                          >
+                            <TableCell className="pl-6 w-[50px]">
                               <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setReceiveSettlement(invoice)
-                                  setReceiveDate(new Date().toISOString().split('T')[0])
-                                  setReceiveNote('')
-                                }}
-                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 pointer-events-none"
                               >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                RECEBER
+                                {expandedPendingInvoices[invoice.id] ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
                               </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap font-medium text-slate-600">
+                              {new Date(invoice.created_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{invoice.dentistName}</p>
+                              {invoice.clinic && (
+                                <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="secondary"
+                                className="bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              >
+                                Pendente
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-slate-900">
+                              {formatCurrency(invoice.amount)}
+                            </TableCell>
+                            <TableCell
+                              className="text-right pr-6"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {isAdmin && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setReceiveSettlement(invoice)
+                                    setReceiveDate(new Date().toISOString().split('T')[0])
+                                    setReceiveNote('')
+                                  }}
+                                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  RECEBER
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          {expandedPendingInvoices[invoice.id] && invoice.orders_snapshot && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                <div className="pl-16 pr-6 py-4">
+                                  <Table className="bg-white rounded-md border text-sm shadow-sm">
+                                    <TableHeader className="bg-slate-100/50">
+                                      <TableRow>
+                                        <TableHead>Pedido</TableHead>
+                                        <TableHead>Paciente</TableHead>
+                                        <TableHead>Trabalho</TableHead>
+                                        <TableHead className="text-right">Valor</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {Array.isArray(invoice.orders_snapshot) &&
+                                        invoice.orders_snapshot.map((o: any) => (
+                                          <TableRow key={o.id} className="hover:bg-slate-50">
+                                            <TableCell>
+                                              <Button
+                                                variant="link"
+                                                className="p-0 h-auto font-medium text-blue-600"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleViewOrder(o.id)
+                                                }}
+                                              >
+                                                {o.friendlyId || o.id.substring(0, 8)}
+                                              </Button>
+                                              {o.isRepetition && (
+                                                <Badge
+                                                  variant="destructive"
+                                                  className="ml-2 text-[10px] uppercase px-1.5 py-0 h-4"
+                                                >
+                                                  Repetição
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="text-slate-600 font-medium">
+                                              {o.patientName}
+                                            </TableCell>
+                                            <TableCell className="text-slate-500">
+                                              {o.workType || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-slate-900">
+                                              {formatCurrency(o.clearedAmount ?? o.basePrice ?? 0)}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      {(!Array.isArray(invoice.orders_snapshot) ||
+                                        invoice.orders_snapshot.length === 0) && (
+                                        <TableRow>
+                                          <TableCell
+                                            colSpan={4}
+                                            className="text-center text-muted-foreground py-4"
+                                          >
+                                            Nenhum pedido atrelado a esta fatura.
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))
                     )}
                   </TableBody>
