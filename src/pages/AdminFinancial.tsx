@@ -73,6 +73,8 @@ export default function AdminFinancial() {
   const [directOrders, setDirectOrders] = useState<any[]>([])
   const [installments, setInstallments] = useState<any[]>([])
   const [recebimentos, setRecebimentos] = useState<any[]>([])
+  const [financialSummary, setFinancialSummary] = useState<any[]>([])
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   // Modal State
   const [manualInvoiceDentist, setManualInvoiceDentist] = useState<string | null>(null)
@@ -241,7 +243,7 @@ export default function AdminFinancial() {
 
       if (sessionError || !session) return
 
-      const [profilesRes, settlementsRes, ordersRes, installmentsRes, recebimentosRes] =
+      const [profilesRes, settlementsRes, ordersRes, installmentsRes, recebimentosRes, summaryRes] =
         await Promise.all([
           supabase
             .from('profiles')
@@ -260,6 +262,7 @@ export default function AdminFinancial() {
             ),
           supabase.from('billing_installments').select('*'),
           supabase.from('recebimentos').select('*'),
+          supabase.from('vw_dentist_financial_summary').select('*'),
         ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -267,12 +270,14 @@ export default function AdminFinancial() {
       if (ordersRes.error) throw ordersRes.error
       if (installmentsRes.error) throw installmentsRes.error
       if (recebimentosRes.error) throw recebimentosRes.error
+      if (summaryRes.error) throw summaryRes.error
 
       if (profilesRes.data) setProfiles(profilesRes.data)
       if (settlementsRes.data) setSettlements(settlementsRes.data)
       if (ordersRes.data) setDirectOrders(ordersRes.data)
       if (installmentsRes.data) setInstallments(installmentsRes.data)
       if (recebimentosRes.data) setRecebimentos(recebimentosRes.data)
+      if (summaryRes.data) setFinancialSummary(summaryRes.data)
     } catch (error: any) {
       console.error('Error fetching financial data:', error)
       toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
@@ -297,6 +302,9 @@ export default function AdminFinancial() {
     const map = new Map<string, any>()
     profiles.forEach((p) => {
       if (selectedDentist !== 'all' && p.id !== selectedDentist) return
+
+      const summaryForDentist = financialSummary.find((s) => s.dentist_id === p.id)
+
       map.set(p.id, {
         id: p.id,
         name: p.name,
@@ -308,6 +316,9 @@ export default function AdminFinancial() {
         readyToInvoiceCount: 0,
         unsettledOrders: [],
         pipelineOrders: [],
+        pending_settlements_count: Number(summaryForDentist?.pending_settlements_count || 0),
+        ready_to_bill_count_global: Number(summaryForDentist?.ready_to_bill_count || 0),
+        in_production_count_global: Number(summaryForDentist?.in_production_count || 0),
       })
     })
 
@@ -451,10 +462,26 @@ export default function AdminFinancial() {
 
     const activeTableData = Array.from(map.values())
       .filter((d) => {
+        let visible = false
         if (showOnlyReadyToInvoice) {
-          return d.aFaturar > 0 || d.readyToInvoiceCount > 0
+          visible = d.aFaturar > 0 || d.readyToInvoiceCount > 0
+        } else {
+          visible =
+            d.aFaturar > 0 ||
+            d.emProducao > 0 ||
+            d.readyToInvoiceCount > 0 ||
+            d.pending_settlements_count > 0 ||
+            d.ready_to_bill_count_global > 0 ||
+            d.in_production_count_global > 0
         }
-        return d.aFaturar > 0 || d.emProducao > 0 || d.readyToInvoiceCount > 0
+
+        if (!visible) return false
+
+        if (statusFilter === 'pending_invoices' && d.pending_settlements_count === 0) return false
+        if (statusFilter === 'ready_to_bill' && d.ready_to_bill_count_global === 0) return false
+        if (statusFilter === 'in_production' && d.in_production_count_global === 0) return false
+
+        return true
       })
       .sort((a, b) => b.aFaturar - a.aFaturar)
 
@@ -468,10 +495,12 @@ export default function AdminFinancial() {
     settlements,
     installments,
     recebimentos,
+    financialSummary,
     selectedMonth,
     selectedYear,
     selectedDentist,
     showOnlyReadyToInvoice,
+    statusFilter,
     selectedLab,
   ])
 
@@ -1181,6 +1210,20 @@ export default function AdminFinancial() {
             </label>
           </div>
 
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[160px] h-10">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full font-medium">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="pending_invoices">Fatura Pendente</SelectItem>
+                <SelectItem value="ready_to_bill">Pronto p/ Faturar</SelectItem>
+                <SelectItem value="in_production">Em Produção</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[200px] h-10">
             <Select value={selectedDentist} onValueChange={setSelectedDentist}>
               <SelectTrigger className="border-none shadow-none focus:ring-0 h-full font-medium">
@@ -1369,6 +1412,26 @@ export default function AdminFinancial() {
                           {row.clinic && (
                             <p className="text-xs text-muted-foreground">{row.clinic}</p>
                           )}
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {row.pending_settlements_count > 0 && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] uppercase px-1.5 py-0 h-4"
+                              >
+                                Fatura Pendente
+                              </Badge>
+                            )}
+                            {row.ready_to_bill_count_global > 0 && (
+                              <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[10px] uppercase px-1.5 py-0 h-4 border-none">
+                                Pronto p/ Faturar
+                              </Badge>
+                            )}
+                            {row.in_production_count_global > 0 && (
+                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] uppercase px-1.5 py-0 h-4 border-none">
+                                Em Produção
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center font-medium text-slate-600">
                           {row.closing_date ? `Dia ${row.closing_date}` : '-'}
