@@ -72,6 +72,7 @@ export default function AdminFinancial() {
   const [settlements, setSettlements] = useState<any[]>([])
   const [directOrders, setDirectOrders] = useState<any[]>([])
   const [installments, setInstallments] = useState<any[]>([])
+  const [recebimentos, setRecebimentos] = useState<any[]>([])
 
   // Modal State
   const [manualInvoiceDentist, setManualInvoiceDentist] = useState<string | null>(null)
@@ -115,6 +116,13 @@ export default function AdminFinancial() {
 
   const togglePaidInvoice = (id: string) => {
     setExpandedPaidInvoices((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  // Paid Installments Expand State
+  const [expandedPaidInstGroups, setExpandedPaidInstGroups] = useState<Record<string, boolean>>({})
+
+  const togglePaidInstGroup = (key: string) => {
+    setExpandedPaidInstGroups((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
   // Pending Invoices Expand State
@@ -233,34 +241,38 @@ export default function AdminFinancial() {
 
       if (sessionError || !session) return
 
-      const [profilesRes, settlementsRes, ordersRes, installmentsRes] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, name, clinic, closing_date, payment_due_date')
-          .in('role', ['dentist', 'laboratory'])
-          .order('name'),
-        supabase
-          .from('settlements')
-          .select(
-            'id, amount, created_at, dentist_id, status, paid_at, orders_snapshot, note, total_installments, sector',
-          ),
-        supabase
-          .from('orders')
-          .select(
-            'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition, sector',
-          ),
-        supabase.from('billing_installments').select('*'),
-      ])
+      const [profilesRes, settlementsRes, ordersRes, installmentsRes, recebimentosRes] =
+        await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, name, clinic, closing_date, payment_due_date')
+            .in('role', ['dentist', 'laboratory'])
+            .order('name'),
+          supabase
+            .from('settlements')
+            .select(
+              'id, amount, created_at, dentist_id, status, paid_at, orders_snapshot, note, total_installments, sector',
+            ),
+          supabase
+            .from('orders')
+            .select(
+              'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition, sector',
+            ),
+          supabase.from('billing_installments').select('*'),
+          supabase.from('recebimentos').select('*'),
+        ])
 
       if (profilesRes.error) throw profilesRes.error
       if (settlementsRes.error) throw settlementsRes.error
       if (ordersRes.error) throw ordersRes.error
       if (installmentsRes.error) throw installmentsRes.error
+      if (recebimentosRes.error) throw recebimentosRes.error
 
       if (profilesRes.data) setProfiles(profilesRes.data)
       if (settlementsRes.data) setSettlements(settlementsRes.data)
       if (ordersRes.data) setDirectOrders(ordersRes.data)
       if (installmentsRes.data) setInstallments(installmentsRes.data)
+      if (recebimentosRes.data) setRecebimentos(recebimentosRes.data)
     } catch (error: any) {
       console.error('Error fetching financial data:', error)
       toast({ title: 'Erro ao buscar dados financeiros', variant: 'destructive' })
@@ -421,6 +433,22 @@ export default function AdminFinancial() {
       }
     })
 
+    recebimentos.forEach((r) => {
+      if (selectedDentist !== 'all') return
+
+      if (isLabSelected) {
+        const rSector = (r.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase().replace('STUDIO', 'STÚDIO')
+        if (rSector !== selSector) return
+      }
+
+      if (r.data_recebimento) {
+        const [year, month] = r.data_recebimento.split('T')[0].split('-')
+        if ((parseInt(month, 10) - 1).toString() === selectedMonth && year === selectedYear) {
+          recebido += Number(r.valor_recebido || 0)
+        }
+      }
+    })
+
     const activeTableData = Array.from(map.values())
       .filter((d) => {
         if (showOnlyReadyToInvoice) {
@@ -439,6 +467,7 @@ export default function AdminFinancial() {
     directOrders,
     settlements,
     installments,
+    recebimentos,
     selectedMonth,
     selectedYear,
     selectedDentist,
@@ -669,6 +698,37 @@ export default function AdminFinancial() {
           new Date(a.paid_at || a.created_at).getTime(),
       )
   }, [installments, profiles, selectedDentist, selectedLab, directOrders])
+
+  const groupedPaidInstallments = useMemo(() => {
+    const groups = new Map<string, any>()
+    paidInstallments.forEach((inst) => {
+      const dateKey = inst.paid_at
+        ? inst.paid_at.split('T')[0]
+        : inst.created_at
+          ? inst.created_at.split('T')[0]
+          : 'sem-data'
+      const key = `${inst.dentist_id}_${dateKey}`
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          dentist_id: inst.dentist_id,
+          dentistName: inst.dentistName,
+          clinic: inst.clinic,
+          paid_at: dateKey,
+          items: [],
+          total_value: 0,
+        })
+      }
+      const group = groups.get(key)
+      group.items.push(inst)
+      group.total_value += Number(inst.installment_value || 0)
+    })
+    return Array.from(groups.values()).sort((a, b) => {
+      const dateA = a.paid_at !== 'sem-data' ? new Date(a.paid_at).getTime() : 0
+      const dateB = b.paid_at !== 'sem-data' ? new Date(b.paid_at).getTime() : 0
+      return dateB - dateA
+    })
+  }, [paidInstallments])
 
   const modalOrders = useMemo(() => {
     if (!manualInvoiceDentist) return []
@@ -1783,7 +1843,29 @@ export default function AdminFinancial() {
                             year === selectedYear
                           )
                         })
-                        .reduce((sum, inv) => sum + Number(inv.installment_value || 0), 0),
+                        .reduce((sum, inv) => sum + Number(inv.installment_value || 0), 0) +
+                        recebimentos
+                          .filter((r) => {
+                            if (selectedDentist !== 'all') return false
+                            const isLabSelected =
+                              selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+                            if (isLabSelected) {
+                              const rSector = (r.sector || 'SOLUÇÕES CERÂMICAS')
+                                .toUpperCase()
+                                .replace('STUDIO', 'STÚDIO')
+                              const selSector = selectedLab
+                                .toUpperCase()
+                                .replace('STUDIO', 'STÚDIO')
+                              if (rSector !== selSector) return false
+                            }
+                            if (!r.data_recebimento) return false
+                            const [year, month] = r.data_recebimento.split('T')[0].split('-')
+                            return (
+                              (parseInt(month, 10) - 1).toString() === selectedMonth &&
+                              year === selectedYear
+                            )
+                          })
+                          .reduce((sum, r) => sum + Number(r.valor_recebido || 0), 0),
                     )}
                   </span>
                 </div>
@@ -1792,53 +1874,103 @@ export default function AdminFinancial() {
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-6">Data Pagamento</TableHead>
+                      <TableHead className="w-[50px] pl-6"></TableHead>
+                      <TableHead>Data Pagamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
-                      <TableHead>Parcela</TableHead>
-                      <TableHead className="text-right pr-6">Valor</TableHead>
+                      <TableHead>Parcelas</TableHead>
+                      <TableHead className="text-right pr-6">Valor Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paidInstallments.length === 0 ? (
+                    {groupedPaidInstallments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           Nenhuma parcela recebida encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paidInstallments.map((inst) => (
-                        <TableRow key={inst.id} className="hover:bg-slate-50/50">
-                          <TableCell className="pl-6 whitespace-nowrap font-medium text-slate-600">
-                            {inst.paid_at
-                              ? new Date(inst.paid_at).toLocaleDateString('pt-BR')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <p className="font-medium text-slate-900">{inst.dentistName}</p>
-                            {inst.clinic && (
-                              <p className="text-xs text-muted-foreground">{inst.clinic}</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="default"
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                            >
-                              {inst.note || `${inst.installment_number}/${inst.total_installments}`}
-                            </Badge>
-                            {inst.payment_method && (
-                              <p
-                                className="text-[10px] text-muted-foreground mt-1 truncate max-w-[120px]"
-                                title={inst.payment_method}
+                      groupedPaidInstallments.map((group) => (
+                        <Fragment key={group.key}>
+                          <TableRow
+                            className="hover:bg-slate-50/50 cursor-pointer"
+                            onClick={() => togglePaidInstGroup(group.key)}
+                          >
+                            <TableCell className="pl-6 w-[50px]">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 pointer-events-none"
                               >
-                                {inst.payment_method}
-                              </p>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium pr-6 text-slate-900">
-                            {formatCurrency(inst.installment_value)}
-                          </TableCell>
-                        </TableRow>
+                                {expandedPaidInstGroups[group.key] ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap font-medium text-slate-600">
+                              {group.paid_at !== 'sem-data'
+                                ? new Date(group.paid_at + 'T12:00:00Z').toLocaleDateString('pt-BR')
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{group.dentistName}</p>
+                              {group.clinic && (
+                                <p className="text-xs text-muted-foreground">{group.clinic}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="secondary"
+                                className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                              >
+                                {group.items.length}{' '}
+                                {group.items.length === 1 ? 'parcela' : 'parcelas'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-6">
+                              {formatCurrency(group.total_value)}
+                            </TableCell>
+                          </TableRow>
+                          {expandedPaidInstGroups[group.key] && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={5} className="p-0 border-b-0">
+                                <div className="pl-16 pr-6 py-4">
+                                  <Table className="bg-white rounded-md border text-sm shadow-sm">
+                                    <TableHeader className="bg-slate-100/50">
+                                      <TableRow>
+                                        <TableHead>Descrição / Observação</TableHead>
+                                        <TableHead>Nº Parcela</TableHead>
+                                        <TableHead>Método</TableHead>
+                                        <TableHead className="text-right">Valor</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {group.items.map((item: any) => (
+                                        <TableRow key={item.id} className="hover:bg-slate-50">
+                                          <TableCell className="text-slate-600 font-medium">
+                                            {item.note || 'Lançamento'}
+                                          </TableCell>
+                                          <TableCell className="text-slate-500">
+                                            {item.installment_number
+                                              ? `${item.installment_number}/${item.total_installments}`
+                                              : '-'}
+                                          </TableCell>
+                                          <TableCell className="text-slate-500 text-xs">
+                                            {item.payment_method || '-'}
+                                          </TableCell>
+                                          <TableCell className="text-right font-medium text-slate-900">
+                                            {formatCurrency(item.installment_value)}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))
                     )}
                   </TableBody>
