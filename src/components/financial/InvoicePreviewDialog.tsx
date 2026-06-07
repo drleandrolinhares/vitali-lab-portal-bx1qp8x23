@@ -49,7 +49,19 @@ export function InvoicePreviewDialog({
   }
 
   const handlePrint = () => {
-    window.print()
+    const originalTitle = document.title
+    const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')
+    const pName = (orders[0]?.patientName || orders[0]?.patient_name || dentistName || 'Cliente')
+      .split(' ')
+      .join('')
+    document.title = `Fatura_VitaliLab_${pName}_${dateStr}`
+
+    setTimeout(() => {
+      window.print()
+      setTimeout(() => {
+        document.title = originalTitle
+      }, 500)
+    }, 100)
   }
 
   const fullAddress = labProfile.address
@@ -61,131 +73,216 @@ export function InvoicePreviewDialog({
           <DialogTitle>Prévia da Fatura</DialogTitle>
         </DialogHeader>
         <div className="p-6 overflow-auto flex-1 print:overflow-visible print:p-0">
-          <div className="hidden print:block mb-8 text-center border-b border-slate-200 pb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
-              Fatura de Serviços
-            </h1>
-            <p className="text-slate-500 mt-1">{labProfile.name}</p>
-            {settlementId && (
-              <p className="text-sm font-medium mt-2">
-                Fatura #{settlementId.substring(0, 8).toUpperCase()}
-              </p>
-            )}
-            {date && (
-              <p className="text-sm text-slate-500">
-                Data: {new Date(date).toLocaleDateString('pt-BR')}
-              </p>
-            )}
-          </div>
+          <table className="w-full">
+            <thead className="hidden print:table-header-group">
+              <tr>
+                <td>
+                  <div className="mb-8 text-center border-b border-slate-200 pb-6">
+                    <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
+                      Fatura de Serviços
+                    </h1>
+                    <p className="text-slate-500 mt-1">{labProfile.name}</p>
+                    {settlementId && (
+                      <p className="text-sm font-medium mt-2">
+                        Fatura #{settlementId.substring(0, 8).toUpperCase()}
+                      </p>
+                    )}
+                    {date && (
+                      <p className="text-sm text-slate-500">
+                        Data: {new Date(date).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div className="print:hidden mb-8 text-center border-b border-slate-200 pb-6">
+                    <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
+                      Fatura de Serviços
+                    </h1>
+                    <p className="text-slate-500 mt-1">{labProfile.name}</p>
+                    {settlementId && (
+                      <p className="text-sm font-medium mt-2">
+                        Fatura #{settlementId.substring(0, 8).toUpperCase()}
+                      </p>
+                    )}
+                    {date && (
+                      <p className="text-sm text-slate-500">
+                        Data: {new Date(date).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
 
-          <div className="mb-6 flex justify-between items-end print:mb-8">
-            <div>
-              <h3 className="font-bold text-lg text-slate-800">Cliente: {dentistName}</h3>
-              {clinicName && <p className="text-muted-foreground">{clinicName}</p>}
-            </div>
-            <div className="text-right hidden print:block">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">
-                Total da Fatura
-              </p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalAmount)}</p>
-            </div>
-          </div>
-          <div className="border rounded-md print:border-slate-200 print:shadow-none">
-            <Table>
-              <TableHeader className="bg-slate-50 print:bg-slate-100/50">
-                <TableRow>
-                  <TableHead>Pedido</TableHead>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead>Trabalho</TableHead>
-                  <TableHead>Dentes/Arcadas</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((o) => {
-                  let teethInfo = '-'
-                  if (o.teeth && o.teeth.length > 0) teethInfo = `Dentes: ${o.teeth.join(', ')}`
-                  else if (o.arches && o.arches.length > 0)
-                    teethInfo = `Arcadas: ${o.arches.join(', ')}`
-                  else if (o.tooth_or_arch) {
-                    const t = o.tooth_or_arch?.teeth || []
-                    const a = o.tooth_or_arch?.arches || []
-                    if (t.length > 0) teethInfo = `Dentes: ${t.join(', ')}`
-                    else if (a.length > 0) teethInfo = `Arcadas: ${a.join(', ')}`
-                  }
+                  <div className="mb-6 flex justify-between items-end print:mb-8">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-800">Cliente: {dentistName}</h3>
+                      {clinicName && <p className="text-muted-foreground">{clinicName}</p>}
+                    </div>
+                    <div className="text-right hidden print:block">
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">
+                        Total da Fatura
+                      </p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {formatCurrency(totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border rounded-md print:border-slate-200 print:shadow-none">
+                    <Table>
+                      <TableHeader className="bg-slate-50 print:bg-slate-100/50">
+                        <TableRow>
+                          <TableHead>Pedido</TableHead>
+                          <TableHead>Paciente</TableHead>
+                          <TableHead>Trabalho</TableHead>
+                          <TableHead>Dentes/Arcadas</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders.map((o) => {
+                          let teethInfo = '-'
+                          if (o.teeth && o.teeth.length > 0)
+                            teethInfo = `Dentes: ${o.teeth.join(', ')}`
+                          else if (o.arches && o.arches.length > 0)
+                            teethInfo = `Arcadas: ${o.arches.join(', ')}`
+                          else if (o.tooth_or_arch) {
+                            const t = o.tooth_or_arch?.teeth || []
+                            const a = o.tooth_or_arch?.arches || []
+                            if (t.length > 0) teethInfo = `Dentes: ${t.join(', ')}`
+                            else if (a.length > 0) teethInfo = `Arcadas: ${a.join(', ')}`
+                          }
 
-                  return (
-                    <TableRow key={o.id} className="print:border-b print:border-slate-100">
-                      <TableCell className="font-medium text-xs font-mono">
-                        {o.friendlyId || o.friendly_id || o.id?.substring(0, 8)}
-                      </TableCell>
-                      <TableCell>{o.patientName || o.patient_name}</TableCell>
-                      <TableCell>{o.workType || o.work_type || '-'}</TableCell>
-                      <TableCell className="text-xs text-slate-500">{teethInfo}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(o.clearedAmount ?? o.basePrice ?? o.base_price ?? 0)}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                          return (
+                            <TableRow key={o.id} className="print:border-b print:border-slate-100">
+                              <TableCell className="font-medium text-xs font-mono">
+                                {o.friendlyId || o.friendly_id || o.id?.substring(0, 8)}
+                              </TableCell>
+                              <TableCell>{o.patientName || o.patient_name}</TableCell>
+                              <TableCell>{o.workType || o.work_type || '-'}</TableCell>
+                              <TableCell className="text-xs text-slate-500">{teethInfo}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(
+                                  o.clearedAmount ?? o.basePrice ?? o.base_price ?? 0,
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
 
-          <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 print:flex-col print:mt-10 print:items-start print:gap-8">
-            <div className="flex flex-col gap-4 w-full max-w-xl print:w-full print:max-w-none">
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full print:bg-transparent print:border-t-2 print:border-b-0 print:border-x-0 print:border-slate-300 print:rounded-none print:p-0 print:pt-4 print:break-inside-avoid">
-                <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2 print:text-slate-900">
-                  Dados do Laboratório
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
-                  <p className="text-sm text-slate-600 print:text-slate-800">
-                    <span className="font-semibold">Razão Social:</span>{' '}
-                    {labProfile.name || 'Não cadastrada'}
-                  </p>
-                  {labProfile.cnpj && (
-                    <p className="text-sm text-slate-600 print:text-slate-800">
-                      <span className="font-semibold">CNPJ:</span> {labProfile.cnpj}
-                    </p>
-                  )}
-                  {fullAddress && (
-                    <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
-                      <span className="font-semibold">Endereço:</span> {fullAddress}
-                    </p>
-                  )}
-                </div>
-              </div>
+                  <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 print:hidden">
+                    <div className="flex flex-col gap-4 w-full max-w-xl">
+                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full">
+                        <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2">
+                          Dados do Laboratório
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                          <p className="text-sm text-slate-600">
+                            <span className="font-semibold">Razão Social:</span>{' '}
+                            {labProfile.name || 'Não cadastrada'}
+                          </p>
+                          {labProfile.cnpj && (
+                            <p className="text-sm text-slate-600">
+                              <span className="font-semibold">CNPJ:</span> {labProfile.cnpj}
+                            </p>
+                          )}
+                          {fullAddress && (
+                            <p className="text-sm text-slate-600 sm:col-span-2">
+                              <span className="font-semibold">Endereço:</span> {fullAddress}
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full print:bg-transparent print:border-t-2 print:border-b-0 print:border-x-0 print:border-slate-300 print:rounded-none print:p-0 print:pt-4 print:break-inside-avoid">
-                <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2 print:text-slate-900">
-                  Dados para Pagamento (PIX)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
-                  <p className="text-sm text-slate-600 print:text-slate-800">
-                    <span className="font-semibold">Chave PIX:</span>{' '}
-                    {labProfile.pix_key || 'Não cadastrada'}
-                  </p>
-                  {labProfile.pix_type && (
-                    <p className="text-sm text-slate-600 print:text-slate-800">
-                      <span className="font-semibold">Tipo:</span> {labProfile.pix_type}
-                    </p>
-                  )}
-                  {labProfile.bank_name && (
-                    <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
-                      <span className="font-semibold">Banco:</span> {labProfile.bank_name}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full">
+                        <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2">
+                          Dados para Pagamento (PIX)
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                          <p className="text-sm text-slate-600">
+                            <span className="font-semibold">Chave PIX:</span>{' '}
+                            {labProfile.pix_key || 'Não cadastrada'}
+                          </p>
+                          {labProfile.pix_type && (
+                            <p className="text-sm text-slate-600">
+                              <span className="font-semibold">Tipo:</span> {labProfile.pix_type}
+                            </p>
+                          )}
+                          {labProfile.bank_name && (
+                            <p className="text-sm text-slate-600 sm:col-span-2">
+                              <span className="font-semibold">Banco:</span> {labProfile.bank_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="text-right bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px] print:hidden self-end">
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">
-                Total da Fatura
-              </p>
-              <p className="text-3xl font-bold text-primary">{formatCurrency(totalAmount)}</p>
-            </div>
-          </div>
+                    <div className="text-right bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px] self-end">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">
+                        Total da Fatura
+                      </p>
+                      <p className="text-3xl font-bold text-primary">
+                        {formatCurrency(totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot className="hidden print:table-footer-group">
+              <tr>
+                <td>
+                  <div className="pt-8 mt-8 border-t-2 border-slate-300">
+                    <div className="flex justify-between gap-8 text-sm break-inside-avoid pt-4">
+                      <div className="w-1/2 text-left">
+                        <p className="font-bold uppercase tracking-wider text-slate-900 mb-2">
+                          Dados do Laboratório
+                        </p>
+                        <p className="text-slate-800">
+                          <span className="font-semibold">Razão Social:</span>{' '}
+                          {labProfile.name || 'Não cadastrada'}
+                        </p>
+                        {labProfile.cnpj && (
+                          <p className="text-slate-800">
+                            <span className="font-semibold">CNPJ:</span> {labProfile.cnpj}
+                          </p>
+                        )}
+                        {fullAddress && (
+                          <p className="text-slate-800 mt-1">
+                            <span className="font-semibold">Endereço:</span> {fullAddress}
+                          </p>
+                        )}
+                      </div>
+                      <div className="w-1/2 text-left">
+                        <p className="font-bold uppercase tracking-wider text-slate-900 mb-2">
+                          Dados para Pagamento (PIX)
+                        </p>
+                        <p className="text-slate-800">
+                          <span className="font-semibold">Chave PIX:</span>{' '}
+                          {labProfile.pix_key || 'Não cadastrada'}
+                        </p>
+                        {labProfile.pix_type && (
+                          <p className="text-slate-800">
+                            <span className="font-semibold">Tipo:</span> {labProfile.pix_type}
+                          </p>
+                        )}
+                        {labProfile.bank_name && (
+                          <p className="text-slate-800 mt-1">
+                            <span className="font-semibold">Banco:</span> {labProfile.bank_name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
         <div className="px-6 py-4 border-t flex justify-end gap-2 print:hidden">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
