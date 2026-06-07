@@ -46,3 +46,22 @@
     animation: none !important;
   }
 }
+
+/* Simulate print styles when generating PDF via html2pdf */
+body.pdf-generating .print\:hidden {
+  display: none !important;
+}
+body.pdf-generating .hidden.print\:block {
+  display: block !important;
+}
+body.pdf-generating .hidden.print\:table-header-group {
+  display: table-header-group !important;
+}
+body.pdf-generating .hidden.print\:table-footer-group,
+body.pdf-generating .pdf-footer {
+  display: table-footer-group !important;
+}
+body.pdf-generating .pdf-scroll-area {
+  overflow: visible !important;
+  max-height: none !important;
+}

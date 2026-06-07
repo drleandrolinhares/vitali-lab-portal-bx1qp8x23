@@ -8,8 +8,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Printer } from 'lucide-react'
+import { Printer, Download, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/stores/main'
+import { useState, useRef } from 'react'
+// @ts-expect-error
+import html2pdf from 'html2pdf.js'
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -38,6 +41,8 @@ export function InvoicePreviewDialog({
   date?: string
 }) {
   const { appSettings } = useAppStore()
+  const [isGenerating, setIsGenerating] = useState(false)
+  const invoiceRef = useRef<HTMLTableElement>(null)
 
   const labProfile = {
     name: appSettings['lab_razao_social'] || appSettings['lab_name'] || 'Laboratório',
@@ -48,13 +53,48 @@ export function InvoicePreviewDialog({
     bank_name: appSettings['lab_bank_name'] || '',
   }
 
+  const handleDownloadPDF = async () => {
+    if (!invoiceRef.current) return
+    setIsGenerating(true)
+
+    try {
+      document.body.classList.add('pdf-generating')
+
+      const element = invoiceRef.current
+
+      const pName = (orders[0]?.patientName || orders[0]?.patient_name || dentistName || 'Cliente')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+
+      const dateStr = new Date().toISOString().split('T')[0]
+      const timestamp = new Date().getTime()
+      const filename = `Fatura_VitaliLab_${pName}_${dateStr}_${timestamp}.pdf`
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: 900 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      }
+
+      await html2pdf().set(opt).from(element).save()
+    } catch (err) {
+      console.error('Error generating PDF:', err)
+    } finally {
+      document.body.classList.remove('pdf-generating')
+      setIsGenerating(false)
+    }
+  }
+
   const handlePrint = () => {
     const originalTitle = document.title
     const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')
     const pName = (orders[0]?.patientName || orders[0]?.patient_name || dentistName || 'Cliente')
       .split(' ')
       .join('')
-    document.title = `Fatura_VitaliLab_${pName}_${dateStr}`
+    document.title = `Fatura_VitaliLab_${pName}_${dateStr}_${new Date().getTime()}`
 
     setTimeout(() => {
       window.print()
@@ -68,12 +108,12 @@ export function InvoicePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 print:max-w-none print:h-auto print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:block">
-        <DialogHeader className="px-6 py-4 border-b print:hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 print:max-w-none print:h-auto print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:block overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b print:hidden shrink-0">
           <DialogTitle>Prévia da Fatura</DialogTitle>
         </DialogHeader>
-        <div className="p-6 overflow-auto flex-1 print:overflow-visible print:p-0">
-          <table className="w-full">
+        <div className="p-6 overflow-auto flex-1 print:overflow-visible print:p-0 pdf-scroll-area">
+          <table className="w-full" ref={invoiceRef}>
             <thead className="hidden print:table-header-group">
               <tr>
                 <td>
@@ -234,7 +274,7 @@ export function InvoicePreviewDialog({
                 </td>
               </tr>
             </tbody>
-            <tfoot className="hidden print:table-footer-group">
+            <tfoot className="hidden print:table-footer-group pdf-footer">
               <tr>
                 <td>
                   <div className="pt-8 mt-8 border-t-2 border-slate-300">
@@ -284,16 +324,25 @@ export function InvoicePreviewDialog({
             </tfoot>
           </table>
         </div>
-        <div className="px-6 py-4 border-t flex justify-end gap-2 print:hidden">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="px-6 py-4 border-t flex justify-end gap-2 print:hidden shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isGenerating}>
             Fechar
           </Button>
-          <Button
-            onClick={handlePrint}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
+          <Button onClick={handlePrint} variant="outline" className="gap-2" disabled={isGenerating}>
             <Printer className="w-4 h-4" />
-            Imprimir
+            Imprimir Sistêmico
+          </Button>
+          <Button
+            onClick={handleDownloadPDF}
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isGenerating ? 'Gerando...' : 'Baixar PDF'}
           </Button>
         </div>
       </DialogContent>
