@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { addMonths, format, parseISO } from 'date-fns'
+import { useAppStore } from '@/stores/main'
 
 export function ManualEntryForm({
   onSuccess,
@@ -27,6 +28,7 @@ export function ManualEntryForm({
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const { selectedLab } = useAppStore()
 
   useEffect(() => {
     supabase
@@ -58,6 +60,11 @@ export function ManualEntryForm({
       const start = parseISO(startDate)
 
       const inserts = []
+      const activeLab =
+        selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+          ? selectedLab
+          : 'SOLUÇÕES CERÂMICAS'
+
       for (let i = 1; i <= numInstallments; i++) {
         const dueDate = addMonths(start, i - 1)
         const monthYear = format(dueDate, 'MM/yyyy')
@@ -71,10 +78,11 @@ export function ManualEntryForm({
           due_date: format(dueDate, 'yyyy-MM-dd'),
           installment_number: i,
           note: `Parcela ${i}/${numInstallments} ref. ${monthYear}`,
+          sector: activeLab,
         })
       }
 
-      const { error } = await supabase.from('billing_installments').insert(inserts)
+      const { error } = await supabase.from('billing_installments').insert(inserts as any)
       if (error) throw error
 
       toast({ title: 'Lançamento avulso criado com sucesso' })

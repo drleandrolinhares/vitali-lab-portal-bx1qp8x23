@@ -37,7 +37,6 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
 import { useAppStore } from '@/stores/main'
-import AccountsPayable from './AccountsPayable'
 import { OrderDetailsSheet } from '@/components/OrderDetailsSheet'
 import { Order } from '@/lib/types'
 
@@ -243,7 +242,7 @@ export default function AdminFinancial() {
         supabase
           .from('settlements')
           .select(
-            'id, amount, created_at, dentist_id, status, paid_at, orders_snapshot, note, total_installments',
+            'id, amount, created_at, dentist_id, status, paid_at, orders_snapshot, note, total_installments, sector',
           ),
         supabase
           .from('orders')
@@ -338,6 +337,7 @@ export default function AdminFinancial() {
           basePrice: basePrice,
           createdAt: o.created_at,
           isRepetition: o.is_repetition,
+          sector: o.sector,
         })
       }
 
@@ -352,6 +352,7 @@ export default function AdminFinancial() {
           basePrice: basePrice,
           createdAt: o.created_at,
           isRepetition: o.is_repetition,
+          sector: o.sector,
         })
       }
     })
@@ -360,15 +361,20 @@ export default function AdminFinancial() {
       if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return
 
       if (isLabSelected) {
-        const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
-        if (ordersForSettlement.length > 0) {
-          const hasSector = ordersForSettlement.some((o) => {
-            const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-              .toUpperCase()
-              .replace('STUDIO', 'STÚDIO')
-            return oSector === selSector
-          })
-          if (!hasSector) return
+        const sSector = (s.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase().replace('STUDIO', 'STÚDIO')
+        if (sSector !== selSector) {
+          const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return
+          } else {
+            return
+          }
         }
       }
 
@@ -388,15 +394,22 @@ export default function AdminFinancial() {
       if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return
 
       if (isLabSelected) {
-        const ordersForSettlement = directOrders.filter((o) => o.settlement_id === i.settlement_id)
-        if (ordersForSettlement.length > 0) {
-          const hasSector = ordersForSettlement.some((o) => {
-            const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-              .toUpperCase()
-              .replace('STUDIO', 'STÚDIO')
-            return oSector === selSector
-          })
-          if (!hasSector) return
+        const iSector = (i.sector || 'SOLUÇÕES CERÂMICAS').toUpperCase().replace('STUDIO', 'STÚDIO')
+        if (iSector !== selSector) {
+          const ordersForSettlement = directOrders.filter(
+            (o) => o.settlement_id === i.settlement_id,
+          )
+          if (ordersForSettlement.length > 0) {
+            const hasSector = ordersForSettlement.some((o) => {
+              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                .toUpperCase()
+                .replace('STUDIO', 'STÚDIO')
+              return oSector === selSector
+            })
+            if (!hasSector) return
+          } else {
+            return
+          }
         }
       }
 
@@ -444,15 +457,22 @@ export default function AdminFinancial() {
         if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
 
         if (isLabSelected) {
-          const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
-          if (ordersForSettlement.length > 0) {
-            const hasSector = ordersForSettlement.some((o) => {
-              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-                .toUpperCase()
-                .replace('STUDIO', 'STÚDIO')
-              return oSector === selSector
-            })
-            if (!hasSector) return false
+          const sSector = (s.sector || 'SOLUÇÕES CERÂMICAS')
+            .toUpperCase()
+            .replace('STUDIO', 'STÚDIO')
+          if (sSector !== selSector) {
+            const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+            if (ordersForSettlement.length > 0) {
+              const hasSector = ordersForSettlement.some((o) => {
+                const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                  .toUpperCase()
+                  .replace('STUDIO', 'STÚDIO')
+                return oSector === selSector
+              })
+              if (!hasSector) return false
+            } else {
+              return false
+            }
           }
         }
         return true
@@ -479,15 +499,22 @@ export default function AdminFinancial() {
         if (selectedDentist !== 'all' && s.dentist_id !== selectedDentist) return false
 
         if (isLabSelected) {
-          const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
-          if (ordersForSettlement.length > 0) {
-            const hasSector = ordersForSettlement.some((o) => {
-              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-                .toUpperCase()
-                .replace('STUDIO', 'STÚDIO')
-              return oSector === selSector
-            })
-            if (!hasSector) return false
+          const sSector = (s.sector || 'SOLUÇÕES CERÂMICAS')
+            .toUpperCase()
+            .replace('STUDIO', 'STÚDIO')
+          if (sSector !== selSector) {
+            const ordersForSettlement = directOrders.filter((o) => o.settlement_id === s.id)
+            if (ordersForSettlement.length > 0) {
+              const hasSector = ordersForSettlement.some((o) => {
+                const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                  .toUpperCase()
+                  .replace('STUDIO', 'STÚDIO')
+                return oSector === selSector
+              })
+              if (!hasSector) return false
+            } else {
+              return false
+            }
           }
         }
 
@@ -532,17 +559,24 @@ export default function AdminFinancial() {
         if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return false
 
         if (isLabSelected) {
-          const ordersForSettlement = directOrders.filter(
-            (o) => o.settlement_id === i.settlement_id,
-          )
-          if (ordersForSettlement.length > 0) {
-            const hasSector = ordersForSettlement.some((o) => {
-              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-                .toUpperCase()
-                .replace('STUDIO', 'STÚDIO')
-              return oSector === selSector
-            })
-            if (!hasSector) return false
+          const iSector = (i.sector || 'SOLUÇÕES CERÂMICAS')
+            .toUpperCase()
+            .replace('STUDIO', 'STÚDIO')
+          if (iSector !== selSector) {
+            const ordersForSettlement = directOrders.filter(
+              (o) => o.settlement_id === i.settlement_id,
+            )
+            if (ordersForSettlement.length > 0) {
+              const hasSector = ordersForSettlement.some((o) => {
+                const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                  .toUpperCase()
+                  .replace('STUDIO', 'STÚDIO')
+                return oSector === selSector
+              })
+              if (!hasSector) return false
+            } else {
+              return false
+            }
           }
         }
         return true
@@ -599,17 +633,24 @@ export default function AdminFinancial() {
         if (selectedDentist !== 'all' && i.dentist_id !== selectedDentist) return false
 
         if (isLabSelected) {
-          const ordersForSettlement = directOrders.filter(
-            (o) => o.settlement_id === i.settlement_id,
-          )
-          if (ordersForSettlement.length > 0) {
-            const hasSector = ordersForSettlement.some((o) => {
-              const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
-                .toUpperCase()
-                .replace('STUDIO', 'STÚDIO')
-              return oSector === selSector
-            })
-            if (!hasSector) return false
+          const iSector = (i.sector || 'SOLUÇÕES CERÂMICAS')
+            .toUpperCase()
+            .replace('STUDIO', 'STÚDIO')
+          if (iSector !== selSector) {
+            const ordersForSettlement = directOrders.filter(
+              (o) => o.settlement_id === i.settlement_id,
+            )
+            if (ordersForSettlement.length > 0) {
+              const hasSector = ordersForSettlement.some((o) => {
+                const oSector = (o.sector || 'SOLUÇÕES CERÂMICAS')
+                  .toUpperCase()
+                  .replace('STUDIO', 'STÚDIO')
+                return oSector === selSector
+              })
+              if (!hasSector) return false
+            } else {
+              return false
+            }
           }
         }
         return true
@@ -729,6 +770,10 @@ export default function AdminFinancial() {
     try {
       const totalAmount = parseFloat(manualRecAmount)
       const count = manualRecType === 'installment' ? parseInt(manualRecInstallments) || 1 : 1
+      const activeLab =
+        selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+          ? selectedLab
+          : 'SOLUÇÕES CERÂMICAS'
 
       const snapshot = [
         {
@@ -750,7 +795,8 @@ export default function AdminFinancial() {
           status: manualRecType === 'installment' ? 'installment_plan' : 'pending',
           total_installments: count,
           note: manualRecNote,
-        })
+          sector: activeLab,
+        } as any)
         .select('id')
         .single()
 
@@ -781,11 +827,14 @@ export default function AdminFinancial() {
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
             note: `Parcela ${i + 1}/${count} - ${manualRecNote}`,
+            sector: activeLab,
           })
           currentInstNum++
         }
 
-        const { error: instError } = await supabase.from('billing_installments').insert(inserts)
+        const { error: instError } = await supabase
+          .from('billing_installments')
+          .insert(inserts as any)
         if (instError) throw instError
       }
 
@@ -887,6 +936,11 @@ export default function AdminFinancial() {
       const upfront = parseFloat(upfrontAmount) || 0
       const count = parseInt(installmentsCount) || 1
       const finalInstallmentsCount = isInstallment ? (upfront > 0 ? count + 1 : count) : 1
+      const activeLab =
+        selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+          ? selectedLab
+          : 'SOLUÇÕES CERÂMICAS'
+      const targetSector = ordersToSettle[0]?.sector || activeLab
 
       const { data: settlementData, error } = await supabase
         .from('settlements')
@@ -896,7 +950,8 @@ export default function AdminFinancial() {
           orders_snapshot: snapshot,
           status: isInstallment ? 'installment_plan' : 'pending',
           total_installments: finalInstallmentsCount,
-        })
+          sector: targetSector,
+        } as any)
         .select('id')
         .single()
 
@@ -930,6 +985,7 @@ export default function AdminFinancial() {
             due_date: baseDate.toISOString().split('T')[0],
             status: 'pending',
             note: 'Entrada',
+            sector: targetSector,
           })
           currentInstNum++
         }
@@ -949,11 +1005,14 @@ export default function AdminFinancial() {
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
             note: `Parcela ${i + 1}/${count}`,
+            sector: targetSector,
           })
           currentInstNum++
         }
 
-        const { error: instError } = await supabase.from('billing_installments').insert(inserts)
+        const { error: instError } = await supabase
+          .from('billing_installments')
+          .insert(inserts as any)
         if (instError) throw instError
       }
 
@@ -1086,12 +1145,6 @@ export default function AdminFinancial() {
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 font-medium text-muted-foreground data-[state=active]:text-primary"
           >
             Gestão de Parcelamentos
-          </TabsTrigger>
-          <TabsTrigger
-            value="despesas"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 font-medium text-muted-foreground data-[state=active]:text-primary"
-          >
-            Lançamentos (A Pagar)
           </TabsTrigger>
         </TabsList>
 
@@ -1792,15 +1845,6 @@ export default function AdminFinancial() {
                 </Table>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent
-          value="despesas"
-          className="flex-1 flex flex-col min-h-0 mt-0 gap-6 data-[state=inactive]:hidden"
-        >
-          <div className="bg-white rounded-lg p-0 md:p-6 border border-slate-200 overflow-auto flex-1 shadow-sm">
-            <AccountsPayable />
           </div>
         </TabsContent>
       </Tabs>
