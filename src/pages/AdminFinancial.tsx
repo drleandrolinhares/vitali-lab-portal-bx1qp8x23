@@ -459,7 +459,7 @@ export default function AdminFinancial() {
       .sort((a, b) => b.aFaturar - a.aFaturar)
 
     return {
-      summary: { faturar, pipeline, recebido, inadimplencia },
+      summary: { faturar, pipeline, inadimplencia },
       tableData: activeTableData,
     }
   }, [
@@ -550,10 +550,11 @@ export default function AdminFinancial() {
         const dateStr = s.paid_at || s.created_at
         if (!dateStr) return false
 
-        const [year, month] = dateStr.split('T')[0].split('-')
-        const itemMonth = (parseInt(month, 10) - 1).toString()
+        const dateObj = new Date(dateStr)
+        const itemMonth = dateObj.getMonth().toString()
+        const itemYear = dateObj.getFullYear().toString()
 
-        return itemMonth === selectedMonth && year === selectedYear
+        return itemMonth === selectedMonth && itemYear === selectedYear
       })
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
@@ -608,7 +609,14 @@ export default function AdminFinancial() {
             }
           }
         }
-        return true
+        const dateStr = i.paid_at || i.created_at
+        if (!dateStr) return false
+
+        const dateObj = new Date(dateStr)
+        const itemMonth = dateObj.getMonth().toString()
+        const itemYear = dateObj.getFullYear().toString()
+
+        return itemMonth === selectedMonth && itemYear === selectedYear
       })
       .map((i) => {
         const dentist = profiles.find((p) => p.id === i.dentist_id)
@@ -702,11 +710,8 @@ export default function AdminFinancial() {
   const groupedPaidInstallments = useMemo(() => {
     const groups = new Map<string, any>()
     paidInstallments.forEach((inst) => {
-      const dateKey = inst.paid_at
-        ? inst.paid_at.split('T')[0]
-        : inst.created_at
-          ? inst.created_at.split('T')[0]
-          : 'sem-data'
+      const dateStr = inst.paid_at || inst.created_at || 'sem-data'
+      const dateKey = dateStr !== 'sem-data' ? dateStr.split('T')[0] : 'sem-data'
       const key = `${inst.dentist_id}_${dateKey}`
       if (!groups.has(key)) {
         groups.set(key, {
@@ -738,6 +743,46 @@ export default function AdminFinancial() {
       (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     )
   }, [manualInvoiceDentist, tableData])
+
+  const synchronizedRecebido = useMemo(() => {
+    const totalRecebidoUnicas = paidInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0)
+    const totalRecebidoParcelas = paidInstallments.reduce(
+      (sum, inv) => sum + Number(inv.installment_value || 0),
+      0,
+    )
+
+    const totalRecebimentos = recebimentos
+      .filter((r) => {
+        if (selectedDentist !== 'all') return false
+
+        const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
+        if (isLabSelected) {
+          const rSector = (r.sector || 'SOLUÇÕES CERÂMICAS')
+            .toUpperCase()
+            .replace('STUDIO', 'STÚDIO')
+          const selSector = selectedLab.toUpperCase().replace('STUDIO', 'STÚDIO')
+          if (rSector !== selSector) return false
+        }
+
+        if (!r.data_recebimento) return false
+        const dateObj = new Date(r.data_recebimento + 'T12:00:00Z')
+        const itemMonth = dateObj.getMonth().toString()
+        const itemYear = dateObj.getFullYear().toString()
+
+        return itemMonth === selectedMonth && itemYear === selectedYear
+      })
+      .reduce((sum, r) => sum + Number(r.valor_recebido || 0), 0)
+
+    return totalRecebidoUnicas + totalRecebidoParcelas + totalRecebimentos
+  }, [
+    paidInvoices,
+    paidInstallments,
+    recebimentos,
+    selectedDentist,
+    selectedLab,
+    selectedMonth,
+    selectedYear,
+  ])
 
   useEffect(() => {
     if (manualInvoiceDentist) {
@@ -1258,7 +1303,7 @@ export default function AdminFinancial() {
                     Recebido (Mês)
                   </p>
                   <h3 className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(summary.recebido)}
+                    {formatCurrency(synchronizedRecebido)}
                   </h3>
                 </div>
                 <div className="p-3 bg-emerald-50 rounded-full flex-none">
@@ -1835,15 +1880,10 @@ export default function AdminFinancial() {
                   </span>
                   <span className="text-lg font-bold text-emerald-600">
                     {formatCurrency(
-                      paidInstallments
-                        .filter((i) => {
-                          const [year, month] = (i.paid_at || i.created_at).split('T')[0].split('-')
-                          return (
-                            (parseInt(month, 10) - 1).toString() === selectedMonth &&
-                            year === selectedYear
-                          )
-                        })
-                        .reduce((sum, inv) => sum + Number(inv.installment_value || 0), 0) +
+                      paidInstallments.reduce(
+                        (sum, inv) => sum + Number(inv.installment_value || 0),
+                        0,
+                      ) +
                         recebimentos
                           .filter((r) => {
                             if (selectedDentist !== 'all') return false
@@ -1859,11 +1899,10 @@ export default function AdminFinancial() {
                               if (rSector !== selSector) return false
                             }
                             if (!r.data_recebimento) return false
-                            const [year, month] = r.data_recebimento.split('T')[0].split('-')
-                            return (
-                              (parseInt(month, 10) - 1).toString() === selectedMonth &&
-                              year === selectedYear
-                            )
+                            const dateObj = new Date(r.data_recebimento + 'T12:00:00Z')
+                            const itemMonth = dateObj.getMonth().toString()
+                            const itemYear = dateObj.getFullYear().toString()
+                            return itemMonth === selectedMonth && itemYear === selectedYear
                           })
                           .reduce((sum, r) => sum + Number(r.valor_recebido || 0), 0),
                     )}

@@ -48,6 +48,8 @@ import { ptBR } from 'date-fns/locale'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { PartnerPricesPanel, PartnerPricesPanelRef } from './PartnerPricesPanel'
+import { ProfessionalExtractDialog } from './financial/ProfessionalExtractDialog'
+import { formatCurrency } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -225,6 +227,9 @@ export function UsersManagement() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ativos')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [financialFilter, setFinancialFilter] = useState('all')
+  const [financialSummaries, setFinancialSummaries] = useState<Record<string, any>>({})
+  const [selectedExtractDentist, setSelectedExtractDentist] = useState<any>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
@@ -319,15 +324,26 @@ export function UsersManagement() {
     const loadUsers = async () => {
       try {
         setLoading(true)
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('name', { ascending: true })
+        const [
+          { data: usersData, error: usersError },
+          { data: financialData, error: financialError },
+        ] = await Promise.all([
+          supabase.from('profiles').select('*').order('name', { ascending: true }),
+          (supabase as any).from('vw_dentist_financial_summary').select('*'),
+        ])
 
-        if (error) {
-          console.error('Error loading users', error)
-        } else if (isMounted && data) {
-          setUsers(data)
+        if (usersError) {
+          console.error('Error loading users', usersError)
+        } else if (isMounted && usersData) {
+          setUsers(usersData)
+        }
+
+        if (!financialError && financialData && isMounted) {
+          const summariesMap: Record<string, any> = {}
+          financialData.forEach((d: any) => {
+            summariesMap[d.dentist_id] = d
+          })
+          setFinancialSummaries(summariesMap)
         }
       } catch (err: any) {
         console.error('Exception loading users', err)
@@ -372,9 +388,27 @@ export function UsersManagement() {
       if (filterStatus === 'ativos') matchStatus = u.is_active !== false
       else if (filterStatus === 'inativos') matchStatus = u.is_active === false
 
-      return matchSearch && matchStatus
+      let matchFinancial = true
+      if (financialFilter !== 'all') {
+        const fin = financialSummaries[u.id]
+        if (financialFilter === 'pending') {
+          matchFinancial = fin && fin.pending_settlements_count > 0
+        } else if (financialFilter === 'ready') {
+          matchFinancial = fin && fin.ready_to_bill_count > 0
+        } else if (financialFilter === 'production') {
+          matchFinancial = fin && fin.in_production_count > 0
+        } else if (financialFilter === 'none') {
+          matchFinancial =
+            !fin ||
+            (fin.pending_settlements_count === 0 &&
+              fin.ready_to_bill_count === 0 &&
+              fin.in_production_count === 0)
+        }
+      }
+
+      return matchSearch && matchStatus && matchFinancial
     })
-  }, [users, search, filterStatus])
+  }, [users, search, filterStatus, financialFilter, financialSummaries])
 
   const filteredUsers = useMemo(() => {
     return baseFilteredUsers.filter((u) => {
@@ -1018,8 +1052,20 @@ export function UsersManagement() {
             </p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={financialFilter} onValueChange={setFinancialFilter}>
               <SelectTrigger className="w-[180px] uppercase font-semibold text-xs border-border shadow-sm">
+                <SelectValue placeholder="Situação Financeira" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Situações</SelectItem>
+                <SelectItem value="pending">Com Pendências (🔴)</SelectItem>
+                <SelectItem value="ready">Prontos p/ Faturar (🔵)</SelectItem>
+                <SelectItem value="production">Em Produção (🟠)</SelectItem>
+                <SelectItem value="none">Sem Pendências</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px] uppercase font-semibold text-xs border-border shadow-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -1221,7 +1267,7 @@ export function UsersManagement() {
                   <Card
                     key={user.id}
                     className={cn(
-                      'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow shadow-sm',
+                      'relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow shadow-sm flex flex-col',
                       user.is_active === false && 'opacity-60 grayscale-[0.5]',
                       isMaster &&
                         'border-[#e76f51] shadow-sm shadow-[#e76f51]/20 ring-1 ring-[#e76f51]/50',
@@ -1239,7 +1285,7 @@ export function UsersManagement() {
                       openModal(user)
                     }}
                   >
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 flex-1 flex flex-col">
                       <div className="flex items-start justify-between p-4 pb-0">
                         <div className="flex flex-wrap gap-2">
                           {isMaster && (
@@ -1332,6 +1378,19 @@ export function UsersManagement() {
                                   <Key className="w-4 h-4 mr-2" /> Redefinir Senha
                                 </DropdownMenuItem>
                               )}
+                              {(user.role === 'dentist' || user.role === 'laboratory') && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedExtractDentist(user)
+                                    }}
+                                  >
+                                    <FileText className="w-4 h-4 mr-2" /> Extrato do Profissional
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -1347,9 +1406,47 @@ export function UsersManagement() {
                         <h3 className="font-bold text-base text-center line-clamp-1">
                           {user.name}
                         </h3>
+                        {(() => {
+                          const fin = financialSummaries[user.id]
+                          if (!fin) return null
+                          return (
+                            <div className="flex flex-wrap justify-center gap-1.5 mt-2 h-[22px]">
+                              {fin.pending_settlements_count > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-red-50 text-red-600 border-red-200 text-[9px] px-1.5 cursor-help whitespace-nowrap shadow-sm"
+                                  title={`${fin.pending_settlements_count} faturas pendentes (${formatCurrency(fin.pending_settlements_amount)})`}
+                                >
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1 animate-pulse" />{' '}
+                                  Pendente
+                                </Badge>
+                              )}
+                              {fin.ready_to_bill_count > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-600 border-blue-200 text-[9px] px-1.5 cursor-help whitespace-nowrap shadow-sm"
+                                  title={`${fin.ready_to_bill_count} pedidos prontos para faturar (${formatCurrency(fin.ready_to_bill_amount)})`}
+                                >
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1" /> A
+                                  Faturar
+                                </Badge>
+                              )}
+                              {fin.in_production_count > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-amber-50 text-amber-600 border-amber-200 text-[9px] px-1.5 cursor-help whitespace-nowrap shadow-sm"
+                                  title={`${fin.in_production_count} pedidos em produção (${formatCurrency(fin.in_production_amount)})`}
+                                >
+                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1" />{' '}
+                                  Produção
+                                </Badge>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
 
-                      <div className="bg-muted/30 p-4 space-y-2 text-xs">
+                      <div className="bg-muted/30 p-4 space-y-2 text-xs flex-1 border-t">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Briefcase className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{roleObj?.title || user.role}</span>
@@ -2492,6 +2589,13 @@ export function UsersManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ProfessionalExtractDialog
+        dentistId={selectedExtractDentist?.id || null}
+        dentistName={selectedExtractDentist?.name || ''}
+        open={!!selectedExtractDentist}
+        onOpenChange={(o) => !o && setSelectedExtractDentist(null)}
+      />
     </div>
   )
 }
