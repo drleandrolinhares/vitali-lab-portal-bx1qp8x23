@@ -34,6 +34,7 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
+  Printer,
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { InvoicePreviewDialog } from '@/components/financial/InvoicePreviewDialog'
@@ -147,6 +148,13 @@ export default function AdminFinancial() {
   const [selectedFullOrder, setSelectedFullOrder] = useState<Order | null>(null)
   const [isOrderSheetOpen, setIsOrderSheetOpen] = useState(false)
   const [orderObsText, setOrderObsText] = useState('')
+
+  // Print Existing Invoice State
+  const [existingInvoicePrint, setExistingInvoicePrint] = useState<any>(null)
+
+  const handleOpenPrintPreview = (invoice: any) => {
+    setExistingInvoicePrint(invoice)
+  }
 
   const handleViewOrder = async (orderId: string) => {
     try {
@@ -1644,22 +1652,36 @@ export default function AdminFinancial() {
                               className="text-right pr-6"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {isAdmin && (
+                              <div className="flex justify-end gap-2 items-center">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    setReceiveSettlement(invoice)
-                                    setReceiveDate(new Date().toISOString().split('T')[0])
-                                    setReceiveNote('')
+                                    handleOpenPrintPreview(invoice)
                                   }}
-                                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                  className="text-xs font-semibold"
                                 >
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  RECEBER
+                                  <Printer className="w-3 h-3 mr-1" />
+                                  IMPRIMIR
                                 </Button>
-                              )}
+                                {isAdmin && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setReceiveSettlement(invoice)
+                                      setReceiveDate(new Date().toISOString().split('T')[0])
+                                      setReceiveNote('')
+                                    }}
+                                    className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    RECEBER
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                           {expandedPendingInvoices[invoice.id] && invoice.orders_snapshot && (
@@ -1757,7 +1779,8 @@ export default function AdminFinancial() {
                       <TableHead>Data Pagamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right pr-6">Valor</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-right pr-6">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1814,13 +1837,30 @@ export default function AdminFinancial() {
                                 </p>
                               )}
                             </TableCell>
-                            <TableCell className="text-right font-medium pr-6 text-slate-900">
+                            <TableCell className="text-right font-medium text-slate-900">
                               {formatCurrency(invoice.amount)}
+                            </TableCell>
+                            <TableCell
+                              className="text-right pr-6"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenPrintPreview(invoice)
+                                }}
+                                className="text-xs font-semibold"
+                              >
+                                <Printer className="w-3 h-3 mr-1" />
+                                IMPRIMIR
+                              </Button>
                             </TableCell>
                           </TableRow>
                           {expandedPaidInvoices[invoice.id] && invoice.orders_snapshot && (
                             <TableRow className="bg-slate-50/50">
-                              <TableCell colSpan={5} className="p-0 border-b-0">
+                              <TableCell colSpan={6} className="p-0 border-b-0">
                                 <div className="pl-16 pr-6 py-4">
                                   <Table className="bg-white rounded-md border text-sm shadow-sm">
                                     <TableHeader className="bg-slate-100/50">
@@ -2387,6 +2427,20 @@ export default function AdminFinancial() {
           clinicName={profiles.find((p) => p.id === manualInvoiceDentist)?.clinic || ''}
           orders={modalOrders.filter((o: any) => selectedOrderIds.includes(o.id))}
           totalAmount={selectedTotalAmount}
+        />
+      )}
+
+      {/* EXISTING INVOICE PREVIEW */}
+      {existingInvoicePrint && (
+        <InvoicePreviewDialog
+          open={!!existingInvoicePrint}
+          onOpenChange={(open) => !open && setExistingInvoicePrint(null)}
+          dentistName={existingInvoicePrint.dentistName}
+          clinicName={existingInvoicePrint.clinic}
+          orders={existingInvoicePrint.orders_snapshot || []}
+          totalAmount={existingInvoicePrint.amount}
+          settlementId={existingInvoicePrint.id}
+          date={existingInvoicePrint.paid_at || existingInvoicePrint.created_at}
         />
       )}
 

@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Table,
@@ -9,7 +11,6 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
-import { useAppStore } from '@/stores/main'
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -37,11 +38,53 @@ export function InvoicePreviewDialog({
   settlementId?: string
   date?: string
 }) {
-  const { currentUser } = useAppStore()
+  const [labProfile, setLabProfile] = useState<any>(null)
+
+  useEffect(() => {
+    async function fetchLabProfile() {
+      // Primeiro tenta master
+      let { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'master')
+        .limit(1)
+        .maybeSingle()
+
+      // Se não achar, tenta admin
+      if (!data) {
+        const { data: adminData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'admin')
+          .limit(1)
+          .maybeSingle()
+        data = adminData
+      }
+
+      if (data) {
+        setLabProfile(data)
+      }
+    }
+
+    if (open) {
+      fetchLabProfile()
+    }
+  }, [open])
 
   const handlePrint = () => {
     window.print()
   }
+
+  const fullAddress = [
+    labProfile?.address,
+    labProfile?.address_number,
+    labProfile?.address_complement,
+    labProfile?.city,
+    labProfile?.state,
+    labProfile?.cep ? `CEP: ${labProfile.cep}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,7 +97,7 @@ export function InvoicePreviewDialog({
             <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
               Fatura de Serviços
             </h1>
-            <p className="text-slate-500 mt-1">Soluções Cerâmicas</p>
+            <p className="text-slate-500 mt-1">{labProfile?.name || 'Laboratório'}</p>
             {settlementId && (
               <p className="text-sm font-medium mt-2">
                 Fatura #{settlementId.substring(0, 8).toUpperCase()}
@@ -120,27 +163,54 @@ export function InvoicePreviewDialog({
               </TableBody>
             </Table>
           </div>
-          <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 print:flex-row print:mt-10 print:items-start">
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full max-w-sm print:bg-white print:border-2 print:border-slate-300 print:break-inside-avoid">
-              <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Dados para Pagamento (PIX)
-              </p>
-              <p className="text-sm text-slate-600">
-                <span className="font-semibold">Chave PIX:</span>{' '}
-                {currentUser?.pix_key || 'Não cadastrada'}
-              </p>
-              <p className="text-sm text-slate-600">
-                <span className="font-semibold">Tipo:</span>{' '}
-                {currentUser?.pix_type || 'Não cadastrado'}
-              </p>
-              {currentUser?.bank_name && (
-                <p className="text-sm text-slate-600">
-                  <span className="font-semibold">Banco:</span> {currentUser.bank_name}
+
+          <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 print:flex-col print:mt-10 print:items-start print:gap-8">
+            <div className="flex flex-col gap-4 w-full max-w-xl print:w-full print:max-w-none">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full print:bg-transparent print:border-t-2 print:border-b-0 print:border-x-0 print:border-slate-300 print:rounded-none print:p-0 print:pt-4 print:break-inside-avoid">
+                <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2 print:text-slate-900">
+                  Dados do Laboratório
                 </p>
-              )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
+                  <p className="text-sm text-slate-600 print:text-slate-800">
+                    <span className="font-semibold">Razão Social:</span>{' '}
+                    {labProfile?.name || 'Não cadastrada'}
+                  </p>
+                  {(labProfile?.cpf || labProfile?.rg) && (
+                    <p className="text-sm text-slate-600 print:text-slate-800">
+                      <span className="font-semibold">CNPJ/CPF:</span>{' '}
+                      {labProfile?.cpf || labProfile?.rg}
+                    </p>
+                  )}
+                  <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
+                    <span className="font-semibold">Endereço:</span>{' '}
+                    {fullAddress || 'Não cadastrado'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 w-full print:bg-transparent print:border-t-2 print:border-b-0 print:border-x-0 print:border-slate-300 print:rounded-none print:p-0 print:pt-4 print:break-inside-avoid">
+                <p className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-2 print:text-slate-900">
+                  Dados para Pagamento (PIX)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
+                  <p className="text-sm text-slate-600 print:text-slate-800">
+                    <span className="font-semibold">Chave PIX:</span>{' '}
+                    {labProfile?.pix_key || 'Não cadastrada'}
+                  </p>
+                  <p className="text-sm text-slate-600 print:text-slate-800">
+                    <span className="font-semibold">Tipo:</span>{' '}
+                    {labProfile?.pix_type || 'Não cadastrado'}
+                  </p>
+                  {labProfile?.bank_name && (
+                    <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
+                      <span className="font-semibold">Banco:</span> {labProfile.bank_name}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="text-right bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px] print:hidden">
+            <div className="text-right bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px] print:hidden self-end">
               <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">
                 Total da Fatura
               </p>
