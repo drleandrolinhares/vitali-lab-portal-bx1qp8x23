@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
@@ -74,7 +75,13 @@ export default function AdminFinancial() {
   const [installments, setInstallments] = useState<any[]>([])
   const [recebimentos, setRecebimentos] = useState<any[]>([])
   const [financialSummary, setFinancialSummary] = useState<any[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilters, setStatusFilters] = useState<string[]>([])
+
+  const toggleStatusFilter = (val: string) => {
+    setStatusFilters((prev) =>
+      prev.includes(val) ? prev.filter((p) => p !== val) : [...prev, val],
+    )
+  }
 
   // Modal State
   const [manualInvoiceDentist, setManualInvoiceDentist] = useState<string | null>(null)
@@ -477,9 +484,16 @@ export default function AdminFinancial() {
 
         if (!visible) return false
 
-        if (statusFilter === 'pending_invoices' && d.pending_settlements_count === 0) return false
-        if (statusFilter === 'ready_to_bill' && d.ready_to_bill_count_global === 0) return false
-        if (statusFilter === 'in_production' && d.in_production_count_global === 0) return false
+        if (statusFilters.length > 0) {
+          let matchesFilter = false
+          if (statusFilters.includes('pending_invoices') && d.pending_settlements_count > 0)
+            matchesFilter = true
+          if (statusFilters.includes('ready_to_bill') && d.ready_to_bill_count_global > 0)
+            matchesFilter = true
+          if (statusFilters.includes('in_production') && d.in_production_count_global > 0)
+            matchesFilter = true
+          if (!matchesFilter) return false
+        }
 
         return true
       })
@@ -500,7 +514,7 @@ export default function AdminFinancial() {
     selectedYear,
     selectedDentist,
     showOnlyReadyToInvoice,
-    statusFilter,
+    statusFilters,
     selectedLab,
   ])
 
@@ -537,14 +551,18 @@ export default function AdminFinancial() {
       })
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
+        const summaryForDentist = financialSummary.find((sum) => sum.dentist_id === s.dentist_id)
         return {
           ...s,
           dentistName: dentist?.name || 'Desconhecido',
           clinic: dentist?.clinic || '',
+          pending_settlements_count: Number(summaryForDentist?.pending_settlements_count || 0),
+          ready_to_bill_count_global: Number(summaryForDentist?.ready_to_bill_count || 0),
+          in_production_count_global: Number(summaryForDentist?.in_production_count || 0),
         }
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [settlements, profiles, selectedDentist, selectedLab, directOrders])
+  }, [settlements, profiles, selectedDentist, selectedLab, directOrders, financialSummary])
 
   const paidInvoices = useMemo(() => {
     const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
@@ -587,10 +605,14 @@ export default function AdminFinancial() {
       })
       .map((s) => {
         const dentist = profiles.find((p) => p.id === s.dentist_id)
+        const summaryForDentist = financialSummary.find((sum) => sum.dentist_id === s.dentist_id)
         return {
           ...s,
           dentistName: dentist?.name || 'Desconhecido',
           clinic: dentist?.clinic || '',
+          pending_settlements_count: Number(summaryForDentist?.pending_settlements_count || 0),
+          ready_to_bill_count_global: Number(summaryForDentist?.ready_to_bill_count || 0),
+          in_production_count_global: Number(summaryForDentist?.in_production_count || 0),
         }
       })
       .sort(
@@ -606,6 +628,7 @@ export default function AdminFinancial() {
     selectedYear,
     selectedLab,
     directOrders,
+    financialSummary,
   ])
 
   const pendingInstallments = useMemo(() => {
@@ -1210,19 +1233,78 @@ export default function AdminFinancial() {
             </label>
           </div>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[160px] h-10">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full font-medium">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="pending_invoices">Fatura Pendente</SelectItem>
-                <SelectItem value="ready_to_bill">Pronto p/ Faturar</SelectItem>
-                <SelectItem value="in_production">Em Produção</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2 bg-white border border-slate-200 rounded-md shadow-sm h-10 font-medium text-slate-700 w-auto justify-between min-w-[160px] px-3"
+              >
+                <span className="truncate">
+                  {statusFilters.length === 0
+                    ? 'Todos os Status'
+                    : `${statusFilters.length} status selecionado(s)`}
+                </span>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-2" align="start">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center space-x-2 px-1">
+                  <Checkbox
+                    id="filter-all"
+                    checked={statusFilters.length === 0}
+                    onCheckedChange={(c) => (c ? setStatusFilters([]) : null)}
+                  />
+                  <label
+                    htmlFor="filter-all"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Todos os Status
+                  </label>
+                </div>
+                <div className="h-px bg-slate-200 my-1" />
+                <div className="flex items-center space-x-2 px-1">
+                  <Checkbox
+                    id="filter-pending"
+                    checked={statusFilters.includes('pending_invoices')}
+                    onCheckedChange={() => toggleStatusFilter('pending_invoices')}
+                  />
+                  <label
+                    htmlFor="filter-pending"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Fatura Pendente
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2 px-1">
+                  <Checkbox
+                    id="filter-ready"
+                    checked={statusFilters.includes('ready_to_bill')}
+                    onCheckedChange={() => toggleStatusFilter('ready_to_bill')}
+                  />
+                  <label
+                    htmlFor="filter-ready"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Pronto p/ Faturar
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2 px-1">
+                  <Checkbox
+                    id="filter-production"
+                    checked={statusFilters.includes('in_production')}
+                    onCheckedChange={() => toggleStatusFilter('in_production')}
+                  />
+                  <label
+                    htmlFor="filter-production"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Em Produção
+                  </label>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md shadow-sm p-1 min-w-[200px] h-10">
             <Select value={selectedDentist} onValueChange={setSelectedDentist}>
@@ -1531,6 +1613,21 @@ export default function AdminFinancial() {
                               {invoice.clinic && (
                                 <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
                               )}
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {invoice.pending_settlements_count > 0 && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-[10px] uppercase px-1.5 py-0 h-4"
+                                  >
+                                    Fatura Pendente
+                                  </Badge>
+                                )}
+                                {invoice.ready_to_bill_count_global > 0 && (
+                                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[10px] uppercase px-1.5 py-0 h-4 border-none">
+                                    Pronto p/ Faturar
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -1700,6 +1797,21 @@ export default function AdminFinancial() {
                               {invoice.clinic && (
                                 <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
                               )}
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {invoice.pending_settlements_count > 0 && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-[10px] uppercase px-1.5 py-0 h-4"
+                                  >
+                                    Fatura Pendente
+                                  </Badge>
+                                )}
+                                {invoice.ready_to_bill_count_global > 0 && (
+                                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[10px] uppercase px-1.5 py-0 h-4 border-none">
+                                    Pronto p/ Faturar
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge
