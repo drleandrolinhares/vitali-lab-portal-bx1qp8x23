@@ -74,6 +74,7 @@ export function SettlementDetailsDialog({
       const opt = {
         margin: [0, 0, 0, 0],
         filename: filename,
+        pagebreak: { mode: ['css', 'legacy'] },
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -115,7 +116,7 @@ export function SettlementDetailsDialog({
         </DialogHeader>
 
         <div className="p-6 overflow-auto flex-1 print:overflow-visible print:p-0 bg-slate-100 print:bg-white flex justify-center">
-          <div className="bg-white w-full max-w-[210mm] shadow-md border border-slate-200 print:border-none print:shadow-none min-h-[297mm] flex flex-col p-8 print:p-0">
+          <div className="bg-white w-full max-w-[210mm] shadow-md border border-slate-200 print:border-none print:shadow-none flex flex-col p-8 print:p-0">
             {/* Header */}
             <div className="text-center border-b border-slate-200 pb-6 mb-8 shrink-0">
               <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
@@ -196,7 +197,7 @@ export function SettlementDetailsDialog({
                 </TableHeader>
                 <TableBody>
                   {orders.map((o: any) => (
-                    <TableRow key={o.id}>
+                    <TableRow key={o.id} className="print:break-inside-avoid">
                       <TableCell className="font-medium text-xs font-mono">
                         {o.friendlyId || o.id?.substring(0, 8)}
                       </TableCell>
@@ -219,7 +220,7 @@ export function SettlementDetailsDialog({
             </div>
 
             {/* Persistent Footer */}
-            <div className="pt-8 border-t-2 border-slate-200 flex justify-between text-sm shrink-0">
+            <div className="pt-8 mt-8 border-t-2 border-slate-200 flex justify-between text-sm shrink-0 print:break-inside-avoid">
               <div className="w-[48%]">
                 <p className="font-bold uppercase tracking-wider text-slate-900 mb-2">
                   Dados do Laboratório
@@ -275,7 +276,6 @@ export function SettlementDetailsDialog({
             ref={pdfContainerRef}
             style={{
               width: '210mm',
-              minHeight: '297mm',
               padding: '20mm',
               backgroundColor: '#fff',
               display: 'flex',
@@ -449,7 +449,10 @@ export function SettlementDetailsDialog({
                 </thead>
                 <tbody>
                   {orders.map((o: any) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <tr
+                      key={o.id}
+                      style={{ borderBottom: '1px solid #e2e8f0', pageBreakInside: 'avoid' }}
+                    >
                       <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
                         {o.friendlyId || o.id?.substring(0, 8)}
                       </td>
@@ -464,16 +467,17 @@ export function SettlementDetailsDialog({
               </table>
             </div>
 
-            {/* Push footer to bottom */}
+            {/* Footer */}
             <div
               style={{
-                marginTop: 'auto',
+                marginTop: '2rem',
                 paddingTop: '2rem',
                 borderTop: '2px solid #cbd5e1',
                 display: 'flex',
                 justifyContent: 'space-between',
                 fontSize: '12px',
                 flexShrink: 0,
+                pageBreakInside: 'avoid',
               }}
             >
               <div style={{ width: '48%' }}>
