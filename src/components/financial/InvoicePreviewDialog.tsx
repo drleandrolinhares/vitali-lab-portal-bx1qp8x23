@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Table,
@@ -11,6 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
+import { useAppStore } from '@/stores/main'
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -38,53 +37,22 @@ export function InvoicePreviewDialog({
   settlementId?: string
   date?: string
 }) {
-  const [labProfile, setLabProfile] = useState<any>(null)
+  const { appSettings } = useAppStore()
 
-  useEffect(() => {
-    async function fetchLabProfile() {
-      // Primeiro tenta master
-      let { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'master')
-        .limit(1)
-        .maybeSingle()
-
-      // Se não achar, tenta admin
-      if (!data) {
-        const { data: adminData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'admin')
-          .limit(1)
-          .maybeSingle()
-        data = adminData
-      }
-
-      if (data) {
-        setLabProfile(data)
-      }
-    }
-
-    if (open) {
-      fetchLabProfile()
-    }
-  }, [open])
+  const labProfile = {
+    name: appSettings['lab_razao_social'] || appSettings['lab_name'] || 'Laboratório',
+    cnpj: appSettings['lab_cnpj'] || '',
+    address: appSettings['lab_address'] || '',
+    pix_key: appSettings['lab_pix_key'] || '',
+    pix_type: appSettings['lab_pix_type'] || '',
+    bank_name: appSettings['lab_bank_name'] || '',
+  }
 
   const handlePrint = () => {
     window.print()
   }
 
-  const fullAddress = [
-    labProfile?.address,
-    labProfile?.address_number,
-    labProfile?.address_complement,
-    labProfile?.city,
-    labProfile?.state,
-    labProfile?.cep ? `CEP: ${labProfile.cep}` : null,
-  ]
-    .filter(Boolean)
-    .join(', ')
+  const fullAddress = labProfile.address
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,7 +65,7 @@ export function InvoicePreviewDialog({
             <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
               Fatura de Serviços
             </h1>
-            <p className="text-slate-500 mt-1">{labProfile?.name || 'Laboratório'}</p>
+            <p className="text-slate-500 mt-1">{labProfile.name}</p>
             {settlementId && (
               <p className="text-sm font-medium mt-2">
                 Fatura #{settlementId.substring(0, 8).toUpperCase()}
@@ -173,18 +141,18 @@ export function InvoicePreviewDialog({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
                   <p className="text-sm text-slate-600 print:text-slate-800">
                     <span className="font-semibold">Razão Social:</span>{' '}
-                    {labProfile?.name || 'Não cadastrada'}
+                    {labProfile.name || 'Não cadastrada'}
                   </p>
-                  {(labProfile?.cpf || labProfile?.rg) && (
+                  {labProfile.cnpj && (
                     <p className="text-sm text-slate-600 print:text-slate-800">
-                      <span className="font-semibold">CNPJ/CPF:</span>{' '}
-                      {labProfile?.cpf || labProfile?.rg}
+                      <span className="font-semibold">CNPJ:</span> {labProfile.cnpj}
                     </p>
                   )}
-                  <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
-                    <span className="font-semibold">Endereço:</span>{' '}
-                    {fullAddress || 'Não cadastrado'}
-                  </p>
+                  {fullAddress && (
+                    <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
+                      <span className="font-semibold">Endereço:</span> {fullAddress}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -195,13 +163,14 @@ export function InvoicePreviewDialog({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 print:grid-cols-2">
                   <p className="text-sm text-slate-600 print:text-slate-800">
                     <span className="font-semibold">Chave PIX:</span>{' '}
-                    {labProfile?.pix_key || 'Não cadastrada'}
+                    {labProfile.pix_key || 'Não cadastrada'}
                   </p>
-                  <p className="text-sm text-slate-600 print:text-slate-800">
-                    <span className="font-semibold">Tipo:</span>{' '}
-                    {labProfile?.pix_type || 'Não cadastrado'}
-                  </p>
-                  {labProfile?.bank_name && (
+                  {labProfile.pix_type && (
+                    <p className="text-sm text-slate-600 print:text-slate-800">
+                      <span className="font-semibold">Tipo:</span> {labProfile.pix_type}
+                    </p>
+                  )}
+                  {labProfile.bank_name && (
                     <p className="text-sm text-slate-600 sm:col-span-2 print:col-span-2 print:text-slate-800">
                       <span className="font-semibold">Banco:</span> {labProfile.bank_name}
                     </p>
