@@ -1797,21 +1797,6 @@ export default function AdminFinancial() {
                               {invoice.clinic && (
                                 <p className="text-xs text-muted-foreground">{invoice.clinic}</p>
                               )}
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {invoice.pending_settlements_count > 0 && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-[10px] uppercase px-1.5 py-0 h-4"
-                                  >
-                                    Fatura Pendente
-                                  </Badge>
-                                )}
-                                {invoice.ready_to_bill_count_global > 0 && (
-                                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[10px] uppercase px-1.5 py-0 h-4 border-none">
-                                    Pronto p/ Faturar
-                                  </Badge>
-                                )}
-                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge
