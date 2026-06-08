@@ -156,6 +156,17 @@ export default function AdminFinancial() {
     setExistingInvoicePrint(invoice)
   }
 
+  // Pending Invoices Selection
+  const [selectedPendingInvoiceIds, setSelectedPendingInvoiceIds] = useState<string[]>([])
+
+  const handleTogglePendingInvoiceSelection = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedPendingInvoiceIds((prev) => [...prev, id])
+    } else {
+      setSelectedPendingInvoiceIds((prev) => prev.filter((x) => x !== id))
+    }
+  }
+
   const handleViewOrder = async (orderId: string) => {
     try {
       const { data: o, error } = await supabase
@@ -582,6 +593,43 @@ export default function AdminFinancial() {
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }, [settlements, profiles, selectedDentist, selectedLab, directOrders, financialSummary])
+
+  const handleSelectAllPendingInvoices = (checked: boolean) => {
+    if (checked) {
+      setSelectedPendingInvoiceIds(pendingInvoices.map((inv) => inv.id))
+    } else {
+      setSelectedPendingInvoiceIds([])
+    }
+  }
+
+  const selectedPendingInvoices = useMemo(() => {
+    return pendingInvoices.filter((inv) => selectedPendingInvoiceIds.includes(inv.id))
+  }, [pendingInvoices, selectedPendingInvoiceIds])
+
+  const isValidForGrouping = useMemo(() => {
+    const uniqueDentists = new Set(selectedPendingInvoices.map((inv) => inv.dentist_id))
+    return uniqueDentists.size === 1
+  }, [selectedPendingInvoices])
+
+  const handleGroupPrint = () => {
+    if (!isValidForGrouping || selectedPendingInvoices.length === 0) return
+
+    const firstInv = selectedPendingInvoices[0]
+    const combinedOrders = selectedPendingInvoices.flatMap((inv) => inv.orders_snapshot || [])
+    const combinedAmount = selectedPendingInvoices.reduce(
+      (sum, inv) => sum + Number(inv.amount || 0),
+      0,
+    )
+
+    setExistingInvoicePrint({
+      dentistName: firstInv.dentistName,
+      clinic: firstInv.clinic,
+      orders_snapshot: combinedOrders,
+      amount: combinedAmount,
+      id: `AGRUPADO-${selectedPendingInvoices.length}-FATURAS`,
+      created_at: new Date().toISOString(),
+    })
+  }
 
   const paidInvoices = useMemo(() => {
     const isLabSelected = selectedLab && selectedLab !== 'TODOS' && selectedLab !== 'Todos'
@@ -1585,14 +1633,42 @@ export default function AdminFinancial() {
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
             <Card className="shadow-sm border-slate-200 flex flex-col min-h-0">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="text-lg text-slate-800">Faturas Únicas Pendentes</CardTitle>
+                {selectedPendingInvoiceIds.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    {!isValidForGrouping && (
+                      <span className="text-xs text-red-500 font-medium">
+                        Apenas faturas do mesmo dentista podem ser agrupadas.
+                      </span>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!isValidForGrouping}
+                      onClick={handleGroupPrint}
+                      className="gap-2 bg-slate-700 hover:bg-slate-800 text-white border-none"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Agrupar para Impressão ({selectedPendingInvoiceIds.length})
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[50px] pl-6"></TableHead>
+                      <TableHead className="w-[40px] pl-4">
+                        <Checkbox
+                          checked={
+                            pendingInvoices.length > 0 &&
+                            selectedPendingInvoiceIds.length === pendingInvoices.length
+                          }
+                          onCheckedChange={(c) => handleSelectAllPendingInvoices(!!c)}
+                        />
+                      </TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                       <TableHead>Data Fechamento</TableHead>
                       <TableHead>Dentista / Clínica</TableHead>
                       <TableHead>Status</TableHead>
@@ -1603,7 +1679,7 @@ export default function AdminFinancial() {
                   <TableBody>
                     {pendingInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                           Nenhuma fatura única pendente encontrada.
                         </TableCell>
                       </TableRow>
@@ -1614,7 +1690,18 @@ export default function AdminFinancial() {
                             className="hover:bg-slate-50/50 cursor-pointer"
                             onClick={() => togglePendingInvoice(invoice.id)}
                           >
-                            <TableCell className="pl-6 w-[50px]">
+                            <TableCell
+                              className="pl-4 w-[40px]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={selectedPendingInvoiceIds.includes(invoice.id)}
+                                onCheckedChange={(c) =>
+                                  handleTogglePendingInvoiceSelection(invoice.id, !!c)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="w-[50px]">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1700,7 +1787,7 @@ export default function AdminFinancial() {
                           </TableRow>
                           {expandedPendingInvoices[invoice.id] && invoice.orders_snapshot && (
                             <TableRow className="bg-slate-50/50">
-                              <TableCell colSpan={6} className="p-0 border-b-0">
+                              <TableCell colSpan={7} className="p-0 border-b-0">
                                 <div className="pl-16 pr-6 py-4">
                                   <Table className="bg-white rounded-md border text-sm shadow-sm">
                                     <TableHeader className="bg-slate-100/50">
