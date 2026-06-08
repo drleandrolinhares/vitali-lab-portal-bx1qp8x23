@@ -217,10 +217,14 @@ export default function FinancialPage() {
   const handleExportCSV = (settlement: any) => {
     try {
       const snapshot = settlement.orders_snapshot || []
-      let csv = 'Data da Liquidação,Paciente,Trabalho,Valor Cobrado\n'
+      let csv = 'Data da Liquidação,Data de Conclusão,Paciente,Trabalho,Valor Cobrado\n'
       const date = new Date(settlement.created_at).toLocaleDateString('pt-BR')
       snapshot.forEach((s: any) => {
-        csv += `"${date}","${s.patientName || ''}","${s.workType || ''}",${s.clearedAmount || 0}\n`
+        const completionDate =
+          s.completedAt || s.completed_at
+            ? new Date(s.completedAt || s.completed_at).toLocaleDateString('pt-BR')
+            : '-'
+        csv += `"${date}","${completionDate}","${s.patientName || ''}","${s.workType || ''}",${s.clearedAmount || 0}\n`
       })
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -346,7 +350,7 @@ export default function FinancialPage() {
                         <TableHead className="pl-6">Pedido</TableHead>
                         <TableHead>Paciente</TableHead>
                         <TableHead>Trabalho</TableHead>
-                        <TableHead>Data de Criação</TableHead>
+                        <TableHead>Data de Conclusão</TableHead>
                         <TableHead className="text-right pr-6">Valor Faturado</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -381,7 +385,11 @@ export default function FinancialPage() {
                             <TableCell className="font-semibold">{o.patientName}</TableCell>
                             <TableCell className="text-muted-foreground">{o.workType}</TableCell>
                             <TableCell className="text-muted-foreground">
-                              {format(new Date(o.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(
+                                new Date(o.completedAt || o.completed_at || o.createdAt),
+                                'dd/MM/yyyy',
+                                { locale: ptBR },
+                              )}
                             </TableCell>
                             <TableCell className="text-right pr-6 font-bold text-emerald-600">
                               {formatBRL(o.basePrice)}

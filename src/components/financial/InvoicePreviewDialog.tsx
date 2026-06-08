@@ -158,6 +158,7 @@ export function InvoicePreviewDialog({
                 <TableHeader className="bg-slate-50/80">
                   <TableRow>
                     <TableHead className="font-semibold">Pedido</TableHead>
+                    <TableHead className="font-semibold">Conclusão</TableHead>
                     <TableHead className="font-semibold">Paciente</TableHead>
                     <TableHead className="font-semibold">Descrição dos casos</TableHead>
                     <TableHead className="font-semibold">Dentes/Arcadas</TableHead>
@@ -181,6 +182,11 @@ export function InvoicePreviewDialog({
                       <TableRow key={o.id} className="print:break-inside-avoid">
                         <TableCell className="font-medium text-xs font-mono">
                           {o.friendlyId || o.friendly_id || o.id?.substring(0, 8)}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                          {o.completedAt || o.completed_at
+                            ? new Date(o.completedAt || o.completed_at).toLocaleDateString('pt-BR')
+                            : '-'}
                         </TableCell>
                         <TableCell>{o.patientName || o.patient_name}</TableCell>
                         <TableCell>{o.workType || o.work_type || '-'}</TableCell>
@@ -346,6 +352,9 @@ export function InvoicePreviewDialog({
                       Pedido
                     </th>
                     <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 'bold' }}>
+                      Conclusão
+                    </th>
+                    <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 'bold' }}>
                       Paciente
                     </th>
                     <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 'bold' }}>
@@ -378,6 +387,11 @@ export function InvoicePreviewDialog({
                       >
                         <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
                           {o.friendlyId || o.friendly_id || o.id?.substring(0, 8)}
+                        </td>
+                        <td style={{ padding: '12px 8px', whiteSpace: 'nowrap' }}>
+                          {o.completedAt || o.completed_at
+                            ? new Date(o.completedAt || o.completed_at).toLocaleDateString('pt-BR')
+                            : '-'}
                         </td>
                         <td style={{ padding: '12px 8px' }}>{o.patientName || o.patient_name}</td>
                         <td style={{ padding: '12px 8px' }}>{o.workType || o.work_type || '-'}</td>

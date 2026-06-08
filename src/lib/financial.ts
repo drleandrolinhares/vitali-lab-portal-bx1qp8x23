@@ -36,7 +36,14 @@ export function getOrderFinancials(order: any, priceList: any[], kanbanStages: a
 
 export function filterOrdersForFinancials(orders: any[], monthYear: string) {
   if (!orders || !Array.isArray(orders)) return []
-  return orders
+  return orders.filter((o) => {
+    const isCompleted = o.status === 'completed' || o.status === 'delivered'
+    const dateStr = isCompleted
+      ? o.completed_at || o.completedAt || o.created_at || o.createdAt
+      : o.created_at || o.createdAt
+    if (!dateStr) return false
+    return dateStr.startsWith(monthYear)
+  })
 }
 
 export function formatBRL(value: number | string | undefined | null): string {
@@ -80,7 +87,7 @@ export function getOrderCompletionDate(order: any): string | null {
   if (!order) return null
 
   if (order.status === 'completed' || order.status === 'delivered') {
-    return order.updated_at || order.created_at || null
+    return order.completed_at || order.completedAt || order.updated_at || order.created_at || null
   }
 
   return null

@@ -77,6 +77,7 @@ export interface Order {
   dbStatus: OrderStatus
   isAcknowledged?: boolean
   createdAt: string
+  completedAt?: string
   history: OrderHistory[]
   clearedBalance: number
   basePrice: number

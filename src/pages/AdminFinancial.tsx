@@ -194,6 +194,7 @@ export default function AdminFinancial() {
           status: o.status,
           dbStatus: o.status,
           createdAt: o.created_at,
+          completedAt: o.completed_at,
           history: [],
           clearedBalance: o.cleared_balance,
           basePrice: o.base_price,
@@ -273,7 +274,7 @@ export default function AdminFinancial() {
           supabase
             .from('orders')
             .select(
-              'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, work_type, kanban_stage, is_repetition, sector',
+              'id, friendly_id, patient_name, dentist_id, status, base_price, settlement_id, created_at, completed_at, work_type, kanban_stage, is_repetition, sector',
             ),
           supabase.from('billing_installments').select('*'),
           supabase.from('recebimentos').select('*'),
@@ -348,7 +349,7 @@ export default function AdminFinancial() {
       const isCancelled = o.status === 'cancelled'
       const basePrice = Number(o.base_price || 0)
 
-      const orderDate = new Date(o.created_at)
+      const orderDate = new Date(o.completed_at || o.created_at)
       const orderMonth = orderDate.getMonth().toString()
       const orderYear = orderDate.getFullYear().toString()
       const isSelectedPeriod = orderMonth === selectedMonth && orderYear === selectedYear
@@ -374,6 +375,7 @@ export default function AdminFinancial() {
           workType: o.work_type,
           basePrice: basePrice,
           createdAt: o.created_at,
+          completedAt: o.completed_at,
           isRepetition: o.is_repetition,
           sector: o.sector,
         })
@@ -1095,6 +1097,7 @@ export default function AdminFinancial() {
         workType: o.workType,
         clearedAmount: o.basePrice,
         isRepetition: o.isRepetition,
+        completedAt: o.completedAt || o.createdAt,
       }))
 
       const isInstallment = paymentType === 'installment'
@@ -2259,7 +2262,7 @@ export default function AdminFinancial() {
                     <TableRow>
                       <TableHead className="w-12 text-center"></TableHead>
                       <TableHead>Pedido</TableHead>
-                      <TableHead>Data de Entrada</TableHead>
+                      <TableHead>Data de Conclusão</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2290,7 +2293,9 @@ export default function AdminFinancial() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>{new Date(o.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>
+                          {new Date(o.completedAt || o.createdAt).toLocaleDateString('pt-BR')}
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(o.basePrice || 0)}
                         </TableCell>
