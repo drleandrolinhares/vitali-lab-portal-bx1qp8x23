@@ -678,6 +678,7 @@ export type Database = {
           cadista_service_id: string | null
           cleared_balance: number
           color_and_considerations: string | null
+          completed_at: string | null
           created_at: string
           created_by: string | null
           custo_adicional_descricao: string | null
@@ -717,6 +718,7 @@ export type Database = {
           cadista_service_id?: string | null
           cleared_balance?: number
           color_and_considerations?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           custo_adicional_descricao?: string | null
@@ -756,6 +758,7 @@ export type Database = {
           cadista_service_id?: string | null
           cleared_balance?: number
           color_and_considerations?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           custo_adicional_descricao?: string | null
@@ -1756,6 +1759,7 @@ export const Constants = {
 //   is_repetition: boolean (nullable, default: false)
 //   maquiagem_id: uuid (nullable)
 //   acabamento_id: uuid (nullable)
+//   completed_at: timestamp with time zone (nullable)
 // Table: partner_prices
 //   id: uuid (not null, default: gen_random_uuid())
 //   partner_id: uuid (not null)
@@ -2348,6 +2352,24 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION handle_order_status_update()
+//   CREATE OR REPLACE FUNCTION public.handle_order_status_update()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     -- If status changes to completed/delivered, set completed_at
+//     IF NEW.status IN ('completed', 'delivered', 'CONCLUÍDO', 'ENTREGUE') AND (OLD.status NOT IN ('completed', 'delivered', 'CONCLUÍDO', 'ENTREGUE') OR OLD.status IS NULL) THEN
+//       NEW.completed_at := NOW();
+//     -- If status reverts from completed/delivered to something else, unset completed_at
+//     ELSIF NEW.status NOT IN ('completed', 'delivered', 'CONCLUÍDO', 'ENTREGUE') THEN
+//       NEW.completed_at := NULL;
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION is_current_user_active()
 //   CREATE OR REPLACE FUNCTION public.is_current_user_active()
 //    RETURNS boolean
@@ -2459,6 +2481,7 @@ export const Constants = {
 //   on_inventory_transaction: CREATE TRIGGER on_inventory_transaction AFTER INSERT ON public.inventory_transactions FOR EACH ROW EXECUTE FUNCTION update_inventory_quantity()
 // Table: orders
 //   on_order_created: CREATE TRIGGER on_order_created AFTER INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_new_order()
+//   on_order_status_update: CREATE TRIGGER on_order_status_update BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_order_status_update()
 //   trg_handle_order_repetition: CREATE TRIGGER trg_handle_order_repetition BEFORE INSERT OR UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION handle_order_repetition()
 // Table: profiles
 //   protect_is_approved_trigger: CREATE TRIGGER protect_is_approved_trigger BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION protect_is_approved()

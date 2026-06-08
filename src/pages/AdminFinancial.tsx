@@ -349,7 +349,7 @@ export default function AdminFinancial() {
       const isCancelled = o.status === 'cancelled'
       const basePrice = Number(o.base_price || 0)
 
-      const orderDate = new Date(o.completed_at || o.created_at)
+      const orderDate = new Date(isCompleted && o.completed_at ? o.completed_at : o.created_at)
       const orderMonth = orderDate.getMonth().toString()
       const orderYear = orderDate.getFullYear().toString()
       const isSelectedPeriod = orderMonth === selectedMonth && orderYear === selectedYear
@@ -802,7 +802,9 @@ export default function AdminFinancial() {
     const dentistData = tableData.find((d) => d.id === manualInvoiceDentist)
     if (!dentistData) return []
     return dentistData.unsettledOrders.sort(
-      (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      (a: any, b: any) =>
+        new Date(a.completedAt || a.createdAt).getTime() -
+        new Date(b.completedAt || b.createdAt).getTime(),
     )
   }, [manualInvoiceDentist, tableData])
 
