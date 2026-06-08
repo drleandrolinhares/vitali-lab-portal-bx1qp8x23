@@ -25,7 +25,7 @@ CREATE OR REPLACE FUNCTION public.handle_order_status_update()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$
+AS $$
 BEGIN
   -- If status changes to completed/delivered, set completed_at
   IF NEW.status IN ('completed', 'delivered', 'CONCLUÍDO', 'ENTREGUE') AND (OLD.status NOT IN ('completed', 'delivered', 'CONCLUÍDO', 'ENTREGUE') OR OLD.status IS NULL) THEN
@@ -36,4 +36,4 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$function$
+$$;
