@@ -349,7 +349,16 @@ export default function AdminFinancial() {
       const isCancelled = o.status === 'cancelled'
       const basePrice = Number(o.base_price || 0)
 
-      const orderDate = new Date(isCompleted && o.completed_at ? o.completed_at : o.created_at)
+      let orderDateStr = isCompleted ? o.completed_at : o.created_at
+
+      if (isCompleted && !o.completed_at) {
+        console.error(
+          `[Data Integrity Validation] Order ${o.friendly_id || o.id} is completed but lacks completed_at. Skipping for financial calculations to prevent falling back to created_at.`,
+        )
+        return
+      }
+
+      const orderDate = new Date(orderDateStr)
       const orderMonth = orderDate.getMonth().toString()
       const orderYear = orderDate.getFullYear().toString()
       const isSelectedPeriod = orderMonth === selectedMonth && orderYear === selectedYear

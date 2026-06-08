@@ -65,12 +65,12 @@ export function ProfessionalExtractDialog({
           supabase
             .from('orders')
             .select(
-              'id, friendly_id, patient_name, base_price, created_at, status, is_repetition, work_type',
+              'id, friendly_id, patient_name, base_price, created_at, completed_at, status, is_repetition, work_type',
             )
             .eq('dentist_id', dentistId)
             .in('status', ['completed', 'delivered'])
             .is('settlement_id', null)
-            .order('created_at', { ascending: false }),
+            .order('completed_at', { ascending: false }),
           supabase
             .from('settlements')
             .select('*')
@@ -228,7 +228,9 @@ export function ProfessionalExtractDialog({
                           {data.unbilledOrders.map((o) => (
                             <TableRow key={o.id}>
                               <TableCell>
-                                {new Date(o.created_at).toLocaleDateString('pt-BR')}
+                                {new Date(o.completed_at || o.created_at).toLocaleDateString(
+                                  'pt-BR',
+                                )}
                               </TableCell>
                               <TableCell className="font-medium text-blue-600">
                                 {o.friendly_id || o.id.substring(0, 8)}

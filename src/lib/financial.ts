@@ -38,9 +38,20 @@ export function filterOrdersForFinancials(orders: any[], monthYear: string) {
   if (!orders || !Array.isArray(orders)) return []
   return orders.filter((o) => {
     const isCompleted = o.status === 'completed' || o.status === 'delivered'
-    const dateStr = isCompleted
-      ? o.completed_at || o.completedAt || o.created_at || o.createdAt
-      : o.created_at || o.createdAt
+
+    let dateStr = ''
+    if (isCompleted) {
+      dateStr = o.completed_at || o.completedAt
+      if (!dateStr) {
+        console.error(
+          `[Data Integrity Validation] Order ${o.friendly_id || o.id} is finished but has no completed_at. Falling back to created_at is strictly prohibited for financial competence.`,
+        )
+        return false
+      }
+    } else {
+      dateStr = o.created_at || o.createdAt
+    }
+
     if (!dateStr) return false
     return dateStr.startsWith(monthYear)
   })
