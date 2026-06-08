@@ -1708,6 +1708,9 @@ export default function AdminFinancial() {
                                         <TableHead>Pedido</TableHead>
                                         <TableHead>Paciente</TableHead>
                                         <TableHead>Trabalho</TableHead>
+                                        <TableHead className="text-center">
+                                          Data de Conclusão
+                                        </TableHead>
                                         <TableHead className="text-right">Valor</TableHead>
                                       </TableRow>
                                     </TableHeader>
@@ -1741,6 +1744,17 @@ export default function AdminFinancial() {
                                             <TableCell className="text-slate-500">
                                               {o.workType || '-'}
                                             </TableCell>
+                                            <TableCell className="text-center text-slate-500">
+                                              {o.completedAt
+                                                ? new Date(o.completedAt).toLocaleDateString(
+                                                    'pt-BR',
+                                                  )
+                                                : o.createdAt
+                                                  ? new Date(o.createdAt).toLocaleDateString(
+                                                      'pt-BR',
+                                                    )
+                                                  : '-'}
+                                            </TableCell>
                                             <TableCell className="text-right font-medium text-slate-900">
                                               {formatCurrency(o.clearedAmount ?? o.basePrice ?? 0)}
                                             </TableCell>
@@ -1750,7 +1764,7 @@ export default function AdminFinancial() {
                                         invoice.orders_snapshot.length === 0) && (
                                         <TableRow>
                                           <TableCell
-                                            colSpan={4}
+                                            colSpan={5}
                                             className="text-center text-muted-foreground py-4"
                                           >
                                             Nenhum pedido atrelado a esta fatura.
@@ -1882,6 +1896,9 @@ export default function AdminFinancial() {
                                         <TableHead>Pedido</TableHead>
                                         <TableHead>Paciente</TableHead>
                                         <TableHead>Trabalho</TableHead>
+                                        <TableHead className="text-center">
+                                          Data de Conclusão
+                                        </TableHead>
                                         <TableHead className="text-right">Valor</TableHead>
                                       </TableRow>
                                     </TableHeader>
@@ -1915,6 +1932,17 @@ export default function AdminFinancial() {
                                             <TableCell className="text-slate-500">
                                               {o.workType || '-'}
                                             </TableCell>
+                                            <TableCell className="text-center text-slate-500">
+                                              {o.completedAt
+                                                ? new Date(o.completedAt).toLocaleDateString(
+                                                    'pt-BR',
+                                                  )
+                                                : o.createdAt
+                                                  ? new Date(o.createdAt).toLocaleDateString(
+                                                      'pt-BR',
+                                                    )
+                                                  : '-'}
+                                            </TableCell>
                                             <TableCell className="text-right font-medium text-slate-900">
                                               {formatCurrency(o.clearedAmount ?? o.basePrice ?? 0)}
                                             </TableCell>
@@ -1924,7 +1952,7 @@ export default function AdminFinancial() {
                                         invoice.orders_snapshot.length === 0) && (
                                         <TableRow>
                                           <TableCell
-                                            colSpan={4}
+                                            colSpan={5}
                                             className="text-center text-muted-foreground py-4"
                                           >
                                             Nenhum pedido atrelado a este recebimento.
@@ -2488,6 +2516,7 @@ export default function AdminFinancial() {
                       <TableHead>Pedido</TableHead>
                       <TableHead>Paciente</TableHead>
                       <TableHead>Trabalho</TableHead>
+                      <TableHead className="text-center">Data de Conclusão</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2509,6 +2538,13 @@ export default function AdminFinancial() {
                         </TableCell>
                         <TableCell>{o.patientName || '-'}</TableCell>
                         <TableCell>{o.workType || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {o.completedAt
+                            ? new Date(o.completedAt).toLocaleDateString('pt-BR')
+                            : o.createdAt
+                              ? new Date(o.createdAt).toLocaleDateString('pt-BR')
+                              : '-'}
+                        </TableCell>
                         <TableCell className="text-right font-medium text-slate-900">
                           {formatCurrency(o.clearedAmount || o.basePrice || 0)}
                         </TableCell>
@@ -2517,7 +2553,7 @@ export default function AdminFinancial() {
                     {(!receiveSettlement?.orders_snapshot ||
                       receiveSettlement.orders_snapshot.length === 0) && (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
                           Nenhum pedido encontrado no snapshot.
                         </TableCell>
                       </TableRow>
