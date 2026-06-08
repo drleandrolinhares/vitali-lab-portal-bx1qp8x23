@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { format } from 'date-fns'
+import { format, isValid, parseISO } from 'date-fns'
 
 interface InvoicePrintBufferProps {
   isPrinting: boolean
@@ -20,7 +20,7 @@ export function InvoicePrintBuffer({
 
   const dateStr = format(invoiceDate, 'dd/MM/yyyy')
   const totalAmount = orders.reduce((sum, o) => {
-    const base = Number(o.basePrice || o.base_price || 0)
+    const base = Number(o.basePrice || o.base_price || o.clearedAmount || 0)
     const add = Number(o.custo_adicional_valor || 0)
     return sum + base + add
   }, 0)
@@ -32,15 +32,18 @@ export function InvoicePrintBuffer({
           <tr>
             <td>
               <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
-                <div>
+                <div className="flex-1">
                   <h1 className="text-3xl font-bold uppercase tracking-tight text-gray-900">
                     {labProfile?.clinic || 'VITALI LAB'}
                   </h1>
                   <p className="text-sm text-gray-600 mt-1 font-medium">
-                    CNPJ/CPF: {labProfile?.cpf || 'Não informado'}
+                    CNPJ: {labProfile?.cpf || 'Não informado'}
                   </p>
+                  {labProfile?.address && (
+                    <p className="text-sm text-gray-600 mt-1 font-medium">{labProfile.address}</p>
+                  )}
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-none">
                   <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-tight">
                     Fatura de Serviços
                   </h2>
@@ -91,14 +94,25 @@ export function InvoicePrintBuffer({
                 </thead>
                 <tbody>
                   {orders.map((order, idx) => {
-                    const completedAt = order.completedAt || order.completed_at
-                    const dateDisplay = completedAt
-                      ? format(new Date(completedAt), 'dd/MM/yyyy')
-                      : order.createdAt || order.created_at
-                        ? `Criado em ${format(new Date(order.createdAt || order.created_at), 'dd/MM/yyyy')}`
-                        : 'Pendente'
+                    const completedAtStr = order.completedAt || order.completed_at
+                    const createdAtStr = order.createdAt || order.created_at
 
-                    const base = Number(order.basePrice || order.base_price || 0)
+                    let dateDisplay = ''
+                    if (completedAtStr) {
+                      const d = parseISO(completedAtStr)
+                      dateDisplay = isValid(d) ? format(d, 'dd/MM/yyyy') : ''
+                    } else if (createdAtStr) {
+                      const d = parseISO(createdAtStr)
+                      dateDisplay = isValid(d) ? `Criado em ${format(d, 'dd/MM/yyyy')}` : ''
+                    }
+
+                    if (!dateDisplay) {
+                      dateDisplay = format(invoiceDate, 'dd/MM/yyyy')
+                    }
+
+                    const base = Number(
+                      order.basePrice || order.base_price || order.clearedAmount || 0,
+                    )
                     const add = Number(order.custo_adicional_valor || 0)
                     const rowTotal = base + add
 
@@ -109,10 +123,10 @@ export function InvoicePrintBuffer({
                         </td>
                         <td className="py-3 px-2 align-top">
                           <p className="font-bold text-gray-900">
-                            {order.patientName || order.patient_name}
+                            {order.patientName || order.patient_name || '-'}
                           </p>
                           <p className="text-gray-600 text-xs mt-0.5">
-                            {order.workType || order.work_type}
+                            {order.workType || order.work_type || '-'}
                           </p>
                           {add > 0 && order.custo_adicional_descricao && (
                             <p className="text-emerald-600 text-xs mt-1 font-semibold">

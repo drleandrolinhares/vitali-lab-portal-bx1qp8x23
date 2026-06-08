@@ -63,6 +63,7 @@ export default function AdminFinancial() {
   const { currentUser, loading: storeLoading, refreshOrders, selectedLab } = useAppStore()
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'master'
+  const isAdminOrFinancial = isAdmin || currentUser?.role === 'financial'
 
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString())
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
@@ -1642,16 +1643,18 @@ export default function AdminFinancial() {
                         Apenas faturas do mesmo dentista podem ser agrupadas.
                       </span>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!isValidForGrouping}
-                      onClick={handleGroupPrint}
-                      className="gap-2 bg-slate-700 hover:bg-slate-800 text-white border-none"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Agrupar para Impressão ({selectedPendingInvoiceIds.length})
-                    </Button>
+                    {isAdminOrFinancial && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!isValidForGrouping}
+                        onClick={handleGroupPrint}
+                        className="gap-2 bg-slate-700 hover:bg-slate-800 text-white border-none"
+                      >
+                        <Printer className="w-4 h-4" />
+                        Agrupar para Impressão ({selectedPendingInvoiceIds.length})
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardHeader>
@@ -1754,18 +1757,20 @@ export default function AdminFinancial() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="flex justify-end gap-2 items-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleOpenPrintPreview(invoice)
-                                  }}
-                                  className="text-xs font-semibold"
-                                >
-                                  <Printer className="w-3 h-3 mr-1" />
-                                  IMPRIMIR
-                                </Button>
+                                {isAdminOrFinancial && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOpenPrintPreview(invoice)
+                                    }}
+                                    className="text-xs font-semibold"
+                                  >
+                                    <Printer className="w-3 h-3 mr-1" />
+                                    IMPRIMIR
+                                  </Button>
+                                )}
                                 {isAdmin && (
                                   <Button
                                     variant="outline"
@@ -1959,18 +1964,20 @@ export default function AdminFinancial() {
                               className="text-right pr-6"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOpenPrintPreview(invoice)
-                                }}
-                                className="text-xs font-semibold"
-                              >
-                                <Printer className="w-3 h-3 mr-1" />
-                                IMPRIMIR
-                              </Button>
+                              {isAdminOrFinancial && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleOpenPrintPreview(invoice)
+                                  }}
+                                  className="text-xs font-semibold"
+                                >
+                                  <Printer className="w-3 h-3 mr-1" />
+                                  IMPRIMIR
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                           {expandedPaidInvoices[invoice.id] && invoice.orders_snapshot && (
@@ -2525,14 +2532,16 @@ export default function AdminFinancial() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                onClick={() => setPreviewOpen(true)}
-                disabled={selectedOrderIds.length === 0}
-                className="gap-2 bg-slate-700 hover:bg-slate-800 text-white"
-              >
-                PRÉVIA DA FATURA
-              </Button>
+              {isAdminOrFinancial && (
+                <Button
+                  variant="default"
+                  onClick={() => setPreviewOpen(true)}
+                  disabled={selectedOrderIds.length === 0}
+                  className="gap-2 bg-slate-700 hover:bg-slate-800 text-white"
+                >
+                  PRÉVIA DA FATURA
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => setManualInvoiceDentist(null)}>
                 Cancelar
               </Button>
