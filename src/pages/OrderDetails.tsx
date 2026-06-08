@@ -31,6 +31,9 @@ import { supabase } from '@/lib/supabase/client'
 import { OrderHistory } from '@/lib/types'
 import { formatBRL } from '@/lib/financial'
 import { toast } from '@/hooks/use-toast'
+import { Printer } from 'lucide-react'
+import { useInvoicePrint } from '@/hooks/use-invoice-print'
+import { InvoicePrintBuffer } from '@/components/InvoicePrintBuffer'
 
 export default function OrderDetails() {
   const { id } = useParams()
@@ -97,6 +100,12 @@ export default function OrderDetails() {
   const [isSavingCost, setIsSavingCost] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [isReprocessing, setIsReprocessing] = useState(false)
+
+  const { isPrinting, printData, triggerPrint } = useInvoicePrint()
+
+  const handlePrintInvoice = () => {
+    if (order) triggerPrint([order], order.dentistId)
+  }
 
   const handleReprocessBilling = async () => {
     if (!order) return
@@ -301,6 +310,8 @@ export default function OrderDetails() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
+      {printData && <InvoicePrintBuffer {...printData} isPrinting={isPrinting} />}
+
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
@@ -311,7 +322,16 @@ export default function OrderDetails() {
             Criado em {format(new Date(order.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInvoice}
+            disabled={isPrinting}
+            className="bg-background hidden sm:flex"
+          >
+            <Printer className="w-4 h-4 mr-2" /> {isPrinting ? 'Preparando...' : 'Imprimir Fatura'}
+          </Button>
           <StatusBadge status={order.status} className="text-sm px-3 py-1" />
         </div>
       </div>

@@ -49,6 +49,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Printer } from 'lucide-react'
+import { useInvoicePrint } from '@/hooks/use-invoice-print'
+import { InvoicePrintBuffer } from '@/components/InvoicePrintBuffer'
 
 interface Props {
   order: Order | null
@@ -78,6 +81,12 @@ export function OrderDetailsSheet({
   const [colaboradores, setColaboradores] = useState<any[]>([])
   const [isLoadingProduction, setIsLoadingProduction] = useState(false)
   const [isReprocessing, setIsReprocessing] = useState(false)
+
+  const { isPrinting, printData, triggerPrint } = useInvoicePrint()
+
+  const handlePrintInvoice = () => {
+    if (order) triggerPrint([order], order.dentistId)
+  }
 
   const handleReprocessBilling = async () => {
     if (!order) return
@@ -298,19 +307,34 @@ export function OrderDetailsSheet({
                   {order.patientName} - {order.dentistName}
                 </SheetDescription>
               </div>
-              {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
+              <div className="flex items-center gap-2 mt-0.5 shrink-0">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 mt-0.5"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  title="Excluir pedido"
+                  onClick={handlePrintInvoice}
+                  disabled={isPrinting}
+                  title="Imprimir Fatura"
+                  className="h-8 w-8"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Printer className="w-4 h-4" />
                 </Button>
-              )}
+                {(currentUser?.role === 'admin' || currentUser?.role === 'master') && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    title="Excluir pedido"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </SheetHeader>
+
+          {printData && <InvoicePrintBuffer {...printData} isPrinting={isPrinting} />}
+
           <div className="flex-1 overflow-y-auto mt-6 space-y-8 pr-2 pb-6">
             {order.fileUrls && order.fileUrls.length > 0 && (
               <div className="space-y-3 bg-muted/30 p-4 rounded-xl border border-border/50">

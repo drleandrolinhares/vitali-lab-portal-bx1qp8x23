@@ -21,14 +21,18 @@ export default function LabProfile() {
   const { currentUser, appSettings, updateSettings } = useAppStore()
 
   const [formData, setFormData] = useState({
-    lab_razao_social: '',
-    lab_cnpj: '',
     lab_address: '',
     lab_phone: '',
     lab_email: '',
     lab_website: '',
     lab_instagram: '',
-    lab_pix_key: '',
+  })
+
+  const [profileData, setProfileData] = useState({
+    clinic: '',
+    cpf: '',
+    pix_key: '',
+    bank_name: '',
   })
 
   const [logoUrl, setLogoUrl] = useState('')
@@ -36,15 +40,35 @@ export default function LabProfile() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    const fetchMaster = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('clinic, cpf, pix_key, bank_name')
+        .eq('id', currentUser?.id)
+        .single()
+
+      if (data) {
+        setProfileData({
+          clinic: data.clinic || '',
+          cpf: data.cpf || '',
+          pix_key: data.pix_key || '',
+          bank_name: data.bank_name || '',
+        })
+      }
+    }
+
+    if (currentUser?.role === 'master') {
+      fetchMaster()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
     setFormData({
-      lab_razao_social: appSettings['lab_razao_social'] || '',
-      lab_cnpj: appSettings['lab_cnpj'] || '',
       lab_address: appSettings['lab_address'] || '',
       lab_phone: appSettings['lab_phone'] || '',
       lab_email: appSettings['lab_email'] || '',
       lab_website: appSettings['lab_website'] || '',
       lab_instagram: appSettings['lab_instagram'] || '',
-      lab_pix_key: appSettings['lab_pix_key'] || '',
     })
     setLogoUrl(appSettings['lab_logo_url'] || '')
   }, [appSettings])
@@ -55,10 +79,29 @@ export default function LabProfile() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProfileData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
       await updateSettings(formData)
+
+      if (currentUser?.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            clinic: profileData.clinic,
+            cpf: profileData.cpf,
+            pix_key: profileData.pix_key,
+            bank_name: profileData.bank_name,
+          })
+          .eq('id', currentUser.id)
+
+        if (error) throw error
+      }
+
       toast({ title: 'Perfil do Laboratório atualizado com sucesso!' })
     } catch (e: any) {
       toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' })
@@ -166,19 +209,19 @@ export default function LabProfile() {
                     Razão Social / Nome Fantasia
                   </Label>
                   <Input
-                    name="lab_razao_social"
-                    value={formData.lab_razao_social}
-                    onChange={handleChange}
+                    name="clinic"
+                    value={profileData.clinic}
+                    onChange={handleProfileChange}
                     placeholder="Ex: Vitali Lab Prótese Dentária"
                     className="font-medium"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="uppercase text-xs font-bold">CNPJ</Label>
+                  <Label className="uppercase text-xs font-bold">CNPJ / CPF</Label>
                   <Input
-                    name="lab_cnpj"
-                    value={formData.lab_cnpj}
-                    onChange={handleChange}
+                    name="cpf"
+                    value={profileData.cpf}
+                    onChange={handleProfileChange}
                     placeholder="00.000.000/0000-00"
                   />
                 </div>
@@ -231,14 +274,26 @@ export default function LabProfile() {
                     placeholder="Rua Exemplo, 123 - Bairro - Cidade/UF - CEP"
                   />
                 </div>
-                <div className="space-y-2 sm:col-span-2 pt-2">
+                <div className="space-y-2 pt-2">
+                  <Label className="uppercase text-xs font-bold text-emerald-600">
+                    Nome do Banco
+                  </Label>
+                  <Input
+                    name="bank_name"
+                    value={profileData.bank_name}
+                    onChange={handleProfileChange}
+                    placeholder="Ex: Banco Itaú"
+                    className="border-emerald-200 focus-visible:ring-emerald-500 normal-case"
+                  />
+                </div>
+                <div className="space-y-2 pt-2">
                   <Label className="uppercase text-xs font-bold text-emerald-600">
                     Chave PIX (Para Pagamento)
                   </Label>
                   <Input
-                    name="lab_pix_key"
-                    value={formData.lab_pix_key}
-                    onChange={handleChange}
+                    name="pix_key"
+                    value={profileData.pix_key}
+                    onChange={handleProfileChange}
                     placeholder="CNPJ, Celular, E-mail ou Aleatória"
                     className="border-emerald-200 focus-visible:ring-emerald-500 normal-case"
                   />
